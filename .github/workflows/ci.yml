@@ -1,0 +1,89 @@
+# CI — SNGNav Snow Scene
+#
+# Runs on every push and pull request:
+#   1. flutter analyze (zero issues required)
+#   2. flutter test    (all tests must pass)
+#   3. flutter build linux --release (build must succeed)
+#
+# Probe tests (tagged 'probe') are excluded — they require
+# live network access to external APIs.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libblkid-dev \
+            liblzma-dev \
+            libsqlite3-dev
+
+      - name: Run tests
+        run: flutter test --exclude-tags=probe
+
+  build:
+    name: Build (Linux)
+    runs-on: ubuntu-24.04
+    needs: [analyze, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            libblkid-dev \
+            liblzma-dev \
+            libsqlite3-dev
+
+      - name: Build release
+        run: flutter build linux --release -t lib/snow_scene.dart

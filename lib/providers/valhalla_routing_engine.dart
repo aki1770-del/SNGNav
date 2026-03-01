@@ -1,0 +1,250 @@
+/// Valhalla routing engine — concrete implementation.
+///
+/// Implements the abstract [RoutingEngine] interface and returns
+/// engine-agnostic [RouteResult].
+library;
+
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
+
+import '../models/route_result.dart';
+import 'routing_engine.dart';
+
+const _defaultValhallaUrl = 'http://localhost:8002';
+
+class ValhallaRoutingEngine implements RoutingEngine {
+  final String baseUrl;
+  final http.Client _client;
+
+  ValhallaRoutingEngine({
+    String? baseUrl,
+    http.Client? client,
+  })  : baseUrl = baseUrl ?? _defaultValhallaUrl,
+        _client = client ?? http.Client();
+
+  @override
+  EngineInfo get info => const EngineInfo(name: 'valhalla');
+
+  @override
+  Future<bool> isAvailable() async {
+    try {
+      final uri = Uri.parse('$baseUrl/status');
+      final response =
+          await _client.get(uri).timeout(const Duration(seconds: 3));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<RouteResult> calculateRoute(RouteRequest request) async {
+    final stopwatch = Stopwatch()..start();
+
+    final requestBody = jsonEncode({
+      'locations': [
+        {'lat': request.origin.latitude, 'lon': request.origin.longitude},
+        {
+          'lat': request.destination.latitude,
+          'lon': request.destination.longitude,
+        },
+      ],
+      'costing': request.costing,
+      'directions_options': {
+        'language': request.language,
+        'units': 'kilometers',
+      },
+      'costing_options': {
+        request.costing: {
+          'use_highways': 0.8,
+          'use_tolls': 0.5,
+        },
+      },
+    });
+
+    final uri = Uri.parse('$baseUrl/route');
+
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: requestBody,
+          )
+          .timeout(const Duration(seconds: 15));
+
+      stopwatch.stop();
+
+      if (response.statusCode != 200) {
+        final errorBody = _tryParseJson(response.body);
+        final errorMsg = errorBody?['error'] ?? response.body;
+        throw RoutingException(
+          'Valhalla route failed (${response.statusCode}): $errorMsg',
+        );
+      }
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return _parseRouteResponse(json, stopwatch.elapsed);
+    } on http.ClientException catch (e) {
+      throw RoutingException('Valhalla network error: $e');
+    }
+  }
+
+  RouteResult _parseRouteResponse(
+    Map<String, dynamic> json,
+    Duration latency,
+  ) {
+    final trip = json['trip'] as Map<String, dynamic>?;
+    if (trip == null) {
+      throw RoutingException('Invalid response: missing "trip" field');
+    }
+
+    final legs = trip['legs'] as List<dynamic>?;
+    if (legs == null || legs.isEmpty) {
+      throw RoutingException('Invalid response: no route legs');
+    }
+
+    final summaryData = trip['summary'] as Map<String, dynamic>? ?? {};
+    final totalDistanceKm = (summaryData['length'] as num?)?.toDouble() ?? 0;
+    final totalTimeSeconds = (summaryData['time'] as num?)?.toDouble() ?? 0;
+
+    final allPoints = <LatLng>[];
+    final allManeuvers = <RouteManeuver>[];
+    var maneuverIndex = 0;
+
+    for (final leg in legs) {
+      final legMap = leg as Map<String, dynamic>;
+
+      final shapeStr = legMap['shape'] as String? ?? '';
+      if (shapeStr.isNotEmpty) {
+        allPoints.addAll(_decodePolyline6(shapeStr));
+      }
+
+      final maneuvers = legMap['maneuvers'] as List<dynamic>? ?? [];
+      for (final m in maneuvers) {
+        final mMap = m as Map<String, dynamic>;
+        final shapeIdx = mMap['begin_shape_index'] as int? ?? 0;
+        allManeuvers.add(RouteManeuver(
+          index: maneuverIndex++,
+          instruction: mMap['instruction'] as String? ?? '',
+          type: _maneuverTypeString(mMap['type'] as int? ?? 0),
+          lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
+          timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
+          position: shapeIdx < allPoints.length
+              ? allPoints[shapeIdx]
+              : const LatLng(0, 0),
+        ));
+      }
+    }
+
+    return RouteResult(
+      shape: allPoints,
+      maneuvers: allManeuvers,
+      totalDistanceKm: totalDistanceKm,
+      totalTimeSeconds: totalTimeSeconds,
+      summary: '${totalDistanceKm.toStringAsFixed(1)} km, '
+          '${(totalTimeSeconds / 60).toStringAsFixed(0)} min',
+      engineInfo: EngineInfo(
+        name: 'valhalla',
+        queryLatency: latency,
+      ),
+    );
+  }
+
+  List<LatLng> _decodePolyline6(String encoded) {
+    final points = <LatLng>[];
+    var index = 0;
+    var lat = 0;
+    var lng = 0;
+
+    while (index < encoded.length) {
+      var shift = 0;
+      var result = 0;
+      int b;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1F) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1F) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+
+      points.add(LatLng(lat / 1e6, lng / 1e6));
+    }
+
+    return points;
+  }
+
+  String _maneuverTypeString(int type) {
+    const types = {
+      0: 'none',
+      1: 'depart',
+      2: 'arrive',
+      3: 'straight',
+      4: 'arrive',
+      5: 'slight_right',
+      6: 'right',
+      7: 'sharp_right',
+      8: 'u_turn_right',
+      9: 'u_turn_left',
+      10: 'sharp_left',
+      11: 'left',
+      12: 'slight_left',
+      13: 'ramp_straight',
+      14: 'ramp_right',
+      15: 'ramp_left',
+      16: 'exit_right',
+      17: 'exit_left',
+      18: 'stay_straight',
+      19: 'stay_right',
+      20: 'stay_left',
+      21: 'merge',
+      22: 'roundabout_enter',
+      23: 'roundabout_exit',
+      24: 'ferry_enter',
+      25: 'ferry_exit',
+      26: 'transit',
+      27: 'transit_transfer',
+      28: 'transit_remain_on',
+      29: 'transit_connection_start',
+      30: 'transit_connection_transfer',
+      31: 'transit_connection_destination',
+      32: 'post_transit',
+      33: 'merge_right',
+      34: 'merge_left',
+    };
+    return types[type] ?? 'unknown';
+  }
+
+  Map<String, dynamic>? _tryParseJson(String body) {
+    try {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    _client.close();
+  }
+}
+
+/// Exception thrown by any routing engine.
+class RoutingException implements Exception {
+  final String message;
+  const RoutingException(this.message);
+
+  @override
+  String toString() => 'RoutingException: $message';
+}
