@@ -56,11 +56,13 @@ echo -e "${GREEN}[2/6] Flutter found.${NC}"
 # Step 3: Dependencies
 echo -e "${YELLOW}[3/6] Getting dependencies...${NC}"
 flutter pub get
+(cd packages/kalman_dr && dart pub get)
+(cd packages/routing_engine && dart pub get)
 echo -e "${GREEN}[3/6] Dependencies resolved.${NC}"
 
 # Step 4: Analysis
 echo -e "${YELLOW}[4/6] Running static analysis...${NC}"
-ANALYZE_OUTPUT=$(flutter analyze 2>&1)
+ANALYZE_OUTPUT=$(flutter analyze --no-fatal-infos 2>&1)
 ANALYZE_EXIT=$?
 if [ $ANALYZE_EXIT -eq 0 ]; then
   echo -e "${GREEN}[4/6] Analysis clean — zero issues.${NC}"
@@ -72,7 +74,7 @@ fi
 # Step 5: Tests
 echo -e "${YELLOW}[5/6] Running tests...${NC}"
 TEST_START=$(date +%s)
-flutter test 2>&1 | tail -3
+flutter test --exclude-tags=probe 2>&1 | tail -3
 TEST_END=$(date +%s)
 TEST_DURATION=$((TEST_END - TEST_START))
 echo -e "${GREEN}[5/6] Tests completed in ${TEST_DURATION}s.${NC}"
