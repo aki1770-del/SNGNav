@@ -138,7 +138,7 @@ void main() {
 flutter test
 ```
 
-All 838+ existing tests must still pass.
+All 926+ existing tests must still pass.
 
 ---
 

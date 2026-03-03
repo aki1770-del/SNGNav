@@ -10,6 +10,7 @@
 ///   - accuracy exceeded threshold
 ///   - reset returns to uninitialised
 ///   - predict before initialisation returns infinity
+library;
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:test/test.dart';
 

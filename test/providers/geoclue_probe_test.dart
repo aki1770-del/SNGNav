@@ -6,6 +6,7 @@
 ///
 /// Run: flutter test test/providers/geoclue_probe_test.dart
 @TestOn('linux')
+@Tags(['probe'])
 library;
 
 import 'package:dbus/dbus.dart';

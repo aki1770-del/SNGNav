@@ -181,7 +181,7 @@ flutter test
 | kalman_dr | 2 | 24 | Standalone package: EKF convergence, DR state extrapolation |
 | routing_engine | 2 | 34 | OSRM/Valhalla parsing, interface contract (21 tests), cross-engine consistency |
 
-3 known failures: GeoClue2 D-Bus probes (expected — no D-Bus daemon in CI).
+Probe tests (GeoClue2, OSRM, Open-Meteo) are excluded in CI via `--exclude-tags=probe`.
 0 flaky tests (verified by 3 consecutive runs).
 
 ---

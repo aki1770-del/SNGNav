@@ -9,6 +9,7 @@
 ///   - maxAccuracy safety cap
 ///   - toGeoPosition conversion
 ///   - heading wraparound in extrapolation
+library;
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:test/test.dart';
 

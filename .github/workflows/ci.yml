@@ -30,7 +30,11 @@ jobs:
         with:
           channel: stable
 
-      - run: flutter pub get
+      - name: Resolve dependencies
+        run: |
+          flutter pub get
+          cd packages/kalman_dr && dart pub get && cd ../..
+          cd packages/routing_engine && dart pub get && cd ../..
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
@@ -45,7 +49,11 @@ jobs:
         with:
           channel: stable
 
-      - run: flutter pub get
+      - name: Resolve dependencies
+        run: |
+          flutter pub get
+          cd packages/kalman_dr && dart pub get && cd ../..
+          cd packages/routing_engine && dart pub get && cd ../..
 
       - name: Install Linux build dependencies
         run: |
@@ -56,8 +64,13 @@ jobs:
             liblzma-dev \
             libsqlite3-dev
 
-      - name: Run tests
+      - name: Run app tests
         run: flutter test --exclude-tags=probe
+
+      - name: Run sub-package tests
+        run: |
+          cd packages/kalman_dr && dart test && cd ../..
+          cd packages/routing_engine && dart test && cd ../..
 
   build:
     name: Build (Linux)
