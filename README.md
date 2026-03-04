@@ -6,7 +6,7 @@ Navigation that doesn't abandon you when conditions fail unexpectedly.
 
 ```
 Status:   v0.3.1
-Tests:    926 pass (868 app + 24 kalman_dr + 34 routing_engine)
+Tests:    1073 pass (908 app + 56 kalman_dr + 109 routing_engine)
 Platform: Linux desktop (Flutter 3.41.1)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
 Packages: kalman_dr, routing_engine
@@ -165,7 +165,7 @@ lib/
 flutter test
 ```
 
-926 tests across 50 test files (868 app + 24 kalman_dr + 34 routing_engine):
+1073 tests across 55 test files (908 app + 56 kalman_dr + 109 routing_engine):
 
 | Category | Files | Tests | Coverage |
 |----------|:-----:|:-----:|----------|
@@ -237,4 +237,4 @@ Map data: OpenStreetMap contributors (ODbL-1.0).
 ---
 
 *Validated on Machine D: Ubuntu 24.04, Flutter 3.41.1, kernel 6.19.3-1-t2-noble.*
-*Build: `flutter build linux --release` succeeds. Tests: 926 total (868+24+34), 3 expected failures, 0 flaky.*
+*Build: `flutter build linux --release` succeeds. Tests: 1073 total (908+56+109), 0 failures, 0 flaky.*
