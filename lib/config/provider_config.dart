@@ -6,9 +6,9 @@
 ///   flutter run -d linux --dart-define=WEATHER_PROVIDER=open_meteo  (default)
 ///   flutter run -d linux --dart-define=LOCATION_PROVIDER=simulated  (default)
 ///   flutter run -d linux --dart-define=LOCATION_PROVIDER=geoclue
-///   flutter run -d linux --dart-define=ROUTING_ENGINE=mock          (default)
+///   flutter run -d linux --dart-define=ROUTING_ENGINE=valhalla      (default)
 ///   flutter run -d linux --dart-define=ROUTING_ENGINE=osrm
-///   flutter run -d linux --dart-define=ROUTING_ENGINE=valhalla
+///   flutter run -d linux --dart-define=ROUTING_ENGINE=mock
 ///   flutter run -d linux --dart-define=DR_MODE=kalman               (default)
 ///   flutter run -d linux --dart-define=DR_MODE=linear
 ///   flutter run -d linux --dart-define=TILE_SOURCE=online           (default)
@@ -146,7 +146,7 @@ class ProviderConfig {
     this.locationType = LocationProviderType.simulated,
     this.deadReckoningEnabled = true,
     this.drMode = DeadReckoningMode.kalman,
-    this.routingType = RoutingEngineType.mock,
+    this.routingType = RoutingEngineType.valhalla,
     this.tileSource = TileSourceType.online,
     this.mbtilesPath = 'data/offline_tiles.mbtiles',
   });
@@ -170,7 +170,7 @@ class ProviderConfig {
 
     const routingEnv = String.fromEnvironment(
       'ROUTING_ENGINE',
-      defaultValue: 'mock',
+      defaultValue: 'valhalla',
     );
 
     const drModeEnv = String.fromEnvironment(
@@ -384,7 +384,7 @@ class ProviderConfig {
       case 'valhalla':
         return RoutingEngineType.valhalla;
       default:
-        return RoutingEngineType.mock;
+        return RoutingEngineType.valhalla;
     }
   }
 }
