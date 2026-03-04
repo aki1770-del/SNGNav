@@ -1,7 +1,7 @@
 /// Dead reckoning location provider — tunnel fallback.
 ///
 /// Wraps an inner [LocationProvider] (e.g., GeoClue2) using the decorator
-/// pattern. When GPS signal is lost for [gpsTimeout] seconds, begins
+/// pattern. When GPS signal is lost for `gpsTimeout` seconds, begins
 /// predicting position using either:
 ///   - **linear**: constant-velocity extrapolation (baseline mode)
 ///   - **kalman**: Extended Kalman Filter with covariance tracking
@@ -16,6 +16,23 @@
 /// Offline behavior: when GPS is lost, dead reckoning
 /// provides estimated positions. When accuracy exceeds 500m safety cap,
 /// stream stops emitting — driver sees "position unavailable".
+///
+/// Example:
+///
+/// ```dart
+/// final gps = GeoClueLocationProvider();
+/// final dr = DeadReckoningProvider(
+///   inner: gps,
+///   mode: DeadReckoningMode.kalman,
+///   gpsTimeout: Duration(seconds: 3),
+/// );
+/// await dr.start();
+/// dr.positions.listen((pos) {
+///   print('${pos.latitude}, ${pos.longitude} — '
+///       'accuracy: ${pos.accuracy.toStringAsFixed(1)}m, '
+///       'DR: ${dr.isDrActive}');
+/// });
+/// ```
 library;
 
 import 'dart:async';

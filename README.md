@@ -208,6 +208,22 @@ This is a **display-only navigation aid** classified ASIL-QM.
 It does not control the vehicle. Dead reckoning positions are estimates.
 Safety alerts are advisory. See [SAFETY.md](SAFETY.md) for the full safety model.
 
+## API Documentation
+
+Generate dartdoc for the full API reference:
+
+```bash
+dart doc
+```
+
+Output: `doc/api/index.html`. Key entry points:
+
+- **`ProviderConfig`** — configuration system (7 `--dart-define` flags)
+- **`KalmanFilter`** — 4D EKF for tunnel dead reckoning
+- **`DeadReckoningProvider`** — decorator wrapping any `LocationProvider`
+- **`OsrmRoutingEngine`** / **`ValhallaRoutingEngine`** — routing engines
+- **`LocationBloc`**, **`WeatherBloc`**, **`RoutingBloc`** — BLoC state machines
+
 ## Dependencies
 
 11 packages, all permissive licenses (BSD-3, MIT, Apache-2.0).

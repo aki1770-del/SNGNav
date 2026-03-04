@@ -14,7 +14,7 @@ abstract class ConsentService {
   /// Get current consent for a specific purpose.
   ///
   /// Returns [ConsentRecord.unknown] if no consent has been recorded.
-  /// Jidoka: unknown = denied. The caller checks [isEffectivelyGranted].
+  /// Jidoka: unknown = denied. The caller checks `isEffectivelyGranted`.
   Future<ConsentRecord> getConsent(ConsentPurpose purpose);
 
   /// Get all consent records (one per purpose that has been set).
@@ -23,7 +23,7 @@ abstract class ConsentService {
   /// Grant consent for a purpose under a jurisdiction.
   ///
   /// Returns the new [ConsentRecord] with [ConsentStatus.granted]
-  /// and a fresh [updatedAt] timestamp (audit trail).
+  /// and a fresh `updatedAt` timestamp (audit trail).
   Future<ConsentRecord> grant(
     ConsentPurpose purpose,
     Jurisdiction jurisdiction,
@@ -32,7 +32,7 @@ abstract class ConsentService {
   /// Revoke consent for a purpose.
   ///
   /// Returns the new [ConsentRecord] with [ConsentStatus.denied]
-  /// and a fresh [updatedAt] timestamp.
+  /// and a fresh `updatedAt` timestamp.
   Future<ConsentRecord> revoke(ConsentPurpose purpose);
 
   /// Release resources.

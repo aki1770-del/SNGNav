@@ -1,9 +1,9 @@
 /// SnowSceneScaffold — top-level Stack compositing all layers.
 ///
 /// Z-layer structure:
-///   [Z=0] MapLayer — dual-renderer (Fluorite 3D or flutter_map 2D)
-///   [Z=1] NavigationOverlay — weather bar, speed, route progress, consent
-///   [Z=2] SafetyOverlay — always rendered, always on top
+///   `Z=0` MapLayer — dual-renderer (Fluorite 3D or flutter_map 2D)
+///   `Z=1` NavigationOverlay — weather bar, speed, route progress, consent
+///   `Z=2` SafetyOverlay — always rendered, always on top
 ///
 /// Widget-mediated coupling:
 ///   - `BlocListener<RoutingBloc>`: routeActive → NavigationStarted

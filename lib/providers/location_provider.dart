@@ -4,7 +4,7 @@
 /// providers without touching the BLoC.
 ///
 /// Offline behavior: when the location source is unavailable, the
-/// [positions] stream stops emitting. LocationBloc transitions to
+/// `positions` stream stops emitting. LocationBloc transitions to
 /// [LocationQuality.stale] after a timeout, then [LocationQuality.error].
 /// The driver sees the last fix with a degraded quality indicator.
 /// Dead reckoning provides fallback during GPS loss.

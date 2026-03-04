@@ -7,7 +7,7 @@
 ///
 /// Offline behavior: when the upstream data source is unreachable,
 /// implementations should re-emit the last known [WeatherCondition] via
-/// [conditions] rather than letting the stream go silent. The driver sees
+/// `conditions` rather than letting the stream go silent. The driver sees
 /// stale-but-present data instead of a blank widget. See
 /// [OpenMeteoWeatherProvider] for the reference implementation (re-emits
 /// cached condition on HTTP failure).

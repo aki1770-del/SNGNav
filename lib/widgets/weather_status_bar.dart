@@ -6,8 +6,8 @@
 ///     - listener: when isHazardous transitions true → dispatches
 ///       SafetyAlertReceived to NavigationBloc (weather→safety bridge)
 ///
-/// Staleness indicator: when weather data is older than [staleThreshold],
-/// shows elapsed time in amber. When older than [criticalThreshold],
+/// Staleness indicator: when weather data is older than `staleThreshold`,
+/// shows elapsed time in amber. When older than `criticalThreshold`,
 /// shows "STALE" badge in red. The driver always knows how fresh the
 /// data is.
 ///
@@ -43,8 +43,8 @@ class WeatherStatusBar extends StatefulWidget {
 
   /// Interval for periodic staleness rebuild.
   ///
-  /// Every 30 seconds, [setState] forces a rebuild so the staleness
-  /// display recomputes from [DateTime.now]. Without this, the display
+  /// Every 30 seconds, `setState` forces a rebuild so the staleness
+  /// display recomputes from `DateTime.now()`. Without this, the display
   /// only updates when the weather provider emits a new condition.
   static const stalenessRebuildInterval = Duration(seconds: 30);
 

@@ -4,7 +4,7 @@
 /// a list of [HazardZone]s by clustering nearby hazard reports.
 ///
 /// Algorithm: simple distance-based clustering. Two hazard reports within
-/// [clusterRadiusMeters] of each other belong to the same zone. This is
+/// `clusterRadiusMeters` of each other belong to the same zone. This is
 /// a greedy single-linkage approach — adequate for the 5-vehicle simulation
 /// and extensible for larger fleets.
 ///

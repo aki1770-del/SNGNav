@@ -1,15 +1,15 @@
 /// Extended Kalman Filter for dead reckoning — replaces linear extrapolation.
 ///
-/// State vector: [latitude, longitude, speed, heading] (4D).
+/// State vector: `[latitude, longitude, speed, heading]` (4D).
 /// Prediction: constant-velocity model (speed and heading held constant).
-/// Measurement: GPS fix provides [lat, lon, speed, heading] directly.
+/// Measurement: GPS fix provides `[lat, lon, speed, heading]` directly.
 ///
 /// When GPS is available, the filter fuses prediction with measurement,
 /// producing a smoothed estimate. When GPS is lost (tunnel), the filter
 /// predicts only — covariance grows, honestly signalling uncertainty.
 ///
 /// The covariance diagonal maps to GeoPosition.accuracy:
-///   accuracy = sqrt(P[0][0] + P[1][1]) * metres_per_degree
+///   accuracy = sqrt(P\[0\]\[0\] + P\[1\]\[1\]) * metres_per_degree
 ///
 /// Safety: ASIL-QM — display only, no vehicle control.
 ///
@@ -131,7 +131,7 @@ class KalmanFilter {
 
   /// Current estimated accuracy in metres.
   ///
-  /// Derived from the position covariance (P[0][0] + P[1][1]).
+  /// Derived from the position covariance (`P[0][0] + P[1][1]`).
   /// Grows during prediction-only (tunnel), shrinks on GPS update.
   double get accuracyMetres {
     final latVar = _p[0][0];

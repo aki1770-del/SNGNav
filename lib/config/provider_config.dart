@@ -27,6 +27,25 @@
 ///
 /// 7 configurable flags covering weather, location, routing, dead reckoning,
 /// and tile sources.
+///
+/// Example — run with real weather and Kalman dead reckoning:
+///
+/// ```bash
+/// flutter run -d linux \
+///   --dart-define=WEATHER_PROVIDER=open_meteo \
+///   --dart-define=LOCATION_PROVIDER=simulated \
+///   --dart-define=DR_MODE=kalman \
+///   --dart-define=ROUTING_ENGINE=osrm
+/// ```
+///
+/// Example — fully offline demo (no network, no GPS):
+///
+/// ```bash
+/// flutter run -d linux \
+///   --dart-define=WEATHER_PROVIDER=simulated \
+///   --dart-define=TILE_SOURCE=mbtiles \
+///   --dart-define=MBTILES_PATH=data/offline_tiles.mbtiles
+/// ```
 library;
 
 import 'package:http/http.dart' as http;
@@ -87,6 +106,15 @@ enum TileSourceType {
 /// Reads `--dart-define` values at compile time via [String.fromEnvironment].
 /// Defaults to production values (Open-Meteo for weather, simulated for
 /// location until GeoClue2 is validated on Day 5-6).
+///
+/// Example — creating providers from config:
+///
+/// ```dart
+/// final config = ProviderConfig.fromEnvironment();
+/// final weather = config.createWeatherProvider();
+/// final location = config.createLocationProvider();
+/// final routing = config.createRoutingEngine();
+/// ```
 class ProviderConfig {
   /// Weather provider type selected via `--dart-define=WEATHER_PROVIDER=...`.
   final WeatherProviderType weatherType;

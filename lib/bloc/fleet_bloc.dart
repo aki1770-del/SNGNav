@@ -5,7 +5,7 @@
 /// happens at the widget layer via [ConsentGate] (widget-mediated
 /// coupling).
 ///
-/// Active reports are pruned when older than [_reportMaxAge] (15 minutes).
+/// Active reports are pruned when older than `_reportMaxAge` (15 minutes).
 ///
 /// 7th BLoC in the Snow Scene. Same stream-subscription pattern as
 /// WeatherBloc and LocationBloc.

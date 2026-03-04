@@ -1,7 +1,7 @@
 /// Dead reckoning location provider — tunnel fallback.
 ///
 /// Wraps an inner [LocationProvider] (e.g., GeoClue2) using the decorator
-/// pattern. When GPS signal is lost for [gpsTimeout] seconds, begins
+/// pattern. When GPS signal is lost for `gpsTimeout` seconds, begins
 /// predicting position using either:
 ///   - **linear**: constant-velocity extrapolation (baseline mode)
 ///   - **kalman**: Extended Kalman Filter with covariance tracking

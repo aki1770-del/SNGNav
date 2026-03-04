@@ -1,7 +1,22 @@
-/// Valhalla routing engine — concrete implementation.
+/// Valhalla routing engine — multi-modal routing with Japanese support.
 ///
 /// Implements the abstract [RoutingEngine] interface and returns
 /// engine-agnostic [RouteResult].
+///
+/// Example:
+///
+/// ```dart
+/// final engine = ValhallaRoutingEngine(baseUrl: 'http://localhost:8002');
+/// final route = await engine.calculateRoute(RouteRequest(
+///   origin: LatLng(35.17, 136.91),
+///   destination: LatLng(34.96, 137.18),
+///   costing: 'auto',
+///   language: 'ja-JP',
+/// ));
+/// for (final m in route.maneuvers) {
+///   print(m.instruction); // Japanese turn-by-turn
+/// }
+/// ```
 library;
 
 import 'dart:convert';

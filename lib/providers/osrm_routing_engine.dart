@@ -11,6 +11,20 @@
 /// Polyline precision: 5 (1e5) — differs from Valhalla's precision 6.
 ///
 /// Primary routing engine for auto/driving routes.
+///
+/// Example:
+///
+/// ```dart
+/// final engine = OsrmRoutingEngine(baseUrl: 'http://localhost:5000');
+/// if (await engine.isAvailable()) {
+///   final route = await engine.calculateRoute(RouteRequest(
+///     origin: LatLng(35.17, 136.91),
+///     destination: LatLng(34.96, 137.18),
+///   ));
+///   print('${route.summary} — ${route.shape.length} points');
+/// }
+/// await engine.dispose();
+/// ```
 library;
 
 import 'dart:convert';
