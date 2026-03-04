@@ -27,8 +27,8 @@
 ///   ConsentBloc  → fleet data consent gate — SQLite-backed
 ///   FleetBloc    → simulated fleet reports (5 vehicles, consent-gated)
 ///
-/// Default: real weather (Open-Meteo), simulated location+routing, fleet simulated.
-/// Demo scenario: Route 153 Nagoya -> Toyota -> Mikawa Highlands.
+/// Default: real weather (Open-Meteo), simulated location, Valhalla routing, fleet simulated.
+/// Demo scenario: Sakae Station → Route 153 → Higashiokazaki Station.
 library;
 
 import 'dart:io';
@@ -65,26 +65,55 @@ import 'services/sqlite_consent_service.dart';
 import 'widgets/snow_scene_scaffold.dart';
 
 // ---------------------------------------------------------------------------
-// Mock routing engine — pre-built Nagoya → Mikawa route
+// Mock routing engine — Sakae Station → Higashiokazaki Station
+//
+// Maneuver positions MUST align with SimulatedLocationProvider waypoints.
+// Both follow the same corridor: 栄駅 → 国道153号 → 岡崎方面 → 東岡崎駅.
+// See OPS-RULE-005 in CLAUDE.md for the route consistency rule.
 // ---------------------------------------------------------------------------
 
 final _maneuvers = [
-  RouteManeuver(index: 0, instruction: 'Depart Nagoya Station via Route 153 East', type: 'depart', lengthKm: 2.1, timeSeconds: 180, position: const LatLng(35.1709, 136.8815)),
-  RouteManeuver(index: 1, instruction: 'Continue east on Route 153', type: 'straight', lengthKm: 4.5, timeSeconds: 270, position: const LatLng(35.1680, 136.9100)),
-  RouteManeuver(index: 2, instruction: 'Bear right toward Toyota', type: 'slight_right', lengthKm: 5.2, timeSeconds: 310, position: const LatLng(35.1450, 136.9600)),
-  RouteManeuver(index: 3, instruction: 'Continue through Toyota City', type: 'straight', lengthKm: 6.0, timeSeconds: 430, position: const LatLng(35.1200, 137.0100)),
-  RouteManeuver(index: 4, instruction: 'Turn left toward mountains', type: 'left', lengthKm: 8.0, timeSeconds: 690, position: const LatLng(35.0831, 137.1559)),
-  RouteManeuver(index: 5, instruction: 'Begin mountain ascent — snow possible', type: 'straight', lengthKm: 5.5, timeSeconds: 570, position: const LatLng(35.0600, 137.2500)),
-  RouteManeuver(index: 6, instruction: 'Pass summit — descend to highlands', type: 'straight', lengthKm: 6.8, timeSeconds: 610, position: const LatLng(35.0500, 137.3200)),
-  RouteManeuver(index: 7, instruction: 'Arrive at Mikawa Highlands', type: 'arrive', lengthKm: 0.0, timeSeconds: 0, position: const LatLng(35.0700, 137.4000)),
+  RouteManeuver(index: 0, instruction: 'Depart Sakae Station heading east', type: 'depart', lengthKm: 1.8, timeSeconds: 160, position: const LatLng(35.1709, 136.9066)),
+  RouteManeuver(index: 1, instruction: 'Continue east through Chikusa', type: 'straight', lengthKm: 3.5, timeSeconds: 310, position: const LatLng(35.1608, 136.9208)),
+  RouteManeuver(index: 2, instruction: 'Merge onto Route 153 toward Okazaki', type: 'slight_right', lengthKm: 4.0, timeSeconds: 210, position: const LatLng(35.1376, 137.0000)),
+  RouteManeuver(index: 3, instruction: 'Continue southeast on Route 153', type: 'straight', lengthKm: 5.5, timeSeconds: 290, position: const LatLng(35.1013, 137.0628)),
+  RouteManeuver(index: 4, instruction: 'Enter tunnel — GPS may be lost', type: 'straight', lengthKm: 6.0, timeSeconds: 360, position: const LatLng(35.0824, 137.1088)),
+  RouteManeuver(index: 5, instruction: 'Exit tunnel — GPS recovered', type: 'straight', lengthKm: 3.0, timeSeconds: 270, position: const LatLng(35.0182, 137.1698)),
+  RouteManeuver(index: 6, instruction: 'Continue south toward Higashiokazaki', type: 'straight', lengthKm: 4.5, timeSeconds: 400, position: const LatLng(34.9896, 137.1707)),
+  RouteManeuver(index: 7, instruction: 'Arrive at Higashiokazaki Station', type: 'arrive', lengthKm: 0.0, timeSeconds: 0, position: const LatLng(34.9554, 137.1791)),
+];
+
+/// Route shape follows the simulated location waypoints for visual consistency.
+/// Every shape point corresponds to a waypoint in SimulatedLocationProvider.
+final _demoShape = const [
+  LatLng(35.1709, 136.9066),  // wp0:  Sakae Station (depart)
+  LatLng(35.1713, 136.9146),  // wp1:  city
+  LatLng(35.1608, 136.9208),  // wp2:  Chikusa
+  LatLng(35.1607, 136.9491),  // wp3:  city
+  LatLng(35.1513, 136.9837),  // wp4:  city exit
+  LatLng(35.1376, 137.0000),  // wp5:  Route 153 merge
+  LatLng(35.1291, 137.0150),  // wp6:  suburban
+  LatLng(35.1121, 137.0352),  // wp7:  suburban
+  LatLng(35.1013, 137.0628),  // wp8:  suburban
+  LatLng(35.0889, 137.0846),  // wp9:  suburban
+  LatLng(35.0824, 137.1088),  // wp10: tunnel entrance
+  LatLng(35.0743, 137.1275),  // wp11: tunnel
+  LatLng(35.0571, 137.1332),  // wp12: tunnel
+  LatLng(35.0449, 137.1416),  // wp13: tunnel
+  LatLng(35.0340, 137.1527),  // wp14: tunnel exit approach
+  LatLng(35.0182, 137.1698),  // wp15: tunnel exit (GPS recovered)
+  LatLng(35.0031, 137.1708),  // wp16: approach
+  LatLng(34.9896, 137.1707),  // wp17: approach
+  LatLng(34.9715, 137.1798),  // wp18: approach
+  LatLng(34.9554, 137.1791),  // wp19: Higashiokazaki Station (arrive)
 ];
 
 final _demoRoute = RouteResult(
-  shape: _maneuvers.map((m) => m.position).toList(),
+  shape: _demoShape,
   maneuvers: _maneuvers,
-  totalDistanceKm: 38.1,
-  totalTimeSeconds: 3060,
-  summary: 'Route 153: Nagoya → Toyota → Mikawa Highlands',
+  totalDistanceKm: 28.3,
+  totalTimeSeconds: 2000,
+  summary: 'Sakae Station → Route 153 → Higashiokazaki Station',
   engineInfo: const EngineInfo(name: 'mock', version: 'snow-scene-v0.3.1', queryLatency: Duration(milliseconds: 5)),
 );
 
@@ -187,7 +216,7 @@ class SnowSceneApp extends StatelessWidget {
               ..add(const RoutingEngineCheckRequested())
               ..add(const RouteRequested(
                 origin: LatLng(35.1709, 136.9066),
-                destination: LatLng(34.9551, 137.1771),
+                destination: LatLng(34.9554, 137.1791),
                 destinationLabel: 'Higashiokazaki Station',
               )),
           ),

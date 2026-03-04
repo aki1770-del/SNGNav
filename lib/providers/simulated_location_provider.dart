@@ -18,13 +18,13 @@ import 'dart:async';
 import '../models/geo_position.dart';
 import 'location_provider.dart';
 
-/// Simulated GPS source along Route 153, Nagoya → Mikawa Highlands.
+/// Simulated GPS source: Sakae Station → Route 153 → Higashiokazaki Station.
 ///
 /// The scenario has four phases:
-/// 1. **City driving** (steps 0–4): Nagoya Station → expressway, 40 km/h
-/// 2. **国道153号** (steps 5–9): through Toyota City, 90 km/h
-/// 3. **Mountain tunnel** (steps 10–14): GPS lost — stream stops emitting
-/// 4. **Tunnel exit** (steps 15–19): GPS recovered, descend to highlands
+/// 1. **City driving** (steps 0–4): Sakae Station → Nagoya outskirts, 40 km/h
+/// 2. **Suburban road** (steps 5–9): Route 153 toward Okazaki, 70 km/h
+/// 3. **Tunnel segment** (steps 10–14): GPS lost — stream stops emitting
+/// 4. **Tunnel exit** (steps 15–19): GPS recovered, approach Higashiokazaki
 ///
 /// After step 19, the scenario loops from step 0.
 class SimulatedLocationProvider implements LocationProvider {
@@ -98,7 +98,7 @@ class SimulatedLocationProvider implements LocationProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Waypoint data — Route 19 (Nagoya → mountain pass)
+// Waypoint data — Sakae Station → Route 153 → Higashiokazaki Station
 // ---------------------------------------------------------------------------
 
 class _Waypoint {
