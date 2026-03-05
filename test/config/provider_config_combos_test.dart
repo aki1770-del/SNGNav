@@ -31,8 +31,8 @@ void main() {
       expect(config.isKalmanDr, isTrue);
     });
 
-    test('routing = mock', () {
-      expect(config.isMockRouting, isTrue);
+    test('routing = valhalla', () {
+      expect(config.isValhallaRouting, isTrue);
     });
 
     test('tiles = online', () {
@@ -46,10 +46,11 @@ void main() {
 
       expect(weather, isA<OpenMeteoWeatherProvider>());
       expect(location, isA<DeadReckoningProvider>());
-      expect(routing, isNull); // mock returns null
+      expect(routing, isNotNull); // valhalla returns real engine
 
       weather.dispose();
       await location.dispose();
+      await routing!.dispose();
     });
   });
 

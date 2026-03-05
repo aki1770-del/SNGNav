@@ -267,9 +267,9 @@ void main() {
   });
 
   group('ProviderConfig — routing defaults', () {
-    test('defaults to mock routing', () {
+    test('defaults to valhalla routing', () {
       const config = ProviderConfig();
-      expect(config.routingType, RoutingEngineType.mock);
+      expect(config.routingType, RoutingEngineType.valhalla);
     });
 
     test('accepts explicit osrm routing', () {
@@ -314,9 +314,9 @@ void main() {
   });
 
   group('ProviderConfig.fromEnvironment — routing', () {
-    test('defaults to mock routing when no dart-define is set', () {
+    test('defaults to valhalla routing when no dart-define is set', () {
       final config = ProviderConfig.fromEnvironment();
-      expect(config.routingType, RoutingEngineType.mock);
+      expect(config.routingType, RoutingEngineType.valhalla);
     });
   });
 

@@ -1,13 +1,8 @@
-/// OSRM routing engine — primary engine for auto/driving routes.
-///
-/// 95-133x faster than Valhalla (benchmarked):
-///   10 km route: 4.9 ms (vs Valhalla 464 ms)
-///   50 km route: 6.7 ms (vs Valhalla 890 ms)
-///
-/// Sub-frame latency (<16.6 ms) enables real-time rerouting in snow.
+/// OSRM routing engine — HTTP GET-based routing for auto/driving routes.
 ///
 /// API: HTTP GET /route/v1/driving/{lon},{lat};{lon},{lat}
 /// Polyline precision: 5 (1e5) — differs from Valhalla's precision 6.
+/// Default public server: router.project-osrm.org (Zürich, CH).
 library;
 
 import 'dart:convert';

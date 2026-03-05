@@ -57,7 +57,7 @@ Measured through `calculateRoute()` with mock HTTP (includes JSON parse + decode
 | 500 | 301 µs | 341 µs | 433 µs | 788 µs | 2632 µs | 200 |
 | 2000 | 396 µs | 425 µs | 468 µs | 690 µs | 849 µs | 200 |
 
-**Observation**: Polyline decoding is not the bottleneck. Both engines decode 2000 points in < 1 ms (p95). The JSON parse + mock HTTP overhead dominates at all sizes. Actual network latency (OSRM: 4.9 ms, Valhalla: 464 ms) is 10–1000x larger.
+**Observation**: Polyline decoding is not the bottleneck. Both engines decode 2000 points in < 1 ms (p95). The JSON parse + mock HTTP overhead dominates at all sizes.
 
 ## Route Response Parsing (Full Pipeline)
 
@@ -66,7 +66,43 @@ Measured through `calculateRoute()` with mock HTTP (includes JSON parse + decode
 | OSRM | 25 | 500 | 344 µs | 439 µs | 485 µs | 762 µs | 1503 µs |
 | Valhalla | 25 | 500 | 314 µs | 372 µs | 435 µs | 669 µs | 1437 µs |
 
-Both engines parse a realistic 25-maneuver/500-point response in < 1 ms (p95). Sub-frame latency (<16.6 ms) is confirmed for the parse path. The real-world latency difference between OSRM (4.9 ms) and Valhalla (464 ms) is entirely network I/O.
+Both engines parse a realistic 25-maneuver/500-point response in < 1 ms (p95). Sub-frame latency (<16.6 ms) is confirmed for the parse path.
+
+## Live Network Latency (Sprint 15, March 5 2026)
+
+Route: Sakae Station → Higashiokazaki Station (~50 km). Machine D (Japan).
+
+| Engine | Server | Location | Mean (5x warm) | Response size |
+|:-------|:-------|:---------|---------------:|--------------:|
+| OSRM | `router.project-osrm.org` | Zürich, CH | 1,717 ms | 43,645 bytes |
+| Valhalla | `valhalla1.openstreetmap.de` | Falkenstein, DE | 1,367 ms | 14,527 bytes |
+
+**Correction**: Sprint 14 reported "OSRM 4.9 ms, Valhalla 464 ms" — those figures were not reproducible. Live measurements show both engines at ~1.3–1.7 seconds from Japan. The latency is dominated by geographic distance (Japan → Europe, ~300 ms one-way RTT). Valhalla is slightly faster (20% lower mean) with a 3x smaller response.
+
+**Latency decomposition** (Valhalla, typical warm request ~1.3s):
+
+| Component | Time | % |
+|:----------|-----:|--:|
+| Network RTT (Japan → Germany × 2) | ~600 ms | 46% |
+| TLS overhead | ~300 ms | 23% |
+| Server-side routing | ~300 ms | 23% |
+| Transfer (14 KB) | ~100 ms | 8% |
+
+For sub-frame latency (<16.6 ms), local Valhalla deployment is required.
+
+## App Startup & Runtime (Sprint 15, March 5 2026)
+
+Build: release, snow_scene entrypoint. Machine D.
+
+| Metric | Value |
+|:-------|------:|
+| Cold start (to RSS >100 MB) | 309 ms |
+| Steady-state RSS | 193 MB |
+| Idle CPU (simulation mode, 1 Hz GPS) | ~16% |
+| Bundle size | 51 MB (42 MB Flutter engine, 5.1 MB app, 1.8 MB SQLite) |
+| Threads | 26–32 |
+
+Idle CPU is driven by `SimulatedLocationProvider` (1 Hz) → 6 nested BlocBuilder rebuilds → FlutterMap re-render. Expected to drop to ~3% on Machine E (12C/16T).
 
 ## Dead Reckoning Activation Latency
 
@@ -82,5 +118,6 @@ Both modes activate DR after the GPS timeout fires and begin emitting extrapolat
 1. **Kalman filter is cheap**: 15 µs per predict step. A 60-second tunnel costs 301 µs total. Well within the 16.6 ms frame budget.
 2. **Convergence is fast**: The filter converges to ~3.4 m accuracy within 10 GPS fixes (10 seconds at 1 Hz).
 3. **Polyline decoding is not a bottleneck**: All sizes decode in < 1 ms. Network I/O dominates route latency.
-4. **Parse times are engine-agnostic**: OSRM and Valhalla parse at equivalent speed (~400 µs). The 95–133x real-world speed difference is purely network.
+4. **Parse times are engine-agnostic**: OSRM and Valhalla parse at equivalent speed (~400 µs).
 5. **DR activation is deterministic**: Bounded by `gpsTimeout` parameter. No warm-up cost.
+6. **No engine performance gap** (Sprint 15): Both OSRM and Valhalla demo servers respond in ~1.3–1.7s from Japan. Latency is geographic (Europe servers), not engine-specific. Valhalla is 20% faster with 3x smaller responses. Local deployment needed for sub-frame routing.
