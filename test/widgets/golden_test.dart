@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:driving_weather/driving_weather.dart';
 
 import 'package:sngnav_snow_scene/bloc/location_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/location_event.dart';
@@ -29,7 +30,6 @@ import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
-import 'package:sngnav_snow_scene/models/weather_condition.dart';
 import 'package:sngnav_snow_scene/widgets/route_progress_bar.dart';
 import 'package:sngnav_snow_scene/widgets/safety_overlay.dart';
 import 'package:sngnav_snow_scene/widgets/speed_display.dart';

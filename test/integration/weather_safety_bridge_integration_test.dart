@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:driving_weather/driving_weather.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
@@ -29,7 +30,6 @@ import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
-import 'package:sngnav_snow_scene/models/weather_condition.dart';
 import 'package:sngnav_snow_scene/widgets/weather_status_bar.dart';
 
 // ---------------------------------------------------------------------------

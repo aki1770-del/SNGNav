@@ -9,9 +9,8 @@
 /// Supports the snow scenario with weather-cache integration.
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:equatable/equatable.dart';
-
-import '../models/weather_condition.dart';
 
 sealed class WeatherEvent extends Equatable {
   const WeatherEvent();

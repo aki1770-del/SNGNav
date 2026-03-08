@@ -1,4 +1,4 @@
-/// Open-Meteo weather provider — real weather data for SNGNav.
+/// Open-Meteo weather provider — real weather data for driving applications.
 ///
 /// Fetches current weather from the Open-Meteo API (free, no API key).
 /// Maps WMO weather codes + temperature to [WeatherCondition].
@@ -7,11 +7,9 @@
 /// condition (if any) so the UI stays populated with stale data rather
 /// than going blank.
 ///
-/// Interface contract: implements [WeatherProvider] — same 4 methods as
-/// [SimulatedWeatherProvider]. WeatherBloc is implementation-agnostic;
+/// Implements [WeatherProvider] — same 4 methods as
+/// [SimulatedWeatherProvider]. Application logic is implementation-agnostic;
 /// providers are swappable.
-///
-/// Real weather data source with offline cache fallback.
 library;
 
 import 'dart:async';
@@ -19,7 +17,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../models/weather_condition.dart';
+import 'weather_condition.dart';
 import 'weather_provider.dart';
 
 class OpenMeteoWeatherProvider implements WeatherProvider {
@@ -32,7 +30,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
   /// Longitude for weather query (default: Nagoya region).
   final double longitude;
 
-  /// How often to poll the API. Default 5 minutes (R2 mitigation).
+  /// How often to poll the API. Default 5 minutes.
   final Duration pollInterval;
 
   StreamController<WeatherCondition>? _controller;
@@ -97,7 +95,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       if (_lastCondition != null) {
         _controller!.add(_lastCondition!);
       }
-      // If no last condition, silently skip — WeatherBloc stays in current state.
+      // If no last condition, silently skip — application stays in current state.
     }
   }
 

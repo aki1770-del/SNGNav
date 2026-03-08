@@ -1,10 +1,9 @@
-/// Weather condition — the atomic unit of weather data in SNGNav.
+/// Weather condition — the atomic unit of weather data for driving applications.
 ///
-/// Models current weather at the vehicle's location. Fields cover
+/// Models current weather at a vehicle's location. Fields cover
 /// precipitation type, intensity, wind, visibility, and ice risk.
 ///
-/// Weather sources are pluggable: Open-Meteo (real) or simulated (demo).
-/// Configured via `--dart-define=WEATHER_PROVIDER`.
+/// Weather sources are pluggable via [WeatherProvider].
 library;
 
 import 'package:equatable/equatable.dart';
@@ -17,7 +16,7 @@ enum PrecipitationType {
   /// Rain.
   rain,
 
-  /// Snow — the primary scenario for SNGNav.
+  /// Snow — the primary hazard scenario.
   snow,
 
   /// Sleet (mixed rain/snow).

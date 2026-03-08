@@ -2,8 +2,9 @@ name: kalman_dr
 description: >-
   4D Extended Kalman Filter for dead reckoning during GPS loss.
   Covariance-driven accuracy with EKF and linear extrapolation modes.
+  Maintains position estimation through tunnels and urban canyons.
   Pure Dart, no native dependencies.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -11,6 +12,7 @@ topics:
   - dead-reckoning
   - gps
   - navigation
+  - positioning
 
 environment:
   sdk: ^3.11.0

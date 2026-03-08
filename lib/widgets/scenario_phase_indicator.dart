@@ -6,12 +6,12 @@
 /// Snow Scene scenario display.
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/weather_bloc.dart';
 import '../bloc/weather_state.dart';
-import '../models/weather_condition.dart';
 
 class ScenarioPhaseIndicator extends StatelessWidget {
   const ScenarioPhaseIndicator({super.key});

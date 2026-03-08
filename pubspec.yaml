@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   kalman_dr:
     path: packages/kalman_dr
+  driving_weather:
+    path: packages/driving_weather
   routing_engine:
     path: packages/routing_engine
   flutter_map: ^8.2.2

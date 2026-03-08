@@ -11,12 +11,11 @@
 ///   8. Phase 3 (heavy snow) is hazardous
 ///   9. Phase 4 (ice risk) has iceRisk = true
 ///  10. Custom interval is respected
-///
-/// Sprint 7 Day 11 — Test hardening.
 library;
 
+import 'package:test/test.dart';
+
 import 'package:driving_weather/driving_weather.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SimulatedWeatherProvider', () {

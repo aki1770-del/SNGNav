@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Improved package discoverability: added tunnel, urban canyon, and position estimation context to description.
+- Added `positioning` topic.
+
 ## 0.1.0
 
 - Initial release.

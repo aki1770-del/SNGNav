@@ -48,15 +48,13 @@
 /// ```
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:kalman_dr/kalman_dr.dart';
 import '../providers/geoclue_location_provider.dart';
-import '../providers/open_meteo_weather_provider.dart';
 import 'package:routing_engine/routing_engine.dart';
 import '../providers/simulated_location_provider.dart';
-import '../providers/simulated_weather_provider.dart';
-import '../providers/weather_provider.dart';
 
 /// Available weather provider implementations.
 enum WeatherProviderType {

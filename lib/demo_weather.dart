@@ -9,14 +9,13 @@
 /// Demonstrates real-time weather monitoring with hazard detection.
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'bloc/weather_bloc.dart';
 import 'bloc/weather_event.dart';
 import 'bloc/weather_state.dart';
-import 'models/weather_condition.dart';
-import 'providers/simulated_weather_provider.dart';
 
 void main() {
   runApp(const WeatherDemoApp());

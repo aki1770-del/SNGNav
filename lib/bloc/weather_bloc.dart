@@ -16,9 +16,9 @@ library;
 
 import 'dart:async';
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/weather_provider.dart';
 import 'weather_event.dart';
 import 'weather_state.dart';
 

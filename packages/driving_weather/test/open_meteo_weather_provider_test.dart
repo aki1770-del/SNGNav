@@ -17,16 +17,15 @@
 ///  14. offline fallback: no emission when no prior condition
 ///  15. stopMonitoring: stops polling
 ///  16. dispose: closes stream
-///
-/// Sprint 8 Day 6 — E8-3 (real data source).
 library;
 
 import 'dart:convert';
 
-import 'package:driving_weather/driving_weather.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+import 'package:driving_weather/driving_weather.dart';
 
 // ---------------------------------------------------------------------------
 // Test data — realistic Open-Meteo API response

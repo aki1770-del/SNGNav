@@ -12,9 +12,8 @@
 /// Core state for snow-scenario weather monitoring.
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:equatable/equatable.dart';
-
-import '../models/weather_condition.dart';
 
 /// Weather monitoring status.
 enum WeatherStatus {

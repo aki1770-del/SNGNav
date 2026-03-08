@@ -1,16 +1,15 @@
-/// Simulated weather provider — generates realistic Nagoya mountain pass
-/// conditions for the Snow Scene demo.
+/// Simulated weather provider — generates realistic mountain pass
+/// conditions for demo and testing purposes.
 ///
 /// Emits a repeating sequence: clear → light snow → heavy snow → ice risk
 /// → clearing. No network, no external dependency.
 ///
-/// Simulated data only. For real weather, use [OpenMeteoWeatherProvider].
-/// Part of the configurable snow scenario pipeline.
+/// For real weather, use [OpenMeteoWeatherProvider].
 library;
 
 import 'dart:async';
 
-import '../models/weather_condition.dart';
+import 'weather_condition.dart';
 import 'weather_provider.dart';
 
 class SimulatedWeatherProvider implements WeatherProvider {
@@ -68,10 +67,10 @@ class SimulatedWeatherProvider implements WeatherProvider {
     _controller!.add(template(DateTime.now()));
   }
 
-  /// Nagoya mountain pass winter scenario — 6 phases.
+  /// Mountain pass winter scenario — 6 phases.
   ///
-  /// Simulates a drive from Nagoya city (clear) up Route 153 toward
-  /// Toyota and into the Mikawa highlands where snow intensifies.
+  /// Simulates a drive from a city (clear) up a mountain road where
+  /// snow intensifies, then clears on descent.
   static final List<WeatherCondition Function(DateTime)> _scenario = [
     // Phase 0: Clear — city departure.
     (ts) => WeatherCondition.clear(timestamp: ts),

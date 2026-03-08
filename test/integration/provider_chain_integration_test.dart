@@ -19,16 +19,15 @@ library;
 
 import 'dart:async';
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/config/provider_config.dart';
-import 'package:sngnav_snow_scene/models/models.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
-import 'package:sngnav_snow_scene/providers/simulated_weather_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Mock routing engine (network-free, deterministic)

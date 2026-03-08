@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:driving_weather/driving_weather.dart';
 
 import '../bloc/consent_bloc.dart';
 import '../bloc/consent_state.dart';
@@ -32,7 +33,6 @@ import '../bloc/routing_state.dart';
 import '../bloc/weather_bloc.dart';
 import '../bloc/weather_state.dart';
 import '../fluorite/fluorite.dart';
-import '../models/weather_condition.dart';
 import '../services/hazard_aggregator.dart';
 import 'fleet_layer.dart';
 import 'hazard_zone_layer.dart';

@@ -9,14 +9,12 @@ library;
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
-import 'package:sngnav_snow_scene/models/weather_condition.dart';
-import 'package:sngnav_snow_scene/providers/simulated_weather_provider.dart';
-import 'package:sngnav_snow_scene/providers/weather_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Mock provider — controllable stream for testing
