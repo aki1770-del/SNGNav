@@ -578,6 +578,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  routing_engine:
+    dependency: "direct main"
+    description:
+      path: "packages/routing_engine"
+      relative: true
+    source: path
+    version: "0.1.0"
   shelf:
     dependency: transitive
     description:

@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   kalman_dr:
     path: packages/kalman_dr
+  routing_engine:
+    path: packages/routing_engine
   flutter_map: ^8.2.2
   flutter_map_mbtiles: ^1.0.0
   latlong2: ^0.9.1

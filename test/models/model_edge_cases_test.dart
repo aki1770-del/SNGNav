@@ -15,7 +15,7 @@ import 'package:sngnav_snow_scene/models/consent_record.dart';
 import 'package:sngnav_snow_scene/models/fleet_report.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/models/hazard_zone.dart';
-import 'package:sngnav_snow_scene/models/route_result.dart';
+import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers

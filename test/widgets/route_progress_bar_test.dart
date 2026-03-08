@@ -8,7 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/navigation_event.dart';
 import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
-import 'package:sngnav_snow_scene/models/route_result.dart';
+import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/widgets/route_progress_bar.dart';
 
 // ---------------------------------------------------------------------------

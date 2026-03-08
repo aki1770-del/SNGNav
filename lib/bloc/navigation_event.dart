@@ -11,8 +11,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
-
-import '../models/route_result.dart';
+import 'package:routing_engine/routing_engine.dart';
 
 sealed class NavigationEvent extends Equatable {
   const NavigationEvent();

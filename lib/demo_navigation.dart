@@ -24,7 +24,7 @@ import 'bloc/navigation_bloc.dart';
 import 'bloc/navigation_event.dart';
 import 'bloc/navigation_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
-import 'models/route_result.dart';
+import 'package:routing_engine/routing_engine.dart';
 import 'widgets/maneuver_icons.dart';
 import 'widgets/route_progress_bar.dart';
 import 'widgets/safety_overlay.dart';

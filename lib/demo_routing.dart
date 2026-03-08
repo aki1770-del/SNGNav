@@ -16,8 +16,7 @@ import 'package:latlong2/latlong.dart';
 import 'bloc/routing_bloc.dart';
 import 'bloc/routing_event.dart';
 import 'bloc/routing_state.dart';
-import 'models/route_result.dart';
-import 'providers/routing_engine.dart';
+import 'package:routing_engine/routing_engine.dart';
 import 'widgets/maneuver_icons.dart';
 
 // ---------------------------------------------------------------------------

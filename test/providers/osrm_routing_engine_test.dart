@@ -13,9 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:sngnav_snow_scene/models/route_result.dart';
-import 'package:sngnav_snow_scene/providers/osrm_routing_engine.dart';
-import 'package:sngnav_snow_scene/providers/valhalla_routing_engine.dart';
+import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Test data — realistic OSRM response for Nagoya → Toyota City

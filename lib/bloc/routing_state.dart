@@ -13,8 +13,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
-
-import '../models/route_result.dart';
+import 'package:routing_engine/routing_engine.dart';
 
 enum RoutingStatus {
   /// No route active, engine may or may not be available.

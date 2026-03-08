@@ -15,8 +15,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:sngnav_snow_scene/models/route_result.dart';
-import 'package:sngnav_snow_scene/providers/osrm_routing_engine.dart';
+import 'package:routing_engine/routing_engine.dart';
 
 void main() {
   const osrmDemoUrl = 'https://router.project-osrm.org';

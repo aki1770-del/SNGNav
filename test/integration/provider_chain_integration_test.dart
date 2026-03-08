@@ -26,10 +26,8 @@ import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/config/provider_config.dart';
 import 'package:sngnav_snow_scene/models/models.dart';
 import 'package:kalman_dr/kalman_dr.dart';
-import 'package:sngnav_snow_scene/providers/routing_engine.dart';
+import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
-import 'package:sngnav_snow_scene/providers/valhalla_routing_engine.dart'
-    show RoutingException;
 import 'package:sngnav_snow_scene/providers/simulated_weather_provider.dart';
 
 // ---------------------------------------------------------------------------
