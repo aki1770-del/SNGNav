@@ -17,6 +17,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/models/models.dart';
 import 'package:sngnav_snow_scene/providers/providers.dart';

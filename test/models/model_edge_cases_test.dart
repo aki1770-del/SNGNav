@@ -13,7 +13,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:sngnav_snow_scene/models/consent_record.dart';
 import 'package:sngnav_snow_scene/models/fleet_report.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/models/hazard_zone.dart';
 import 'package:sngnav_snow_scene/models/route_result.dart';
 

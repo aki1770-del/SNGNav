@@ -11,9 +11,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sngnav_snow_scene/models/geo_position.dart';
-import 'package:sngnav_snow_scene/providers/dead_reckoning_provider.dart';
-import 'package:sngnav_snow_scene/providers/location_provider.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 // ---------------------------------------------------------------------------
 // Mock inner provider — controllable GPS source

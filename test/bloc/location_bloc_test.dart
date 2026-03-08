@@ -11,9 +11,9 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/models/models.dart';
-import 'package:sngnav_snow_scene/providers/location_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Mock provider — controllable stream for testing

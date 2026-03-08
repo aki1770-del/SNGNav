@@ -17,11 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
-import 'package:sngnav_snow_scene/models/kalman_filter.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/models/route_result.dart';
-import 'package:sngnav_snow_scene/providers/dead_reckoning_provider.dart';
-import 'package:sngnav_snow_scene/providers/location_provider.dart';
 import 'package:sngnav_snow_scene/providers/osrm_routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/valhalla_routing_engine.dart';
 

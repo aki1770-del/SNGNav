@@ -9,8 +9,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sngnav_snow_scene/models/dead_reckoning_state.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 // ---------------------------------------------------------------------------
 // Test data — Nagoya area coordinates

@@ -15,11 +15,10 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/models/models.dart';
-import 'package:sngnav_snow_scene/providers/dead_reckoning_provider.dart';
-import 'package:sngnav_snow_scene/providers/location_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Mock GPS provider — controllable stream for integration testing

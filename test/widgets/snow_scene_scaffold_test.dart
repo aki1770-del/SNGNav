@@ -47,7 +47,7 @@ import 'package:sngnav_snow_scene/bloc/routing_state.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/models/route_result.dart';
 import 'package:sngnav_snow_scene/widgets/consent_gate.dart';
 import 'package:sngnav_snow_scene/widgets/map_layer.dart';

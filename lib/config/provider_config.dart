@@ -50,10 +50,8 @@ library;
 
 import 'package:http/http.dart' as http;
 
-import '../providers/dead_reckoning_provider.dart'
-    show DeadReckoningMode, DeadReckoningProvider;
+import 'package:kalman_dr/kalman_dr.dart';
 import '../providers/geoclue_location_provider.dart';
-import '../providers/location_provider.dart';
 import '../providers/open_meteo_weather_provider.dart';
 import '../providers/osrm_routing_engine.dart';
 import '../providers/routing_engine.dart';

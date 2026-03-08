@@ -5,7 +5,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 
-import '../models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 sealed class LocationEvent extends Equatable {
   const LocationEvent();

@@ -13,9 +13,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/geo_position.dart';
-import '../providers/dead_reckoning_provider.dart';
-import '../providers/location_provider.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'location_event.dart';
 import 'location_state.dart';
 

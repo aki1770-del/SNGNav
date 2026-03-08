@@ -15,8 +15,7 @@ library;
 
 import 'dart:async';
 
-import '../models/geo_position.dart';
-import 'location_provider.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 /// Simulated GPS source: Sakae Station → Route 153 → Higashiokazaki Station.
 ///

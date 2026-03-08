@@ -21,7 +21,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 
-import '../models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 /// The 6 quality states of the location system.
 enum LocationQuality {

@@ -25,7 +25,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/config/provider_config.dart';
 import 'package:sngnav_snow_scene/models/models.dart';
-import 'package:sngnav_snow_scene/providers/dead_reckoning_provider.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/providers/routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
 import 'package:sngnav_snow_scene/providers/valhalla_routing_engine.dart'

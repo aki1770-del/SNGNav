@@ -51,7 +51,7 @@ import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 import 'package:sngnav_snow_scene/fluorite/fluorite_view.dart';
 import 'package:sngnav_snow_scene/models/consent_record.dart';
 import 'package:sngnav_snow_scene/models/fleet_report.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/models/route_result.dart';
 import 'package:sngnav_snow_scene/models/weather_condition.dart';
 import 'package:sngnav_snow_scene/widgets/fleet_layer.dart';

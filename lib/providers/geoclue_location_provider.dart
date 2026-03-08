@@ -7,8 +7,7 @@ library;
 import 'dart:async';
 import 'package:dbus/dbus.dart';
 
-import '../models/geo_position.dart';
-import 'location_provider.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 
 const _busName = 'org.freedesktop.GeoClue2';
 const _managerPath = '/org/freedesktop/GeoClue2/Manager';

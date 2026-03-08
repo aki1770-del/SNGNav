@@ -7,7 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:sngnav_snow_scene/bloc/location_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/location_event.dart';
 import 'package:sngnav_snow_scene/bloc/location_state.dart';
-import 'package:sngnav_snow_scene/models/geo_position.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/widgets/speed_display.dart';
 
 // ---------------------------------------------------------------------------
