@@ -51,6 +51,14 @@ dev_dependencies:
 dependency_overrides:
   routing_engine:
     path: packages/routing_engine
+  driving_weather:
+    path: packages/driving_weather
+  driving_conditions:
+    path: packages/driving_conditions
+  driving_consent:
+    path: packages/driving_consent
+  fleet_hazard:
+    path: packages/fleet_hazard
   navigation_safety:
     path: packages/navigation_safety
   map_viewport_bloc:
@@ -59,6 +67,8 @@ dependency_overrides:
     path: packages/routing_bloc
   offline_tiles:
     path: packages/offline_tiles
+  kalman_dr:
+    path: packages/kalman_dr
 
 flutter:
   uses-material-design: true
