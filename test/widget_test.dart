@@ -1,8 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 
-import 'package:sngnav_snow_scene/models/models.dart';
-
 void main() {
   testWidgets('Snow Scene package resolves correctly',
       (WidgetTester tester) async {

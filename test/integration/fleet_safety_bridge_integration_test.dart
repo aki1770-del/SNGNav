@@ -20,7 +20,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:navigation_safety/navigation_safety.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
 import 'package:sngnav_snow_scene/bloc/consent_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/consent_event.dart';
@@ -31,19 +34,10 @@ import 'package:sngnav_snow_scene/bloc/fleet_state.dart';
 import 'package:sngnav_snow_scene/bloc/location_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/location_event.dart';
 import 'package:sngnav_snow_scene/bloc/location_state.dart';
-import 'package:sngnav_snow_scene/bloc/map_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/map_event.dart';
-import 'package:sngnav_snow_scene/bloc/map_state.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_event.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
-import 'package:sngnav_snow_scene/bloc/routing_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/routing_event.dart';
-import 'package:sngnav_snow_scene/bloc/routing_state.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:sngnav_snow_scene/widgets/snow_scene_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -171,7 +165,7 @@ void main() {
       when(() => navigationBloc.state)
           .thenReturn(const NavigationState.idle());
       when(() => mapBloc.state)
-          .thenReturn(const MapState.loading());
+          .thenReturn(MapState.loading());
       when(() => weatherBloc.state)
           .thenReturn(const WeatherState.unavailable());
       when(() => consentBloc.state)
@@ -421,7 +415,7 @@ void main() {
       when(() => navigationBloc.state)
           .thenReturn(const NavigationState.idle());
       when(() => mapBloc.state)
-          .thenReturn(const MapState.loading());
+          .thenReturn(MapState.loading());
       when(() => weatherBloc.state)
           .thenReturn(const WeatherState.unavailable());
       when(() => consentBloc.state)

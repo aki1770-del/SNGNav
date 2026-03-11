@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Added cross-links to sibling packages (routing_engine, driving_weather) in README.
+
 ## 0.1.1
 
 - Improved package discoverability: added tunnel, urban canyon, and position estimation context to description.

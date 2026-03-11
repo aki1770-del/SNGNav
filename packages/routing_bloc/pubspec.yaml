@@ -1,0 +1,34 @@
+name: routing_bloc
+description: >-
+  Engine-agnostic route lifecycle state machine and glanceable route progress
+  UI for driver-assisting navigation. Flutter package with pure Dart _core
+  exports for routing state and route progress status.
+version: 0.1.0
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - routing
+  - bloc
+  - navigation
+  - flutter
+  - automotive
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  equatable: ^2.0.7
+  flutter_bloc: ^9.1.0
+  latlong2: ^0.9.1
+  routing_engine: ^0.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
+
+flutter:
+  uses-material-design: true

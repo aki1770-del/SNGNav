@@ -15,10 +15,8 @@
 /// Sprint 7 Day 11 — Test hardening.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:sngnav_snow_scene/models/consent_record.dart';
-import 'package:sngnav_snow_scene/services/in_memory_consent_service.dart';
 
 void main() {
   group('InMemoryConsentService', () {

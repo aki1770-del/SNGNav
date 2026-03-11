@@ -1,22 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bloc_test/bloc_test.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:mocktail/mocktail.dart';
 
-import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_event.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
-import 'package:sngnav_snow_scene/widgets/route_progress_bar.dart';
-
-// ---------------------------------------------------------------------------
-// Mock
-// ---------------------------------------------------------------------------
-
-class MockNavigationBloc extends MockBloc<NavigationEvent, NavigationState>
-    implements NavigationBloc {}
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -63,13 +50,10 @@ RouteResult _testRoute() => RouteResult(
 // Helper
 // ---------------------------------------------------------------------------
 
-Widget _buildWidget(NavigationBloc bloc) {
+Widget _buildWidget(RouteProgressBar widget) {
   return MaterialApp(
     home: Scaffold(
-      body: BlocProvider<NavigationBloc>.value(
-        value: bloc,
-        child: const RouteProgressBar(),
-      ),
+      body: widget,
     ),
   );
 }
@@ -80,16 +64,10 @@ Widget _buildWidget(NavigationBloc bloc) {
 
 void main() {
   group('RouteProgressBar', () {
-    late MockNavigationBloc bloc;
-
-    setUp(() {
-      bloc = MockNavigationBloc();
-    });
-
     testWidgets('renders nothing when navigation is idle', (tester) async {
-      when(() => bloc.state).thenReturn(const NavigationState.idle());
-
-      await tester.pumpWidget(_buildWidget(bloc));
+      await tester.pumpWidget(_buildWidget(
+        const RouteProgressBar(status: RouteProgressStatus.idle),
+      ));
 
       // SizedBox.shrink has zero size.
       expect(find.byType(RouteProgressBar), findsOneWidget);
@@ -99,52 +77,52 @@ void main() {
     testWidgets('shows current maneuver instruction when navigating',
         (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.navigating,
-        route: route,
-        currentManeuverIndex: 0,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.active,
+          route: route,
+          currentManeuverIndex: 0,
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('Depart north on Route 41'), findsOneWidget);
     });
 
     testWidgets('shows correct icon for maneuver type', (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.navigating,
-        route: route,
-        currentManeuverIndex: 1, // "right" type
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.active,
+          route: route,
+          currentManeuverIndex: 1, // "right" type
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.byIcon(Icons.turn_right), findsOneWidget);
     });
 
     testWidgets('shows distance for current maneuver', (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.navigating,
-        route: route,
-        currentManeuverIndex: 1,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.active,
+          route: route,
+          currentManeuverIndex: 1,
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('0.8 km'), findsOneWidget);
     });
 
     testWidgets('shows ETA and total distance', (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.navigating,
-        route: route,
-        currentManeuverIndex: 0,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.active,
+          route: route,
+          currentManeuverIndex: 0,
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('12 min'), findsOneWidget);
       expect(find.text('4.2 km'), findsOneWidget);
@@ -153,13 +131,13 @@ void main() {
     testWidgets('shows progress bar with correct value', (tester) async {
       final route = _testRoute();
       // Index 1 of 3 maneuvers => progress = 1/3 ≈ 0.333
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.navigating,
-        route: route,
-        currentManeuverIndex: 1,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.active,
+          route: route,
+          currentManeuverIndex: 1,
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       final indicator = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
@@ -169,13 +147,13 @@ void main() {
 
     testWidgets('shows "Rerouting..." text when deviated', (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.deviated,
-        route: route,
-        currentManeuverIndex: 1,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.deviated,
+          route: route,
+          currentManeuverIndex: 1,
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('Rerouting...'), findsOneWidget);
       expect(find.byIcon(Icons.wrong_location), findsOneWidget);
@@ -183,14 +161,14 @@ void main() {
 
     testWidgets('shows arrived card with destination label', (tester) async {
       final route = _testRoute();
-      when(() => bloc.state).thenReturn(NavigationState(
-        status: NavigationStatus.arrived,
+      await tester.pumpWidget(_buildWidget(
+        RouteProgressBar(
+          status: RouteProgressStatus.arrived,
         route: route,
-        currentManeuverIndex: 2,
+          currentManeuverIndex: 2,
         destinationLabel: 'Inuyama Castle',
+        ),
       ));
-
-      await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('Arrived at Inuyama Castle'), findsOneWidget);
       expect(find.byIcon(Icons.sports_score), findsOneWidget);

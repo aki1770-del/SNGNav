@@ -1,6 +1,6 @@
 # EXTRACTING.md — How to Extract a Package from SNGNav
 
-A developer document. Not governance. Based on three real extractions.
+A developer document. Not governance. Based on three published extractions and three live Flutter-track extractions.
 
 ## The Pattern
 
@@ -15,10 +15,14 @@ Every extraction follows **G1 → G2 → G3**:
 ## Before You Start
 
 **Extraction candidates** must be:
-- Pure Dart (no Flutter dependency) — maximizes platform reach (all 6)
+- Either pure Dart, or Flutter-track with a pure Dart `_core` surface for reusable models
 - Self-contained — no imports from `package:sngnav_snow_scene/`
 - Tested — existing tests cover the code being extracted
 - Unique on pub.dev — check that no good package already exists for this domain
+
+**Track selection rule**:
+- Use **pure Dart** when the extracted value is a model, service contract, parser, or algorithm.
+- Use **Flutter-track + `_core`** when the extracted value is fundamentally a BLoC or widget package. Keep reusable data models in `your_package_core.dart` with zero Flutter imports.
 
 ## G1: Create the Package
 
@@ -46,7 +50,7 @@ packages/
 name: your_package
 description: >-
   One-line description with search keywords.
-  Second line adds context. Pure Dart, no native dependencies.
+  Second line adds context. State the track honestly: pure Dart or Flutter package with pure Dart core.
 version: 0.1.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
@@ -97,13 +101,55 @@ Write for a stranger. Include:
 
 ```bash
 cd packages/your_package
-dart pub get
-dart test          # all pass
-dart analyze       # no errors
+dart pub get       # or flutter pub get for Flutter-track packages
+dart test          # pure Dart package
+flutter test       # Flutter-track package
+dart analyze       # pure Dart package
+flutter analyze    # Flutter-track package
 dart pub publish --dry-run   # 0 warnings
 ```
 
 **G1 passes when**: 0 warnings on dry-run, all tests green.
+
+### Flutter-track pattern-setter notes
+
+`navigation_safety` established the first approved Flutter-track extraction pattern:
+
+- full package barrel for BLoC + widget API
+- separate `navigation_safety_core.dart` barrel for pure Dart models
+- package README includes explicit ASIL-QM, advisory-only language
+- package tests verify OODA budget documentation and SafetyOverlay Rules 1-5 behavior indirectly through state/widget coverage
+
+`map_viewport_bloc` extends that pattern for viewport coordination packages:
+
+- full package barrel for `MapBloc`, events, and state
+- separate `map_viewport_bloc_core.dart` barrel for pure Dart viewport models
+- package README includes the canonical camera modes and Z0-Z5 layer contract
+- package tests verify user-toggle restrictions (Z1-Z4 only), free-look timeout behavior, and safety-compatible return to `follow`
+
+`routing_bloc` extends the same pattern for route lifecycle packages:
+
+- full package barrel for `RoutingBloc`, events, state, and route progress widgets
+- separate `routing_bloc_core.dart` barrel for pure Dart route lifecycle models
+- package README includes explicit 4-state contract and route glanceability posture
+- package tests verify route lifecycle transitions and maneuver/progress UI rendering
+
+`offline_tiles` extends the same pattern for offline tile management packages:
+
+- full package barrel for `OfflineTileManager`, `OfflineTileProvider`, and resolver
+- separate `offline_tiles_core.dart` barrel for pure Dart tile source types, coverage tiers, and cache config
+- package README includes explicit five-level runtime resolution order and four coverage tiers
+- package tests generate temporary MBTiles fixtures at test time (no committed binary assets)
+- integration tests verify archive creation, existing-archive writes, expiry cleanup, and RAM cache eviction
+
+`driving_conditions` introduces the **pure Dart computation** pattern (Phase C):
+
+- single barrel (no `_core` split needed — entire package is pure Dart)
+- zero Flutter dependency — safe for CLI, server, and test harness use
+- imports `SafetyScore` from `navigation_safety_core` (cross-package dependency, not duplication)
+- README documents all formulas: decision tree, grip factors, opacity/blur, particle config, Monte Carlo
+- 53 tests including boundary regression tests from in-flight review
+- `publish_to: none` — internal monorepo package, not yet pub.dev-publishable
 
 ## G2: Migrate the App
 
@@ -187,6 +233,22 @@ your_package:
 
 **Cumulative**: 2,339 lines of inline duplication removed. 13 files deleted. 3 packages on pub.dev.
 
+### Phase C — Pure Dart Computation
+
+| # | Package | Sprint | New lines | Tests | Track |
+|:-:|---------|:------:|:---------:|:-----:|:-----:|
+| 7 | driving_conditions | 50 | ~350 | 53 | Pure Dart |
+
+## Live Pattern-Setter In Progress
+
+| Package | Sprint | Track | Gate reached | Evidence |
+|---------|:------:|:-----:|:------------:|----------|
+| navigation_safety | 48 | Flutter + `_core` | G3 complete | 53 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+| map_viewport_bloc | 48 | Flutter + `_core` | G3 complete | 45 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+| routing_bloc | 49 | Flutter + `_core` | G3 complete | 29 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+| offline_tiles | 49 | Flutter + `_core` | G3 complete | 19 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+| driving_conditions | 52 | Pure Dart | G3 complete | 60 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+
 ## Discovery Checklist (post-publish)
 
 After G3, verify discoverability:
@@ -195,4 +257,4 @@ After G3, verify discoverability:
 - [ ] Description includes search keywords (not just technical terms)
 - [ ] Topics are max 5, chosen for search volume
 - [ ] README has install command, quick example, API table
-- [ ] Cross-link to sibling packages in README (*"See also: kalman_dr, routing_engine, driving_weather"*)
+- [ ] Cross-link to sibling packages in README (*"See also: kalman_dr, routing_engine, driving_weather, driving_consent, fleet_hazard, navigation_safety, map_viewport_bloc, routing_bloc, offline_tiles, driving_conditions"*)

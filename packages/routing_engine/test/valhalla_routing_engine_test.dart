@@ -74,9 +74,28 @@ void main() {
       expect(engine.baseUrl, 'http://localhost:8002');
     });
 
+    test('local constructor uses localhost:8005 by default', () {
+      final engine = ValhallaRoutingEngine.local();
+      expect(engine.baseUrl, 'http://localhost:8005');
+    });
+
     test('custom baseUrl is preserved', () {
       final engine = ValhallaRoutingEngine(baseUrl: 'http://custom:9999');
       expect(engine.baseUrl, 'http://custom:9999');
+    });
+
+    test('local constructor accepts custom host and port', () {
+      final engine = ValhallaRoutingEngine.local(host: 'machine-e', port: 9000);
+      expect(engine.baseUrl, 'http://machine-e:9000');
+    });
+
+    test('custom timeouts are preserved', () {
+      final engine = ValhallaRoutingEngine.local(
+        availabilityTimeout: const Duration(seconds: 1),
+        routeTimeout: const Duration(seconds: 20),
+      );
+      expect(engine.availabilityTimeout, const Duration(seconds: 1));
+      expect(engine.routeTimeout, const Duration(seconds: 20));
     });
   });
 

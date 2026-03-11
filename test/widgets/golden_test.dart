@@ -18,20 +18,17 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:driving_weather/driving_weather.dart';
+import 'package:navigation_safety/navigation_safety.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
 import 'package:sngnav_snow_scene/bloc/location_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/location_event.dart';
 import 'package:sngnav_snow_scene/bloc/location_state.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_event.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
-import 'package:sngnav_snow_scene/widgets/route_progress_bar.dart';
-import 'package:sngnav_snow_scene/widgets/safety_overlay.dart';
 import 'package:sngnav_snow_scene/widgets/speed_display.dart';
 import 'package:sngnav_snow_scene/widgets/weather_status_bar.dart';
 
@@ -172,6 +169,15 @@ Widget _goldenFrame({
       ),
     ),
   );
+}
+
+RouteProgressStatus _routeProgressStatus(NavigationStatus status) {
+  return switch (status) {
+    NavigationStatus.idle => RouteProgressStatus.idle,
+    NavigationStatus.navigating => RouteProgressStatus.active,
+    NavigationStatus.deviated => RouteProgressStatus.deviated,
+    NavigationStatus.arrived => RouteProgressStatus.arrived,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -320,7 +326,12 @@ void main() {
         currentManeuverIndex: 0,
       );
       await tester.pumpWidget(_goldenFrame(
-        child: const RouteProgressBar(),
+        child: RouteProgressBar(
+          status: _routeProgressStatus(navState.status),
+          route: navState.route,
+          currentManeuverIndex: navState.currentManeuverIndex,
+          destinationLabel: navState.destinationLabel,
+        ),
         navState: navState,
         size: const Size(400, 120),
       ));
@@ -339,7 +350,12 @@ void main() {
         destinationLabel: 'Mikawa Highlands',
       );
       await tester.pumpWidget(_goldenFrame(
-        child: const RouteProgressBar(),
+        child: RouteProgressBar(
+          status: _routeProgressStatus(arrivedState.status),
+          route: arrivedState.route,
+          currentManeuverIndex: arrivedState.currentManeuverIndex,
+          destinationLabel: arrivedState.destinationLabel,
+        ),
         navState: arrivedState,
         size: const Size(400, 80),
       ));

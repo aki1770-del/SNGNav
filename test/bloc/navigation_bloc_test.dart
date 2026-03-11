@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
-import 'package:sngnav_snow_scene/models/models.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------
@@ -699,7 +698,7 @@ void main() {
     );
 
     blocTest<NavigationBloc, NavigationState>(
-      'alert cleared on navigation stop',
+      'alert preserved on navigation stop',
       build: NavigationBloc.new,
       seed: () => NavigationState(
         status: NavigationStatus.navigating,
@@ -708,7 +707,13 @@ void main() {
         alertSeverity: AlertSeverity.warning,
       ),
       act: (bloc) => bloc.add(const NavigationStopped()),
-      expect: () => [const NavigationState.idle()],
+      expect: () => [
+        const NavigationState(
+          status: NavigationStatus.idle,
+          alertMessage: 'Ice ahead',
+          alertSeverity: AlertSeverity.warning,
+        ),
+      ],
     );
   });
 }

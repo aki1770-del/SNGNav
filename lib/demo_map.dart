@@ -4,7 +4,7 @@
 ///
 /// Shows the MapBloc controlling a live flutter_map:
 ///   - Camera modes: Follow (tracks GPS), FreeLook (user drags), Overview (fit route)
-///   - Layer toggles: route, weather, safety, fleet
+///   - Layer toggles: route, fleet, hazard, weather
 ///   - Simulated GPS position cycling along Nagoya mountain pass
 ///   - FitToBounds demonstrates route overview
 ///
@@ -17,10 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-
-import 'bloc/map_bloc.dart';
-import 'bloc/map_event.dart';
-import 'bloc/map_state.dart';
+import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 
 // ---------------------------------------------------------------------------
 // Simulated GPS track — 6 points along the Nagoya mountain pass
@@ -197,8 +194,8 @@ class _MapDemoPageState extends State<MapDemoPage> {
                       ],
                     ),
 
-                  // Safety layer (hazard markers)
-                  if (state.isLayerVisible(MapLayerType.safety))
+                  // Hazard layer (warning markers)
+                  if (state.isLayerVisible(MapLayerType.hazard))
                     MarkerLayer(
                       markers: [
                         Marker(
@@ -428,7 +425,9 @@ class _LayerPanel extends StatelessWidget {
             const Text('Layers',
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            for (final layer in MapLayerType.values)
+            for (final layer in MapLayerType.values.where(
+              (layer) => layer.isUserToggleable,
+            ))
               _LayerToggle(
                 layer: layer,
                 visible: state.isLayerVisible(layer),
@@ -480,10 +479,12 @@ class _LayerToggle extends StatelessWidget {
 
   static Color _layerColor(MapLayerType layer) {
     return switch (layer) {
+      MapLayerType.baseTile => Colors.brown,
       MapLayerType.route => Colors.blue,
+      MapLayerType.fleet => Colors.green,
+      MapLayerType.hazard => Colors.orange,
       MapLayerType.weather => Colors.cyan,
       MapLayerType.safety => Colors.red,
-      MapLayerType.fleet => Colors.green,
     };
   }
 }

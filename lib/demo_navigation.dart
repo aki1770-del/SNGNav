@@ -16,18 +16,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:navigation_safety/navigation_safety.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
 import 'bloc/location_bloc.dart';
 import 'bloc/location_event.dart';
 import 'bloc/location_state.dart';
-import 'bloc/navigation_bloc.dart';
-import 'bloc/navigation_event.dart';
-import 'bloc/navigation_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
-import 'widgets/maneuver_icons.dart';
-import 'widgets/route_progress_bar.dart';
-import 'widgets/safety_overlay.dart';
 import 'widgets/speed_display.dart';
 
 // ---------------------------------------------------------------------------
@@ -314,7 +310,16 @@ class _NavigationDemoPageState extends State<NavigationDemoPage> {
               const Expanded(child: _MapPlaceholder()),
 
               // Route progress bar
-              const RouteProgressBar(),
+              BlocBuilder<NavigationBloc, NavigationState>(
+                builder: (context, state) {
+                  return RouteProgressBar(
+                    status: _routeProgressStatus(state.status),
+                    route: state.route,
+                    currentManeuverIndex: state.currentManeuverIndex,
+                    destinationLabel: state.destinationLabel,
+                  );
+                },
+              ),
 
               // Bottom bar: speed display + info
               const _BottomBar(),
@@ -327,6 +332,15 @@ class _NavigationDemoPageState extends State<NavigationDemoPage> {
       ),
     );
   }
+}
+
+RouteProgressStatus _routeProgressStatus(NavigationStatus status) {
+  return switch (status) {
+    NavigationStatus.idle => RouteProgressStatus.idle,
+    NavigationStatus.navigating => RouteProgressStatus.active,
+    NavigationStatus.deviated => RouteProgressStatus.deviated,
+    NavigationStatus.arrived => RouteProgressStatus.arrived,
+  };
 }
 
 class _RouteHeader extends StatelessWidget {

@@ -1,0 +1,25 @@
+name: driving_consent
+description: >-
+  Automotive-grade privacy consent model with Jidoka semantics — UNKNOWN equals
+  DENIED. Per-purpose consent (fleet location, weather telemetry, diagnostics),
+  multi-jurisdiction support (GDPR, CCPA, APPI), and pluggable storage.
+  Pure Dart, no Flutter dependency.
+version: 0.1.0
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - consent
+  - privacy
+  - gdpr
+  - automotive
+  - navigation
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

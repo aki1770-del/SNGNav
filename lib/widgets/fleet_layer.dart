@@ -10,9 +10,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:flutter_map/flutter_map.dart';
-
-import '../models/fleet_report.dart';
 
 /// Builds a [MarkerLayer] from a list of [FleetReport]s.
 ///

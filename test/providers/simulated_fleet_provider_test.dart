@@ -15,9 +15,8 @@ library;
 
 import 'dart:async';
 
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
 import 'package:sngnav_snow_scene/providers/simulated_fleet_provider.dart';
 
 void main() {

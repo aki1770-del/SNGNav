@@ -1,0 +1,27 @@
+name: driving_conditions
+description: >-
+  Driving condition computation models — road surface classification,
+  visibility degradation, precipitation parameters, and Monte Carlo
+  safety score simulation. Pure Dart, no Flutter dependency. Advisory
+  computation for driver-assisting navigation.
+version: 0.1.0
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - driving
+  - safety
+  - weather
+  - navigation
+  - simulation
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+  driving_weather: ^0.1.0
+  navigation_safety: ^0.1.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

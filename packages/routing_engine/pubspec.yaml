@@ -1,8 +1,9 @@
 name: routing_engine
 description: >-
   Engine-agnostic routing interface with OSRM and Valhalla implementations.
+  Supports local and public routing servers, offline routing via local Valhalla.
   Abstract RoutingEngine, RouteResult model, and build-time engine selection.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -10,6 +11,7 @@ topics:
   - osrm
   - valhalla
   - navigation
+  - offline
 
 environment:
   sdk: ^3.11.0

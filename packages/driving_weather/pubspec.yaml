@@ -1,10 +1,10 @@
 name: driving_weather
 description: >-
-  Weather condition model and provider abstraction for driving applications.
-  Precipitation type/intensity, visibility, ice risk, and wind speed.
-  Includes Open-Meteo integration with offline fallback.
-  Pure Dart, no Flutter dependency.
-version: 0.1.0
+  Weather condition model for driving applications — snow, ice, visibility,
+  and hazardous conditions detection. Precipitation type/intensity, wind speed,
+  ice risk, and temperature monitoring. Includes Open-Meteo integration with
+  offline fallback. Pure Dart, no Flutter dependency.
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -12,6 +12,7 @@ topics:
   - driving
   - navigation
   - safety
+  - open-meteo
 
 environment:
   sdk: ^3.11.0

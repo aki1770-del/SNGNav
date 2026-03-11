@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
-import 'package:sngnav_snow_scene/models/models.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------

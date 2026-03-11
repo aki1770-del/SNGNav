@@ -12,12 +12,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
-import 'bloc/routing_bloc.dart';
-import 'bloc/routing_event.dart';
-import 'bloc/routing_state.dart';
 import 'package:routing_engine/routing_engine.dart';
-import 'widgets/maneuver_icons.dart';
 
 // ---------------------------------------------------------------------------
 // Mock routing engine — returns pre-built routes after a simulated delay

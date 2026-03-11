@@ -13,10 +13,9 @@
 /// Consent is explicit, revocable, and purpose-scoped.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/consent_record.dart';
-import '../services/consent_service.dart';
 import 'consent_event.dart';
 import 'consent_state.dart';
 

@@ -17,8 +17,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_mbtiles/flutter_map_mbtiles.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 
 void main() {
   runApp(const SNGNavGettingStarted());
@@ -50,7 +50,7 @@ class OfflineMapPage extends StatefulWidget {
 }
 
 class _OfflineMapPageState extends State<OfflineMapPage> {
-  MbTilesTileProvider? _mbTilesProvider;
+  offline_tiles.OfflineTileManager? _offlineTileManager;
   bool _isOffline = false;
   String _statusMessage = 'Initializing...';
 
@@ -69,27 +69,29 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   Future<void> _initTileProvider() async {
     final file = File(_mbtilesPath);
-    if (await file.exists()) {
-      try {
-        final provider = MbTilesTileProvider.fromPath(
-          path: _mbtilesPath,
-          silenceTileNotFound: true,
+    try {
+      if (await file.exists()) {
+        final manager = offline_tiles.OfflineTileManager(
+          tileSource: offline_tiles.TileSourceType.mbtiles,
+          mbtilesPath: _mbtilesPath,
         );
         setState(() {
-          _mbTilesProvider = provider;
+          _offlineTileManager = manager;
           _isOffline = true;
           _statusMessage =
               'Offline — MBTiles loaded (${_formatSize(file.lengthSync())})';
         });
-      } catch (e) {
+      } else {
         setState(() {
-          _statusMessage = 'MBTiles error: $e — using online fallback';
+          _offlineTileManager = null;
+          _isOffline = false;
+          _statusMessage =
+              'No MBTiles file at $_mbtilesPath — using online fallback';
         });
       }
-    } else {
+    } catch (e) {
       setState(() {
-        _statusMessage =
-            'No MBTiles file at $_mbtilesPath — using online OSM tiles';
+        _statusMessage = 'MBTiles error: $e — using online fallback';
       });
     }
   }
@@ -102,7 +104,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   @override
   void dispose() {
-    _mbTilesProvider?.dispose();
+    _offlineTileManager?.dispose();
     super.dispose();
   }
 
@@ -150,8 +152,8 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             ),
             children: [
               TileLayer(
-                tileProvider: _mbTilesProvider ?? NetworkTileProvider(),
-                urlTemplate: _mbTilesProvider == null
+                tileProvider: _offlineTileManager?.tileProvider ?? NetworkTileProvider(),
+                urlTemplate: _offlineTileManager == null
                     ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
                     : null,
                 userAgentPackageName: 'com.sngnav.getting_started',

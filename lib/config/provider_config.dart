@@ -9,6 +9,7 @@
 ///   flutter run -d linux --dart-define=ROUTING_ENGINE=valhalla      (default)
 ///   flutter run -d linux --dart-define=ROUTING_ENGINE=osrm
 ///   flutter run -d linux --dart-define=ROUTING_ENGINE=mock
+///   flutter run -d linux --dart-define=VALHALLA_BASE_URL=http://localhost:8005
 ///   flutter run -d linux --dart-define=DR_MODE=kalman               (default)
 ///   flutter run -d linux --dart-define=DR_MODE=linear
 ///   flutter run -d linux --dart-define=TILE_SOURCE=online           (default)
@@ -127,6 +128,10 @@ class ProviderConfig {
   /// Routing engine type selected via `--dart-define=ROUTING_ENGINE=...`.
   final RoutingEngineType routingType;
 
+  /// Valhalla base URL override via `--dart-define=VALHALLA_BASE_URL=...`.
+  /// When empty, uses the public default.
+  final String valhallaBaseUrl;
+
   /// Tile source type selected via `--dart-define=TILE_SOURCE=...`.
   final TileSourceType tileSource;
 
@@ -141,6 +146,7 @@ class ProviderConfig {
     this.deadReckoningEnabled = true,
     this.drMode = DeadReckoningMode.kalman,
     this.routingType = RoutingEngineType.valhalla,
+    this.valhallaBaseUrl = '',
     this.tileSource = TileSourceType.online,
     this.mbtilesPath = 'data/offline_tiles.mbtiles',
   });
@@ -182,12 +188,18 @@ class ProviderConfig {
       defaultValue: 'data/offline_tiles.mbtiles',
     );
 
+    const valhallaBaseUrlEnv = String.fromEnvironment(
+      'VALHALLA_BASE_URL',
+      defaultValue: '',
+    );
+
     return ProviderConfig(
       weatherType: _parseWeatherType(weatherEnv),
       locationType: _parseLocationType(locationEnv),
       deadReckoningEnabled: drEnv.toLowerCase() != 'false',
       drMode: _parseDrMode(drModeEnv),
       routingType: _parseRoutingType(routingEnv),
+      valhallaBaseUrl: valhallaBaseUrlEnv,
       tileSource: _parseTileSource(tileSourceEnv),
       mbtilesPath: mbtilesPathEnv,
     );
@@ -296,7 +308,7 @@ class ProviderConfig {
   /// demo route (as snow_scene.dart does). OSRM returns a real engine.
   RoutingEngine? createRoutingEngine({
     String osrmBaseUrl = 'https://router.project-osrm.org',
-    String valhallaBaseUrl = 'https://valhalla1.openstreetmap.de',
+    String defaultValhallaBaseUrl = 'https://valhalla1.openstreetmap.de',
     http.Client? httpClient,
   }) {
     switch (routingType) {
@@ -309,7 +321,9 @@ class ProviderConfig {
         );
       case RoutingEngineType.valhalla:
         return ValhallaRoutingEngine(
-          baseUrl: valhallaBaseUrl,
+          baseUrl: valhallaBaseUrl.isNotEmpty
+              ? valhallaBaseUrl
+              : defaultValhallaBaseUrl,
           client: httpClient,
         );
     }

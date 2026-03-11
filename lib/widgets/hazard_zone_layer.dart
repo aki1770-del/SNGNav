@@ -11,9 +11,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:flutter_map/flutter_map.dart';
-
-import '../models/hazard_zone.dart';
 
 /// Builds a [CircleLayer] + [MarkerLayer] from a list of [HazardZone]s.
 class HazardZoneLayer extends StatelessWidget {

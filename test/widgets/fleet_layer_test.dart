@@ -18,7 +18,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:sngnav_snow_scene/widgets/fleet_layer.dart';
 
 // ---------------------------------------------------------------------------

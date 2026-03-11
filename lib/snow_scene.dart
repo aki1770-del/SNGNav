@@ -36,8 +36,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_mbtiles/flutter_map_mbtiles.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_viewport_bloc/map_viewport_bloc.dart';
+import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -48,14 +49,10 @@ import 'bloc/fleet_bloc.dart';
 import 'bloc/fleet_event.dart';
 import 'bloc/location_bloc.dart';
 import 'bloc/location_event.dart';
-import 'bloc/map_bloc.dart';
-import 'bloc/map_event.dart';
-import 'bloc/map_state.dart';
-import 'bloc/navigation_bloc.dart';
-import 'bloc/routing_bloc.dart';
-import 'bloc/routing_event.dart';
 import 'bloc/weather_bloc.dart';
 import 'bloc/weather_event.dart';
+import 'package:navigation_safety/navigation_safety.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'config/provider_config.dart';
 import 'providers/simulated_fleet_provider.dart';
@@ -116,6 +113,8 @@ final _demoRoute = RouteResult(
   engineInfo: const EngineInfo(name: 'mock', version: 'snow-scene-v0.3.1', queryLatency: Duration(milliseconds: 5)),
 );
 
+const _offlineCoverageValidationZoom = 12;
+
 class _MockRoutingEngine implements RoutingEngine {
   @override
   EngineInfo get info => _demoRoute.engineInfo;
@@ -152,39 +151,71 @@ Future<void> main() async {
 
   final config = ProviderConfig.fromEnvironment();
 
-  // Try loading MBTiles for offline map tiles.
+  // Create the tile provider through the extracted offline tile package.
+  offline_tiles.OfflineTileManager? offlineTileManager;
   TileProvider? tileProvider;
   if (config.isMbtilesTiles) {
-    final file = File(config.mbtilesPath);
-    if (file.existsSync()) {
-      try {
-        tileProvider = MbTilesTileProvider.fromPath(
-          path: config.mbtilesPath,
+    try {
+      offlineTileManager = offline_tiles.OfflineTileManager(
+        tileSource: offline_tiles.TileSourceType.mbtiles,
+        mbtilesPath: config.mbtilesPath,
+      );
+      tileProvider = offlineTileManager.tileProvider;
+      final uncovered = offlineTileManager.uncoveredPoints(
+        _demoRoute.shape,
+        zoom: _offlineCoverageValidationZoom,
+      );
+      if (uncovered.isNotEmpty) {
+        final preview = uncovered
+            .take(3)
+            .map((point) =>
+                '(${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)})')
+            .join(', ');
+        debugPrint(
+          'Warning: MBTiles coverage is incomplete for the mock route at zoom '
+          '$_offlineCoverageValidationZoom. Hybrid online fallback will be used. '
+          'Uncovered sample: $preview',
         );
-      } catch (_) {
-        // Fallback to online tiles if MBTiles fails to load.
       }
+    } catch (_) {
+      // Fallback to online tiles if the archive fails to load.
+      offlineTileManager = null;
+      tileProvider = null;
     }
   }
 
   runApp(SnowSceneApp(
     consentDb: consentDb,
     config: config,
+    offlineTileManager: offlineTileManager,
     tileProvider: tileProvider,
   ));
 }
 
-class SnowSceneApp extends StatelessWidget {
-  final Database consentDb;
-  final ProviderConfig config;
-  final TileProvider? tileProvider;
-
+class SnowSceneApp extends StatefulWidget {
   const SnowSceneApp({
     super.key,
     required this.consentDb,
     required this.config,
+    this.offlineTileManager,
     this.tileProvider,
   });
+
+  final Database consentDb;
+  final ProviderConfig config;
+  final offline_tiles.OfflineTileManager? offlineTileManager;
+  final TileProvider? tileProvider;
+
+  @override
+  State<SnowSceneApp> createState() => _SnowSceneAppState();
+}
+
+class _SnowSceneAppState extends State<SnowSceneApp> {
+  @override
+  void dispose() {
+    widget.offlineTileManager?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,12 +236,12 @@ class SnowSceneApp extends StatelessWidget {
               // Provider selected via --dart-define=LOCATION_PROVIDER=...
               // Default: Simulated (Route 19 with tunnel scenario).
               // Dead reckoning wraps automatically unless DEAD_RECKONING=false.
-              provider: config.createLocationProvider(),
+              provider: widget.config.createLocationProvider(),
             )..add(const LocationStartRequested()),
           ),
           BlocProvider(
             create: (_) => RoutingBloc(
-              engine: config.createRoutingEngine() ?? _MockRoutingEngine(),
+              engine: widget.config.createRoutingEngine() ?? _MockRoutingEngine(),
             )
               ..add(const RoutingEngineCheckRequested())
               ..add(const RouteRequested(
@@ -221,32 +252,19 @@ class SnowSceneApp extends StatelessWidget {
           ),
           BlocProvider(create: (_) => NavigationBloc()),
           BlocProvider(
-            create: (_) => MapBloc()
-              ..add(const CameraModeChanged(CameraMode.follow))
-              ..add(const LayerToggled(
-                layer: MapLayerType.weather,
-                visible: true,
-              ))
-              ..add(const LayerToggled(
-                layer: MapLayerType.safety,
-                visible: true,
-              ))
-              ..add(const LayerToggled(
-                layer: MapLayerType.fleet,
-                visible: true,
-              )),
+            create: (_) => MapBloc(),
           ),
           BlocProvider(
             create: (_) => WeatherBloc(
               // Provider selected via --dart-define=WEATHER_PROVIDER=...
               // Default: Open-Meteo (real Nagoya weather, no API key).
               // Simulated: 6-phase mountain pass scenario.
-              provider: config.createWeatherProvider(),
+              provider: widget.config.createWeatherProvider(),
             )..add(const WeatherMonitorStarted()),
           ),
           BlocProvider(
             create: (_) => ConsentBloc(
-              service: SqliteConsentService(consentDb),
+              service: SqliteConsentService(widget.consentDb),
             )..add(const ConsentLoadRequested()),
           ),
           BlocProvider(
@@ -255,7 +273,7 @@ class SnowSceneApp extends StatelessWidget {
             )..add(const FleetListenStarted()),
           ),
         ],
-        child: SnowSceneScaffold(tileProvider: tileProvider),
+        child: SnowSceneScaffold(tileProvider: widget.tileProvider),
       ),
     );
   }

@@ -17,7 +17,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/fleet_provider.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'fleet_event.dart';
 import 'fleet_state.dart';
 

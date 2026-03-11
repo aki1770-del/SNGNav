@@ -378,15 +378,14 @@ void main() {
       await engine.dispose();
     });
 
-    test('passes custom base URL to ValhallaRoutingEngine', () async {
+    test('passes custom base URL to ValhallaRoutingEngine via config field', () async {
       const config = ProviderConfig(
         routingType: RoutingEngineType.valhalla,
+        valhallaBaseUrl: 'http://localhost:8005',
       );
-      final engine = config.createRoutingEngine(
-        valhallaBaseUrl: 'http://localhost:8002',
-      );
+      final engine = config.createRoutingEngine();
       final valhalla = engine! as ValhallaRoutingEngine;
-      expect(valhalla.baseUrl, 'http://localhost:8002');
+      expect(valhalla.baseUrl, 'http://localhost:8005');
       await engine.dispose();
     });
   });

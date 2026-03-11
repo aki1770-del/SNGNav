@@ -10,7 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sngnav_snow_scene/widgets/maneuver_icons.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
 void main() {
   group('ManeuverIcons.forType', () {

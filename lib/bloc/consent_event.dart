@@ -6,9 +6,8 @@
 /// Consent is explicit, revocable, and purpose-scoped.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:equatable/equatable.dart';
-
-import '../models/consent_record.dart';
 
 sealed class ConsentEvent extends Equatable {
   const ConsentEvent();

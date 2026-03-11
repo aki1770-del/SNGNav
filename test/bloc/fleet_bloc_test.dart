@@ -19,8 +19,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:sngnav_snow_scene/bloc/fleet_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/fleet_event.dart';
 import 'package:sngnav_snow_scene/bloc/fleet_state.dart';
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
-import 'package:sngnav_snow_scene/providers/fleet_provider.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 
 // ---------------------------------------------------------------------------
 // Mock FleetProvider

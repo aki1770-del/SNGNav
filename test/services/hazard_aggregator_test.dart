@@ -1,9 +1,6 @@
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
-
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
-import 'package:sngnav_snow_scene/models/hazard_zone.dart';
-import 'package:sngnav_snow_scene/services/hazard_aggregator.dart';
 
 void main() {
   final now = DateTime.now();

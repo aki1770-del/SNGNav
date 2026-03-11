@@ -20,10 +20,10 @@
 /// Sprint 8 Days 2–3 — SqliteConsentService.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-import 'package:sngnav_snow_scene/models/consent_record.dart';
 import 'package:sngnav_snow_scene/services/consent_database.dart';
 import 'package:sngnav_snow_scene/services/sqlite_consent_service.dart';
 

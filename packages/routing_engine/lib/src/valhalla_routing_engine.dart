@@ -15,16 +15,36 @@ import 'route_result.dart';
 import 'routing_engine.dart';
 
 const _defaultValhallaUrl = 'http://localhost:8002';
+const _defaultLocalValhallaUrl = 'http://localhost:8005';
 
 class ValhallaRoutingEngine implements RoutingEngine {
   final String baseUrl;
+  final Duration availabilityTimeout;
+  final Duration routeTimeout;
   final http.Client _client;
 
   ValhallaRoutingEngine({
     String? baseUrl,
+    Duration availabilityTimeout = const Duration(seconds: 3),
+    Duration routeTimeout = const Duration(seconds: 15),
     http.Client? client,
   })  : baseUrl = baseUrl ?? _defaultValhallaUrl,
+        availabilityTimeout = availabilityTimeout,
+        routeTimeout = routeTimeout,
         _client = client ?? http.Client();
+
+  ValhallaRoutingEngine.local({
+    String host = 'localhost',
+    int port = 8005,
+    Duration availabilityTimeout = const Duration(seconds: 3),
+    Duration routeTimeout = const Duration(seconds: 15),
+    http.Client? client,
+  }) : this(
+         baseUrl: 'http://$host:$port',
+         availabilityTimeout: availabilityTimeout,
+         routeTimeout: routeTimeout,
+         client: client,
+       );
 
   @override
   EngineInfo get info => const EngineInfo(name: 'valhalla');
@@ -33,8 +53,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
   Future<bool> isAvailable() async {
     try {
       final uri = Uri.parse('$baseUrl/status');
-      final response =
-          await _client.get(uri).timeout(const Duration(seconds: 3));
+      final response = await _client.get(uri).timeout(availabilityTimeout);
       return response.statusCode == 200;
     } catch (_) {
       return false;
@@ -75,7 +94,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
             headers: {'Content-Type': 'application/json'},
             body: requestBody,
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(routeTimeout);
 
       stopwatch.stop();
 

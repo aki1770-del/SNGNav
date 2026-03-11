@@ -14,8 +14,7 @@ import 'dart:math';
 
 import 'package:latlong2/latlong.dart';
 
-import '../models/fleet_report.dart';
-import 'fleet_provider.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 
 class SimulatedFleetProvider implements FleetProvider {
   final Duration interval;

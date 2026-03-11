@@ -7,7 +7,7 @@
 ///   4. Shows route polyline when route layer visible and route exists
 ///   5. Hides route polyline when route layer not visible
 ///   6. Shows weather zone when weather layer visible and snowing
-///   7. Shows safety markers when safety layer visible and hazardous
+///   7. Shows hazard markers when hazard layer visible and hazardous
 ///   8. Shows position marker when location available
 ///   9. Hides position marker when no location
 ///  10. Shows FleetLayer when consent granted + fleet listening (Gap 2)
@@ -29,7 +29,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:driving_consent/driving_consent.dart';
 import 'package:driving_weather/driving_weather.dart';
+import 'package:map_viewport_bloc/map_viewport_bloc.dart';
+import 'package:navigation_safety/navigation_safety.dart';
+import 'package:routing_bloc/routing_bloc.dart';
 
 import 'package:sngnav_snow_scene/bloc/consent_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/consent_event.dart';
@@ -40,18 +44,11 @@ import 'package:sngnav_snow_scene/bloc/fleet_state.dart';
 import 'package:sngnav_snow_scene/bloc/location_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/location_event.dart';
 import 'package:sngnav_snow_scene/bloc/location_state.dart';
-import 'package:sngnav_snow_scene/bloc/map_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/map_event.dart';
-import 'package:sngnav_snow_scene/bloc/map_state.dart';
-import 'package:sngnav_snow_scene/bloc/routing_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/routing_event.dart';
-import 'package:sngnav_snow_scene/bloc/routing_state.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 import 'package:sngnav_snow_scene/fluorite/fluorite_view.dart';
-import 'package:sngnav_snow_scene/models/consent_record.dart';
-import 'package:sngnav_snow_scene/models/fleet_report.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/widgets/fleet_layer.dart';
@@ -70,6 +67,9 @@ class MockRoutingBloc extends MockBloc<RoutingEvent, RoutingState>
 class MockLocationBloc extends MockBloc<LocationEvent, LocationState>
     implements LocationBloc {}
 
+class MockNavigationBloc extends MockBloc<NavigationEvent, NavigationState>
+  implements NavigationBloc {}
+
 class MockWeatherBloc extends MockBloc<WeatherEvent, WeatherState>
     implements WeatherBloc {}
 
@@ -87,7 +87,7 @@ const _defaultMapState = MapState(
   status: MapStatus.ready,
   center: LatLng(35.1709, 136.8815),
   zoom: 12.0,
-  visibleLayers: {MapLayerType.route, MapLayerType.weather, MapLayerType.safety},
+  visibleLayers: {MapLayerType.route, MapLayerType.weather, MapLayerType.hazard},
 );
 
 final _routeActive = RoutingState(
@@ -147,8 +147,8 @@ final _fleetMapState = const MapState(
   zoom: 12.0,
   visibleLayers: {
     MapLayerType.route,
+    MapLayerType.hazard,
     MapLayerType.weather,
-    MapLayerType.safety,
     MapLayerType.fleet,
   },
 );
@@ -222,6 +222,7 @@ final _fleetListeningDryOnly = FleetState(
 Widget _buildMapLayer({
   required MockMapBloc mapBloc,
   required MockRoutingBloc routingBloc,
+  required MockNavigationBloc navigationBloc,
   required MockLocationBloc locationBloc,
   required MockWeatherBloc weatherBloc,
   required MockFleetBloc fleetBloc,
@@ -234,6 +235,7 @@ Widget _buildMapLayer({
         providers: [
           BlocProvider<MapBloc>.value(value: mapBloc),
           BlocProvider<RoutingBloc>.value(value: routingBloc),
+          BlocProvider<NavigationBloc>.value(value: navigationBloc),
           BlocProvider<LocationBloc>.value(value: locationBloc),
           BlocProvider<WeatherBloc>.value(value: weatherBloc),
           BlocProvider<FleetBloc>.value(value: fleetBloc),
@@ -256,6 +258,7 @@ void main() {
   group('MapLayer', () {
     late MockMapBloc mapBloc;
     late MockRoutingBloc routingBloc;
+    late MockNavigationBloc navigationBloc;
     late MockLocationBloc locationBloc;
     late MockWeatherBloc weatherBloc;
     late MockFleetBloc fleetBloc;
@@ -264,6 +267,7 @@ void main() {
     setUp(() {
       mapBloc = MockMapBloc();
       routingBloc = MockRoutingBloc();
+      navigationBloc = MockNavigationBloc();
       locationBloc = MockLocationBloc();
       weatherBloc = MockWeatherBloc();
       fleetBloc = MockFleetBloc();
@@ -273,6 +277,8 @@ void main() {
       when(() => mapBloc.state).thenReturn(_defaultMapState);
       when(() => routingBloc.state)
           .thenReturn(const RoutingState.idle());
+        when(() => navigationBloc.state)
+          .thenReturn(const NavigationState.idle());
       when(() => locationBloc.state)
           .thenReturn(const LocationState.uninitialized());
       when(() => weatherBloc.state)
@@ -288,6 +294,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -303,6 +310,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -320,6 +328,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -339,6 +348,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -361,6 +371,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -372,6 +383,7 @@ void main() {
 
     testWidgets('shows weather zone when weather layer visible and snowing',
         (tester) async {
+      when(() => routingBloc.state).thenReturn(_routeActive);
       when(() => weatherBloc.state).thenReturn(WeatherState(
         status: WeatherStatus.monitoring,
         condition: _snowCondition,
@@ -380,6 +392,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -387,9 +400,16 @@ void main() {
       ));
 
       expect(find.byType(PolygonLayer), findsOneWidget);
+
+      final polygonLayer = tester.widget<PolygonLayer>(find.byType(PolygonLayer));
+      final polygon = polygonLayer.polygons.single;
+      final north = polygon.points
+          .map((point) => point.latitude)
+          .reduce((a, b) => a > b ? a : b);
+      expect(north, greaterThan(35.10));
     });
 
-    testWidgets('shows safety markers when safety layer visible and hazardous',
+    testWidgets('shows hazard markers when hazard layer visible and hazardous',
         (tester) async {
       when(() => weatherBloc.state).thenReturn(WeatherState(
         status: WeatherStatus.monitoring,
@@ -399,6 +419,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -420,6 +441,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -435,6 +457,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -453,6 +476,7 @@ void main() {
   group('MapLayer consent-gated fleet layers (Gap 2)', () {
     late MockMapBloc mapBloc;
     late MockRoutingBloc routingBloc;
+    late MockNavigationBloc navigationBloc;
     late MockLocationBloc locationBloc;
     late MockWeatherBloc weatherBloc;
     late MockFleetBloc fleetBloc;
@@ -461,6 +485,7 @@ void main() {
     setUp(() {
       mapBloc = MockMapBloc();
       routingBloc = MockRoutingBloc();
+      navigationBloc = MockNavigationBloc();
       locationBloc = MockLocationBloc();
       weatherBloc = MockWeatherBloc();
       fleetBloc = MockFleetBloc();
@@ -470,6 +495,8 @@ void main() {
       when(() => mapBloc.state).thenReturn(_fleetMapState);
       when(() => routingBloc.state)
           .thenReturn(const RoutingState.idle());
+        when(() => navigationBloc.state)
+          .thenReturn(const NavigationState.idle());
       when(() => locationBloc.state)
           .thenReturn(const LocationState.uninitialized());
       when(() => weatherBloc.state)
@@ -484,6 +511,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -501,6 +529,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -519,6 +548,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -537,6 +567,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -554,6 +585,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
@@ -567,21 +599,27 @@ void main() {
 
     testWidgets('hides fleet layers when fleet layer toggled off in MapState',
         (tester) async {
-      // Map state without fleet layer visible
-      when(() => mapBloc.state).thenReturn(_defaultMapState);
+      // Map state without fleet or hazard layers visible
+      when(() => mapBloc.state).thenReturn(const MapState(
+        status: MapStatus.ready,
+        center: LatLng(35.1709, 136.8815),
+        zoom: 12.0,
+        visibleLayers: {MapLayerType.route, MapLayerType.weather},
+      ));
       when(() => consentBloc.state).thenReturn(_consentGranted);
       when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
 
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,
         consentBloc: consentBloc,
       ));
 
-      // _defaultMapState has {route, weather, safety} — no fleet
+      // Neither fleet markers nor hazard visuals should render.
       expect(find.byType(FleetLayer), findsNothing);
       expect(find.byType(HazardZoneLayer), findsNothing);
     });
@@ -594,6 +632,7 @@ void main() {
   group('MapLayer hazard aggregation pipeline (Gap 3)', () {
     late MockMapBloc mapBloc;
     late MockRoutingBloc routingBloc;
+    late MockNavigationBloc navigationBloc;
     late MockLocationBloc locationBloc;
     late MockWeatherBloc weatherBloc;
     late MockFleetBloc fleetBloc;
@@ -602,6 +641,7 @@ void main() {
     setUp(() {
       mapBloc = MockMapBloc();
       routingBloc = MockRoutingBloc();
+      navigationBloc = MockNavigationBloc();
       locationBloc = MockLocationBloc();
       weatherBloc = MockWeatherBloc();
       fleetBloc = MockFleetBloc();
@@ -610,6 +650,8 @@ void main() {
       when(() => mapBloc.state).thenReturn(_fleetMapState);
       when(() => routingBloc.state)
           .thenReturn(const RoutingState.idle());
+        when(() => navigationBloc.state)
+          .thenReturn(const NavigationState.idle());
       when(() => locationBloc.state)
           .thenReturn(const LocationState.uninitialized());
       when(() => weatherBloc.state)
@@ -627,6 +669,7 @@ void main() {
       await tester.pumpWidget(_buildMapLayer(
         mapBloc: mapBloc,
         routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
         locationBloc: locationBloc,
         weatherBloc: weatherBloc,
         fleetBloc: fleetBloc,

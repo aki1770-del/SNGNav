@@ -56,6 +56,15 @@ purposes. It does not control vehicle systems. When accuracy exceeds the
 500m safety cap, the provider stops emitting positions rather than showing
 unreliable data.
 
+## See Also
+
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla, local/public)
+- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
+- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
+- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
+
+All five packages are extracted from [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation prototype.
+
 ## License
 
 BSD-3-Clause — see [LICENSE](LICENSE).

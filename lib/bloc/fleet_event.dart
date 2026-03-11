@@ -9,8 +9,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
-
-import '../models/fleet_report.dart';
+import 'package:fleet_hazard/fleet_hazard.dart';
 
 sealed class FleetEvent extends Equatable {
   const FleetEvent();

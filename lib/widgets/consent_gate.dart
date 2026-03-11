@@ -12,13 +12,13 @@
 /// Jidoka (自働化): UNKNOWN = DENIED. The pipeline stops itself.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/consent_bloc.dart';
 import '../bloc/consent_event.dart';
 import '../bloc/consent_state.dart';
-import '../models/consent_record.dart';
 
 class ConsentGate extends StatelessWidget {
   const ConsentGate({super.key});

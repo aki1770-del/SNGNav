@@ -20,8 +20,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
-import 'package:sngnav_snow_scene/models/models.dart';
-import 'package:sngnav_snow_scene/providers/providers.dart';
 
 // ---------------------------------------------------------------------------
 // Mock engine (reusable from routing_bloc_test)
@@ -306,7 +304,7 @@ void main() {
     });
   });
 
-  group('Cross-BLoC workflow: layer visibility across BLoCs', () {
+  group('Cross-BLoC workflow: viewport layer contract', () {
     late MapBloc mapBloc;
 
     setUp(() {
@@ -318,25 +316,31 @@ void main() {
       await mapBloc.close();
     });
 
-    test('enable weather + safety layers for Snow Scene', () async {
+    test('hazard and safety follow the extracted viewport contract', () async {
       await Future<void>.delayed(Duration.zero);
 
-      // Default: only route visible
-      expect(mapBloc.state.isLayerVisible(MapLayerType.route), isTrue);
-      expect(mapBloc.state.isLayerVisible(MapLayerType.weather), isFalse);
-      expect(mapBloc.state.isLayerVisible(MapLayerType.safety), isFalse);
-
-      // Snow Scene enables weather and safety overlays
-      mapBloc.add(const LayerToggled(
-          layer: MapLayerType.weather, visible: true));
-      mapBloc.add(const LayerToggled(
-          layer: MapLayerType.safety, visible: true));
-      await Future<void>.delayed(Duration.zero);
-
+      // Package defaults keep the core layers visible.
+      expect(mapBloc.state.isLayerVisible(MapLayerType.baseTile), isTrue);
       expect(mapBloc.state.isLayerVisible(MapLayerType.route), isTrue);
       expect(mapBloc.state.isLayerVisible(MapLayerType.weather), isTrue);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.hazard), isTrue);
       expect(mapBloc.state.isLayerVisible(MapLayerType.safety), isTrue);
-      expect(mapBloc.state.isLayerVisible(MapLayerType.fleet), isFalse);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.fleet), isTrue);
+
+      // User toggles can disable hazard/weather, but not safety.
+      mapBloc.add(const LayerToggled(
+          layer: MapLayerType.weather, visible: false));
+      mapBloc.add(const LayerToggled(
+          layer: MapLayerType.hazard, visible: false));
+      mapBloc.add(const LayerToggled(
+          layer: MapLayerType.safety, visible: false));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(mapBloc.state.isLayerVisible(MapLayerType.route), isTrue);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.weather), isFalse);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.hazard), isFalse);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.safety), isTrue);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.fleet), isTrue);
     });
   });
 

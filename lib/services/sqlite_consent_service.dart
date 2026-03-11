@@ -13,11 +13,10 @@
 /// Persistent consent with audit trail.
 library;
 
+import 'package:driving_consent/driving_consent.dart';
 import 'package:sqlite3/sqlite3.dart';
 
-import '../models/consent_record.dart';
 import 'consent_database.dart';
-import 'consent_service.dart';
 
 class SqliteConsentService implements ConsentService {
   final Database _db;

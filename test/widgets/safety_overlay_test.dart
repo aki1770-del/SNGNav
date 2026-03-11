@@ -3,11 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
-
-import 'package:sngnav_snow_scene/bloc/navigation_bloc.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_event.dart';
-import 'package:sngnav_snow_scene/bloc/navigation_state.dart';
-import 'package:sngnav_snow_scene/widgets/safety_overlay.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 
 // ---------------------------------------------------------------------------
 // Mock

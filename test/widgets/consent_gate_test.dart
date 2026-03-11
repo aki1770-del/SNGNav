@@ -17,12 +17,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:driving_consent/driving_consent.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:sngnav_snow_scene/bloc/consent_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/consent_event.dart';
 import 'package:sngnav_snow_scene/bloc/consent_state.dart';
-import 'package:sngnav_snow_scene/models/consent_record.dart';
 import 'package:sngnav_snow_scene/widgets/consent_gate.dart';
 
 // ---------------------------------------------------------------------------
