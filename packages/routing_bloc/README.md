@@ -133,15 +133,18 @@ flutter run -d linux -t example/lib/main.dart
 
 ## See Also
 
-- [routing_engine](https://pub.dev/packages/routing_engine) - Engine-agnostic routing backend abstraction
-- [navigation_safety](https://pub.dev/packages/navigation_safety) - Navigation session and safety overlay package
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) - Viewport and layer composition state machine
-- [offline_tiles](https://pub.dev/packages/offline_tiles) - Offline tile management with MBTiles fallback
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing backend abstraction
+- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
+- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
+- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
+- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
+- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
+- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
 
-All of these packages are extracted from
-[SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation
-reference product.
+All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
 
 ## License
 
-BSD-3-Clause - see [LICENSE](LICENSE).
+BSD-3-Clause — see [LICENSE](LICENSE).

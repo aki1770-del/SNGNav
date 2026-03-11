@@ -2,7 +2,9 @@
 
 ## 0.1.2
 
+- Added `example/main.dart` showing Kalman predict/update flow.
 - Added cross-links to sibling packages (routing_engine, driving_weather) in README.
+- Expanded README sibling links to the full 10-package SNGNav ecosystem.
 
 ## 0.1.1
 

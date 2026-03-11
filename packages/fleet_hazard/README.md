@@ -64,14 +64,18 @@ class MyFleetProvider implements FleetProvider {
 
 ## See Also
 
-- [kalman_dr](https://pub.dev/packages/kalman_dr) - Dead reckoning through GPS loss
-- [routing_engine](https://pub.dev/packages/routing_engine) - Engine-agnostic routing
-- [driving_weather](https://pub.dev/packages/driving_weather) - Driving weather condition model
-- [driving_consent](https://pub.dev/packages/driving_consent) - Privacy consent with Jidoka semantics
-- `navigation_safety` - Flutter navigation safety state machine with pure Dart `_core` models (currently in the SNGNav monorepo)
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla)
+- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
+- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
+- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
+- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
+- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
+- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All six extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
 
 ## License
 
-BSD-3-Clause - see [LICENSE](LICENSE).
+BSD-3-Clause — see [LICENSE](LICENSE).

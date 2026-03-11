@@ -81,12 +81,13 @@ class MyRoutingEngine implements RoutingEngine {
 - [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
 - [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
 - [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- `navigation_safety` — Flutter navigation safety state machine with pure Dart `_core` models (currently in the SNGNav monorepo)
-- `map_viewport_bloc` — Flutter viewport state machine with pure Dart `_core` models (currently in the SNGNav monorepo)
-- `routing_bloc` — Flutter route lifecycle state machine with pure Dart `_core` models (currently in the SNGNav monorepo)
-- `offline_tiles` — Flutter offline tile manager with pure Dart `_core` models (currently in the SNGNav monorepo)
+- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
+- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
+- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
+- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All nine extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
 
 ## Local Integration Test
 

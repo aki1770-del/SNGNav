@@ -1,5 +1,7 @@
 # sngnav
 
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+
 **Snow Guard Navigation** — offline-first navigation for Flutter on embedded Linux.
 
 Navigation that doesn't abandon you when conditions fail unexpectedly.

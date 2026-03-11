@@ -2,9 +2,11 @@
 
 ## 0.1.1
 
+- Added `example/main.dart` showing the engine-agnostic `RoutingEngine` API with a minimal example engine.
 - Improved discoverability: added offline routing, local Valhalla keywords.
 - Added `offline` topic.
 - Added cross-links to sibling packages in README.
+- Expanded README sibling links to the full 10-package SNGNav ecosystem.
 - Added `ValhallaRoutingEngine.local()` helper and configurable timeouts.
 - Set `ValhallaRoutingEngine.local()` to the canonical Machine E `localhost:8005` runtime.
 - Added gated local Valhalla integration test and README instructions.
