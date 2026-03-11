@@ -15,7 +15,6 @@ import 'route_result.dart';
 import 'routing_engine.dart';
 
 const _defaultValhallaUrl = 'http://localhost:8002';
-const _defaultLocalValhallaUrl = 'http://localhost:8005';
 
 class ValhallaRoutingEngine implements RoutingEngine {
   final String baseUrl;

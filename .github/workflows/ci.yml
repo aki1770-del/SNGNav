@@ -33,8 +33,9 @@ jobs:
       - name: Resolve dependencies
         run: |
           flutter pub get
-          cd packages/kalman_dr && dart pub get && cd ../..
-          cd packages/routing_engine && dart pub get && cd ../..
+          for pkg in packages/*/; do
+            (cd "$pkg" && flutter pub get)
+          done
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
@@ -52,8 +53,9 @@ jobs:
       - name: Resolve dependencies
         run: |
           flutter pub get
-          cd packages/kalman_dr && dart pub get && cd ../..
-          cd packages/routing_engine && dart pub get && cd ../..
+          for pkg in packages/*/; do
+            (cd "$pkg" && flutter pub get)
+          done
 
       - name: Install Linux build dependencies
         run: |
@@ -67,10 +69,19 @@ jobs:
       - name: Run app tests
         run: flutter test --exclude-tags=probe
 
-      - name: Run sub-package tests
+      - name: Run pure Dart package tests
         run: |
-          cd packages/kalman_dr && dart test && cd ../..
-          cd packages/routing_engine && dart test && cd ../..
+          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine; do
+            echo "--- packages/$pkg ---"
+            (cd "packages/$pkg" && dart test)
+          done
+
+      - name: Run Flutter package tests
+        run: |
+          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc; do
+            echo "--- packages/$pkg ---"
+            (cd "packages/$pkg" && flutter test)
+          done
 
   build:
     name: Build (Linux)
@@ -83,7 +94,12 @@ jobs:
         with:
           channel: stable
 
-      - run: flutter pub get
+      - name: Resolve dependencies
+        run: |
+          flutter pub get
+          for pkg in packages/*/; do
+            (cd "$pkg" && flutter pub get)
+          done
 
       - name: Install Linux build dependencies
         run: |
