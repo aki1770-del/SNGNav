@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:driving_consent/driving_consent.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 import 'package:mocktail/mocktail.dart';
@@ -109,6 +110,15 @@ final _testPosition = GeoPosition(
   speed: 16.7,
   heading: 90.0,
   timestamp: DateTime(2026),
+);
+
+final _followResumePosition = GeoPosition(
+  latitude: 35.1815,
+  longitude: 136.9050,
+  accuracy: 4.0,
+  speed: 17.2,
+  heading: 96.0,
+  timestamp: DateTime(2026, 3, 12, 6, 5),
 );
 
 // ---------------------------------------------------------------------------
@@ -451,6 +461,165 @@ void main() {
       verifyNever(() => mapBloc.add(any(that: isA<CenterChanged>())));
 
       await locationController.close();
+    });
+
+    testWidgets(
+        'live recentering resumes after freeLook returns to follow',
+        (tester) async {
+      var currentMapState = const MapState(
+        status: MapStatus.ready,
+        center: LatLng(35.1709, 136.8815),
+        zoom: 12.0,
+        cameraMode: CameraMode.freeLook,
+      );
+      when(() => mapBloc.state).thenAnswer((_) => currentMapState);
+
+      final locationController = StreamController<LocationState>.broadcast();
+      whenListen(
+        locationBloc,
+        locationController.stream,
+        initialState: const LocationState.uninitialized(),
+      );
+
+      await tester.pumpWidget(_buildScaffold(
+        locationBloc: locationBloc,
+        routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
+        mapBloc: mapBloc,
+        weatherBloc: weatherBloc,
+        consentBloc: consentBloc,
+        fleetBloc: fleetBloc,
+      ));
+      await tester.pump();
+
+      locationController.add(LocationState(
+        quality: LocationQuality.fix,
+        position: _testPosition,
+      ));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => mapBloc.add(any(that: isA<CenterChanged>())));
+
+      currentMapState = const MapState(
+        status: MapStatus.ready,
+        center: LatLng(35.1709, 136.8815),
+        zoom: 12.0,
+        cameraMode: CameraMode.follow,
+      );
+
+      locationController.add(LocationState(
+        quality: LocationQuality.fix,
+        position: _followResumePosition,
+      ));
+      await tester.pumpAndSettle();
+
+      verify(() => mapBloc.add(any(that: isA<CenterChanged>()))).called(1);
+
+      await locationController.close();
+    });
+
+    testWidgets(
+        'widget-mediated: ConsentBloc fleet grant dispatches FleetListenStarted',
+        (tester) async {
+      final consentController = StreamController<ConsentState>.broadcast();
+      final deniedState = ConsentState(
+        status: ConsentBlocStatus.ready,
+        consents: {
+          ConsentPurpose.fleetLocation: ConsentRecord(
+            purpose: ConsentPurpose.fleetLocation,
+            status: ConsentStatus.denied,
+            jurisdiction: Jurisdiction.appi,
+            updatedAt: DateTime(2026, 3, 12),
+          ),
+        },
+      );
+      final grantedState = ConsentState(
+        status: ConsentBlocStatus.ready,
+        consents: {
+          ConsentPurpose.fleetLocation: ConsentRecord(
+            purpose: ConsentPurpose.fleetLocation,
+            status: ConsentStatus.granted,
+            jurisdiction: Jurisdiction.appi,
+            updatedAt: DateTime(2026, 3, 12),
+          ),
+        },
+      );
+
+      whenListen(
+        consentBloc,
+        consentController.stream,
+        initialState: deniedState,
+      );
+
+      await tester.pumpWidget(_buildScaffold(
+        locationBloc: locationBloc,
+        routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
+        mapBloc: mapBloc,
+        weatherBloc: weatherBloc,
+        consentBloc: consentBloc,
+        fleetBloc: fleetBloc,
+      ));
+      await tester.pump();
+
+      consentController.add(grantedState);
+      await tester.pumpAndSettle();
+
+      verify(() => fleetBloc.add(const FleetListenStarted())).called(1);
+
+      await consentController.close();
+    });
+
+    testWidgets(
+        'widget-mediated: ConsentBloc fleet revoke dispatches FleetListenStopped',
+        (tester) async {
+      final consentController = StreamController<ConsentState>.broadcast();
+      final grantedState = ConsentState(
+        status: ConsentBlocStatus.ready,
+        consents: {
+          ConsentPurpose.fleetLocation: ConsentRecord(
+            purpose: ConsentPurpose.fleetLocation,
+            status: ConsentStatus.granted,
+            jurisdiction: Jurisdiction.gdpr,
+            updatedAt: DateTime(2026, 3, 12),
+          ),
+        },
+      );
+      final revokedState = ConsentState(
+        status: ConsentBlocStatus.ready,
+        consents: {
+          ConsentPurpose.fleetLocation: ConsentRecord(
+            purpose: ConsentPurpose.fleetLocation,
+            status: ConsentStatus.denied,
+            jurisdiction: Jurisdiction.gdpr,
+            updatedAt: DateTime(2026, 3, 12),
+          ),
+        },
+      );
+
+      whenListen(
+        consentBloc,
+        consentController.stream,
+        initialState: grantedState,
+      );
+
+      await tester.pumpWidget(_buildScaffold(
+        locationBloc: locationBloc,
+        routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
+        mapBloc: mapBloc,
+        weatherBloc: weatherBloc,
+        consentBloc: consentBloc,
+        fleetBloc: fleetBloc,
+      ));
+      await tester.pump();
+
+      consentController.add(revokedState);
+      await tester.pumpAndSettle();
+
+      verify(() => fleetBloc.add(const FleetListenStopped())).called(1);
+
+      await consentController.close();
     });
   });
 }

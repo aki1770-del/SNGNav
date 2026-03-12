@@ -25,7 +25,10 @@ import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 
+import '../bloc/consent_bloc.dart';
+import '../bloc/consent_state.dart';
 import '../bloc/fleet_bloc.dart';
+import '../bloc/fleet_event.dart';
 import '../bloc/fleet_state.dart';
 import '../bloc/location_bloc.dart';
 import '../bloc/location_state.dart';
@@ -157,6 +160,17 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
       ),
       body: MultiBlocListener(
         listeners: [
+          // Widget-mediated: ConsentBloc fleet gate → FleetBloc listen/stop
+          BlocListener<ConsentBloc, ConsentState>(
+            listenWhen: (prev, curr) => prev.isFleetGranted != curr.isFleetGranted,
+            listener: (context, state) {
+              context.read<FleetBloc>().add(
+                    state.isFleetGranted
+                        ? FleetListenStarted()
+                        : FleetListenStopped(),
+                  );
+            },
+          ),
           // Widget-mediated: RoutingBloc routeActive → NavigationStarted
           BlocListener<RoutingBloc, RoutingState>(
             listenWhen: (prev, curr) =>

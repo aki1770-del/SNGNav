@@ -258,3 +258,19 @@ After G3, verify discoverability:
 - [ ] Topics are max 5, chosen for search volume
 - [ ] README has install command, quick example, API table
 - [ ] Cross-link to sibling packages in README (*"See also: kalman_dr, routing_engine, driving_weather, driving_consent, fleet_hazard, navigation_safety, map_viewport_bloc, routing_bloc, offline_tiles, driving_conditions"*)
+
+## Integration Coverage Matrix (Sprint 60)
+
+Package extraction proves reusable surfaces. Integration evidence proves the surfaces still behave as one driver-assisting navigation system when recomposed in the app.
+
+| Gap / flow | Evidence files | Current proof |
+|:-----------|:---------------|:--------------|
+| Weather → Safety bridge | `test/integration/weather_safety_bridge_integration_test.dart` | Hazard triggers, non-hazard guard rails, and message correctness |
+| Fleet → Safety bridge | `test/integration/fleet_safety_bridge_integration_test.dart` | Icy vs snowy severity mapping and no false alerts for dry-only reports |
+| Multi-hazard priority | `test/integration/multi_hazard_priority_integration_test.dart` | Critical fleet hazard overrides weather warning and cannot be downgraded by later warning input |
+| Consent lifecycle → fleet listening | `test/widgets/snow_scene_scaffold_test.dart` | Fleet listening starts on grant and stops on revoke through widget-mediated coupling |
+| Viewport coherence (follow ↔ freeLook) | `packages/map_viewport_bloc/test/bloc/map_bloc_test.dart`, `test/widgets/snow_scene_scaffold_test.dart` | User pan enters freeLook, timer returns to follow, and live positions recenter only while following |
+| Offline tiles → route coverage correspondence | `lib/snow_scene.dart`, `packages/offline_tiles/test/integration/offline_tile_manager_test.dart` | Route waypoints are checked for local coverage and uncovered points are surfaced explicitly |
+| Full Snow Scene chain | `test/integration/s52_flow_full_chain_test.dart`, `test/integration/snow_scene_demo_flow_test.dart` | Route, weather, navigation, map, consent, fleet, and demo flow remain coherent end-to-end |
+
+Use this matrix when evaluating whether an extracted package still serves D3 after recomposition. A package that is publishable but not integration-proven is not yet fully trustworthy in the Snow Scene.

@@ -335,6 +335,50 @@ void main() {
     );
 
     blocTest<NavigationBloc, NavigationState>(
+      'lower-severity alert does not replace an existing critical alert',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+        alertMessage: 'Fleet reports: icy road conditions detected',
+        alertSeverity: AlertSeverity.critical,
+        alertDismissible: false,
+      ),
+      act: (bloc) => bloc.add(const SafetyAlertReceived(
+        message: 'Heavy snow - reduced traction and visibility',
+        severity: AlertSeverity.warning,
+      )),
+      expect: () => <NavigationState>[],
+      verify: (bloc) {
+        expect(bloc.state.alertSeverity, AlertSeverity.critical);
+        expect(bloc.state.alertMessage, 'Fleet reports: icy road conditions detected');
+        expect(bloc.state.alertDismissible, isFalse);
+      },
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
+      'higher-severity alert replaces an existing warning alert',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+        alertMessage: 'Heavy snow - reduced traction and visibility',
+        alertSeverity: AlertSeverity.warning,
+      ),
+      act: (bloc) => bloc.add(const SafetyAlertReceived(
+        message: 'Fleet reports: icy road conditions detected',
+        severity: AlertSeverity.critical,
+        dismissible: false,
+      )),
+      expect: () => [
+        isA<NavigationState>()
+            .having((state) => state.alertSeverity, 'severity', AlertSeverity.critical)
+            .having((state) => state.alertMessage, 'message', 'Fleet reports: icy road conditions detected')
+            .having((state) => state.alertDismissible, 'dismissible', isFalse),
+      ],
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
       'dismissible alert can be cleared',
       build: NavigationBloc.new,
       seed: () => NavigationState(

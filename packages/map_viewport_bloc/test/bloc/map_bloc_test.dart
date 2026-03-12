@@ -430,6 +430,37 @@ void main() {
     );
 
     blocTest<MapBloc, MapState>(
+      'route fit to overview then user pan then timeout returns to follow without fit bounds',
+      build: () => MapBloc(freeLookTimeout: const Duration(milliseconds: 20)),
+      seed: () => const MapState(
+        status: MapStatus.ready,
+        center: _nagoya,
+        zoom: 15,
+        cameraMode: CameraMode.follow,
+      ),
+      act: (bloc) async {
+        bloc.add(const FitToBounds(
+          southWest: _routeSw,
+          northEast: _routeNe,
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        bloc.add(const UserPanDetected());
+      },
+      wait: const Duration(milliseconds: 60),
+      expect: () => [
+        isA<MapState>()
+            .having((state) => state.cameraMode, 'cameraMode', CameraMode.overview)
+            .having((state) => state.hasFitBounds, 'hasFitBounds', isTrue),
+        isA<MapState>()
+            .having((state) => state.cameraMode, 'cameraMode', CameraMode.freeLook)
+            .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
+        isA<MapState>()
+            .having((state) => state.cameraMode, 'cameraMode', CameraMode.follow)
+            .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
+      ],
+    );
+
+    blocTest<MapBloc, MapState>(
       'manual follow override cancels pending freeLook timeout',
       build: () => MapBloc(freeLookTimeout: const Duration(milliseconds: 20)),
       seed: () => const MapState(

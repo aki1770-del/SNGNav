@@ -90,6 +90,12 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     SafetyAlertReceived event,
     Emitter<NavigationState> emit,
   ) {
+    final currentSeverity = state.alertSeverity;
+    if (currentSeverity != null &&
+        event.severity.index < currentSeverity.index) {
+      return;
+    }
+
     emit(state.copyWith(
       alertMessage: event.message,
       alertSeverity: event.severity,

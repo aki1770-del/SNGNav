@@ -46,7 +46,6 @@ import 'package:sqlite3/sqlite3.dart';
 import 'bloc/consent_bloc.dart';
 import 'bloc/consent_event.dart';
 import 'bloc/fleet_bloc.dart';
-import 'bloc/fleet_event.dart';
 import 'bloc/location_bloc.dart';
 import 'bloc/location_event.dart';
 import 'bloc/weather_bloc.dart';
@@ -270,7 +269,7 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
           BlocProvider(
             create: (_) => FleetBloc(
               provider: SimulatedFleetProvider(),
-            )..add(const FleetListenStarted()),
+            ),
           ),
         ],
         child: SnowSceneScaffold(tileProvider: widget.tileProvider),
