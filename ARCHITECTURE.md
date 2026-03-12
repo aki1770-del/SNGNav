@@ -286,9 +286,279 @@ test/
 └── widgets/     Widget rendering + golden tests
 
 packages/
-├── kalman_dr/       Kalman filter + DR provider (standalone package)
-└── routing_engine/  OSRM + Valhalla engines (standalone package)
+├── driving_conditions/  Pure Dart road-surface + safety score models
+├── driving_consent/     Privacy consent gate with Jidoka semantics
+├── driving_weather/     Weather models + provider abstraction
+├── fleet_hazard/        Fleet telemetry models + hazard aggregation
+├── kalman_dr/           Dead reckoning + location provider contracts
+├── map_viewport_bloc/   Declarative camera and viewport state
+├── navigation_safety/   Safety-focused navigation session + overlay
+├── offline_tiles/       MBTiles-backed offline tile management
+├── routing_bloc/        Engine-agnostic route lifecycle BLoC
+└── routing_engine/      OSRM + Valhalla routing interface
 ```
+
+---
+
+## Package Composition
+
+The sections above explain the app from the driver's point of view. This
+section explains it from the edge developer's point of view: which packages
+exist, which ones depend on each other, and how they compose into one
+navigation system.
+
+### Package-At-A-Glance
+
+| Package | Role | Depends on | pub.dev |
+|---------|------|------------|---------|
+| `driving_conditions` | Pure Dart road-surface assessment, precipitation tuning, visibility degradation, safety score simulation | `driving_weather`, `navigation_safety` | <https://pub.dev/packages/driving_conditions> |
+| `driving_consent` | Three-state consent gate (`unknown`, `granted`, `denied`) with per-purpose records | — | <https://pub.dev/packages/driving_consent> |
+| `driving_weather` | Weather models and provider interface | — | <https://pub.dev/packages/driving_weather> |
+| `fleet_hazard` | Fleet reports, hazard zones, clustering, provider interface | — | <https://pub.dev/packages/fleet_hazard> |
+| `kalman_dr` | Dead reckoning, `LocationProvider`, 4D Kalman filter | — | <https://pub.dev/packages/kalman_dr> |
+| `map_viewport_bloc` | Map camera mode, center, zoom, fit-to-bounds state | — | <https://pub.dev/packages/map_viewport_bloc> |
+| `navigation_safety` | Navigation session state, alert severity, safety overlay | `routing_engine` | <https://pub.dev/packages/navigation_safety> |
+| `offline_tiles` | MBTiles manager, tile coverage queries, runtime resolver | — | <https://pub.dev/packages/offline_tiles> |
+| `routing_bloc` | Route request lifecycle, progress, UI widgets | `routing_engine` | <https://pub.dev/packages/routing_bloc> |
+| `routing_engine` | Engine-agnostic route API with OSRM and Valhalla adapters | — | <https://pub.dev/packages/routing_engine> |
+
+### Dependency Graph
+
+Compile-time package dependencies are intentionally shallow. Most composition
+happens in the app layer through BLoCs and widget listeners, not by making
+packages import each other indiscriminately.
+
+```
+driving_conditions
+├── driving_weather
+└── navigation_safety_core
+
+navigation_safety
+└── routing_engine
+
+routing_bloc
+└── routing_engine
+
+Standalone packages:
+- driving_consent
+- fleet_hazard
+- kalman_dr
+- map_viewport_bloc
+- offline_tiles
+```
+
+This is deliberate. The packages form a toolkit, and the app decides how to
+compose them. That keeps each package reusable while letting the full SNGNav
+experience combine them tightly.
+
+### Composition Rules
+
+1. Keep domain packages narrow. A package should own one responsibility and
+   expose plain Dart models or a small BLoC surface.
+2. Compose at the boundary. The app layer wires packages together with
+   `MultiBlocProvider`, `BlocListener`, and provider injection.
+3. Use integration tests as the truth source. Cross-package behavior is proven
+   in `test/integration/` and package integration suites, not inferred from
+   README claims.
+
+### Pattern 1: Navigation Chain
+
+Purpose: calculate a route once, then let navigation state and viewport state
+react to that route consistently.
+
+```
+RouteRequest
+  -> routing_engine
+  -> RouteResult
+  -> routing_bloc
+  -> SnowSceneScaffold listener
+  -> navigation_safety
+  -> map_viewport_bloc
+  -> widgets
+```
+
+Key types:
+- `RouteRequest` / `RouteResult` from `routing_engine`
+- `RoutingState` from `routing_bloc`
+- `NavigationState` from `navigation_safety`
+- `MapState` from `map_viewport_bloc`
+
+Reference wiring:
+
+```dart
+BlocProvider(
+  create: (_) => RoutingBloc(engine: routingEngine),
+),
+BlocProvider(
+  create: (_) => NavigationBloc(),
+),
+BlocProvider(
+  create: (_) => MapBloc(),
+),
+
+BlocListener<RoutingBloc, RoutingState>(
+  listenWhen: (prev, curr) => !prev.hasRoute && curr.hasRoute,
+  listener: (context, state) {
+    final route = state.route!;
+    context.read<NavigationBloc>().add(NavigationStarted(
+      route: route,
+      destinationLabel: state.destinationLabel,
+    ));
+    // The app also fits the viewport to the route shape here.
+  },
+  child: const SnowSceneScaffold(),
+)
+```
+
+Sprint 60 evidence:
+- `test/integration/snow_scene_demo_flow_test.dart` proves `RouteRequested`
+  leads to route calculation, `NavigationStarted`, fit-to-route behavior, and
+  maneuver advancement in one composed flow.
+
+### Pattern 2: Hazard Pipeline
+
+Purpose: turn weather and fleet signals into one coherent driver-facing alert
+instead of competing warnings.
+
+```
+WeatherProvider -> driving_weather -> WeatherBloc ---
+                                                   \ 
+                                                    -> navigation_safety
+                                                   / 
+FleetProvider   -> fleet_hazard  -> FleetBloc  ----
+
+Optional analysis layer:
+driving_conditions -> reusable road-surface and safety score models
+```
+
+Key types:
+- `WeatherCondition` from `driving_weather`
+- `FleetReport` / `HazardZone` from `fleet_hazard`
+- `AlertSeverity` / `NavigationState` from `navigation_safety`
+
+`driving_conditions` stays pure Dart on purpose. It is the analysis layer an
+edge developer can reuse to model road surface, visibility, and safety score
+logic without pulling in Flutter widgets.
+
+Reference wiring:
+
+```dart
+BlocListener<FleetBloc, FleetState>(
+  listenWhen: (prev, curr) => !prev.hasHazards && curr.hasHazards,
+  listener: (context, state) {
+    final hasIcy = state.hazardReports.any(
+      (report) => report.condition == RoadCondition.icy,
+    );
+    context.read<NavigationBloc>().add(SafetyAlertReceived(
+      message: hasIcy
+          ? 'Fleet reports: icy road conditions detected'
+          : 'Fleet reports: snowy road conditions ahead',
+      severity: hasIcy ? AlertSeverity.critical : AlertSeverity.warning,
+    ));
+  },
+  child: const SnowSceneScaffold(),
+)
+```
+
+Sprint 60 evidence:
+- `test/integration/multi_hazard_priority_integration_test.dart` proves fleet
+  critical alerts override weaker weather warnings and that later weather input
+  does not downgrade an already-critical fleet alert.
+
+### Pattern 3: Consent Gate
+
+Purpose: stop fleet telemetry flow unless the driver has explicitly granted the
+relevant consent purpose.
+
+```
+driving_consent
+  -> ConsentRecord / ConsentService
+  -> ConsentBloc
+  -> SnowSceneScaffold listener
+  -> FleetListenStarted / FleetListenStopped
+  -> fleet_hazard provider lifecycle
+```
+
+Key types:
+- `ConsentRecord`, `ConsentPurpose`, `ConsentStatus` from `driving_consent`
+- `ConsentState` from the app layer
+- `FleetState` from the app layer over `fleet_hazard`
+
+Reference wiring:
+
+```dart
+BlocListener<ConsentBloc, ConsentState>(
+  listenWhen: (prev, curr) => prev.isFleetGranted != curr.isFleetGranted,
+  listener: (context, state) {
+    context.read<FleetBloc>().add(
+      state.isFleetGranted ? FleetListenStarted() : FleetListenStopped(),
+    );
+  },
+  child: const SnowSceneScaffold(),
+)
+```
+
+Sprint 60 evidence:
+- `test/integration/snow_scene_demo_flow_test.dart` proves fleet reports before
+  consent grant are ignored end to end, then begin affecting alerts only after
+  consent is granted.
+- `test/widgets/snow_scene_scaffold_test.dart` proves the widget-mediated
+  bridge dispatches `FleetListenStarted` on grant and `FleetListenStopped` on
+  revoke.
+
+### Offline Coverage Support
+
+`offline_tiles` is deliberately orthogonal to the three pipelines above. It is
+the map-survivability package: route shape and viewport logic still work, but
+the developer can ask a second question before the drive begins: "do I have
+local tile coverage for this route?"
+
+Sprint 60 evidence:
+- `packages/offline_tiles/test/integration/offline_tile_manager_test.dart`
+  proves exact tile resolution, lower-zoom fallback, per-point coverage, and
+  uncovered waypoint reporting across a route shape.
+
+### Full Composition at the App Boundary
+
+The app layer is where the toolkit becomes a product. In the Snow Scene app,
+the package surface is composed with app-owned BLoCs for location, weather,
+fleet, and consent, then rendered through `SnowSceneScaffold`.
+
+```
+kalman_dr            -> LocationBloc ---
+routing_engine       -> RoutingBloc ----\
+navigation_safety    -> NavigationBloc --\
+map_viewport_bloc    -> MapBloc -----------+-> SnowSceneScaffold
+driving_weather      -> WeatherBloc -----/
+driving_consent      -> ConsentBloc -----/
+fleet_hazard         -> FleetBloc -------/
+offline_tiles        -> MapLayer tile provider
+```
+
+This split is intentional:
+- Packages own reusable domain behavior
+- The app owns scenario choreography and UI timing
+- Integration tests prove the whole tree behaves coherently
+
+### Where To Start
+
+If you are adopting SNGNav selectively, start from the smallest package set
+that matches your use case.
+
+| Goal | Start here |
+|------|------------|
+| Add routing to an existing Flutter app | `routing_engine` + `routing_bloc` |
+| Keep position flowing when GPS drops | `kalman_dr` |
+| Add consent-aware fleet telemetry | `driving_consent` + `fleet_hazard` |
+| Turn weather and fleet input into safety alerts | `driving_weather` + `fleet_hazard` + `navigation_safety` + optionally `driving_conditions` |
+| Keep maps useful offline | `offline_tiles` + `map_viewport_bloc` |
+| Reproduce the full Snow Scene reference flow | all 10 packages + the app-layer BLoCs in `lib/bloc/` |
+
+Use this rule of thumb:
+- Start with one package when you need one capability.
+- Add a second package when you need lifecycle or UI state.
+- Move to the full app composition only when you need the whole
+  driver-assisting chain.
 
 ---
 
