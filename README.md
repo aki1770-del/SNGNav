@@ -320,9 +320,23 @@ Pre-built Chubu tiles: 28.3 MB, zoom 10-14.
 
 ## Safety
 
-This is a **display-only navigation aid** classified ASIL-QM.
-It does not control the vehicle. Dead reckoning positions are estimates.
-Safety alerts are advisory. See [SAFETY.md](SAFETY.md) for the full safety model.
+This is a **display-only navigation aid** classified ASIL-QM under ISO 26262.
+
+- **No vehicle control**: no steering, braking, throttle, or ADAS commands.
+- **Advisory alerts only**: weather warnings and hazard zones inform the
+  driver — they do not override driver judgment.
+- **No AI-generated imagery**: all visual output is deterministic (tile
+  rendering, route geometry, declared weather data). No generative model
+  produces or modifies what the driver sees.
+- **Consent by default**: fleet data sharing is deny-by-default,
+  per-purpose, and revocable.
+- **Graceful degradation**: loss of any single data source never produces a
+  blank screen or misleading output.
+
+The architecture aligns with emerging transport safety regulations
+(EU AI Act, UNECE WP.29) through design, not retrofit. See
+[SAFETY.md](SAFETY.md) for the full safety model, regulatory awareness
+context, and compliance-by-design mapping.
 
 ## API Documentation
 

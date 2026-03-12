@@ -26,9 +26,11 @@ on embedded hardware at the boundary between the vehicle and the world. You
 process on-device, not in the cloud. You collect data with consent, not by
 default. You render at 60fps on ARM, not on a gaming GPU.
 
-**Why we build this**: see [Why We Build](https://github.com/aki1770-del/sngnav/blob/main/docs/why_we_build.md)
-(PHIL-001) — the philosophy document that traces from Sakichi Toyoda's loom
-to the driver in an unexpected snowstorm.
+**Why we build this**: Sakichi Toyoda built a loom that stopped itself
+when a thread broke — the machine protected the weaver's work. We build
+navigation that protects the driver when conditions break: GPS lost in a
+tunnel, network gone on a mountain pass, snow the forecast missed. The
+architecture serves the edge developer. The edge developer serves the driver.
 
 ---
 
@@ -295,7 +297,7 @@ If a proposed feature can't answer all five, it doesn't ship.
 
 SNGNav is a product expression of a broader philosophy:
 
-- **WHY**: [Why We Build](https://github.com/aki1770-del/sngnav/blob/main/docs/why_we_build.md) (PHIL-001) — from Sakichi's loom to the driver in the snow
+- **WHY**: The architecture protects the driver when conditions break — from Sakichi's loom to the driver in the snow
 - **WHO**: The governance hierarchy traces from the human decision anchor through strategic intelligence to build execution
 - **HOW**: [ARCHITECTURE.md](ARCHITECTURE.md) — Five Guardians, the provider system, offline-first design
 
