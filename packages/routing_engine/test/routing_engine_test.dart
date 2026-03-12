@@ -254,6 +254,40 @@ void main() {
       );
       expect(withGeom.hasGeometry, isTrue);
     });
+
+    test('route models expose value props and debug strings', () {
+      const maneuver = RouteManeuver(
+        index: 1,
+        instruction: 'Turn right',
+        type: 'right',
+        lengthKm: 1.2,
+        timeSeconds: 90,
+        position: LatLng(35.1, 136.9),
+      );
+      const engine = EngineInfo(
+        name: 'osrm',
+        version: '1.0',
+        queryLatency: Duration(milliseconds: 42),
+      );
+      const route = RouteResult(
+        shape: [LatLng(35.1, 136.9), LatLng(35.2, 137.0)],
+        maneuvers: [maneuver],
+        totalDistanceKm: 12.34,
+        totalTimeSeconds: 780,
+        summary: 'Nagoya to Toyota',
+        engineInfo: engine,
+      );
+
+      expect(
+        maneuver.props,
+        [1, 'Turn right', 'right', 1.2, 90, const LatLng(35.1, 136.9)],
+      );
+      expect(maneuver.toString(), contains('Turn right'));
+      expect(engine.props, ['osrm', '1.0', const Duration(milliseconds: 42)]);
+      expect(engine.toString(), 'EngineInfo(osrm v1.0, 42ms)');
+      expect(route.props, [route.shape, route.maneuvers, 12.34, 780, 'Nagoya to Toyota', engine]);
+      expect(route.toString(), 'RouteResult(12.3km, 13min, 2 pts, osrm)');
+    });
   });
 
   group('RouteRequest', () {
@@ -276,6 +310,25 @@ void main() {
         destination: LatLng(34.97, 137.17),
       );
       expect(a, equals(b));
+    });
+
+    test('props include routing parameters', () {
+      const req = RouteRequest(
+        origin: LatLng(35.17, 136.88),
+        destination: LatLng(34.97, 137.17),
+        costing: 'truck',
+        language: 'en-US',
+      );
+
+      expect(
+        req.props,
+        [
+          const LatLng(35.17, 136.88),
+          const LatLng(34.97, 137.17),
+          'truck',
+          'en-US',
+        ],
+      );
     });
   });
 

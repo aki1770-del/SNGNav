@@ -11,6 +11,40 @@ Run benchmarks:
 flutter test test/benchmark/performance_benchmark_test.dart --reporter expanded
 ```
 
+## Coverage Baseline (Sprint 62, March 12 2026)
+
+Coverage command:
+
+```bash
+flutter test --coverage
+```
+
+Package coverage was measured by running the same command in the app root and each package directory, then reading each generated `coverage/lcov.info`.
+
+### Line Coverage Summary
+
+| Surface | Before | After | Delta |
+|:--------|-------:|------:|------:|
+| App | 83.10% | **84.12%** | **+1.02** |
+| driving_conditions | 89.33% | **94.00%** | **+4.67** |
+| driving_consent | 100.00% | 100.00% | 0.00 |
+| driving_weather | 83.85% | **97.69%** | **+13.84** |
+| fleet_hazard | 100.00% | 100.00% | 0.00 |
+| kalman_dr | 90.43% | 90.43% | 0.00 |
+| map_viewport_bloc | 87.97% | 87.97% | 0.00 |
+| navigation_safety | 92.78% | **98.33%** | **+5.55** |
+| offline_tiles | 74.60% | 74.60% | 0.00 |
+| routing_bloc | 96.97% | **100.00%** | **+3.03** |
+| routing_engine | 89.96% | **100.00%** | **+10.04** |
+
+### Sprint 62 Findings
+
+1. P1 D3-critical package coverage improved materially without production code changes.
+2. `routing_engine` and `routing_bloc` now have full measured line coverage.
+3. `driving_weather`, `navigation_safety`, and `driving_conditions` moved from good to near-complete coverage through focused model/event tests.
+4. The largest remaining blind spots are P2/supporting or adapter-heavy surfaces: `offline_tiles` (74.60%), app-only `geoclue_location_provider.dart`, and `snow_scene.dart`.
+5. `driving_consent` and `fleet_hazard` were already fully covered before Sprint 62.
+
 ## Kalman Filter (4D EKF)
 
 ### Machine D (i5-7267U 2C/4T)

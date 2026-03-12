@@ -127,5 +127,30 @@ void main() {
       expect(assessment.precipitation.minVelocity, 2.0);
       expect(assessment.precipitation.maxVelocity, 4.0);
     });
+
+    test('assessment remains value-comparable for identical conditions', () {
+      final a = DrivingConditionAssessment.fromCondition(_condition(
+        precipType: PrecipitationType.rain,
+        intensity: PrecipitationIntensity.light,
+        temperatureCelsius: 7,
+      ));
+      final b = DrivingConditionAssessment.fromCondition(_condition(
+        precipType: PrecipitationType.rain,
+        intensity: PrecipitationIntensity.light,
+        temperatureCelsius: 7,
+      ));
+
+      expect(a, equals(b));
+      expect(
+        a.props,
+        [
+          a.surfaceState,
+          a.gripFactor,
+          a.visibility,
+          a.precipitation,
+          a.advisoryMessage,
+        ],
+      );
+    });
   });
 }
