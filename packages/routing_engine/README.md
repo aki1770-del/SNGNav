@@ -10,6 +10,13 @@ Engine-agnostic routing interface for Dart with OSRM and Valhalla implementation
 - **Engine identity**: `EngineInfo` reports name, version, and query latency
 - **Build-time selection**: swap engines without code changes
 
+## Install
+
+```yaml
+dependencies:
+  routing_engine: ^0.1.2
+```
+
 ## Usage
 
 ```dart
@@ -74,6 +81,16 @@ class MyRoutingEngine implements RoutingEngine {
   Future<void> dispose() async {}
 }
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `RoutingEngine` | Abstract interface for route calculation, availability checks, and cleanup. |
+| `RouteRequest` | Defines origin, destination, and optional waypoints for a route query. |
+| `RouteResult` | Returns maneuvers, geometry, distance, duration, and engine metadata. |
+| `EngineInfo` | Reports engine name, version, and observed query latency. |
+| `OsrmRoutingEngine` / `ValhallaRoutingEngine` | Concrete implementations for OSRM and Valhalla backends. |
 
 ## See Also
 

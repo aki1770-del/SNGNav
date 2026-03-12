@@ -13,6 +13,13 @@ covariance-driven accuracy reporting. Pure Dart, no native dependencies.
 - **Two modes**: EKF (full) and linear extrapolation (lightweight)
 - **Decorator pattern**: wraps any `LocationProvider` transparently
 
+## Install
+
+```yaml
+dependencies:
+  kalman_dr: ^0.1.3
+```
+
 ## Usage
 
 ```dart
@@ -48,6 +55,15 @@ provider.positions.listen((position) {
       '(accuracy: ${position.accuracyMetres}m)');
 });
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `KalmanFilter` | Predicts and updates the 4D state vector for dead reckoning. |
+| `DeadReckoningProvider` | Wraps a location provider and emits predicted positions during GPS loss. |
+| `DeadReckoningMode` | Selects EKF or linear extrapolation mode. |
+| `KalmanPosition` | Carries predicted position, speed, heading, timestamp, and accuracy. |
 
 ## Safety Classification
 

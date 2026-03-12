@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Added an explicit install section to README for pub.dev onboarding.
+- Added an API overview table to README for core routing abstractions.
+
 ## 0.1.1
 
 - Added `example/main.dart` showing the engine-agnostic `RoutingEngine` API with a minimal example engine.

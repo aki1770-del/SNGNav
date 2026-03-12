@@ -3,7 +3,7 @@ description: >-
   Engine-agnostic routing interface with OSRM and Valhalla implementations.
   Supports local and public routing servers, offline routing via local Valhalla.
   Abstract RoutingEngine, RouteResult model, and build-time engine selection.
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

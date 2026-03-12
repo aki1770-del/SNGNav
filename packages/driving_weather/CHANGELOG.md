@@ -1,5 +1,10 @@
 ## Changelog
 
+## 0.1.2
+
+- Added an explicit install section to README for pub.dev onboarding.
+- Clarified the API overview and example flow in README.
+
 ## 0.1.1
 
 - Added `example/main.dart` showing simulated weather progression without network access.

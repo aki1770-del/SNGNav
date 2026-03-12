@@ -12,6 +12,13 @@ Weather condition model and provider abstraction for driving applications.
 - **SimulatedWeatherProvider** — Demo provider with a realistic mountain-pass
   snow scenario
 
+## Install
+
+```yaml
+dependencies:
+  driving_weather: ^0.1.2
+```
+
 ## Usage
 
 ```dart
@@ -55,6 +62,15 @@ class MyFleetWeatherProvider implements WeatherProvider {
   // stopMonitoring, dispose
 }
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `WeatherCondition` | Snapshot of precipitation, temperature, visibility, wind, and ice risk. |
+| `WeatherProvider` | Abstract interface for live or simulated weather sources. |
+| `OpenMeteoWeatherProvider` | Pulls real weather data with offline fallback behavior. |
+| `SimulatedWeatherProvider` | Provides deterministic demo and test weather sequences. |
 
 ## Model
 

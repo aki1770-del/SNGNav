@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Added an explicit install section to README for pub.dev onboarding.
+- Added an API overview table to README for core Kalman filter types.
+
 ## 0.1.2
 
 - Added `example/main.dart` showing Kalman predict/update flow.
