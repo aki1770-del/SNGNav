@@ -3,7 +3,7 @@ description: >
   Offline-first Flutter navigation with dead reckoning, weather safety,
   and configurable providers.
 publish_to: 'none'
-version: 0.3.1
+version: 0.4.0
 
 environment:
   sdk: ^3.11.0

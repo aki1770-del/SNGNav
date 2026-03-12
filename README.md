@@ -7,7 +7,7 @@
 Navigation that doesn't abandon you when conditions fail unexpectedly.
 
 ```
-Status:   v0.3.1
+Status:   v0.4.0
 Tests:    App suite + extracted package suites
 Platform: Linux desktop (Flutter 3.41.4)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md

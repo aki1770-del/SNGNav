@@ -125,7 +125,7 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SNGNav Snow Scene v0.3'),
+        title: const Text('SNGNav Snow Scene v0.4.0'),
         centerTitle: true,
         actions: [
           BlocBuilder<NavigationBloc, NavigationState>(

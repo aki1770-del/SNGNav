@@ -1,6 +1,6 @@
 # SNGNav — Agent Instructions
 
-**Project**: sngnav_snow_scene v0.3.1
+**Project**: sngnav_snow_scene v0.4.0
 **What**: Offline-first Flutter navigation with dead reckoning, weather safety, fleet hazard aggregation, and configurable providers. Reference app for embedded Linux IVI.
 **SDK**: Dart ^3.11.0, Flutter stable channel
 **Platform**: Linux desktop (primary), embedded Linux IVI (target)

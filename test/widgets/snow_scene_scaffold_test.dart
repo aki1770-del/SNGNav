@@ -215,7 +215,7 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('SNGNav Snow Scene v0.3'), findsOneWidget);
+      expect(find.text('SNGNav Snow Scene v0.4.0'), findsOneWidget);
     });
 
     testWidgets('shows navigation status chip (idle)', (tester) async {
