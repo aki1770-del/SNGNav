@@ -37,6 +37,33 @@ Five guardians. Five failure modes. No single component's failure abandons the d
 
 ---
 
+## Why This Architecture?
+
+The navigation industry is converging on cloud-powered 3D visualization — AI
+models rendering vivid driving scenes from server-side imagery. The results are
+impressive in good conditions. In degraded conditions — tunnels, rural dead
+zones, unexpected weather that kills connectivity — cloud-dependent navigation
+disappears at the moment the driver needs it most.
+
+SNGNav takes the opposite approach:
+
+| Aspect | Cloud-first navigation | SNGNav |
+|--------|----------------------|--------|
+| Processing | Server-side AI rendering | On-device, embedded Linux |
+| Connectivity | Required for full experience | Works fully offline |
+| Data model | Proprietary, platform-locked | Open-source, BSD-3-Clause |
+| Driver data | Platform-controlled collection | Consent-first, deny-by-default |
+| Extensibility | Closed API, vendor decides features | 4 provider interfaces, 10 packages, pub.dev |
+| Weather awareness | Not a design concern | Origin story — built for unexpected snow |
+| Safety boundary | Rich visuals during driving | Display-only, ASIL-QM, advisory alerts |
+
+This is not a competition with commercial navigation services. It is architecture
+for the conditions they do not serve: **offline, degraded, extreme.** The driver
+in a snowstorm with no cell signal is our customer's customer. The edge developer
+building for that driver is our customer.
+
+---
+
 ## Quick Start
 
 ```bash
