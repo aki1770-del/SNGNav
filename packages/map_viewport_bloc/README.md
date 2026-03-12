@@ -19,7 +19,7 @@ contract instead of rebuilding viewport rules from scratch.
 
 ```yaml
 dependencies:
-  map_viewport_bloc: ^0.1.0
+  map_viewport_bloc: ^0.1.1
 ```
 
 ## Quick Start
@@ -96,6 +96,17 @@ import 'package:map_viewport_bloc/map_viewport_bloc_core.dart';
 final weatherZ = MapLayerType.weather.zIndex;
 final safetyToggleable = MapLayerType.safety.isUserToggleable;
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `MapBloc` | Viewport state machine for camera mode, bounds fitting, and layer visibility. |
+| `MapState` | Current center, zoom, camera mode, visible layers, and fit-bounds state. |
+| `MapEvent` | Inputs for initialization, camera changes, pans, bounds fitting, and layer toggles. |
+| `CameraMode` | Canonical `follow`, `freeLook`, and `overview` camera states. |
+| `MapLayerType` | Six-layer contract for route, fleet, hazard, weather, and safety rendering. |
+| `MapLayerZ` | Stable Z-order constants for renderer integrations. |
 
 ## Example
 

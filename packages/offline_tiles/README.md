@@ -19,7 +19,7 @@ fallback.
 
 ```yaml
 dependencies:
-  offline_tiles: ^0.1.0
+  offline_tiles: ^0.1.1
 ```
 
 ## Quick Start
@@ -48,7 +48,7 @@ final tileLayer = TileLayer(
 );
 ```
 
-## Public API
+## API Overview
 
 | API | Purpose |
 |-----|---------|

@@ -12,6 +12,7 @@
 @Tags(['probe'])
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -38,8 +39,8 @@ void main() {
 
       // The OSRM public demo may be temporarily down.
       // This test documents reachability from Machine D.
-      print('OSRM public demo reachable: $available');
-      print('URL: $osrmDemoUrl');
+      debugPrint('OSRM public demo reachable: $available');
+      debugPrint('URL: $osrmDemoUrl');
       expect(available, isA<bool>());
     });
 
@@ -49,12 +50,12 @@ void main() {
         destination: toyota,
       ));
 
-      print('Route: ${result.summary}');
-      print('Distance: ${result.totalDistanceKm.toStringAsFixed(1)} km');
-      print('Duration: ${(result.totalTimeSeconds / 60).toStringAsFixed(0)} min');
-      print('Geometry points: ${result.shape.length}');
-      print('Maneuvers: ${result.maneuvers.length}');
-      print('Latency: ${result.engineInfo.queryLatency.inMilliseconds} ms');
+      debugPrint('Route: ${result.summary}');
+      debugPrint('Distance: ${result.totalDistanceKm.toStringAsFixed(1)} km');
+      debugPrint('Duration: ${(result.totalTimeSeconds / 60).toStringAsFixed(0)} min');
+      debugPrint('Geometry points: ${result.shape.length}');
+      debugPrint('Maneuvers: ${result.maneuvers.length}');
+      debugPrint('Latency: ${result.engineInfo.queryLatency.inMilliseconds} ms');
 
       // Nagoya → Toyota is ~25-40 km by road.
       expect(result.totalDistanceKm, greaterThan(20));
@@ -94,9 +95,9 @@ void main() {
         destination: toyota,
       ));
 
-      print('--- Maneuvers ---');
+      debugPrint('--- Maneuvers ---');
       for (final m in result.maneuvers) {
-        print('  [${m.index}] ${m.type}: ${m.instruction} '
+        debugPrint('  [${m.index}] ${m.type}: ${m.instruction} '
             '(${m.lengthKm.toStringAsFixed(1)} km)');
       }
 

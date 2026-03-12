@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Add explicit Install section and API Overview table to README.
+- Refresh README validation and license metadata for republish.
+
 ## 0.1.0
 
 - Initial release.

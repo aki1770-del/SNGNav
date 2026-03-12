@@ -4,7 +4,7 @@ description: >-
   DENIED. Per-purpose consent (fleet location, weather telemetry, diagnostics),
   multi-jurisdiction support (GDPR, CCPA, APPI), and pluggable storage.
   Pure Dart, no Flutter dependency.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

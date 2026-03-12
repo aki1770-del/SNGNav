@@ -3,7 +3,7 @@ description: >-
   Safety-focused navigation session state machine and always-on-top alert
   overlay for driver-assisting navigation. Flutter package with pure Dart
   _core models for SafetyScore, AlertSeverity, and threshold configuration.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

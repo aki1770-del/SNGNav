@@ -22,7 +22,7 @@ control steering, braking, throttle, or any vehicle actuation path.
 
 ```yaml
 dependencies:
-  navigation_safety: ^0.1.0
+  navigation_safety: ^0.1.1
 ```
 
 ## Quick Start
@@ -53,7 +53,7 @@ class MyNavScreen extends StatelessWidget {
 }
 ```
 
-## API
+## API Overview
 
 | API | Purpose |
 |-----|---------|

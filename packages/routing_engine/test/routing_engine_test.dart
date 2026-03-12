@@ -7,6 +7,8 @@
 ///   - RouteResult: model construction, ETA, hasGeometry
 ///   - RouteRequest: equality, default values
 ///   - RoutingException: message formatting
+library;
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;

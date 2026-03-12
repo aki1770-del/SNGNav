@@ -10,6 +10,13 @@ Fleet telemetry hazard model and geographic clustering for driver-assisting navi
 - `FleetProvider` abstract interface so apps can swap simulated, local, or remote telemetry backends.
 - Pure Dart package with no Flutter dependency.
 
+## Install
+
+```yaml
+dependencies:
+  fleet_hazard: ^0.1.1
+```
+
 ## Usage
 
 ```dart
@@ -61,6 +68,16 @@ class MyFleetProvider implements FleetProvider {
   }
 }
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `FleetReport` | Individual vehicle report carrying position, road condition, confidence, and timestamp. |
+| `HazardZone` | Clustered geographic hazard summary with severity and confidence rollups. |
+| `HazardAggregator` | Pure Dart clustering algorithm that converts reports into hazard zones. |
+| `FleetProvider` | Stream-based interface for simulated, local, or remote fleet telemetry sources. |
+| `RoadCondition` | Canonical hazard labels such as `dry`, `snowy`, and `icy`. |
 
 ## See Also
 

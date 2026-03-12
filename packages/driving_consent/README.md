@@ -10,6 +10,13 @@ Automotive-grade privacy consent model with Jidoka semantics — UNKNOWN equals 
 - **Pluggable storage**: abstract `ConsentService` interface. Bring your own persistent backend.
 - **Pure Dart**: no Flutter dependency. Works in CLI tools, servers, and Flutter apps.
 
+## Install
+
+```yaml
+dependencies:
+  driving_consent: ^0.1.1
+```
+
 ## Usage
 
 ```dart
@@ -64,6 +71,17 @@ class MyPersistentConsentService implements ConsentService {
   }
 }
 ```
+
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `ConsentRecord` | Stores consent status, purpose, jurisdiction, and audit timestamp. |
+| `ConsentService` | Abstract interface for reading, granting, revoking, and listing consent state. |
+| `InMemoryConsentService` | Ready-to-run in-memory implementation for tests, demos, and offline flows. |
+| `ConsentPurpose` | Enumerates independently controlled data-sharing purposes. |
+| `ConsentStatus` | Three-state consent gate where `unknown` is treated as denied. |
+| `Jurisdiction` | Captures the policy context for the recorded consent decision. |
 
 ## See Also
 

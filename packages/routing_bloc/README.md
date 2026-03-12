@@ -22,7 +22,7 @@ implementation.
 
 ```yaml
 dependencies:
-  routing_bloc: ^0.1.0
+  routing_bloc: ^0.1.1
 ```
 
 ## Quick Start
@@ -65,7 +65,7 @@ class ExampleScreen extends StatelessWidget {
 }
 ```
 
-## API
+## API Overview
 
 | API | Purpose |
 |-----|---------|

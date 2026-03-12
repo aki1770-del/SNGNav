@@ -1,7 +1,5 @@
 library;
 
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';

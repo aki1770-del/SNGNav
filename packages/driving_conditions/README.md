@@ -14,6 +14,13 @@ This package converts a `WeatherCondition` into structured driving guidance:
 
 `driving_conditions` does not render UI and does not depend on Flutter. It provides computation outputs that app and package layers can consume.
 
+## Install
+
+```yaml
+dependencies:
+  driving_conditions: ^0.1.1
+```
+
 ## Core Models
 
 ### RoadSurfaceState
@@ -132,12 +139,23 @@ final score = simulator.simulate(
 );
 ```
 
+## API Overview
+
+| Type | Purpose |
+|------|---------|
+| `DrivingConditionAssessment` | Converts a weather condition into surface, grip, visibility, particles, and advisory output. |
+| `RoadSurfaceState` | Canonical road-surface classification for dry, wet, slush, snow, ice, and standing water. |
+| `PrecipitationConfig` | Particle-system parameters derived from precipitation type and intensity. |
+| `VisibilityDegradation` | UI-facing opacity and blur values derived from visibility distance. |
+| `SafetyScoreSimulator` | Monte Carlo simulator for advisory safety scoring under uncertain conditions. |
+| `SimulationBackend` / `SimulationOptions` | Extension points for native or alternative simulation engines. |
+
 ## Validation
 
 Current package status:
 
 - Pure Dart
-- 53 passing tests (including boundary regression tests from in-flight review)
+- 60 passing tests
 - Path-dependent monorepo package
 
 ## See Also
@@ -153,3 +171,7 @@ Current package status:
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
 All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+
+## License
+
+BSD-3-Clause — see [LICENSE](LICENSE).

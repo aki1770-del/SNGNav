@@ -17,8 +17,6 @@
 /// PHIL-001 trace: D3 (driver in snow) → D5 (evidence chain).
 library;
 
-import 'dart:async';
-
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';

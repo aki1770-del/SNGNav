@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -73,14 +74,13 @@ void _report(String label, List<int> timesUs) {
   final p95 = timesUs[(n * 0.95).floor()];
   final p99 = timesUs[(n * 0.99).floor()];
 
-  // ignore: avoid_print
-  print('  $label: '
-      'min=${min}µs  '
-      'p50=${p50}µs  '
+    debugPrint('  $label: '
+      'min=$minµs  '
+      'p50=$p50µs  '
       'mean=${mean.toStringAsFixed(1)}µs  '
-      'p95=${p95}µs  '
-      'p99=${p99}µs  '
-      'max=${max}µs  '
+      'p95=$p95µs  '
+      'p99=$p99µs  '
+      'max=$maxµs  '
       '(n=$n)');
 }
 

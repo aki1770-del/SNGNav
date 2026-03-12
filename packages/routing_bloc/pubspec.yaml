@@ -3,7 +3,7 @@ description: >-
   Engine-agnostic route lifecycle state machine and glanceable route progress
   UI for driver-assisting navigation. Flutter package with pure Dart _core
   exports for routing state and route progress status.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

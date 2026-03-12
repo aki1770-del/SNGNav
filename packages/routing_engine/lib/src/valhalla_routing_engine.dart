@@ -24,12 +24,10 @@ class ValhallaRoutingEngine implements RoutingEngine {
 
   ValhallaRoutingEngine({
     String? baseUrl,
-    Duration availabilityTimeout = const Duration(seconds: 3),
-    Duration routeTimeout = const Duration(seconds: 15),
+    this.availabilityTimeout = const Duration(seconds: 3),
+    this.routeTimeout = const Duration(seconds: 15),
     http.Client? client,
   })  : baseUrl = baseUrl ?? _defaultValhallaUrl,
-        availabilityTimeout = availabilityTimeout,
-        routeTimeout = routeTimeout,
         _client = client ?? http.Client();
 
   ValhallaRoutingEngine.local({
