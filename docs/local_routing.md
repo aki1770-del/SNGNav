@@ -4,6 +4,9 @@ Run OSRM and Valhalla locally so SNGNav routes without any cloud dependency.
 Both engines run as Docker containers on a standard Linux machine or a
 Raspberry Pi 4/5.
 
+For full device bring-up on arm64 Linux targets, pair this guide with
+`docs/arm_deployment.md`.
+
 ## Prerequisites
 
 - Docker (or Podman)

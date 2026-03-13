@@ -9,7 +9,7 @@
 
 Navigation that doesn't abandon you when conditions fail unexpectedly.
 
-Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [docs/local_routing.md](docs/local_routing.md).
+Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), [docs/architecture.md](docs/architecture.md), [docs/arm_deployment.md](docs/arm_deployment.md), and [docs/local_routing.md](docs/local_routing.md).
 
 Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
@@ -89,6 +89,8 @@ First run shows a simulated drive from Sakae Station to Higashiokazaki Station
 with real weather from Open-Meteo. No API keys required.
 
 **Clone-to-render target**: < 15 minutes on fresh Ubuntu 24.04.
+
+For Raspberry Pi and other arm64 Linux targets, see [docs/arm_deployment.md](docs/arm_deployment.md).
 
 ## Running The Demo
 
