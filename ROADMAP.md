@@ -29,7 +29,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 ## Near-Term
 
-- [ ] **Local routing deployment guide** — document Valhalla on Raspberry Pi (Docker and native), Chūbu region OSM extract, route query walkthrough
+- [x] **Local routing deployment guide** — OSRM + Valhalla via Docker, Chūbu region, Raspberry Pi notes (see [docs/local_routing.md](docs/local_routing.md))
 - [ ] **Conference submission** — submit abstract to embedded Linux or automotive open-source events (FOSDEM, ELC, AGL)
 - [ ] **Package usage examples** — richer examples in pub.dev READMEs showing integration patterns
 

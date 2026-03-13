@@ -103,6 +103,9 @@ are needed. If OSRM is unavailable, Valhalla serves as fallback.
 [osrm_routing_engine.dart](lib/providers/osrm_routing_engine.dart),
 [valhalla_routing_engine.dart](lib/providers/valhalla_routing_engine.dart)
 
+**Deployment**: See [docs/local_routing.md](docs/local_routing.md) for Docker
+setup on desktop or Raspberry Pi.
+
 ### Guardian 4: Kalman Filter
 
 **Protects against**: noisy GPS measurements and position jumps.
