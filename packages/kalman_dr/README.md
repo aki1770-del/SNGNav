@@ -65,6 +65,84 @@ provider.positions.listen((position) {
 });
 ```
 
+## Integration Pattern
+
+The package becomes most useful when it sits between your raw location source
+and the rest of the Flutter app. The pattern is: create the underlying GPS
+provider once, wrap it with `DeadReckoningProvider`, then surface the stream in
+UI code that can explain when the app is running on prediction instead of live
+GPS.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:kalman_dr/kalman_dr.dart';
+
+class DeadReckoningStatusCard extends StatefulWidget {
+  const DeadReckoningStatusCard({
+    super.key,
+    required this.gpsProvider,
+  });
+
+  final LocationProvider gpsProvider;
+
+  @override
+  State<DeadReckoningStatusCard> createState() =>
+      _DeadReckoningStatusCardState();
+}
+
+class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
+  late final DeadReckoningProvider provider;
+
+  @override
+  void initState() {
+    super.initState();
+    provider = DeadReckoningProvider(
+      inner: widget.gpsProvider,
+      mode: DeadReckoningMode.kalman,
+    );
+    provider.start();
+  }
+
+  @override
+  void dispose() {
+    provider.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<GeoPosition>(
+      stream: provider.positions,
+      builder: (context, snapshot) {
+        final position = snapshot.data;
+        if (position == null) {
+          return const Text('Waiting for location...');
+        }
+
+        final degraded = position.accuracyMetres > 25;
+        return ListTile(
+          title: Text(
+            '${position.latitude.toStringAsFixed(5)}, '
+            '${position.longitude.toStringAsFixed(5)}',
+          ),
+          subtitle: Text(
+            degraded
+                ? 'Predicted path — accuracy '
+                    '${position.accuracyMetres.toStringAsFixed(0)}m'
+                : 'Live GPS lock — accuracy '
+                    '${position.accuracyMetres.toStringAsFixed(0)}m',
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+This is the tunnel pattern: keep the location pipeline alive, surface the
+degraded confidence honestly, and let the rest of the map/navigation stack keep
+rendering instead of freezing.
+
 ## API Overview
 
 | Type | Purpose |

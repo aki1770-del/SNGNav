@@ -385,5 +385,5 @@ Map data: OpenStreetMap contributors (ODbL-1.0).
 
 ---
 
-*Validated on Machine D: Ubuntu 24.04, Flutter 3.41.4, kernel 6.19.3-1-t2-noble.*
+*Validated on Machine E: Ubuntu 24.04, Flutter 3.41.4, kernel 6.18.5-1-t2-noble.*
 *Build: `flutter build linux --release` succeeds. Run `flutter test` from the repo root plus affected package suites under `packages/` for current validation.*

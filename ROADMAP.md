@@ -8,7 +8,7 @@ This document shows what has been built, what is in progress, and what comes nex
 ### Foundation (March 2026)
 
 - **10-package monorepo** — BLoC architecture, every provider swappable via `--dart-define`
-- **958 tests** passing across root and package suites
+- **1073 tests** passing across root and package suites
 - **Dead reckoning** — 4D Extended Kalman Filter (`kalman_dr` 0.2.0, [pub.dev](https://pub.dev/packages/kalman_dr))
 - **Weather-aware driving conditions** — deterministic road surface classification (`driving_conditions` 0.2.0, [pub.dev](https://pub.dev/packages/driving_conditions))
 - **Offline map tiles** — MBTiles (SQLite) with no network dependency
@@ -20,7 +20,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — package composition, provider chain, BLoC event flow
 - [SAFETY.md](SAFETY.md) — regulatory awareness (EU AI Act, ISO 26262, SOTIF, R155/R156)
-- Package READMEs with install instructions and API examples on pub.dev
+- Package READMEs with install instructions, API examples, and integration-pattern snippets on pub.dev
 
 ## In Progress
 
@@ -31,7 +31,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 - [x] **Local routing deployment guide** — OSRM + Valhalla via Docker, Chūbu region, Raspberry Pi notes (see [docs/local_routing.md](docs/local_routing.md))
 - [ ] **Conference submission** — submit abstract to embedded Linux or automotive open-source events (FOSDEM, ELC, AGL)
-- [ ] **Package usage examples** — richer examples in pub.dev READMEs showing integration patterns
+- [x] **Package usage examples** — richer examples in pub.dev READMEs showing integration patterns
 
 ## Strategic
 

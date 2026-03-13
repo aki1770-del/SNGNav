@@ -43,6 +43,81 @@ await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
 await service.revoke(ConsentPurpose.fleetLocation);
 ```
 
+## Integration Pattern
+
+The package is designed to sit at the entrance to any data-sharing feature.
+Typical app wiring: query consent before enabling telemetry, render the current
+state, and only activate the upstream provider after the driver grants the exact
+purpose.
+
+```dart
+import 'package:driving_consent/driving_consent.dart';
+import 'package:flutter/material.dart';
+
+class FleetConsentGate extends StatefulWidget {
+  const FleetConsentGate({super.key});
+
+  @override
+  State<FleetConsentGate> createState() => _FleetConsentGateState();
+}
+
+class _FleetConsentGateState extends State<FleetConsentGate> {
+  final service = InMemoryConsentService();
+  late Future<ConsentRecord> consentFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    consentFuture = service.getConsent(ConsentPurpose.fleetLocation);
+  }
+
+  Future<void> _grant() async {
+    await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
+    setState(() {
+      consentFuture = service.getConsent(ConsentPurpose.fleetLocation);
+    });
+  }
+
+  @override
+  void dispose() {
+    service.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ConsentRecord>(
+      future: consentFuture,
+      builder: (context, snapshot) {
+        final consent = snapshot.data;
+        if (consent == null) {
+          return const Text('Checking consent...');
+        }
+
+        if (consent.isEffectivelyGranted) {
+          return const Text('Fleet telemetry enabled');
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Fleet telemetry is blocked: ${consent.status.name}'),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _grant,
+              child: const Text('Grant consent'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+```
+
+This is the Jidoka posture in UI form: `unknown` and `denied` both stop the
+line until the human makes an explicit choice.
+
 ### Implement a persistent service
 
 ```dart

@@ -169,7 +169,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.1"
   nested:
     dependency: transitive
     description:
@@ -198,10 +198,10 @@ packages:
     dependency: "direct main"
     description:
       name: routing_engine
-      sha256: e0b3b6fdf959801bc91e53331edcd9b0c5e3d52c35384c76a95f94b91dbb9912
+      sha256: bd1509f9aeea302dc74d6348ddc6bb46ce471c0875714955147a5f01c7bbad49
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.0"
+    version: "0.1.2"
   sky_engine:
     dependency: transitive
     description: flutter

@@ -22,7 +22,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
-  routing_engine: ^0.1.0
+  routing_engine: ^0.1.2
 
 dev_dependencies:
   flutter_test:

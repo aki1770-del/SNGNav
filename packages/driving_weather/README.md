@@ -59,6 +59,74 @@ await sim.startMonitoring();
 // Cycles: clear → light snow → moderate → heavy → ice → clearing
 ```
 
+## Integration Pattern
+
+The usual app pattern is: start one weather provider in `initState`, subscribe
+through `StreamBuilder`, and convert the raw condition into a compact status bar
+or alert strip. This keeps the weather source swappable while the UI stays
+stable.
+
+```dart
+import 'package:driving_weather/driving_weather.dart';
+import 'package:flutter/material.dart';
+
+class WeatherBanner extends StatefulWidget {
+  const WeatherBanner({super.key});
+
+  @override
+  State<WeatherBanner> createState() => _WeatherBannerState();
+}
+
+class _WeatherBannerState extends State<WeatherBanner> {
+  late final WeatherProvider provider;
+
+  @override
+  void initState() {
+    super.initState();
+    provider = SimulatedWeatherProvider(
+      interval: const Duration(seconds: 5),
+    )..startMonitoring();
+  }
+
+  @override
+  void dispose() {
+    provider.stopMonitoring();
+    provider.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<WeatherCondition>(
+      stream: provider.conditions,
+      builder: (context, snapshot) {
+        final condition = snapshot.data;
+        if (condition == null) {
+          return const Text('Loading weather...');
+        }
+
+        return ListTile(
+          title: Text(
+            '${condition.precipType.name} '
+            '${condition.intensity.name}',
+          ),
+          subtitle: Text(
+            'Visibility ${condition.visibilityMeters.toStringAsFixed(0)}m • '
+            'Ice risk ${condition.iceRisk ? 'yes' : 'no'}',
+          ),
+          trailing: condition.isHazardous
+              ? const Icon(Icons.warning_amber_rounded)
+              : const Icon(Icons.cloud_outlined),
+        );
+      },
+    );
+  }
+}
+```
+
+Swap `SimulatedWeatherProvider` for `OpenMeteoWeatherProvider` when you move
+from demo mode to live weather. The widget contract does not have to change.
+
 ### Custom weather source
 
 ```dart

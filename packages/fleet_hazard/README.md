@@ -50,6 +50,78 @@ for (final zone in zones) {
 }
 ```
 
+## Integration Pattern
+
+`fleet_hazard` usually lives between a telemetry stream and a map overlay.
+Collect reports from your provider, aggregate them into zones, then render the
+zone summaries in whatever map widget or overlay layer your app uses.
+
+```dart
+import 'dart:async';
+
+import 'package:fleet_hazard/fleet_hazard.dart';
+import 'package:flutter/material.dart';
+
+class HazardSummaryList extends StatefulWidget {
+  const HazardSummaryList({
+    super.key,
+    required this.provider,
+  });
+
+  final FleetProvider provider;
+
+  @override
+  State<HazardSummaryList> createState() => _HazardSummaryListState();
+}
+
+class _HazardSummaryListState extends State<HazardSummaryList> {
+  final reports = <FleetReport>[];
+  StreamSubscription<FleetReport>? subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    subscription = widget.provider.reports.listen((report) {
+      setState(() {
+        reports.add(report);
+      });
+    });
+    widget.provider.startListening();
+  }
+
+  @override
+  void dispose() {
+    subscription?.cancel();
+    widget.provider.stopListening();
+    widget.provider.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zones = HazardAggregator.aggregate(reports);
+
+    return ListView(
+      shrinkWrap: true,
+      children: [
+        for (final zone in zones)
+          ListTile(
+            title: Text('${zone.severity.name} zone'),
+            subtitle: Text(
+              '${zone.vehicleCount} vehicles • '
+              '${zone.radiusMeters.toStringAsFixed(0)}m radius',
+            ),
+          ),
+      ],
+    );
+  }
+}
+```
+
+In a full navigation UI, this same `zones` list is what you would pass to a map
+overlay layer so the driver sees clustered snowy and icy segments, not raw per-
+vehicle noise.
+
 ## Implement a provider
 
 ```dart

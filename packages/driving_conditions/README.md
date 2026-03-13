@@ -149,6 +149,69 @@ final score = simulator.simulate(
 );
 ```
 
+## Integration Pattern
+
+`driving_conditions` normally sits between a weather feed and a UI layer that
+needs an honest safety summary. A common wiring pattern is: subscribe to a
+weather provider, derive a `DrivingConditionAssessment`, then compute a safety
+score for the current vehicle speed before rendering the result.
+
+```dart
+import 'package:driving_conditions/driving_conditions.dart';
+import 'package:driving_weather/driving_weather.dart';
+import 'package:flutter/material.dart';
+
+class ConditionsSummaryCard extends StatelessWidget {
+  const ConditionsSummaryCard({
+    super.key,
+    required this.conditions,
+    required this.vehicleSpeedKmh,
+  });
+
+  final Stream<WeatherCondition> conditions;
+  final double vehicleSpeedKmh;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<WeatherCondition>(
+      stream: conditions,
+      builder: (context, snapshot) {
+        final condition = snapshot.data;
+        if (condition == null) {
+          return const Text('Waiting for weather...');
+        }
+
+        final assessment =
+            DrivingConditionAssessment.fromCondition(condition);
+        final score = const SafetyScoreSimulator().simulate(
+          speed: vehicleSpeedKmh,
+          gripFactor: assessment.gripFactor,
+          surface: assessment.surfaceState,
+          visibilityMeters: condition.visibilityMeters,
+          seed: 42,
+        );
+
+        return Card(
+          child: ListTile(
+            title: Text(
+              '${assessment.surfaceState.name} '
+              'grip=${assessment.gripFactor.toStringAsFixed(2)}',
+            ),
+            subtitle: Text(
+              '${assessment.advisoryMessage}\n'
+              'Safety score: ${score.overall.toStringAsFixed(2)}',
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+This keeps the package in its intended role: pure computation in the middle of
+the stack, no UI dependency, but a direct path to a driver-facing advisory.
+
 ## API Overview
 
 | Type | Purpose |

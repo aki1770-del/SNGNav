@@ -64,6 +64,74 @@ if (await engine.isAvailable()) {
 
 `ValhallaRoutingEngine.local()` targets `http://localhost:8005`, which matches the canonical Machine E local runtime path proven in SNGNav. The plain `ValhallaRoutingEngine()` constructor still preserves the historical `http://localhost:8002` default for compatibility. Override `host`, `port`, `availabilityTimeout`, or `routeTimeout` when needed.
 
+## Integration Pattern
+
+In a Flutter app, `routing_engine` typically sits behind a button or bloc
+event: choose the backend once, fetch the route asynchronously, then render the
+summary and maneuver list. Keep the engine creation close to app start so you
+can swap OSRM, Valhalla, or a local backend without touching the route screen.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:routing_engine/routing_engine.dart';
+
+class RoutePreviewCard extends StatefulWidget {
+  const RoutePreviewCard({super.key});
+
+  @override
+  State<RoutePreviewCard> createState() => _RoutePreviewCardState();
+}
+
+class _RoutePreviewCardState extends State<RoutePreviewCard> {
+  late final RoutingEngine engine;
+  Future<RouteResult>? pendingRoute;
+
+  @override
+  void initState() {
+    super.initState();
+    engine = ValhallaRoutingEngine.local();
+    pendingRoute = engine.calculateRoute(const RouteRequest(
+      origin: LatLng(35.1709, 136.9066),
+      destination: LatLng(34.9551, 137.1771),
+    ));
+  }
+
+  @override
+  void dispose() {
+    engine.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<RouteResult>(
+      future: pendingRoute,
+      builder: (context, snapshot) {
+        final route = snapshot.data;
+        if (route == null) {
+          return const Text('Calculating route...');
+        }
+
+        return Card(
+          child: ListTile(
+            title: Text(route.summary),
+            subtitle: Text(
+              '${route.totalDistanceKm.toStringAsFixed(1)} km, '
+              '${route.maneuvers.length} maneuvers via '
+              '${route.engineInfo.name}',
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+When you later adopt `routing_bloc`, keep this same seam: the bloc owns the
+async lifecycle, `routing_engine` stays the backend abstraction.
+
 ### Implement a custom engine
 
 ```dart
