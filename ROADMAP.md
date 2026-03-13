@@ -1,0 +1,54 @@
+# Roadmap
+
+SNGNav is developed in structured sprints with governance checks at every close.
+This document shows what has been built, what is in progress, and what comes next.
+
+## Completed
+
+### Foundation (March 2026)
+
+- **10-package monorepo** — BLoC architecture, every provider swappable via `--dart-define`
+- **958 tests** passing across root and package suites
+- **Dead reckoning** — 4D Extended Kalman Filter (`kalman_dr` 0.2.0, [pub.dev](https://pub.dev/packages/kalman_dr))
+- **Weather-aware driving conditions** — deterministic road surface classification (`driving_conditions` 0.2.0, [pub.dev](https://pub.dev/packages/driving_conditions))
+- **Offline map tiles** — MBTiles (SQLite) with no network dependency
+- **Privacy-first consent** — Jidoka model: UNKNOWN = DENIED, per-purpose, per-jurisdiction
+- **Safety architecture** — display-only, ASIL-QM documented (see [SAFETY.md](SAFETY.md))
+- **Developer onboarding** — `git clone` → `flutter run` on any Linux machine, no server required for default config
+
+### Documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — package composition, provider chain, BLoC event flow
+- [SAFETY.md](SAFETY.md) — regulatory awareness (EU AI Act, ISO 26262, SOTIF, R155/R156)
+- Package READMEs with install instructions and API examples on pub.dev
+
+## In Progress
+
+- **Content distribution** — technical article and thread series on the architecture and regulatory positioning
+- **Community building** — monitoring engagement, responding to feedback
+
+## Near-Term
+
+- [ ] **Local routing deployment guide** — document Valhalla on Raspberry Pi (Docker and native), Chūbu region OSM extract, route query walkthrough
+- [ ] **Conference submission** — submit abstract to embedded Linux or automotive open-source events (FOSDEM, ELC, AGL)
+- [ ] **Package usage examples** — richer examples in pub.dev READMEs showing integration patterns
+
+## Strategic
+
+- [ ] **Voice guidance** — Flutter TTS integration for turn announcements and hazard warnings
+- [ ] **Real-world validation** — field testing with actual GPS hardware and winter driving conditions
+- [ ] **3D visualization** — elevation-aware rendering (current foundation is 2D)
+- [ ] **Additional routing engines** — GraphHopper, custom OSRM profiles for winter conditions
+
+## Non-Goals
+
+These are intentional architectural boundaries, not missing features:
+
+- **No AI/ML inference** — road surface classification is deterministic. This is a regulatory advantage, not a limitation.
+- **No cloud dependency** — the architecture is offline-first by design. Connectivity is optional.
+- **No vehicle actuation** — SNGNav is display-only. It informs the driver; it does not control the vehicle.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and testing guidelines.
+BSD-3-Clause — contributions welcome.
