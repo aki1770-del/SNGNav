@@ -68,12 +68,15 @@ building for that driver is our customer.
 
 ```bash
 # Prerequisites
-sudo apt install clang cmake ninja-build libgtk-3-dev
+sudo apt install clang cmake ninja-build libgtk-3-dev libsqlite3-dev pkg-config
 
 # Build and run
 flutter pub get
 flutter run -d linux -t lib/snow_scene.dart
 ```
+
+For the automated path, run `./scripts/setup.sh`. It installs the same Linux
+packages and requires interactive `sudo` access for Step 1.
 
 First run shows a simulated drive from Sakae Station to Higashiokazaki Station
 with real weather from Open-Meteo. No API keys required.

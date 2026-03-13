@@ -32,6 +32,15 @@ echo ""
 
 # Step 1: System packages
 echo -e "${YELLOW}[1/6] Installing system dependencies...${NC}"
+if ! sudo -n true 2>/dev/null; then
+  echo "  Step 1 needs interactive sudo access on Debian/Ubuntu."
+  echo "  You may be prompted for your password, or you can install these manually first:"
+  echo "    sudo apt-get install clang cmake ninja-build libgtk-3-dev libsqlite3-dev pkg-config"
+fi
+if ! sudo -v; then
+  echo -e "${RED}Unable to acquire sudo credentials for Step 1.${NC}"
+  exit 1
+fi
 sudo apt-get update -qq
 sudo apt-get install -y -qq \
   clang \

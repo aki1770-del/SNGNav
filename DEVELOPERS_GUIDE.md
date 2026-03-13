@@ -874,13 +874,20 @@ test('heavy snow with freezing temp produces compactedSnow', () {
 Each package has its own test suite. Run them independently:
 
 ```bash
-# Single package
+# Single pure Dart package
 cd packages/driving_conditions && dart test
 
-# All packages
+# Single Flutter package
+cd packages/navigation_safety && flutter test
+
+# All packages (choose the runner by package type)
 for pkg in packages/*/; do
   echo "Testing $pkg..."
-  (cd "$pkg" && dart test) || exit 1
+  if grep -q 'sdk: flutter' "$pkg/pubspec.yaml"; then
+    (cd "$pkg" && flutter test) || exit 1
+  else
+    (cd "$pkg" && dart test) || exit 1
+  fi
 done
 
 # Full app (Flutter required)
