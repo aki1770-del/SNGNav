@@ -6,6 +6,11 @@ Declarative viewport state machine for driver-assisting navigation maps.
 overview transitions so edge developers can plug a renderer into a stable
 contract instead of rebuilding viewport rules from scratch.
 
+## When to use this package
+
+Use `map_viewport_bloc` when you need stable camera rules and a canonical
+layer contract, but want freedom to choose your own renderer.
+
 ## Features
 
 - `MapBloc` with three camera modes: `follow`, `freeLook`, `overview`.
@@ -129,7 +134,11 @@ flutter run -d linux -t example/lib/main.dart
 - [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
 - [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`map_viewport_bloc` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

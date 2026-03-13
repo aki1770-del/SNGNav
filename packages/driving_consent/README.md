@@ -2,6 +2,11 @@
 
 Automotive-grade privacy consent model with Jidoka semantics — UNKNOWN equals DENIED.
 
+## When to use this package
+
+Use `driving_consent` when a data pipeline must stop itself unless the driver
+has explicitly granted the exact sharing purpose.
+
 ## Features
 
 - **Jidoka gate**: `ConsentStatus.unknown` is treated as denied. The pipeline stops itself.
@@ -17,7 +22,7 @@ dependencies:
   driving_consent: ^0.1.1
 ```
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:driving_consent/driving_consent.dart';
@@ -95,7 +100,11 @@ class MyPersistentConsentService implements ConsentService {
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`driving_consent` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

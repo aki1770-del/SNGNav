@@ -3,6 +3,17 @@
 Thank you for your interest. This guide explains how to add new providers,
 write tests, and submit changes.
 
+If this is your first contribution, start with one of these:
+
+- documentation drift or broken links
+- provider or package README examples
+- tests for an existing provider edge case
+- small integration fixes that preserve the driver-assisting safety boundary
+
+If you are reporting a bug or proposing a feature, use the GitHub issue
+templates first so the expected environment, failure mode, and user value are
+captured up front.
+
 ---
 
 ## How the Provider System Works
@@ -138,7 +149,8 @@ void main() {
 flutter test
 ```
 
-All 1073+ existing tests must still pass.
+Run the root suite plus any affected package suites. Treat the live test run as
+authoritative when README or document statistics drift.
 
 ---
 
@@ -219,6 +231,9 @@ Read [SAFETY.md](SAFETY.md) before contributing. Key rules:
    - What provider you added and why
    - Which `--dart-define` flag activates it
    - Test count before and after
+
+For documentation-only pull requests, replace the test delta with a short note
+describing what reader friction or drift you removed.
 
 ---
 

@@ -8,6 +8,11 @@ fallback.
 - coverage tiers: what to pre-download
 - runtime resolution: how a single tile request is resolved while rendering
 
+## When to use this package
+
+Use `offline_tiles` when your map must keep rendering through connectivity loss
+and you need explicit control over what gets cached versus how lookups resolve.
+
 ## Features
 
 - `OfflineTileManager` with `cacheRoute()`, `cacheRegion()`, and `tileProvider`
@@ -109,7 +114,11 @@ The example shows:
 - [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
 - [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`offline_tiles` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

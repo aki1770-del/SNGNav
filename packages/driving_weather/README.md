@@ -2,6 +2,11 @@
 
 Weather condition model and provider abstraction for driving applications.
 
+## When to use this package
+
+Use `driving_weather` when you need a consistent weather model plus a swappable
+provider interface for real and simulated driving conditions.
+
 ## Features
 
 - **WeatherCondition** — Equatable model with precipitation type/intensity,
@@ -19,7 +24,7 @@ dependencies:
   driving_weather: ^0.1.2
 ```
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:driving_weather/driving_weather.dart';
@@ -107,4 +112,8 @@ ASIL-QM — display and advisory only. Not for vehicle control.
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`driving_weather` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.

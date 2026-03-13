@@ -2,6 +2,11 @@
 
 Fleet telemetry hazard model and geographic clustering for driver-assisting navigation.
 
+## When to use this package
+
+Use `fleet_hazard` when you need to turn individual snowy or icy vehicle
+reports into clustered, map-ready hazard zones.
+
 ## Features
 
 - `FleetReport` model with road condition, timestamp, confidence, and position.
@@ -17,7 +22,7 @@ dependencies:
   fleet_hazard: ^0.1.1
 ```
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:fleet_hazard/fleet_hazard.dart';
@@ -91,7 +96,11 @@ class MyFleetProvider implements FleetProvider {
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`fleet_hazard` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

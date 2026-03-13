@@ -1,9 +1,18 @@
 # kalman_dr
 
+[![pub package](https://img.shields.io/pub/v/kalman_dr.svg)](https://pub.dev/packages/kalman_dr)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
+
 Kalman filter dead reckoning for Dart location services.
 
 A 4D Extended Kalman Filter that predicts position through GPS loss using
 covariance-driven accuracy reporting. Pure Dart, no native dependencies.
+
+## When to use this package
+
+Use `kalman_dr` when your app already has a location provider and you need GPS
+loss survivability with explicit uncertainty reporting instead of a blank map.
 
 ## Features
 
@@ -17,10 +26,10 @@ covariance-driven accuracy reporting. Pure Dart, no native dependencies.
 
 ```yaml
 dependencies:
-  kalman_dr: ^0.1.3
+  kalman_dr: ^0.2.0
 ```
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:kalman_dr/kalman_dr.dart';
@@ -84,7 +93,11 @@ unreliable data.
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`kalman_dr` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

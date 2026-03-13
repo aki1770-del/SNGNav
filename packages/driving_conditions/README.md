@@ -1,5 +1,9 @@
 # driving_conditions
 
+[![pub package](https://img.shields.io/pub/v/driving_conditions.svg)](https://pub.dev/packages/driving_conditions)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
+
 Pure Dart computation models for weather-driven driving safety assessment.
 
 This package converts a `WeatherCondition` into structured driving guidance:
@@ -10,6 +14,12 @@ This package converts a `WeatherCondition` into structured driving guidance:
 - Precipitation particle parameters for renderers
 - Monte Carlo safety score simulation
 
+## When to use this package
+
+Use `driving_conditions` when you already have weather input and need
+deterministic road-surface, grip, visibility, or safety-score outputs without
+pulling in Flutter UI code.
+
 ## Scope
 
 `driving_conditions` does not render UI and does not depend on Flutter. It provides computation outputs that app and package layers can consume.
@@ -18,7 +28,7 @@ This package converts a `WeatherCondition` into structured driving guidance:
 
 ```yaml
 dependencies:
-  driving_conditions: ^0.1.1
+  driving_conditions: ^0.2.0
 ```
 
 ## Core Models
@@ -111,7 +121,7 @@ overall = gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2
 
 Jitter is random `0.0..0.1` per run. Use `seed` for deterministic tests.
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:driving_conditions/driving_conditions.dart';
@@ -170,7 +180,11 @@ Current package status:
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`driving_conditions` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

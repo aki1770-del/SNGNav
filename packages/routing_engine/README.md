@@ -2,6 +2,11 @@
 
 Engine-agnostic routing interface for Dart with OSRM and Valhalla implementations.
 
+## When to use this package
+
+Use `routing_engine` when you want one route API that can target OSRM,
+Valhalla, or a custom backend without rewriting app logic.
+
 ## Features
 
 - **Abstract interface**: `RoutingEngine` defines `calculateRoute`, `isAvailable`, `info`, `dispose`
@@ -17,7 +22,7 @@ dependencies:
   routing_engine: ^0.1.2
 ```
 
-## Usage
+## Quick Start
 
 ```dart
 import 'package:routing_engine/routing_engine.dart';
@@ -104,7 +109,11 @@ class MyRoutingEngine implements RoutingEngine {
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`routing_engine` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## Local Integration Test
 

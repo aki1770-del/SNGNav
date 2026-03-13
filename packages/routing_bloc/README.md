@@ -8,6 +8,11 @@ while keeping route guidance small enough to read quickly. It depends on
 `routing_engine` for backend routing and does not require a specific engine
 implementation.
 
+## When to use this package
+
+Use `routing_bloc` when you want route lifecycle state and glanceable progress
+UI without coupling your screens to a specific routing backend.
+
 ## Features
 
 - `RoutingBloc` for the 4-state route lifecycle: idle, loading, routeActive,
@@ -143,7 +148,11 @@ flutter run -d linux -t example/lib/main.dart
 - [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
 - [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`routing_bloc` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

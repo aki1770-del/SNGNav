@@ -7,6 +7,11 @@ for driver-assisting navigation applications.
 displays safety-relevant information to help the driver decide. It does **not**
 control steering, braking, throttle, or any vehicle actuation path.
 
+## When to use this package
+
+Use `navigation_safety` when you need navigation session state and a safety
+overlay that stays visually subordinate to the driver, not the vehicle.
+
 ## Features
 
 - `NavigationBloc` for navigation session lifecycle: idle, navigating,
@@ -125,7 +130,11 @@ control commands or to imply ADAS certification.
 - [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
 
-All ten extracted packages are part of [SNGNav](https://github.com/aki1770-del/SNGNav), a driver-assisting navigation reference product.
+## Part of SNGNav
+
+`navigation_safety` is one of the 10 packages in
+[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
+driver-assisting navigation reference product for embedded Linux.
 
 ## License
 

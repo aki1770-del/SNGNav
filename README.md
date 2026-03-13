@@ -1,10 +1,17 @@
 # sngnav
 
 [![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
+[![pub package](https://img.shields.io/pub/v/driving_conditions.svg)](https://pub.dev/packages/driving_conditions)
+[![pub package](https://img.shields.io/pub/v/kalman_dr.svg)](https://pub.dev/packages/kalman_dr)
 
 **Snow Guard Navigation** — offline-first navigation for Flutter on embedded Linux.
 
 Navigation that doesn't abandon you when conditions fail unexpectedly.
+
+Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [docs/local_routing.md](docs/local_routing.md).
+
+Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
 ```
 Status:   v0.4.0

@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a capability, workflow, or package improvement.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user or developer problem is currently unsolved?
+      placeholder: Describe the current friction or missing capability.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: What would you like to add or change?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and scope impact
+      description: Does this change affect display-only boundaries, consent, or offline-first behavior?
+      placeholder: Explain whether the proposal changes safety boundaries or not.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you evaluate?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues first.
+          required: true
+        - label: This proposal stays within SNGNav's driver-assisting, display-only scope.
+          required: false

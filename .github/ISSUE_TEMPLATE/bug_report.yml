@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible defect in SNGNav or one of its packages.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed, and why does it matter to the driver or edge developer?
+      placeholder: In one or two sentences, describe the failure.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Give a minimal path from clean checkout to failure.
+      placeholder: |
+        1. flutter run ...
+        2. Trigger ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Flutter, Dart, target package, and any relevant dart-defines.
+      placeholder: |
+        OS:
+        Flutter:
+        Dart:
+        Package:
+        Flags:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste stack traces, terminal output, or screenshots if available.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues first.
+          required: true
+        - label: I can reproduce this on the current main branch.
+          required: false
