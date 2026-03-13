@@ -9,7 +9,6 @@ import 'package:sngnav_snow_scene/providers/geoclue_location_provider.dart';
 class _FakeGeoClueSession implements GeoClueSession {
   _FakeGeoClueSession({
     this.availableAccuracyLevel,
-    this.nextPosition,
   });
 
   final int? availableAccuracyLevel;
