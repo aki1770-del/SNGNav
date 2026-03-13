@@ -3,13 +3,33 @@ library;
 
 import 'package:equatable/equatable.dart';
 
+/// A geographic position fix with accuracy and motion metadata.
+///
+/// The atomic unit of location data in the dead-reckoning pipeline.
+/// Carries both the position and quality indicators ([isNavigationGrade],
+/// [isHighAccuracy]) so downstream code can react to degrading fixes.
 class GeoPosition extends Equatable {
+  /// Latitude in decimal degrees (WGS-84).
   final double latitude;
+
+  /// Longitude in decimal degrees (WGS-84).
   final double longitude;
-  final double accuracy; // metres
+
+  /// Horizontal accuracy radius in metres.
+  ///
+  /// Grows during dead reckoning as uncertainty increases.
+  final double accuracy;
+
+  /// Altitude in metres above the WGS-84 ellipsoid. [double.nan] if unknown.
   final double altitude;
-  final double speed; // m/s
-  final double heading; // degrees, 0 = north, clockwise
+
+  /// Ground speed in metres per second. [double.nan] if unknown.
+  final double speed;
+
+  /// Heading in degrees clockwise from true north. [double.nan] if unknown.
+  final double heading;
+
+  /// Timestamp of this fix (UTC).
   final DateTime timestamp;
 
   const GeoPosition({

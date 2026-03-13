@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Added comprehensive dartdoc coverage for native simulation APIs and model quality fields.
+- Fixed `dart doc` warnings so documentation builds cleanly.
+- Added edge-case coverage for road-surface thresholds, hysteresis behavior, and visibility degradation.
+
 ## 0.1.1
 
 - Add explicit Install section and API Overview table to README.

@@ -8,7 +8,8 @@ import 'package:equatable/equatable.dart';
 
 class VisibilityDegradation extends Equatable {
   /// Overlay opacity (0.0 = fully transparent, 1.0 = fully opaque).
-  /// Clamped to [0.0, 0.9] — never fully occludes the view.
+  ///
+  /// Clamped to the range 0.0–0.9 — never fully occludes the view.
   final double opacity;
 
   /// Gaussian blur sigma for fog effect.

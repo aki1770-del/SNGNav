@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Expanded dartdoc coverage for `GeoPosition` and public quality-threshold APIs.
+- Added package-level `GeoPosition` edge-case coverage.
+- Prepared for republish after Sprint 69 code hardening.
+
 ## 0.1.3
 
 - Added an explicit install section to README for pub.dev onboarding.

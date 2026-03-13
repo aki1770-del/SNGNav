@@ -1,3 +1,7 @@
+/// Native (C FFI) implementation of [SafetyScoreSimulationEngine].
+///
+/// Delegates Monte Carlo safety-score simulation to a compiled C library
+/// for higher throughput than the pure-Dart [CpuSafetyScoreSimulationEngine].
 library;
 
 import 'package:navigation_safety/navigation_safety_core.dart';
@@ -7,7 +11,12 @@ import 'native_simulation_bindings.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_options.dart';
 
+/// Runs safety-score Monte Carlo simulation via a native C library.
+///
+/// Uses [NativeSimulationBindings] to call the compiled
+/// `simulation_run_batch` function through `dart:ffi`.
 class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
+  /// Creates an engine backed by [bindings] (defaults to platform library).
   NativeSafetyScoreSimulationEngine({NativeSimulationBindings? bindings})
     : _bindings = bindings ?? NativeSimulationBindings();
 

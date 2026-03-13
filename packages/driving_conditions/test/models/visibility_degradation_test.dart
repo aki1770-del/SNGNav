@@ -42,5 +42,34 @@ void main() {
       final result = VisibilityDegradation.compute(10000);
       expect(result, VisibilityDegradation.clear);
     });
+
+    test('exactly 500m → 0.5 opacity and 0 blur (boundary)', () {
+      final result = VisibilityDegradation.compute(500);
+      expect(result.opacity, 0.5);
+      expect(result.blurSigma, 0.0);
+    });
+
+    test('501m → opacity slightly less than 0.5', () {
+      final result = VisibilityDegradation.compute(501);
+      expect(result.opacity, lessThan(0.5));
+      expect(result.blurSigma, 0.0);
+    });
+
+    test('clear constant has zero opacity and blur', () {
+      expect(VisibilityDegradation.clear.opacity, 0.0);
+      expect(VisibilityDegradation.clear.blurSigma, 0.0);
+    });
+
+    test('equatable: same values are equal', () {
+      final a = VisibilityDegradation.compute(300);
+      final b = VisibilityDegradation.compute(300);
+      expect(a, equals(b));
+    });
+
+    test('equatable: different values are not equal', () {
+      final a = VisibilityDegradation.compute(300);
+      final b = VisibilityDegradation.compute(400);
+      expect(a, isNot(equals(b)));
+    });
   });
 }
