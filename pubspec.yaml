@@ -20,15 +20,15 @@ dependencies:
   routing_engine:
     path: packages/routing_engine
   routing_bloc:
-    ^0.1.0
+    ^0.2.0
   offline_tiles:
-    ^0.1.0
+    ^0.2.0
   fleet_hazard:
     path: packages/fleet_hazard
   navigation_safety:
-    ^0.1.0
+    ^0.2.0
   map_viewport_bloc:
-    ^0.1.0
+    ^0.2.0
   driving_conditions:
     path: packages/driving_conditions
   flutter_map: ^8.2.2

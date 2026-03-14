@@ -1,0 +1,57 @@
+name: sngnav_example
+description: "Integrated SNGNav example app."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^9.1.0
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  driving_weather:
+    path: ../packages/driving_weather
+  map_viewport_bloc:
+    path: ../packages/map_viewport_bloc
+  navigation_safety:
+    path: ../packages/navigation_safety
+  offline_tiles:
+    path: ../packages/offline_tiles
+  routing_bloc:
+    path: ../packages/routing_bloc
+  routing_engine:
+    path: ../packages/routing_engine
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+dependency_overrides:
+  driving_conditions:
+    path: ../packages/driving_conditions
+  driving_consent:
+    path: ../packages/driving_consent
+  driving_weather:
+    path: ../packages/driving_weather
+  fleet_hazard:
+    path: ../packages/fleet_hazard
+  kalman_dr:
+    path: ../packages/kalman_dr
+  map_viewport_bloc:
+    path: ../packages/map_viewport_bloc
+  navigation_safety:
+    path: ../packages/navigation_safety
+  offline_tiles:
+    path: ../packages/offline_tiles
+  routing_bloc:
+    path: ../packages/routing_bloc
+  routing_engine:
+    path: ../packages/routing_engine
+
+flutter:
+  uses-material-design: true
