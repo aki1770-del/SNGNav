@@ -8,7 +8,7 @@ This document shows what has been built, what is in progress, and what comes nex
 ### Foundation (March 2026)
 
 - **10-package monorepo** — BLoC architecture, every provider swappable via `--dart-define`
-- **1073 tests** passing across root and package suites
+- **963+ tests** passing across root and package suites (restructured from 1073 during package extraction)
 - **Dead reckoning** — 4D Extended Kalman Filter (`kalman_dr` 0.2.0, [pub.dev](https://pub.dev/packages/kalman_dr))
 - **Weather-aware driving conditions** — deterministic road surface classification (`driving_conditions` 0.2.0, [pub.dev](https://pub.dev/packages/driving_conditions))
 - **Offline map tiles** — MBTiles (SQLite) with no network dependency
@@ -16,11 +16,22 @@ This document shows what has been built, what is in progress, and what comes nex
 - **Safety architecture** — display-only, ASIL-QM documented (see [SAFETY.md](SAFETY.md))
 - **Developer onboarding** — `git clone` → `flutter run` on any Linux machine, no server required for default config
 
+### Consolidation (March 2026)
+
+- **All 10 packages at 0.2.0 on pub.dev** — version-harmonized ecosystem with aligned internal constraints
+- **963 tests** passing across root and package suites (+243 in targeted density expansion)
+- **Integrated example app** — `cd example && flutter run -d linux` demonstrates 5-package composition in one flow
+- **Package integration patterns** — documented cross-package BLoC composition, provider override, and testing recipes
+- **GeoClue hardening** — fault-tolerant location provider with graceful offline fallback
+
 ### Documentation
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — package composition, provider chain, BLoC event flow
 - [SAFETY.md](SAFETY.md) — regulatory awareness (EU AI Act, ISO 26262, SOTIF, R155/R156)
+- [DEVELOPERS_GUIDE.md](DEVELOPERS_GUIDE.md) — developer onboarding and testing guide
+- [BENCHMARKS.md](BENCHMARKS.md) — routing engine performance analysis
 - Package READMEs with install instructions, API examples, and integration-pattern snippets on pub.dev
+- [example/README.md](example/README.md) — 5-step demo flow for the integrated example app
 
 ## In Progress
 

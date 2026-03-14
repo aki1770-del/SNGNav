@@ -14,11 +14,11 @@ Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), [docs/
 Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
 ```
-Status:   v0.4.0
-Tests:    App suite + extracted package suites
-Platform: Linux desktop (Flutter 3.41.4)
+Status:   v0.5.0
+Tests:    963 passing (root + 10 package suites)
+Platform: Linux desktop (Flutter 3.11.0)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 10 SNGNav packages
+Ecosystem: 10 packages, all 0.2.0 on pub.dev
 ```
 
 ## Why "Snow Guard"?
