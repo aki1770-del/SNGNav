@@ -3,7 +3,8 @@
 # Runs on every push and pull request:
 #   1. flutter analyze (zero issues required)
 #   2. flutter test    (all tests must pass)
-#   3. flutter build linux --release (build must succeed)
+#   3. aggregate coverage summary (quality signal for edge developers)
+#   4. flutter build linux --release (build must succeed)
 #
 # Probe tests (tagged 'probe') are excluded — they require
 # live network access to external APIs.
@@ -66,22 +67,47 @@ jobs:
             liblzma-dev \
             libsqlite3-dev
 
-      - name: Run app tests
-        run: flutter test --exclude-tags=probe
+      - name: Install coverage tooling
+        run: dart pub global activate coverage
 
-      - name: Run pure Dart package tests
+      - name: Run app tests with coverage
+        run: flutter test --coverage --exclude-tags=probe
+
+      - name: Run pure Dart package tests with coverage
         run: |
+          export PATH="$HOME/.pub-cache/bin:$PATH"
           for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine; do
             echo "--- packages/$pkg ---"
-            (cd "packages/$pkg" && dart test)
+            (
+              cd "packages/$pkg"
+              rm -rf coverage
+              dart test --coverage=coverage/raw
+              dart pub global run coverage:format_coverage \
+                --packages=.dart_tool/package_config.json \
+                --report-on=lib \
+                --in=coverage/raw \
+                --out=coverage/lcov.info \
+                --lcov
+            )
           done
 
-      - name: Run Flutter package tests
+      - name: Run Flutter package tests with coverage
         run: |
           for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc; do
             echo "--- packages/$pkg ---"
-            (cd "packages/$pkg" && flutter test)
+            (cd "packages/$pkg" && flutter test --coverage)
           done
+
+      - name: Merge coverage reports
+        run: ./scripts/coverage_report.sh
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: |
+            coverage/lcov.info
+            coverage/summary.txt
 
   build:
     name: Build (Linux)
