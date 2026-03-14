@@ -62,3 +62,4 @@ packages/*/pubspec.lock
 # Lock file — kept for the app (reproducible builds)
 # Uncomment if publishing the app as a package:
 # pubspec.lock
+data/routing/

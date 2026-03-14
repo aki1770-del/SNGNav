@@ -7,8 +7,8 @@ This document shows what has been built, what is in progress, and what comes nex
 
 ### Foundation (March 2026)
 
-- **10-package monorepo** — BLoC architecture, every provider swappable via `--dart-define`
-- **963+ tests** passing across root and package suites (restructured from 1073 during package extraction)
+- **11-package monorepo** — BLoC architecture, every provider swappable via `--dart-define`
+- **987+ tests** passing across root and package suites
 - **Dead reckoning** — 4D Extended Kalman Filter (`kalman_dr` 0.2.0, [pub.dev](https://pub.dev/packages/kalman_dr))
 - **Weather-aware driving conditions** — deterministic road surface classification (`driving_conditions` 0.2.0, [pub.dev](https://pub.dev/packages/driving_conditions))
 - **Offline map tiles** — MBTiles (SQLite) with no network dependency
@@ -18,8 +18,8 @@ This document shows what has been built, what is in progress, and what comes nex
 
 ### Consolidation (March 2026)
 
-- **All 10 packages at 0.2.0 on pub.dev** — version-harmonized ecosystem with aligned internal constraints
-- **963 tests** passing across root and package suites (+243 in targeted density expansion)
+- **10 packages at 0.2.0 on pub.dev** + `voice_guidance` 0.1.0 — version-harmonized ecosystem with aligned internal constraints
+- **987 tests** passing across root and 11 package suites
 - **Integrated example app** — `cd example && flutter run -d linux` demonstrates 5-package composition in one flow
 - **Package integration patterns** — documented cross-package BLoC composition, provider override, and testing recipes
 - **GeoClue hardening** — fault-tolerant location provider with graceful offline fallback
@@ -46,7 +46,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 ## Strategic
 
-- [ ] **Voice guidance** — Flutter TTS integration for turn announcements and hazard warnings
+- [x] **Voice guidance** — Flutter TTS integration for turn announcements and hazard warnings (`voice_guidance` 0.1.0)
 - [ ] **Real-world validation** — field testing with actual GPS hardware and winter driving conditions
 - [ ] **3D visualization** — elevation-aware rendering (current foundation is 2D)
 - [ ] **Additional routing engines** — GraphHopper, custom OSRM profiles for winter conditions

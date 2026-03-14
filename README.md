@@ -16,10 +16,10 @@ Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in tem
 
 ```
 Status:   v0.5.0
-Tests:    963 passing (root + 10 package suites)
+Tests:    987 passing (root + 11 package suites)
 Platform: Linux desktop (Flutter 3.11.0)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 10 packages, all 0.2.0 on pub.dev
+Ecosystem: 11 packages (10 at 0.2.0 + voice_guidance 0.1.0) on pub.dev
 ```
 
 ## Why "Snow Guard"?
@@ -61,7 +61,7 @@ SNGNav takes the opposite approach:
 | Connectivity | Required for full experience | Works fully offline |
 | Data model | Proprietary, platform-locked | Open-source, BSD-3-Clause |
 | Driver data | Platform-controlled collection | Consent-first, deny-by-default |
-| Extensibility | Closed API, vendor decides features | 4 provider interfaces, 10 packages, pub.dev |
+| Extensibility | Closed API, vendor decides features | 4 provider interfaces, 11 packages, pub.dev |
 | Weather awareness | Not a design concern | Origin story — built for unexpected snow |
 | Safety boundary | Rich visuals during driving | Display-only, ASIL-QM, advisory alerts |
 
@@ -369,7 +369,7 @@ Output: `doc/api/index.html`. Key entry points:
 
 ## Dependencies
 
-The app depends on the 10-package SNGNav ecosystem plus a small set of Flutter
+The app depends on the 11-package SNGNav ecosystem plus a small set of Flutter
 and runtime libraries with permissive licenses. See `pubspec.yaml` for the
 complete list.
 

@@ -11,21 +11,85 @@ import 'package:navigation_safety/navigation_safety.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
+import 'package:voice_guidance/voice_guidance.dart';
 
 const _origin = LatLng(35.1709, 136.8815);
 const _destination = LatLng(35.0700, 137.4000);
 const _toyotaCity = LatLng(35.0831, 137.1559);
 const _mbtilesPath = '../data/offline_tiles.mbtiles';
+const _voiceGuidanceEnabled =
+    bool.fromEnvironment('VOICE_GUIDANCE', defaultValue: true);
+const _voiceLanguageTag = String.fromEnvironment(
+  'VOICE_LANGUAGE',
+  defaultValue: 'ja-JP',
+);
 
 final _demoRoute = RouteResult(
   shape: const [
+    // Nagoya Station area
     LatLng(35.1709, 136.8815),
+    LatLng(35.1705, 136.8850),
+    LatLng(35.1700, 136.8900),
+    LatLng(35.1695, 136.8960),
+    LatLng(35.1690, 136.9020),
+    LatLng(35.1685, 136.9080),
+    // Heading east toward Chikusa
     LatLng(35.1680, 136.9100),
-    LatLng(35.1450, 136.9600),
+    LatLng(35.1672, 136.9150),
+    LatLng(35.1660, 136.9220),
+    LatLng(35.1645, 136.9300),
+    LatLng(35.1630, 136.9380),
+    LatLng(35.1610, 136.9450),
+    // Route 153 southeast toward Tenpaku
+    LatLng(35.1580, 136.9500),
+    LatLng(35.1550, 136.9560),
+    LatLng(35.1520, 136.9600),
+    LatLng(35.1480, 136.9650),
+    LatLng(35.1450, 136.9700),
+    LatLng(35.1410, 136.9760),
+    // Approaching Miyoshi
+    LatLng(35.1370, 136.9830),
+    LatLng(35.1330, 136.9900),
+    LatLng(35.1280, 136.9970),
+    LatLng(35.1230, 137.0040),
     LatLng(35.1200, 137.0100),
+    LatLng(35.1160, 137.0180),
+    // Route 153 continuing east
+    LatLng(35.1120, 137.0260),
+    LatLng(35.1080, 137.0350),
+    LatLng(35.1040, 137.0450),
+    LatLng(35.1000, 137.0550),
+    LatLng(35.0960, 137.0650),
+    LatLng(35.0930, 137.0750),
+    // Approaching Toyota City
+    LatLng(35.0900, 137.0850),
+    LatLng(35.0880, 137.0960),
+    LatLng(35.0860, 137.1080),
+    LatLng(35.0845, 137.1200),
+    LatLng(35.0835, 137.1350),
     LatLng(35.0831, 137.1559),
-    LatLng(35.0600, 137.2500),
-    LatLng(35.0500, 137.3200),
+    // Past Toyota heading east into mountains
+    LatLng(35.0825, 137.1700),
+    LatLng(35.0810, 137.1850),
+    LatLng(35.0790, 137.2000),
+    LatLng(35.0760, 137.2150),
+    LatLng(35.0720, 137.2300),
+    LatLng(35.0680, 137.2400),
+    // Mountain road climbing
+    LatLng(35.0640, 137.2500),
+    LatLng(35.0610, 137.2600),
+    LatLng(35.0590, 137.2720),
+    LatLng(35.0570, 137.2850),
+    LatLng(35.0550, 137.2980),
+    LatLng(35.0530, 137.3100),
+    // Descending toward Mikawa Highlands
+    LatLng(35.0520, 137.3200),
+    LatLng(35.0530, 137.3320),
+    LatLng(35.0550, 137.3450),
+    LatLng(35.0580, 137.3570),
+    LatLng(35.0610, 137.3680),
+    LatLng(35.0650, 137.3800),
+    LatLng(35.0680, 137.3900),
     LatLng(35.0700, 137.4000),
   ],
   maneuvers: const [
@@ -129,10 +193,22 @@ class SngNavExampleApp extends StatelessWidget {
                   ..add(const MapInitialized(center: _origin, zoom: 9.8)),
               ),
               BlocProvider(
-                create: (_) => RoutingBloc(engine: _MockRoutingEngine())
+                create: (_) => RoutingBloc(engine: _HybridRoutingEngine())
                   ..add(const RoutingEngineCheckRequested()),
               ),
               BlocProvider(create: (_) => NavigationBloc()),
+              BlocProvider(
+                create: (context) => VoiceGuidanceBloc(
+                  ttsEngine: _voiceGuidanceEnabled
+                      ? FlutterTtsEngine()
+                      : NoOpTtsEngine(),
+                  navigationStateStream: context.read<NavigationBloc>().stream,
+                  config: VoiceGuidanceConfig(
+                    enabled: _voiceGuidanceEnabled,
+                    languageTag: _voiceLanguageTag,
+                  ),
+                ),
+              ),
             ],
             child: const ExampleHomePage(),
           ),
@@ -158,6 +234,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   String _tileStatus = 'Checking tile source...';
   bool _isOffline = false;
   bool _navigationStarted = false;
+  bool _mapReady = false;
 
   @override
   void initState() {
@@ -244,6 +321,10 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   void _advanceNavigation() {
     context.read<NavigationBloc>().add(const ManeuverAdvanced());
+    // Force map to follow the new maneuver position
+    context.read<MapBloc>().add(
+          const CameraModeChanged(CameraMode.follow),
+        );
   }
 
   void _simulateDeviation() {
@@ -258,6 +339,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   void _applyMapState(MapState state) {
+    if (!_mapReady) return;
     if (state.hasFitBounds) {
       final bounds = LatLngBounds(state.fitBoundsSw!, state.fitBoundsNe!);
       _mapController.fitCamera(
@@ -299,6 +381,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             final maneuver = state.currentManeuver;
             if (maneuver != null) {
               context.read<MapBloc>().add(CenterChanged(maneuver.position));
+              context.read<MapBloc>().add(const ZoomChanged(12.0));
             }
           },
         ),
@@ -307,6 +390,21 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         appBar: AppBar(
           title: const Text('SNGNav Example'),
           actions: [
+            BlocBuilder<VoiceGuidanceBloc, VoiceGuidanceState>(
+              builder: (context, voiceState) {
+                final isMuted =
+                    !_voiceGuidanceEnabled || voiceState.status == VoiceGuidanceStatus.muted;
+                return IconButton(
+                  tooltip: isMuted ? 'Enable voice guidance' : 'Mute voice guidance',
+                  onPressed: () {
+                    context.read<VoiceGuidanceBloc>().add(
+                          isMuted ? const VoiceEnabled() : const VoiceDisabled(),
+                        );
+                  },
+                  icon: Icon(isMuted ? Icons.volume_off : Icons.volume_up),
+                );
+              },
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Center(
@@ -346,6 +444,10 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                 initialZoom: mapState.zoom,
                 minZoom: 6,
                 maxZoom: 16,
+                onMapReady: () {
+                  _mapReady = true;
+                  if (mapState.isReady) _applyMapState(mapState);
+                },
                 onPositionChanged: (position, hasGesture) {
                   if (!hasGesture) {
                     return;
@@ -359,9 +461,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                 TileLayer(
                   tileProvider:
                       _offlineTileManager?.tileProvider ?? NetworkTileProvider(),
-                  urlTemplate: _offlineTileManager == null
-                      ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-                      : null,
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.sngnav.example',
                 ),
                 BlocBuilder<RoutingBloc, RoutingState>(
@@ -386,8 +487,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                   markers: [
                     Marker(
                       point: _origin,
-                      width: 44,
-                      height: 44,
+                      width: 80,
+                      height: 40,
                       child: _MarkerBubble(
                         color: Colors.green.shade700,
                         icon: Icons.trip_origin,
@@ -396,8 +497,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                     ),
                     Marker(
                       point: _destination,
-                      width: 48,
-                      height: 48,
+                      width: 80,
+                      height: 40,
                       child: _MarkerBubble(
                         color: Colors.red.shade700,
                         icon: Icons.place,
@@ -508,11 +609,30 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Status: ${navState.status.name}'),
+                    if (navState.hasRoute) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Step ${navState.currentManeuverIndex + 1} / ${navState.route!.maneuvers.length}',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Text(
                       navState.currentManeuver?.instruction ?? 'Waiting for route',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
+                    if (navState.nextManeuver != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Next: ${navState.nextManeuver!.instruction}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -542,6 +662,40 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             ),
           ),
           _PanelCard(
+            title: 'Voice Guidance',
+            child: BlocBuilder<VoiceGuidanceBloc, VoiceGuidanceState>(
+              builder: (context, voiceState) {
+                final isMuted =
+                    !_voiceGuidanceEnabled || voiceState.status == VoiceGuidanceStatus.muted;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Enabled by config: $_voiceGuidanceEnabled'),
+                    Text('Language: $_voiceLanguageTag'),
+                    Text('Status: ${voiceState.status.name}'),
+                    const SizedBox(height: 6),
+                    Text(
+                      voiceState.lastSpokenText ?? 'No announcement yet',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        context.read<VoiceGuidanceBloc>().add(
+                              isMuted
+                                  ? const VoiceEnabled()
+                                  : const VoiceDisabled(),
+                            );
+                      },
+                      icon: Icon(isMuted ? Icons.volume_up : Icons.volume_off),
+                      label: Text(isMuted ? 'Enable Voice' : 'Mute Voice'),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          _PanelCard(
             title: 'Weather Feed',
             child: _WeatherSummary(
               condition: _latestWeather,
@@ -561,6 +715,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                     if (routingState.route != null) ...[
                       const SizedBox(height: 6),
                       Text(routingState.route!.summary),
+                      Text('Engine: ${routingState.route!.engineInfo.name}'),
                       Text(
                         '${routingState.route!.totalDistanceKm.toStringAsFixed(1)} km • ${routingState.route!.eta.inMinutes} min',
                       ),
@@ -577,6 +732,65 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         ],
       ),
     );
+  }
+}
+
+class _HybridRoutingEngine implements RoutingEngine {
+  _HybridRoutingEngine()
+      : _primary = ValhallaRoutingEngine.local(),
+        _secondary = OsrmRoutingEngine(baseUrl: 'https://router.project-osrm.org'),
+        _fallback = _MockRoutingEngine();
+
+  final RoutingEngine _primary;
+  final RoutingEngine _secondary;
+  final RoutingEngine _fallback;
+
+  @override
+  EngineInfo get info => _primary.info;
+
+  @override
+  Future<RouteResult> calculateRoute(RouteRequest request) async {
+    try {
+      final route = await _primary.calculateRoute(request);
+      if (route.hasGeometry) {
+        return route;
+      }
+    } catch (_) {
+      // Try secondary engine.
+    }
+
+    try {
+      final route = await _secondary.calculateRoute(request);
+      if (route.hasGeometry) {
+        return route;
+      }
+    } catch (_) {
+      // Fall back to deterministic demo route when online engines are unavailable.
+    }
+
+    return _fallback.calculateRoute(request);
+  }
+
+  @override
+  Future<bool> isAvailable() async {
+    final primaryAvailable = await _primary.isAvailable();
+    if (primaryAvailable) {
+      return true;
+    }
+
+    final secondaryAvailable = await _secondary.isAvailable();
+    if (secondaryAvailable) {
+      return true;
+    }
+
+    return _fallback.isAvailable();
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _primary.dispose();
+    await _secondary.dispose();
+    await _fallback.dispose();
   }
 }
 

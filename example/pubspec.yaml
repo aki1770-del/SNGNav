@@ -25,6 +25,8 @@ dependencies:
     path: ../packages/routing_bloc
   routing_engine:
     path: ../packages/routing_engine
+  voice_guidance:
+    path: ../packages/voice_guidance
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +54,8 @@ dependency_overrides:
     path: ../packages/routing_bloc
   routing_engine:
     path: ../packages/routing_engine
+  voice_guidance:
+    path: ../packages/voice_guidance
 
 flutter:
   uses-material-design: true
