@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Add integration pattern examples derived from SNGNav example app.
+- Harden coverage baseline with additional test paths.
+- Update internal dependency: routing_engine ^0.2.0.
+- Polish package landing page, README structure, and pub.dev metadata.
+- Harmonize version across all SNGNav ecosystem packages.
+
 ## 0.1.1
 
 - Add explicit API Overview wording to README and align install instructions.

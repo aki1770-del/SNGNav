@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Add integration pattern examples derived from SNGNav example app.
+- Harden coverage baseline with additional test paths.
+- Polish package landing page, README structure, and pub.dev metadata.
+- Harmonize version across all SNGNav ecosystem packages.
+
 ## 0.1.2
 
 - Added an explicit install section to README for pub.dev onboarding.

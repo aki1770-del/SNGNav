@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Add Sprint 60 integration evidence and coverage enhancements.
+- Polish package landing page, README structure, and pub.dev metadata.
+- Harmonize version across all SNGNav ecosystem packages.
+
 ## 0.1.1
 
 - Add API Overview table to README and align install instructions.

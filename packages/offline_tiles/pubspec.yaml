@@ -3,7 +3,7 @@ description: >-
   Offline tile management for Flutter navigation maps with MBTiles-backed local
   fallback. Includes coverage tiers, runtime tile resolution, and a Flutter
   tile provider with pure Dart _core models.
-version: 0.1.1
+version: 0.2.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
