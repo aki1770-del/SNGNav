@@ -93,7 +93,7 @@ jobs:
 
       - name: Run Flutter package tests with coverage
         run: |
-          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc; do
+          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc voice_guidance; do
             echo "--- packages/$pkg ---"
             (cd "packages/$pkg" && flutter test --coverage)
           done

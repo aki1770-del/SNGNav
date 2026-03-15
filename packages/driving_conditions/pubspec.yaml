@@ -4,7 +4,7 @@ description: >-
   visibility degradation, precipitation parameters, and Monte Carlo
   safety score simulation. Pure Dart, no Flutter dependency. Advisory
   computation for driver-assisting navigation.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -19,8 +19,8 @@ environment:
 
 dependencies:
   equatable: ^2.0.7
-  driving_weather: ^0.1.2
-  navigation_safety: ^0.1.1
+  driving_weather: ^0.3.0
+  navigation_safety: ^0.3.0
 
 dev_dependencies:
   test: ^1.25.0

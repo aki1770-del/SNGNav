@@ -9,7 +9,7 @@ dependencies:
     sdk: flutter
   navigation_safety:
     path: ../
-  routing_engine: ^0.2.0
+  routing_engine: ^0.3.0
   latlong2: ^0.9.1
   flutter_bloc: ^9.1.0
 

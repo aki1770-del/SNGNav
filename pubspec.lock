@@ -159,21 +159,21 @@ packages:
       path: "packages/driving_conditions"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   driving_consent:
     dependency: "direct main"
     description:
       path: "packages/driving_consent"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   driving_weather:
     dependency: "direct main"
     description:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   equatable:
     dependency: "direct main"
     description:
@@ -220,7 +220,7 @@ packages:
       path: "packages/fleet_hazard"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -333,7 +333,7 @@ packages:
       path: "packages/kalman_dr"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   latlong2:
     dependency: "direct main"
     description:
@@ -404,7 +404,7 @@ packages:
       path: "packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   matcher:
     dependency: transitive
     description:
@@ -475,7 +475,7 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   nested:
     dependency: transitive
     description:
@@ -506,7 +506,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   package_config:
     dependency: transitive
     description:
@@ -633,14 +633,14 @@ packages:
       path: "packages/routing_bloc"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   routing_engine:
     dependency: "direct main"
     description:
       path: "packages/routing_engine"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   shelf:
     dependency: transitive
     description:

@@ -1,19 +1,8 @@
 # Changelog
 
-## 0.2.0
+## 0.3.0
 
-- Add Sprint 60 integration evidence and coverage enhancements.
-- Polish package landing page, README structure, and pub.dev metadata.
-- Harmonize version across all SNGNav ecosystem packages.
+- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
+- No breaking API changes in this package for this release.
 
-## 0.1.1
-
-- Add API Overview table to README and align install instructions.
-- Republish current example app and pub.dev discovery metadata.
-
-## 0.1.0
-
-- Initial release.
-- `MapBloc` viewport state machine with follow, free-look, and overview modes.
-- `_core` exports for `CameraMode`, `MapLayerType`, and `MapLayerZ`.
-- Six-layer Z-order contract with user-toggle restrictions for safety-critical layers.

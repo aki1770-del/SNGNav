@@ -1,22 +1,8 @@
 # Changelog
 
-## 0.2.0
+## 0.3.0
 
-- Add integration pattern examples derived from SNGNav example app.
-- Polish package landing page, README structure, and pub.dev metadata.
-- Harmonize version across all SNGNav ecosystem packages.
+- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
+- No breaking API changes in this package for this release.
 
-## 0.1.1
-
-- Add explicit Install section and API Overview table to README.
-- Republish current example inventory and pub.dev discovery metadata.
-
-## 0.1.0
-
-- Initial release.
-- `ConsentRecord` model with Jidoka semantics (UNKNOWN = DENIED).
-- `ConsentStatus` three-state gate: granted, denied, unknown.
-- `ConsentPurpose` per-purpose scoping: fleet location, weather telemetry, diagnostics.
-- `Jurisdiction` multi-jurisdiction support: GDPR, CCPA, APPI.
-- `ConsentService` abstract interface for pluggable storage.
-- `InMemoryConsentService` for testing and offline use.

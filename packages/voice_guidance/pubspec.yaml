@@ -3,7 +3,7 @@ description: >-
   Engine-agnostic voice guidance foundation for turn announcements and
   safety warnings. Provides TTS abstraction, FlutterTts implementation,
   and NoOp fallback for tests and headless environments.
-version: 0.1.0
+version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -22,8 +22,8 @@ dependencies:
   equatable: ^2.0.7
   flutter_tts: ^4.2.2
   flutter_bloc: ^9.1.0
-  navigation_safety: ^0.2.0
-  routing_engine: ^0.2.0
+  navigation_safety: ^0.3.0
+  routing_engine: ^0.3.0
 
 dev_dependencies:
   flutter_test:
