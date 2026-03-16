@@ -1,623 +1,351 @@
 # SNGNav Architecture Guide
 
-Snow Guard Navigation — a reference navigation application for embedded Linux
-IVI platforms. This guide explains how the system protects the driver when
-conditions degrade: GPS lost in a tunnel, network down in a blizzard, routing
-server unreachable. Every design decision traces back to one question:
+SNGNav is an offline-first navigation architecture for Flutter on embedded Linux.
+It is designed for the moment most navigation systems handle badly: the tunnel,
+the mountain pass, the rural dead zone, the unexpected snowstorm. When GPS,
+network, or backend reachability degrades, the system should degrade one layer
+at a time instead of abandoning the driver.
+
+As of `v0.6.0`, the project has:
+
+- 11 published packages on pub.dev
+- 1,005 automated tests
+- 91% line coverage in CI
+- 6,904 lines of library code
+- 122 source files
+- 0 analyzer issues at the release gate
+
+This document explains the architecture from two perspectives:
+
+1. The driver-facing view: what failure modes the system is built to survive.
+2. The edge-developer view: how the packages, BLoCs, and interfaces compose.
+
+---
+
+## Design Anchor
+
+SNGNav starts from one question:
 
 > **How can we help the driver when conditions are worst?**
+
+The project is not organized around feature demos. It is organized around
+failure boundaries. Each major package exists because something important can
+disappear at the wrong time: GPS signal, network access, backend availability,
+sensor quality, or deployment assumptions.
+
+The customer is the edge developer building for the driver who still needs help
+when those assumptions fail.
 
 ---
 
 ## The Five Guardians
 
 SNGNav's name encodes its purpose: **S**now **G**uard **Nav**igation. The
-"guard" comes from the Japanese concept of *kami* (神) — distributed natural
-guardians (八百万の神). Five subsystems act as guardians, each protecting
-against a specific failure mode. They compose — when one guardian activates,
-the others continue working.
+architecture is shaped around five guardians, each protecting against a
+different failure mode.
 
-### Guardian 1: Dead Reckoning
+| Guardian | Protects against | Architectural response |
+|----------|------------------|------------------------|
+| Dead reckoning | GPS loss in tunnels, canyons, blizzards | Predict position from speed and heading when fixes drop |
+| Offline tiles | Network loss | Serve map tiles from MBTiles instead of relying on the network |
+| Local routing | Cloud or server unavailability | Use engine-agnostic routing with local Valhalla, OSRM, or mock fallback |
+| Kalman filter | Noisy or degraded sensor input | Smooth GPS while available, grow uncertainty honestly when predicting |
+| Config system | Deployment variation | Switch implementations with `--dart-define` instead of code forks |
 
-**Protects against**: GPS signal loss (tunnels, urban canyons, blizzards).
+The point is not that each guardian is impressive alone. The point is that no
+single failure abandons the driver.
 
-When GPS is lost for 3 seconds, the dead reckoning provider begins predicting
-position from the last known speed and heading. Two algorithms are available:
+---
 
-| Mode | Algorithm | Accuracy | Use case |
-|------|-----------|----------|----------|
-| `linear` | Constant velocity extrapolation | Degrades ~50m/min | Baseline, simple |
-| `kalman` | 4D Extended Kalman Filter | Degrades ~20m/min | Advanced, covariance-aware |
+## Layered System
 
-The Kalman filter tracks `[latitude, longitude, speed, heading]` and maintains
-a 4x4 covariance matrix. When GPS returns, the filter fuses the measurement
-with the prediction — the driver sees a smooth transition, not a position jump.
+At a high level, the runtime stack looks like this:
 
-**Safety cap**: if accuracy exceeds 500m, the stream stops emitting. The driver
-sees "position unavailable" rather than a misleading estimate.
+```text
+Provider / Engine Layer
+  Valhalla | OSRM | Mock routing | MBTiles | TTS backend
+            |
+            v
+Application State Layer
+  RoutingBloc -> NavigationBloc -> VoiceGuidanceBloc
+         |             |
+         v             v
+      MapBloc      SafetyOverlay
+            |
+            v
+Presentation Layer
+  Flutter widgets, route progress, map camera, alerts, controls
+```
 
-**How it composes**: dead reckoning wraps any `LocationProvider` using the
-decorator pattern. The BLoC sees only `Stream<GeoPosition>` — it doesn't know
-whether the position came from GPS or dead reckoning.
+Three rules matter here:
+
+1. The UI does not talk directly to infrastructure.
+2. BLoCs own domain state, not backend details.
+3. Concrete providers remain swappable behind interfaces.
+
+That separation is what lets the project keep working when one implementation
+changes or disappears.
+
+---
+
+## Package Portfolio
+
+The codebase is a Flutter monorepo with 11 extracted packages. Seven are pure
+Dart. Four provide Flutter BLoC integration while still exposing reusable core
+libraries where appropriate.
+
+| Package | Type | Responsibility |
+|---------|------|----------------|
+| `kalman_dr` | Pure Dart | 4D Extended Kalman Filter and dead reckoning primitives |
+| `routing_engine` | Pure Dart | Engine-agnostic route interface for Valhalla, OSRM, or mock |
+| `routing_bloc` | Flutter + BLoC | Route lifecycle state machine |
+| `driving_weather` | Pure Dart | Weather condition model: precipitation, intensity, visibility, ice risk |
+| `driving_conditions` | Pure Dart | Road surface classification, grip factors, simulation |
+| `driving_consent` | Pure Dart | Per-purpose, per-jurisdiction consent model with deny-by-default semantics |
+| `fleet_hazard` | Pure Dart | Hazard reports, clustering, temporal decay |
+| `navigation_safety` | Flutter + BLoC | Safety boundaries, overlays, session-level alerts |
+| `map_viewport_bloc` | Flutter + BLoC | Map camera and viewport state |
+| `offline_tiles` | Pure Dart | MBTiles-backed offline tile management |
+| `voice_guidance` | Flutter + Dart | Engine-agnostic turn-by-turn and hazard speech |
+
+This split is deliberate. SNGNav pushes domain logic downward into packages that
+can be tested without widgets and, in many cases, without Flutter at all.
+
+---
+
+## Composition Model
+
+The example application demonstrates four-BLoC composition in one
+`MultiBlocProvider`:
 
 ```dart
-final gps = GeoClueLocationProvider();
-final dr = DeadReckoningProvider(
-  inner: gps,
-  mode: DeadReckoningMode.kalman,
-  gpsTimeout: Duration(seconds: 3),
-);
-// dr.positions emits GPS when available, DR predictions when not.
+MultiBlocProvider(
+  providers: [
+    BlocProvider(
+      create: (_) => MapBloc()
+        ..add(const MapInitialized(center: _origin, zoom: 9.8)),
+    ),
+    BlocProvider(
+      create: (_) => RoutingBloc(engine: _HybridRoutingEngine())
+        ..add(const RoutingEngineCheckRequested()),
+    ),
+    BlocProvider(create: (_) => NavigationBloc()),
+    BlocProvider(
+      create: (context) => VoiceGuidanceBloc(
+        ttsEngine: _ttsEngine,
+        navigationStateStream: context.read<NavigationBloc>().stream,
+        config: VoiceGuidanceConfig(
+          enabled: _voiceGuidanceEnabled,
+          languageTag: _voiceLanguageTag,
+        ),
+      ),
+    ),
+  ],
+  child: const ExampleHomePage(),
+)
 ```
 
-**Source**: [dead_reckoning_provider.dart](lib/providers/dead_reckoning_provider.dart),
-[kalman_filter.dart](lib/models/kalman_filter.dart)
+Each BLoC owns one domain:
 
-### Guardian 2: Offline Tiles
+- `RoutingBloc` manages route request, loading, success, and failure.
+- `NavigationBloc` tracks progress through maneuvers and arrival state.
+- `VoiceGuidanceBloc` watches navigation state and turns transitions into speech.
+- `MapBloc` controls camera position, zoom, and follow/overview behavior.
 
-**Protects against**: network loss during navigation.
+What matters is what these BLoCs do **not** know:
 
-Map tiles are served from a local MBTiles file — a single SQLite database
-containing pre-rendered tile images. When network is unavailable, the map
-continues rendering from local data. The tile resolution strategy uses a
-four-level fallback:
+- `RoutingBloc` does not know whether the route came from Valhalla, OSRM, or a mock engine.
+- `VoiceGuidanceBloc` does not know whether audio came from Flutter TTS, Linux `spd-say`, or a no-op engine.
+- `MapBloc` does not know whether tiles came from disk or the network.
 
-1. **RAM cache** (< 1ms) — recently viewed tiles
-2. **Regional MBTiles** (< 5ms) — pre-loaded area tiles
-3. **Overview MBTiles** (degraded zoom) — lower resolution fallback
-4. **Placeholder tile** — grey tile with "offline" message
-
-The map never goes blank.
-
-**Configuration**: `--dart-define=TILE_SOURCE=mbtiles` with
-`--dart-define=MBTILES_PATH=data/offline_tiles.mbtiles`.
-
-### Guardian 3: Local Routing
-
-**Protects against**: routing server unavailability.
-
-Two routing engines are available — both can run locally via Docker containers,
-eliminating cloud dependency:
-
-| Engine | Strength | Latency | Memory |
-|--------|----------|---------|--------|
-| OSRM | Driving routes, fast recalculation | ~5ms | ~180MB |
-| Valhalla | Multi-modal, Japanese kanji, isochrones | ~465ms | ~420MB |
-
-Both implement the same `RoutingEngine` interface. The BLoC doesn't know which
-engine is running.
-
-```dart
-abstract class RoutingEngine {
-  Future<RouteResult> calculateRoute(RouteRequest request);
-  Future<bool> isAvailable();
-  Future<void> dispose();
-}
-```
-
-**Decision tree**: OSRM for driving queries (95-133x faster). Valhalla for
-bicycle/pedestrian, isochrones, or when Japanese turn-by-turn instructions
-are needed. If OSRM is unavailable, Valhalla serves as fallback.
-
-**Source**: [routing_engine.dart](lib/providers/routing_engine.dart),
-[osrm_routing_engine.dart](lib/providers/osrm_routing_engine.dart),
-[valhalla_routing_engine.dart](lib/providers/valhalla_routing_engine.dart)
-
-**Deployment**: See [docs/local_routing.md](docs/local_routing.md) for Docker
-setup on desktop or Raspberry Pi.
-
-### Guardian 4: Kalman Filter
-
-**Protects against**: noisy GPS measurements and position jumps.
-
-Even with GPS available, raw measurements are noisy — accuracy varies from 3m
-to 50m depending on satellite geometry, atmospheric conditions, and multipath.
-The Kalman filter smooths these measurements:
-
-- **Predict step**: projects state forward using constant-velocity model (~15 microseconds)
-- **Update step**: fuses prediction with GPS measurement using Kalman gain
-- **Covariance**: honestly tracks uncertainty — `accuracyMetres` grows during
-  prediction, shrinks on GPS update
-
-The filter converges within ~10 GPS fixes to sub-4m accuracy.
-
-This guardian works in tandem with Guardian 1 (dead reckoning). During GPS
-availability, it smooths. During GPS loss, it predicts. Same filter, same
-state vector, continuous operation.
-
-**Source**: [kalman_filter.dart](lib/models/kalman_filter.dart)
-
-### Guardian 5: Configuration System
-
-**Protects against**: deployment rigidity — one binary must work in demo rooms,
-development labs, test tracks, and production vehicles.
-
-Seven compile-time flags select which implementations to use. No code changes
-needed — the same codebase serves all environments:
-
-| Flag | Values | Default | Purpose |
-|------|--------|---------|---------|
-| `WEATHER_PROVIDER` | `simulated`, `open_meteo` | `open_meteo` | Weather data source |
-| `LOCATION_PROVIDER` | `simulated`, `geoclue` | `simulated` | GPS data source |
-| `DEAD_RECKONING` | `true`, `false` | `true` | Enable/disable DR wrapper |
-| `DR_MODE` | `kalman`, `linear` | `kalman` | Dead reckoning algorithm |
-| `ROUTING_ENGINE` | `mock`, `osrm`, `valhalla` | `mock` | Routing backend |
-| `TILE_SOURCE` | `online`, `mbtiles` | `online` | Map tile source |
-| `MBTILES_PATH` | file path | `data/offline_tiles.mbtiles` | Offline tile location |
-
-Example — fully offline demo (no network, no GPS):
-
-```bash
-flutter run -d linux -t lib/snow_scene.dart \
-  --dart-define=WEATHER_PROVIDER=simulated \
-  --dart-define=TILE_SOURCE=mbtiles \
-  --dart-define=MBTILES_PATH=data/offline_tiles.mbtiles
-```
-
-Example — real weather with Kalman dead reckoning:
-
-```bash
-flutter run -d linux -t lib/snow_scene.dart \
-  --dart-define=WEATHER_PROVIDER=open_meteo \
-  --dart-define=LOCATION_PROVIDER=simulated \
-  --dart-define=DR_MODE=kalman \
-  --dart-define=ROUTING_ENGINE=osrm
-```
-
-**Source**: [provider_config.dart](lib/config/provider_config.dart)
+That ignorance is the architecture working as intended.
 
 ---
 
-## Provider System
+## Key Flows
 
-The provider system is SNGNav's core architectural pattern. BLoCs depend on
-abstract interfaces, not implementations. Adding a new data source requires
-no BLoC or widget changes.
+### 1. Route Request and Navigation
 
-### Data Flow
+The route flow is intentionally layered:
 
-```
---dart-define flag  →  ProviderConfig  →  creates provider  →  injected into BLoC
-```
-
-### The Four Interfaces
-
-| Interface | Stream type | Implementations |
-|-----------|-------------|-----------------|
-| `LocationProvider` | `Stream<GeoPosition>` | `SimulatedLocationProvider`, `GeoClueLocationProvider` |
-| `WeatherProvider` | `Stream<WeatherCondition>` | `SimulatedWeatherProvider`, `OpenMeteoWeatherProvider` |
-| `RoutingEngine` | `Future<RouteResult>` | `OsrmRoutingEngine`, `ValhallaRoutingEngine` |
-| `FleetProvider` | `Stream<FleetReport>` | `SimulatedFleetProvider` |
-
-Each interface defines `start`/`stop`/`dispose` lifecycle methods and a data
-stream (or future for routing). Implementations handle their own error recovery.
-
-### Offline Rule
-
-When the upstream data source is unreachable, implementations re-emit the last
-known value rather than letting the stream go silent. The driver sees
-stale-but-present data, not a blank widget. See `OpenMeteoWeatherProvider` for
-the reference implementation.
-
-### Adding a New Provider
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete step-by-step guide.
-The short version:
-
-1. Implement the abstract interface in `lib/providers/`
-2. Add an enum value and factory case in `lib/config/provider_config.dart`
-3. Your provider is now selectable via `--dart-define`
-4. Write tests in `test/providers/`
-
-**Key principle**: if you find yourself editing a BLoC or widget to add a
-provider, the interface needs extending — open an issue first.
-
----
-
-## Decision Flow
-
-### How the System Chooses: GPS vs Dead Reckoning
-
-```
-GPS position arrives
-    │
-    ├── Mode = linear
-    │   └── Forward to stream, update last-known state, reset watchdog
-    │
-    └── Mode = kalman
-        └── Feed into Kalman filter, emit filtered position, reset watchdog
-
-GPS watchdog fires (3s timeout)
-    │
-    ├── Mode = linear
-    │   └── Extrapolate from last speed + heading, accuracy degrades ~50m/min
-    │
-    └── Mode = kalman
-        └── Predict from filter state, covariance grows, accuracy degrades ~20m/min
-
-GPS returns
-    └── Stop DR, resume GPS (Kalman: fuse measurement, smooth transition)
-
-Accuracy exceeds 500m safety cap
-    └── Stop DR, stream goes silent, driver sees "position unavailable"
-```
-
-The BLoC sees this as a quality state machine with five states:
-
-| Quality | Meaning | Trigger |
-|---------|---------|---------|
-| `uninitialized` | Not started | Initial state |
-| `acquiring` | Waiting for first fix | After `start()` |
-| `fix` | GPS available, accuracy ≤ 50m | Position with `isNavigationGrade` |
-| `stale` | No update for 10s | Stale timer fires |
-| `error` | Provider error | Stream error |
-
-### How the System Chooses: OSRM vs Valhalla
-
-The choice is made at build time via `--dart-define=ROUTING_ENGINE=osrm` or
-`valhalla`. The BLoC receives whichever engine was injected — it issues
-`RouteRequested` events and receives `RouteResult` states identically
-regardless of engine.
-
-**When to use OSRM**: driving routes where speed matters. OSRM uses
-Contraction Hierarchies for ~5ms response time.
-
-**When to use Valhalla**: multi-modal routing (bicycle, pedestrian, truck),
-Japanese turn-by-turn instructions with kanji, isochrone analysis, or when
-OSRM is unavailable.
-
----
-
-## Project Structure
-
-```
-lib/
-├── bloc/        BLoCs (state machines — do NOT modify for new providers)
-├── config/      ProviderConfig (edit here to register new providers)
-├── models/      Data classes (GeoPosition, RouteResult, WeatherCondition)
-├── providers/   Provider interfaces + implementations (add here)
-├── services/    Consent, hazard aggregation
-└── widgets/     UI layer (do NOT modify for new providers)
-
-test/
-├── bloc/        BLoC state transition tests
-├── config/      Flag parsing, factory method tests
-├── integration/ Cross-BLoC safety flow tests
-├── models/      Data class edge case tests
-├── providers/   Provider contract tests
-├── benchmark/   Performance benchmarks
-└── widgets/     Widget rendering + golden tests
-
-packages/
-├── driving_conditions/  Pure Dart road-surface + safety score models
-├── driving_consent/     Privacy consent gate with Jidoka semantics
-├── driving_weather/     Weather models + provider abstraction
-├── fleet_hazard/        Fleet telemetry models + hazard aggregation
-├── kalman_dr/           Dead reckoning + location provider contracts
-├── map_viewport_bloc/   Declarative camera and viewport state
-├── navigation_safety/   Safety-focused navigation session + overlay
-├── offline_tiles/       MBTiles-backed offline tile management
-├── routing_bloc/        Engine-agnostic route lifecycle BLoC
-└── routing_engine/      OSRM + Valhalla routing interface
-```
-
----
-
-## Package Composition
-
-The sections above explain the app from the driver's point of view. This
-section explains it from the edge developer's point of view: which packages
-exist, which ones depend on each other, and how they compose into one
-navigation system.
-
-### Package-At-A-Glance
-
-| Package | Role | Depends on | pub.dev |
-|---------|------|------------|---------|
-| `driving_conditions` | Pure Dart road-surface assessment, precipitation tuning, visibility degradation, safety score simulation | `driving_weather`, `navigation_safety` | <https://pub.dev/packages/driving_conditions> |
-| `driving_consent` | Three-state consent gate (`unknown`, `granted`, `denied`) with per-purpose records | — | <https://pub.dev/packages/driving_consent> |
-| `driving_weather` | Weather models and provider interface | — | <https://pub.dev/packages/driving_weather> |
-| `fleet_hazard` | Fleet reports, hazard zones, clustering, provider interface | — | <https://pub.dev/packages/fleet_hazard> |
-| `kalman_dr` | Dead reckoning, `LocationProvider`, 4D Kalman filter | — | <https://pub.dev/packages/kalman_dr> |
-| `map_viewport_bloc` | Map camera mode, center, zoom, fit-to-bounds state | — | <https://pub.dev/packages/map_viewport_bloc> |
-| `navigation_safety` | Navigation session state, alert severity, safety overlay | `routing_engine` | <https://pub.dev/packages/navigation_safety> |
-| `offline_tiles` | MBTiles manager, tile coverage queries, runtime resolver | — | <https://pub.dev/packages/offline_tiles> |
-| `routing_bloc` | Route request lifecycle, progress, UI widgets | `routing_engine` | <https://pub.dev/packages/routing_bloc> |
-| `routing_engine` | Engine-agnostic route API with OSRM and Valhalla adapters | — | <https://pub.dev/packages/routing_engine> |
-
-### Dependency Graph
-
-Compile-time package dependencies are intentionally shallow. Most composition
-happens in the app layer through BLoCs and widget listeners, not by making
-packages import each other indiscriminately.
-
-```
-driving_conditions
-├── driving_weather
-└── navigation_safety_core
-
-navigation_safety
-└── routing_engine
-
-routing_bloc
-└── routing_engine
-
-Standalone packages:
-- driving_consent
-- fleet_hazard
-- kalman_dr
-- map_viewport_bloc
-- offline_tiles
-```
-
-This is deliberate. The packages form a toolkit, and the app decides how to
-compose them. That keeps each package reusable while letting the full SNGNav
-experience combine them tightly.
-
-### Composition Rules
-
-1. Keep domain packages narrow. A package should own one responsibility and
-   expose plain Dart models or a small BLoC surface.
-2. Compose at the boundary. The app layer wires packages together with
-   `MultiBlocProvider`, `BlocListener`, and provider injection.
-3. Use integration tests as the truth source. Cross-package behavior is proven
-   in `test/integration/` and package integration suites, not inferred from
-   README claims.
-
-### Pattern 1: Navigation Chain
-
-Purpose: calculate a route once, then let navigation state and viewport state
-react to that route consistently.
-
-```
+```text
 RouteRequest
   -> routing_engine
   -> RouteResult
   -> routing_bloc
-  -> SnowSceneScaffold listener
-  -> navigation_safety
-  -> map_viewport_bloc
-  -> widgets
+  -> navigation state
+  -> viewport updates + UI rendering
 ```
 
-Key types:
-- `RouteRequest` / `RouteResult` from `routing_engine`
-- `RoutingState` from `routing_bloc`
-- `NavigationState` from `navigation_safety`
-- `MapState` from `map_viewport_bloc`
+The route engine is a fallback chain. A deployment can prefer Valhalla, fall
+back to OSRM, or use a deterministic mock engine for local demos and tests.
 
-Reference wiring:
+This separation matters because routing and navigation are different problems.
+Losing the ability to calculate a fresh route is bad; losing the ability to
+continue along the current route is worse. SNGNav keeps those concerns separate.
+
+### 2. GPS Loss and Honest Uncertainty
+
+The `kalman_dr` package tracks `[latitude, longitude, speed, heading]`.
+
+When GPS is available:
+
+- predict forward
+- update with the new measurement
+- emit a smoothed position estimate
+
+When GPS disappears:
+
+- continue predicting from filter state
+- grow covariance over time
+- expose larger accuracy radii instead of pretending confidence
+
+The system does not hide degradation. It models it.
+
+### 3. Offline Map Survival
+
+`offline_tiles` treats local data as a first-class runtime path, not a backup.
+The effective resolution order is:
+
+```text
+RAM cache -> MBTiles -> lower-zoom fallback -> online -> placeholder
+```
+
+This means the runtime tries to serve the best local tile first and only uses
+the network when the local path is exhausted.
+
+### 4. Privacy Gate
+
+`driving_consent` is a hard architectural gate, not a policy flourish.
+
+Core rule:
 
 ```dart
-BlocProvider(
-  create: (_) => RoutingBloc(engine: routingEngine),
-),
-BlocProvider(
-  create: (_) => NavigationBloc(),
-),
-BlocProvider(
-  create: (_) => MapBloc(),
-),
-
-BlocListener<RoutingBloc, RoutingState>(
-  listenWhen: (prev, curr) => !prev.hasRoute && curr.hasRoute,
-  listener: (context, state) {
-    final route = state.route!;
-    context.read<NavigationBloc>().add(NavigationStarted(
-      route: route,
-      destinationLabel: state.destinationLabel,
-    ));
-    // The app also fits the viewport to the route shape here.
-  },
-  child: const SnowSceneScaffold(),
-)
+bool get isEffectivelyGranted => status == ConsentStatus.granted;
 ```
 
-Sprint 60 evidence:
-- `test/integration/snow_scene_demo_flow_test.dart` proves `RouteRequested`
-  leads to route calculation, `NavigationStarted`, fit-to-route behavior, and
-  maneuver advancement in one composed flow.
+Operationally, `unknown` and `denied` both mean stop.
 
-### Pattern 2: Hazard Pipeline
+That gives the system four useful properties:
 
-Purpose: turn weather and fleet signals into one coherent driver-facing alert
-instead of competing warnings.
+- consent is per-purpose
+- consent is per-jurisdiction
+- revocation is immediate
+- startup defaults to no data flow
 
-```
-WeatherProvider -> driving_weather -> WeatherBloc ---
-                                                   \ 
-                                                    -> navigation_safety
-                                                   / 
-FleetProvider   -> fleet_hazard  -> FleetBloc  ----
+### 5. Voice as a Co-Driver
 
-Optional analysis layer:
-driving_conditions -> reusable road-surface and safety score models
-```
-
-Key types:
-- `WeatherCondition` from `driving_weather`
-- `FleetReport` / `HazardZone` from `fleet_hazard`
-- `AlertSeverity` / `NavigationState` from `navigation_safety`
-
-`driving_conditions` stays pure Dart on purpose. It is the analysis layer an
-edge developer can reuse to model road surface, visibility, and safety score
-logic without pulling in Flutter widgets.
-
-Reference wiring:
+`voice_guidance` adds a narrow, explicit speech interface:
 
 ```dart
-BlocListener<FleetBloc, FleetState>(
-  listenWhen: (prev, curr) => !prev.hasHazards && curr.hasHazards,
-  listener: (context, state) {
-    final hasIcy = state.hazardReports.any(
-      (report) => report.condition == RoadCondition.icy,
-    );
-    context.read<NavigationBloc>().add(SafetyAlertReceived(
-      message: hasIcy
-          ? 'Fleet reports: icy road conditions detected'
-          : 'Fleet reports: snowy road conditions ahead',
-      severity: hasIcy ? AlertSeverity.critical : AlertSeverity.warning,
-    ));
-  },
-  child: const SnowSceneScaffold(),
-)
+abstract class TtsEngine {
+  Future<bool> isAvailable();
+  Future<void> setLanguage(String languageTag);
+  Future<void> setVolume(double volume);
+  Future<void> speak(String text);
+  Future<void> stop();
+  Future<void> dispose();
+}
 ```
 
-Sprint 60 evidence:
-- `test/integration/multi_hazard_priority_integration_test.dart` proves fleet
-  critical alerts override weaker weather warnings and that later weather input
-  does not downgrade an already-critical fleet alert.
+This keeps platform-specific speech details out of the UI and BLoCs. On Linux,
+the engine can route through Speech Dispatcher. In tests, it can fall back to a
+no-op implementation while still exercising state transitions and formatting.
 
-### Pattern 3: Consent Gate
-
-Purpose: stop fleet telemetry flow unless the driver has explicitly granted the
-relevant consent purpose.
-
-```
-driving_consent
-  -> ConsentRecord / ConsentService
-  -> ConsentBloc
-  -> SnowSceneScaffold listener
-  -> FleetListenStarted / FleetListenStopped
-  -> fleet_hazard provider lifecycle
-```
-
-Key types:
-- `ConsentRecord`, `ConsentPurpose`, `ConsentStatus` from `driving_consent`
-- `ConsentState` from the app layer
-- `FleetState` from the app layer over `fleet_hazard`
-
-Reference wiring:
-
-```dart
-BlocListener<ConsentBloc, ConsentState>(
-  listenWhen: (prev, curr) => prev.isFleetGranted != curr.isFleetGranted,
-  listener: (context, state) {
-    context.read<FleetBloc>().add(
-      state.isFleetGranted ? FleetListenStarted() : FleetListenStopped(),
-    );
-  },
-  child: const SnowSceneScaffold(),
-)
-```
-
-Sprint 60 evidence:
-- `test/integration/snow_scene_demo_flow_test.dart` proves fleet reports before
-  consent grant are ignored end to end, then begin affecting alerts only after
-  consent is granted.
-- `test/widgets/snow_scene_scaffold_test.dart` proves the widget-mediated
-  bridge dispatches `FleetListenStarted` on grant and `FleetListenStopped` on
-  revoke.
-
-### Offline Coverage Support
-
-`offline_tiles` is deliberately orthogonal to the three pipelines above. It is
-the map-survivability package: route shape and viewport logic still work, but
-the developer can ask a second question before the drive begins: "do I have
-local tile coverage for this route?"
-
-Sprint 60 evidence:
-- `packages/offline_tiles/test/integration/offline_tile_manager_test.dart`
-  proves exact tile resolution, lower-zoom fallback, per-point coverage, and
-  uncovered waypoint reporting across a route shape.
-
-### Full Composition at the App Boundary
-
-The app layer is where the toolkit becomes a product. In the Snow Scene app,
-the package surface is composed with app-owned BLoCs for location, weather,
-fleet, and consent, then rendered through `SnowSceneScaffold`.
-
-```
-kalman_dr            -> LocationBloc ---
-routing_engine       -> RoutingBloc ----\
-navigation_safety    -> NavigationBloc --\
-map_viewport_bloc    -> MapBloc -----------+-> SnowSceneScaffold
-driving_weather      -> WeatherBloc -----/
-driving_consent      -> ConsentBloc -----/
-fleet_hazard         -> FleetBloc -------/
-offline_tiles        -> MapLayer tile provider
-```
-
-This split is intentional:
-- Packages own reusable domain behavior
-- The app owns scenario choreography and UI timing
-- Integration tests prove the whole tree behaves coherently
-
-### Where To Start
-
-If you are adopting SNGNav selectively, start from the smallest package set
-that matches your use case.
-
-| Goal | Start here |
-|------|------------|
-| Add routing to an existing Flutter app | `routing_engine` + `routing_bloc` |
-| Keep position flowing when GPS drops | `kalman_dr` |
-| Add consent-aware fleet telemetry | `driving_consent` + `fleet_hazard` |
-| Turn weather and fleet input into safety alerts | `driving_weather` + `fleet_hazard` + `navigation_safety` + optionally `driving_conditions` |
-| Keep maps useful offline | `offline_tiles` + `map_viewport_bloc` |
-| Reproduce the full Snow Scene reference flow | all 10 packages + the app-layer BLoCs in `lib/bloc/` |
-
-Use this rule of thumb:
-- Start with one package when you need one capability.
-- Add a second package when you need lifecycle or UI state.
-- Move to the full app composition only when you need the whole
-  driver-assisting chain.
+Voice guidance is advisory. It helps reduce glance load. It does not control the
+vehicle.
 
 ---
 
-## Widget Architecture
+## Runtime Configuration
 
-The UI is a 4-layer stack with strict Z-ordering:
+SNGNav uses compile-time flags to select implementations without forking the
+application.
 
-| Z | Layer | Purpose |
-|:-:|-------|---------|
-| 0 | MapLayer | Map tiles (online or MBTiles) |
-| 1 | NavigationOverlay | Route line, turn instructions, speed |
-| 2 | SafetyOverlay | Weather alerts, hazard zones |
-| 3 | BottomNavBar | Navigation controls |
+Typical examples:
 
-**Z-order is non-negotiable.** The SafetyOverlay is always rendered and always
-above navigation content. Critical alerts are modal — they block map
-interaction until the driver acknowledges. See [SAFETY.md](SAFETY.md).
+| Concern | Example values |
+|---------|----------------|
+| Weather source | `simulated`, `open_meteo` |
+| Location source | `simulated`, `geoclue` |
+| Dead reckoning mode | `kalman`, `linear` |
+| Routing backend | `mock`, `osrm`, `valhalla` |
+| Tile source | `online`, `mbtiles` |
+
+This keeps one codebase usable across desktop demos, development rigs, CI, and
+future embedded deployments.
+
+---
+
+## Monorepo Structure
+
+The repo is organized around reusable packages plus an example application that
+demonstrates composition:
+
+```text
+packages/
+  driving_conditions/
+  driving_consent/
+  driving_weather/
+  fleet_hazard/
+  kalman_dr/
+  map_viewport_bloc/
+  navigation_safety/
+  offline_tiles/
+  routing_bloc/
+  routing_engine/
+  voice_guidance/
+
+example/
+  lib/
+  test/
+
+tool/
+  CI and release support
+```
+
+The architectural rule is simple: if a capability can be extracted into a clean
+boundary, it should become a package instead of being buried in widget code.
 
 ---
 
 ## Safety Boundary
 
-SNGNav is classified **ASIL-QM** (Quality Management) under ISO 26262. It is a
-display-only navigation aid — no steering, braking, throttle, or ADAS control.
-This boundary is verified every sprint: zero actuator calls in the codebase.
+SNGNav stays within an ASIL-QM advisory boundary.
 
-Key safety rules:
-- Dead reckoning estimates are marked with increasing accuracy radius
-- Safety alerts are advisory — they never suppress driver judgment
-- Fleet telemetry requires explicit consent (deny by default)
-- No data leaves the device without explicit grant
+- Display and audio only
+- No actuator path
+- No vehicle control
+- No attempt to replace driver judgment
 
-See [SAFETY.md](SAFETY.md) for the complete safety statement.
+This matters because the project is built to assist the driver under degraded
+conditions, not to automate the vehicle.
 
 ---
 
-## Performance Reference
+## Present Limitations
 
-Benchmarks on Machine D (MacBook Pro 2017, i5-7267U, 8GB RAM):
+The architecture is real, published, and tested, but its limits should stay
+explicit:
 
-| Operation | p50 | p95 |
-|-----------|-----|-----|
-| Kalman predict (1 step) | ~15 microseconds | ~20 microseconds |
-| 60-second tunnel DR (60 predictions) | ~300 microseconds total | — |
-| Kalman convergence | ~10 GPS fixes to sub-4m | — |
-| Polyline decode (500 points) | < 1ms | — |
-| OSRM route parse (25 maneuvers) | ~400 microseconds | — |
-| Valhalla route parse (25 maneuvers) | ~400 microseconds | — |
+- The current UI is 2D, not 3D.
+- Linux desktop is the primary supported runtime today.
+- Real routing still depends on a routing engine such as Valhalla or OSRM.
+- The project is still effectively maintained by one primary contributor.
+- The hardest snow-driving scenarios are still validated mostly through software evidence, not field deployment.
 
-See [BENCHMARKS.md](BENCHMARKS.md) for full results.
+Those limits do not weaken the architecture. They define it honestly.
 
 ---
 
 ## Further Reading
 
-- [CONTRIBUTING.md](CONTRIBUTING.md) — how to add providers, test conventions
-- [SAFETY.md](SAFETY.md) — safety classification, alert design, consent model
-- [BENCHMARKS.md](BENCHMARKS.md) — performance reference numbers
-- [README.md](README.md) — quick start, build instructions, API documentation
+- [README.md](README.md)
+- [SAFETY.md](SAFETY.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SNGNAV_WAY.md](SNGNAV_WAY.md)
+- [packages](packages)
+- [example](example)
+
+The architecture should make one promise clear: when the preferred path
+disappears, the system should still tell the truth and keep helping.

@@ -10,7 +10,7 @@
 
 Navigation that doesn't abandon you when conditions fail unexpectedly.
 
-Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), [docs/architecture.md](docs/architecture.md), [docs/arm_deployment.md](docs/arm_deployment.md), and [docs/local_routing.md](docs/local_routing.md).
+Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md), [docs/arm_deployment.md](docs/arm_deployment.md), and [docs/local_routing.md](docs/local_routing.md).
 
 Latest article: [1005 Tests, Zero AI: Building Offline-First Navigation with Flutter on Embedded Linux](https://dev.to/aki1770del/1005-tests-zero-ai-building-offline-first-navigation-with-flutter-on-embedded-linux-43bf).
 
