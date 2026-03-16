@@ -10,7 +10,9 @@ navigation domain can remain independent from platform TTS APIs.
 
 - `TtsEngine` interface for pluggable speech engines.
 - `FlutterTtsEngine` implementation using `flutter_tts`.
+- `LinuxTtsEngine` implementation using `spd-say` on Linux.
 - `NoOpTtsEngine` for tests and non-audio environments.
+- `createDefaultTtsEngine()` to pick a safe engine per platform.
 - `VoiceGuidanceConfig` for runtime voice settings.
 
 ## Install
@@ -25,18 +27,23 @@ dependencies:
 ```dart
 import 'package:voice_guidance/voice_guidance.dart';
 
-final tts = FlutterTtsEngine();
+final tts = createDefaultTtsEngine();
 await tts.setLanguage('ja-JP');
 await tts.setVolume(1.0);
 await tts.speak('300 meters ahead, turn right.');
 ```
+
+On Linux, `createDefaultTtsEngine()` uses `spd-say` when it is available and
+degrades silently when it is not installed.
 
 ## API Overview
 
 | API | Purpose |
 |-----|---------|
 | `TtsEngine` | Abstract speech interface |
+| `createDefaultTtsEngine()` | Platform-safe default engine selection |
 | `FlutterTtsEngine` | Real platform speech implementation |
+| `LinuxTtsEngine` | Speech Dispatcher (`spd-say`) backend for Linux |
 | `NoOpTtsEngine` | Silent fallback for CI/tests |
 | `VoiceGuidanceConfig` | Runtime voice behavior configuration |
 

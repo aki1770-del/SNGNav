@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:voice_guidance/voice_guidance.dart';
@@ -41,6 +42,14 @@ void main() {
       verify(() => flutterTts.setLanguage('ja-JP')).called(1);
     });
 
+    test('setLanguage disables plugin on MissingPluginException', () async {
+      when(() => flutterTts.setLanguage(any())).thenThrow(MissingPluginException());
+
+      await engine.setLanguage('ja-JP');
+
+      expect(engine.pluginAvailable, isFalse);
+    });
+
     test('setVolume clamps values into range', () async {
       when(() => flutterTts.setVolume(any())).thenAnswer((_) async => 1);
 
@@ -59,6 +68,14 @@ void main() {
       verify(() => flutterTts.speak('Turn right.')).called(1);
     });
 
+    test('speak disables plugin on MissingPluginException', () async {
+      when(() => flutterTts.speak(any())).thenThrow(MissingPluginException());
+
+      await engine.speak('Turn right.');
+
+      expect(engine.pluginAvailable, isFalse);
+    });
+
     test('speak ignores blank input', () async {
       when(() => flutterTts.speak(any())).thenAnswer((_) async => 1);
 
@@ -73,6 +90,13 @@ void main() {
       await engine.stop();
 
       verify(() => flutterTts.stop()).called(1);
+    });
+
+    test('isAvailable returns false after MissingPluginException', () async {
+      when(() => flutterTts.getLanguages).thenThrow(MissingPluginException());
+
+      expect(await engine.isAvailable(), isFalse);
+      expect(engine.pluginAvailable, isFalse);
     });
 
     test('dispose stops and prevents future calls', () async {

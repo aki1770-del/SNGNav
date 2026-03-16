@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/services.dart';
 
 import 'tts_engine.dart';
 
@@ -10,16 +11,32 @@ class FlutterTtsEngine implements TtsEngine {
 
   final FlutterTts _flutterTts;
   bool _disposed = false;
+  bool _pluginAvailable = true;
+
+  bool get pluginAvailable => _pluginAvailable;
+
+  T? _guardPluginCall<T>(T? Function() action) {
+    if (_disposed || !_pluginAvailable) return null;
+    try {
+      return action();
+    } on MissingPluginException {
+      _pluginAvailable = false;
+      return null;
+    }
+  }
 
   @override
   Future<bool> isAvailable() async {
-    if (_disposed) return false;
+    if (_disposed || !_pluginAvailable) return false;
     try {
       final dynamic langs = await _flutterTts.getLanguages;
       if (langs is List) {
         return langs.isNotEmpty;
       }
       return langs != null;
+    } on MissingPluginException {
+      _pluginAvailable = false;
+      return false;
     } catch (_) {
       return false;
     }
@@ -27,34 +44,31 @@ class FlutterTtsEngine implements TtsEngine {
 
   @override
   Future<void> setLanguage(String languageTag) async {
-    if (_disposed) return;
-    await _flutterTts.setLanguage(languageTag);
+    await _guardPluginCall(() => _flutterTts.setLanguage(languageTag));
   }
 
   @override
   Future<void> setVolume(double volume) async {
-    if (_disposed) return;
     final clamped = volume.clamp(0.0, 1.0).toDouble();
-    await _flutterTts.setVolume(clamped);
+    await _guardPluginCall(() => _flutterTts.setVolume(clamped));
   }
 
   @override
   Future<void> speak(String text) async {
-    if (_disposed) return;
+    if (_disposed || !_pluginAvailable) return;
     if (text.trim().isEmpty) return;
-    await _flutterTts.speak(text);
+    await _guardPluginCall(() => _flutterTts.speak(text));
   }
 
   @override
   Future<void> stop() async {
-    if (_disposed) return;
-    await _flutterTts.stop();
+    await _guardPluginCall(() => _flutterTts.stop());
   }
 
   @override
   Future<void> dispose() async {
     if (_disposed) return;
-    await _flutterTts.stop();
+    await _guardPluginCall(() => _flutterTts.stop());
     _disposed = true;
   }
 }
