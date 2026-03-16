@@ -18,7 +18,7 @@ Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in tem
 
 ```
 Status:   v0.6.0
-Tests:    1005 passing (root + voice_guidance + example suites)
+Tests:    1627 passing (root + all package suites)
 Platform: Linux desktop (Flutter 3.11.0)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
 Ecosystem: 11 packages, all at 0.3.0 on pub.dev
