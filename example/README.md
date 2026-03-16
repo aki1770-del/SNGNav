@@ -17,6 +17,9 @@ flutter pub get
 flutter run -d linux
 ```
 
+On Linux, voice guidance uses Speech Dispatcher through `spd-say` when that
+command is installed on the system.
+
 Optional offline tiles:
 
 - Place an MBTiles file at `../data/offline_tiles.mbtiles`

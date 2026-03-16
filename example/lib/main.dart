@@ -21,8 +21,10 @@ const _voiceGuidanceEnabled =
     bool.fromEnvironment('VOICE_GUIDANCE', defaultValue: true);
 const _voiceLanguageTag = String.fromEnvironment(
   'VOICE_LANGUAGE',
-  defaultValue: 'ja-JP',
+  defaultValue: 'en-US',
 );
+final TtsEngine _ttsEngine =
+    _voiceGuidanceEnabled ? createDefaultTtsEngine() : NoOpTtsEngine();
 
 final _demoRoute = RouteResult(
   shape: const [
@@ -199,9 +201,7 @@ class SngNavExampleApp extends StatelessWidget {
               BlocProvider(create: (_) => NavigationBloc()),
               BlocProvider(
                 create: (context) => VoiceGuidanceBloc(
-                  ttsEngine: _voiceGuidanceEnabled
-                      ? FlutterTtsEngine()
-                      : NoOpTtsEngine(),
+                  ttsEngine: _ttsEngine,
                   navigationStateStream: context.read<NavigationBloc>().stream,
                   config: VoiceGuidanceConfig(
                     enabled: _voiceGuidanceEnabled,
@@ -227,11 +227,18 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   final MapController _mapController = MapController();
   final SimulatedWeatherProvider _weatherProvider =
       SimulatedWeatherProvider(interval: const Duration(seconds: 6));
+  static const _autoAdvanceInterval = Duration(seconds: 3);
   StreamSubscription<WeatherCondition>? _weatherSubscription;
+  Timer? _autoAdvanceTimer;
 
   offline_tiles.OfflineTileManager? _offlineTileManager;
   WeatherCondition? _latestWeather;
   String _tileStatus = 'Checking tile source...';
+  bool? _voiceBackendAvailable;
+  bool _autoAdvanceEnabled = false;
+  String _autoAdvanceStatus = 'Manual control';
+  bool _isTestingVoice = false;
+  String? _voiceTestStatus;
   bool _isOffline = false;
   bool _navigationStarted = false;
   bool _mapReady = false;
@@ -240,6 +247,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   void initState() {
     super.initState();
     _initTileProvider();
+    _loadVoiceDiagnostics();
     _startWeather();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RoutingBloc>().add(const RouteRequested(
@@ -248,6 +256,75 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             destinationLabel: 'Mikawa Highlands',
           ));
     });
+  }
+
+  Future<void> _loadVoiceDiagnostics() async {
+    final available = await _ttsEngine.isAvailable();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _voiceBackendAvailable = available;
+    });
+  }
+
+  Future<void> _runVoiceTest() async {
+    if (_isTestingVoice) {
+      return;
+    }
+
+    if (!_voiceGuidanceEnabled) {
+      setState(() {
+        _voiceTestStatus = 'Voice guidance disabled by VOICE_GUIDANCE.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isTestingVoice = true;
+      _voiceTestStatus = 'Sending test phrase...';
+    });
+
+    try {
+      final available = await _ttsEngine.isAvailable();
+      if (!available) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _voiceBackendAvailable = false;
+          _voiceTestStatus = 'Voice is unavailable.';
+        });
+        return;
+      }
+
+      await _ttsEngine.setLanguage(_voiceLanguageTag);
+      await _ttsEngine.setVolume(1.0);
+      await _ttsEngine.stop();
+      await _ttsEngine.speak(_voiceTestPhrase(_voiceLanguageTag));
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _voiceBackendAvailable = true;
+        _voiceTestStatus = 'Test phrase sent.';
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _voiceBackendAvailable = false;
+        _voiceTestStatus = 'Voice test failed.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTestingVoice = false;
+        });
+      }
+    }
   }
 
   Future<void> _initTileProvider() async {
@@ -327,6 +404,67 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         );
   }
 
+  void _toggleAutoAdvance() {
+    if (_autoAdvanceEnabled) {
+      _stopAutoAdvance(status: 'Manual control');
+      return;
+    }
+
+    final navState = context.read<NavigationBloc>().state;
+    if (!navState.hasRoute) {
+      setState(() {
+        _autoAdvanceStatus = 'Waiting for route';
+      });
+      return;
+    }
+
+    setState(() {
+      _autoAdvanceEnabled = true;
+      _autoAdvanceStatus = 'Auto-advancing every 3 seconds';
+    });
+
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = Timer.periodic(_autoAdvanceInterval, (_) {
+      if (!mounted) {
+        _stopAutoAdvance();
+        return;
+      }
+
+      final currentState = context.read<NavigationBloc>().state;
+      switch (currentState.status) {
+        case NavigationStatus.idle:
+          _stopAutoAdvance(status: 'Waiting for route');
+        case NavigationStatus.arrived:
+          _stopAutoAdvance(status: 'Demo complete');
+        case NavigationStatus.deviated:
+          if (_autoAdvanceStatus != 'Paused for reroute') {
+            setState(() {
+              _autoAdvanceStatus = 'Paused for reroute';
+            });
+          }
+        case NavigationStatus.navigating:
+          if (_autoAdvanceStatus != 'Auto-advancing every 3 seconds') {
+            setState(() {
+              _autoAdvanceStatus = 'Auto-advancing every 3 seconds';
+            });
+          }
+          _advanceNavigation();
+      }
+    });
+  }
+
+  void _stopAutoAdvance({String status = 'Manual control'}) {
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = null;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _autoAdvanceEnabled = false;
+      _autoAdvanceStatus = status;
+    });
+  }
+
   void _simulateDeviation() {
     final navBloc = context.read<NavigationBloc>();
     navBloc.add(const RouteDeviationDetected(reason: 'Snow drift on shoulder'));
@@ -352,6 +490,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   @override
   void dispose() {
+    _autoAdvanceTimer?.cancel();
     _weatherSubscription?.cancel();
     _weatherProvider.dispose();
     _offlineTileManager?.dispose();
@@ -382,6 +521,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             if (maneuver != null) {
               context.read<MapBloc>().add(CenterChanged(maneuver.position));
               context.read<MapBloc>().add(const ZoomChanged(12.0));
+            }
+            if (_autoAdvanceEnabled && state.status == NavigationStatus.arrived) {
+              _stopAutoAdvance(status: 'Demo complete');
             }
           },
         ),
@@ -560,6 +702,83 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             ),
           ),
           _PanelCard(
+            title: 'Voice Diagnostics',
+            child: BlocBuilder<VoiceGuidanceBloc, VoiceGuidanceState>(
+              builder: (context, voiceState) {
+                final availabilityLabel = switch (_voiceBackendAvailable) {
+                  true => 'available',
+                  false => 'unavailable',
+                  null => 'checking...',
+                };
+                final effectiveStatus = !_voiceGuidanceEnabled
+                    ? 'disabled by VOICE_GUIDANCE'
+                    : voiceState.status.name;
+                final lastPhrase = voiceState.lastHazardMessage ??
+                    voiceState.lastSpokenText ??
+                    'No announcements yet';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DiagnosticsRow(
+                      label: 'Availability',
+                      value: availabilityLabel,
+                    ),
+                    _DiagnosticsRow(
+                      label: 'Status',
+                      value: effectiveStatus,
+                    ),
+                    _DiagnosticsRow(
+                      label: 'Language',
+                      value: _voiceLanguageTag,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Latest message',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lastPhrase,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        FilledButton.tonalIcon(
+                          onPressed: _isTestingVoice ? null : _runVoiceTest,
+                          icon: _isTestingVoice
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.record_voice_over),
+                          label: Text(
+                            _isTestingVoice ? 'Testing...' : 'Test Voice',
+                          ),
+                        ),
+                        if (_voiceTestStatus != null)
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 220),
+                            child: Text(
+                              _voiceTestStatus!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          _PanelCard(
             title: 'Map Controls',
             child: BlocBuilder<MapBloc, MapState>(
               builder: (context, mapState) {
@@ -642,6 +861,14 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                           onPressed: navState.hasRoute ? _advanceNavigation : null,
                           child: const Text('Advance Maneuver'),
                         ),
+                        FilledButton.tonal(
+                          onPressed: navState.hasRoute || _autoAdvanceEnabled
+                              ? _toggleAutoAdvance
+                              : null,
+                          child: Text(
+                            _autoAdvanceEnabled ? 'Stop Auto Demo' : 'Start Auto Demo',
+                          ),
+                        ),
                         OutlinedButton(
                           onPressed: navState.hasRoute ? _simulateDeviation : null,
                           child: const Text('Simulate Deviation'),
@@ -655,6 +882,13 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                           child: const Text('Dismiss Alert'),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _autoAdvanceStatus,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade700,
+                          ),
                     ),
                   ],
                 );
@@ -727,6 +961,48 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                   ],
                 );
               },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _voiceTestPhrase(String languageTag) {
+  final normalized = languageTag.toLowerCase();
+  if (normalized.startsWith('ja')) {
+    return '音声ガイダンスのテストです。次の交差点を右折します。';
+  }
+  return 'Voice guidance test. Turn right at the next intersection.';
+}
+
+class _DiagnosticsRow extends StatelessWidget {
+  const _DiagnosticsRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 88,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
         ],
