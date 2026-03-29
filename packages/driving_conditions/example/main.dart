@@ -14,7 +14,7 @@ void main() {
 
   final assessment = DrivingConditionAssessment.fromCondition(condition);
 
-  final score = const SafetyScoreSimulator().simulate(
+  final result = const SafetyScoreSimulator().simulate(
     speed: 50,
     gripFactor: assessment.gripFactor,
     surface: assessment.surfaceState,
@@ -26,5 +26,7 @@ void main() {
   print('gripFactor: ${assessment.gripFactor.toStringAsFixed(2)}');
   print('advisory: ${assessment.advisoryMessage}');
   print('visibility opacity: ${assessment.visibility.opacity.toStringAsFixed(2)}');
-  print('simulated overall safety: ${score.overall.toStringAsFixed(2)}');
+  print('simulated overall safety: ${result.score.overall.toStringAsFixed(2)}');
+  print('variance: ${result.variance.toStringAsFixed(4)}');
+  print('incident count: ${result.incidentCount}');
 }
