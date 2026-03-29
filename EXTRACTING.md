@@ -148,7 +148,7 @@ dart pub publish --dry-run   # 0 warnings
 - zero Flutter dependency — safe for CLI, server, and test harness use
 - imports `SafetyScore` from `navigation_safety_core` (cross-package dependency, not duplication)
 - README documents all formulas: decision tree, grip factors, opacity/blur, particle config, Monte Carlo
-- 53 tests including boundary regression tests from in-flight review
+- 86 tests including boundary regression tests from in-flight review
 - `publish_to: none` — internal monorepo package, not yet pub.dev-publishable
 
 ## G2: Migrate the App
@@ -247,7 +247,7 @@ your_package:
 | map_viewport_bloc | 48 | Flutter + `_core` | G3 complete | 45 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
 | routing_bloc | 49 | Flutter + `_core` | G3 complete | 29 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
 | offline_tiles | 49 | Flutter + `_core` | G3 complete | 19 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
-| driving_conditions | 52 | Pure Dart | G3 complete | 60 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
+| driving_conditions | 52 | Pure Dart | G3 complete | 88 package tests, 957 app tests, analyze clean, pub.dev 0.3.0 published (0.4.0 G1 ready — SimulationResult API) |
 
 ## Discovery Checklist (post-publish)
 
@@ -257,7 +257,7 @@ After G3, verify discoverability:
 - [ ] Description includes search keywords (not just technical terms)
 - [ ] Topics are max 5, chosen for search volume
 - [ ] README has install command, quick example, API table
-- [ ] Cross-link to sibling packages in README (*"See also: kalman_dr, routing_engine, driving_weather, driving_consent, fleet_hazard, navigation_safety, map_viewport_bloc, routing_bloc, offline_tiles, driving_conditions"*)
+- [ ] Cross-link to sibling packages in README (*"See also: kalman_dr, routing_engine, driving_weather, driving_consent, fleet_hazard, navigation_safety, map_viewport_bloc, routing_bloc, offline_tiles, voice_guidance, driving_conditions"*)
 
 ## Integration Coverage Matrix (Sprint 60)
 

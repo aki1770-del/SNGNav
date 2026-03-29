@@ -36,7 +36,7 @@ cd packages/<name> && dart pub publish --dry-run && cd ../..
 flutter test --update-goldens
 ```
 
-**Expected test counts**: 872 app tests, plus per-package: kalman_dr 56, routing_engine 112, driving_weather 31, driving_consent 34, fleet_hazard 39, navigation_safety 53, map_viewport_bloc 45, routing_bloc 29, offline_tiles 16, driving_conditions 53.
+**Expected test counts**: 957 app tests, plus per-package: kalman_dr 64, routing_engine 114, driving_weather 35, driving_consent 34, fleet_hazard 39, navigation_safety 85, map_viewport_bloc 66, routing_bloc 52, offline_tiles 40, driving_conditions 88, voice_guidance 49.
 
 ---
 
@@ -103,10 +103,10 @@ ASIL-QM classification. This is a navigation **display aid**, not vehicle contro
 | `lib/services/` | Consent DB, hazard aggregation | Edit for service changes |
 | `lib/widgets/` | UI widgets (12 widgets) | **DON'T MODIFY** for new providers |
 | `lib/fluorite/` | Fluorite engine integration (stub) | Do not modify without user approval |
-| `packages/` | 10 extracted packages in the monorepo | See G1→G2→G3 below |
+| `packages/` | 11 extracted packages in the monorepo | See G1→G2→G3 below |
 | `test/` | Mirrors `lib/` structure | Mirror every new `lib/` file |
 
-### Ten Extracted Packages
+### Eleven Extracted Packages
 
 | Package | Track | Status | What it models |
 |---------|:-----:|:------:|---------------|
@@ -119,6 +119,7 @@ ASIL-QM classification. This is a navigation **display aid**, not vehicle contro
 | `map_viewport_bloc` | Flutter + `_core` | Published | Map viewport BLoC, camera modes, layer visibility, and pure Dart viewport models |
 | `routing_bloc` | Flutter + `_core` | Published | Route lifecycle BLoC, route progress UI, maneuver icons, and pure Dart routing lifecycle models |
 | `offline_tiles` | Flutter + `_core` | Published | Offline tile manager, runtime tile resolver, coverage tiers, and pure Dart tile source models |
+| `voice_guidance` | Flutter | Published | TTS engine abstraction, VoiceGuidanceBloc, platform-safe default engine selection |
 | `driving_conditions` | Pure Dart | Extracted in repo (G1.5) | Road surface state, visibility degradation, precipitation config, assessment bridge, Monte Carlo safety score simulation |
 
 ### Routing Bloc Contract

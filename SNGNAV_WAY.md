@@ -156,12 +156,11 @@ architectural rewrite.
 
 ## §4 The Package Portfolio
 
-Ten extracted packages currently live in the SNGNav monorepo. Nine packages are
+Eleven extracted packages currently live in the SNGNav monorepo. Ten packages are
 already published to [pub.dev](https://pub.dev). The four Flutter-track +
 `_core` packages completed G3 publication in Sprint 51: `navigation_safety`,
-`map_viewport_bloc`, `routing_bloc`, and `offline_tiles`. `driving_conditions`
-remains internal-only by human decision because it currently depends on local
-path-based package relationships.
+`map_viewport_bloc`, `routing_bloc`, and `offline_tiles`. `voice_guidance` is
+also published. `driving_conditions` is also published (Sprint 89, pub.dev 0.3.0). Sprint 90 promotes `SimulationResult` to the public API — 0.4.0 G1 ready.
 
 | Package | Track | Status | What it models | Edge developer value |
 |---------|:-----:|:------:|---------------|---------------------|
@@ -174,7 +173,8 @@ path-based package relationships.
 | [**map_viewport_bloc**](https://pub.dev/packages/map_viewport_bloc) | Flutter + `_core` | Published | Map viewport BLoC, camera modes, layer visibility, and fit-to-bounds models | Reusable viewport state machine with canonical layer rules for Flutter navigation maps |
 | [**routing_bloc**](https://pub.dev/packages/routing_bloc) | Flutter + `_core` | Published | Route lifecycle BLoC, route progress UI, and maneuver icon mapping | Reusable route-guidance state machine and glanceable route UI for Flutter navigation apps |
 | [**offline_tiles**](https://pub.dev/packages/offline_tiles) | Flutter + `_core` | Published | Offline tile manager, runtime tile resolver, coverage tiers | Reusable offline tile management for any Flutter map app needing MBTiles + fallback |
-| `driving_conditions` | Pure Dart | Extracted in repo (G1.5) | Road surface state, visibility degradation, precipitation config, driving condition assessment, Monte Carlo safety score simulation | Pure Dart computation models for weather-based driving safety — usable in CLI, server, or test harness without Flutter |
+| [**voice_guidance**](https://pub.dev/packages/voice_guidance) | Flutter | Published | TTS engine abstraction, VoiceGuidanceBloc, platform-safe default engine selection | Platform-agnostic voice guidance — works on mobile, Linux (spd-say), and silently in CI |
+| [**driving_conditions**](https://pub.dev/packages/driving_conditions) | Pure Dart | Published | Road surface state, visibility degradation, precipitation config, driving condition assessment, Monte Carlo safety score simulation with `SimulationResult` (variance + incident count) | Pure Dart computation models for weather-based driving safety — usable in CLI, server, or test harness without Flutter |
 
 ### Canonical Viewport Contract
 
