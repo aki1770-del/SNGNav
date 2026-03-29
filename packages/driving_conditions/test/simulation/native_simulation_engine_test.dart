@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:driving_conditions/driving_conditions.dart';
-import 'package:driving_conditions/src/simulation/native_safety_score_simulation_engine.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -30,12 +29,17 @@ void main() {
       options: options,
     );
 
-    expect(native.overall, closeTo(cpu.overall, 0.005));
-    expect(native.gripScore, closeTo(cpu.gripScore, 0.005));
-    expect(native.visibilityScore, closeTo(cpu.visibilityScore, 0.005));
+    expect(native.score.overall, closeTo(cpu.score.overall, 0.005));
+    expect(native.score.gripScore, closeTo(cpu.score.gripScore, 0.005));
     expect(
-      native.fleetConfidenceScore,
-      closeTo(cpu.fleetConfidenceScore, 0.0001),
+      native.score.visibilityScore,
+      closeTo(cpu.score.visibilityScore, 0.005),
     );
+    expect(
+      native.score.fleetConfidenceScore,
+      closeTo(cpu.score.fleetConfidenceScore, 0.0001),
+    );
+    expect(native.variance, isNonNegative);
+    expect(native.executionMs, isNotNull);
   });
 }

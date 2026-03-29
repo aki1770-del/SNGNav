@@ -11,7 +11,7 @@ DrivingConditionAssessment _assessment(WeatherCondition condition) {
   return DrivingConditionAssessment.fromCondition(condition);
 }
 
-SafetyScore _scoreFor(
+SimulationResult _scoreFor(
   WeatherCondition condition, {
   required int seed,
   int runs = 200,
@@ -102,13 +102,13 @@ void main() {
         equals(clearScore),
       );
 
-      expect(rainScore.overall, lessThan(clearScore.overall));
-      expect(snowScore.overall, lessThan(rainScore.overall));
-      expect(blackIceScore.overall, lessThan(snowScore.overall));
+      expect(rainScore.score.overall, lessThan(clearScore.score.overall));
+      expect(snowScore.score.overall, lessThan(rainScore.score.overall));
+      expect(blackIceScore.score.overall, lessThan(snowScore.score.overall));
 
-      expect(clearScore.toAlertSeverity(config), isNull);
-      expect(snowScore.toAlertSeverity(config), isNotNull);
-      expect(blackIceScore.toAlertSeverity(config), AlertSeverity.critical);
+      expect(clearScore.score.toAlertSeverity(config), isNull);
+      expect(snowScore.score.toAlertSeverity(config), isNotNull);
+      expect(blackIceScore.score.toAlertSeverity(config), AlertSeverity.critical);
     });
 
     test('hysteresis prevents immediate clear-to-snow oscillation', () {

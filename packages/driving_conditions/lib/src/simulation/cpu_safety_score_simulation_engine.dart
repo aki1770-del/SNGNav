@@ -13,6 +13,7 @@ import '../models/road_surface_state.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
+import 'simulation_result.dart';
 
 /// CPU (pure Dart) Monte Carlo safety score engine.
 ///
@@ -65,7 +66,7 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   }
 
   @override
-  SafetyScore simulate({
+  SimulationResult simulate({
     required double speed,
     required double gripFactor,
     required RoadSurfaceState surface,
@@ -78,14 +79,17 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       );
     }
 
+    final effectiveRuns = options.runs < 1 ? 1 : options.runs;
     final random = options.seed != null ? Random(options.seed) : Random();
 
     var totalOverall = 0.0;
     var totalGrip = 0.0;
     var totalVis = 0.0;
     var totalFleet = 0.0;
+    var totalOverallSquared = 0.0;
+    var incidentCount = 0;
 
-    for (var i = 0; i < options.runs; i++) {
+    for (var i = 0; i < effectiveRuns; i++) {
       final score = runOnce(
         speed: speed,
         gripFactor: gripFactor,
@@ -97,13 +101,22 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       totalGrip += score.gripScore;
       totalVis += score.visibilityScore;
       totalFleet += score.fleetConfidenceScore;
+      totalOverallSquared += score.overall * score.overall;
+      if (score.overall < 0.4) incidentCount++;
     }
 
-    return SafetyScore(
-      overall: totalOverall / options.runs,
-      gripScore: totalGrip / options.runs,
-      visibilityScore: totalVis / options.runs,
-      fleetConfidenceScore: totalFleet / options.runs,
+    final mean = totalOverall / effectiveRuns;
+    final variance = (totalOverallSquared / effectiveRuns) - (mean * mean);
+
+    return SimulationResult(
+      score: SafetyScore(
+        overall: mean,
+        gripScore: totalGrip / effectiveRuns,
+        visibilityScore: totalVis / effectiveRuns,
+        fleetConfidenceScore: totalFleet / effectiveRuns,
+      ),
+      variance: variance,
+      incidentCount: incidentCount,
     );
   }
 }

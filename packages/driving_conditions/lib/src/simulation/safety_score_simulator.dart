@@ -18,6 +18,7 @@ import 'cpu_safety_score_simulation_engine.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
+import 'simulation_result.dart';
 
 class SafetyScoreSimulator {
   const SafetyScoreSimulator({
@@ -49,11 +50,14 @@ class SafetyScoreSimulator {
     );
   }
 
-  /// Run N Monte Carlo simulations and return the mean [SafetyScore].
+  /// Run N Monte Carlo simulations and return a [SimulationResult].
+  ///
+  /// [SimulationResult] includes the mean [SafetyScore] plus variance,
+  /// incident count, and (when using the native engine) execution time.
   ///
   /// [runs] defaults to 1000. Provide [seed] for deterministic results
   /// (required for testing).
-  SafetyScore simulate({
+  SimulationResult simulate({
     int runs = 1000,
     required double speed,
     required double gripFactor,

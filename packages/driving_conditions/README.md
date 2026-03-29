@@ -4,7 +4,9 @@
 [![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-Pure Dart computation models for weather-driven driving safety assessment.
+**Turn weather data into actionable driving safety guidance.** Pure Dart models
+that convert a weather condition into road surface classification, grip
+estimation, visibility degradation, and Monte Carlo safety scores.
 
 This package converts a `WeatherCondition` into structured driving guidance:
 
@@ -28,7 +30,7 @@ pulling in Flutter UI code.
 
 ```yaml
 dependencies:
-  driving_conditions: ^0.2.0
+  driving_conditions: ^0.3.0
 ```
 
 ## Core Models
@@ -140,13 +142,16 @@ final condition = WeatherCondition(
 final assessment = DrivingConditionAssessment.fromCondition(condition);
 
 final simulator = SafetyScoreSimulator();
-final score = simulator.simulate(
+final result = simulator.simulate(
   speed: 50,
   gripFactor: assessment.gripFactor,
   surface: assessment.surfaceState,
   visibilityMeters: condition.visibilityMeters,
   seed: 42,
 );
+// result.score     — mean SafetyScore across all Monte Carlo runs
+// result.variance  — score variance (high = mixed conditions)
+// result.incidentCount — runs where overall score fell below 0.4
 ```
 
 ## Integration Pattern
@@ -183,7 +188,7 @@ class ConditionsSummaryCard extends StatelessWidget {
 
         final assessment =
             DrivingConditionAssessment.fromCondition(condition);
-        final score = const SafetyScoreSimulator().simulate(
+        final result = const SafetyScoreSimulator().simulate(
           speed: vehicleSpeedKmh,
           gripFactor: assessment.gripFactor,
           surface: assessment.surfaceState,
@@ -199,7 +204,7 @@ class ConditionsSummaryCard extends StatelessWidget {
             ),
             subtitle: Text(
               '${assessment.advisoryMessage}\n'
-              'Safety score: ${score.overall.toStringAsFixed(2)}',
+              'Safety score: ${result.score.overall.toStringAsFixed(2)}',
             ),
           ),
         );
@@ -221,33 +226,35 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 | `PrecipitationConfig` | Particle-system parameters derived from precipitation type and intensity. |
 | `VisibilityDegradation` | UI-facing opacity and blur values derived from visibility distance. |
 | `SafetyScoreSimulator` | Monte Carlo simulator for advisory safety scoring under uncertain conditions. |
+| `SimulationResult` | Full output of a simulation run: mean `SafetyScore`, variance, incident count, and (native engine) execution time. |
+| `CpuSafetyScoreSimulationEngine` | Pure-Dart Monte Carlo engine. Always available regardless of platform. |
+| `NativeSafetyScoreSimulationEngine` | C FFI engine for higher throughput. Exposes `executionMs` in `SimulationResult`. |
 | `SimulationBackend` / `SimulationOptions` | Extension points for native or alternative simulation engines. |
 
 ## Validation
 
 Current package status:
 
-- Pure Dart
-- 60 passing tests
-- Path-dependent monorepo package
+- Pure Dart — no Flutter dependency
+- 88 passing tests
+- Distributed as a monorepo path package within [SNGNav](https://github.com/aki1770-del/SNGNav) — use via path dependency or copy into your project
+
+## Works With
+
+| Package | How |
+|---------|-----|
+| [driving_weather](https://pub.dev/packages/driving_weather) | Upstream — provides `WeatherCondition` input |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Downstream — safety scores drive alert severity |
+| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Parallel — correlates road surface with fleet reports |
 
 ## See Also
 
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather conditions model (upstream dependency providing `WeatherCondition`)
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing
+- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent
 
-## Part of SNGNav
-
-`driving_conditions` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

@@ -173,7 +173,7 @@ void main() {
       if (!state.hasCondition) return;
       final assessment = DrivingConditionAssessment.fromCondition(state.condition!);
       const simulator = SafetyScoreSimulator();
-      final score = simulator.simulate(
+      final result = simulator.simulate(
         runs: 200,
         speed: 70,
         gripFactor: assessment.gripFactor,
@@ -181,7 +181,7 @@ void main() {
         visibilityMeters: state.condition!.visibilityMeters,
         seed: S52TestFixtures.transitionSeed,
       );
-      final severity = score.toAlertSeverity(safetyConfig);
+      final severity = result.score.toAlertSeverity(safetyConfig);
       if (severity != null) {
         navigationBloc.add(SafetyAlertReceived(
           message: assessment.advisoryMessage,

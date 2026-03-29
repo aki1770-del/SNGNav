@@ -85,13 +85,13 @@ void main() {
         seed: 10,
       );
 
-      expect(poor.overall, lessThan(good.overall));
-      expect(poor.gripScore, lessThan(good.gripScore));
-      expect(poor.visibilityScore, lessThan(good.visibilityScore));
+      expect(poor.score.overall, lessThan(good.score.overall));
+      expect(poor.score.gripScore, lessThan(good.score.gripScore));
+      expect(poor.score.visibilityScore, lessThan(good.score.visibilityScore));
     });
 
     test('single run is supported', () {
-      final score = simulator.simulate(
+      final result = simulator.simulate(
         runs: 1,
         speed: 50,
         gripFactor: 0.5,
@@ -100,11 +100,11 @@ void main() {
         seed: 3,
       );
 
-      expect(score.overall, inInclusiveRange(0.0, 1.0));
+      expect(result.score.overall, inInclusiveRange(0.0, 1.0));
     });
 
     test('default run count returns stable average', () {
-      final score = simulator.simulate(
+      final result = simulator.simulate(
         speed: 60,
         gripFactor: 0.6,
         surface: RoadSurfaceState.standingWater,
@@ -112,8 +112,45 @@ void main() {
         seed: 9,
       );
 
-      expect(score.overall, inInclusiveRange(0.0, 1.0));
-      expect(score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      expect(result.score.overall, inInclusiveRange(0.0, 1.0));
+      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+    });
+
+    test('returns variance and incident count', () {
+      final result = simulator.simulate(
+        runs: 500,
+        speed: 80,
+        gripFactor: 0.3,
+        surface: RoadSurfaceState.compactedSnow,
+        visibilityMeters: 200,
+        seed: 77,
+      );
+
+      expect(result.variance, isNonNegative);
+      expect(result.incidentCount, inInclusiveRange(0, 500));
+      expect(result.executionMs, isNull);
+    });
+
+    test('poor conditions produce higher incident count than good conditions',
+        () {
+      final good = simulator.simulate(
+        runs: 500,
+        speed: 40,
+        gripFactor: 1.0,
+        surface: RoadSurfaceState.dry,
+        visibilityMeters: 1000,
+        seed: 55,
+      );
+      final poor = simulator.simulate(
+        runs: 500,
+        speed: 110,
+        gripFactor: 0.1,
+        surface: RoadSurfaceState.blackIce,
+        visibilityMeters: 80,
+        seed: 55,
+      );
+
+      expect(poor.incidentCount, greaterThan(good.incidentCount));
     });
   });
 }

@@ -27,7 +27,7 @@ void main() {
     });
 
     test('accepts auto backend as CPU fallback', () {
-      final score = engine.simulate(
+      final result = engine.simulate(
         speed: 60,
         gripFactor: 0.8,
         surface: RoadSurfaceState.dry,
@@ -39,7 +39,10 @@ void main() {
         ),
       );
 
-      expect(score.overall, inInclusiveRange(0.0, 1.0));
+      expect(result.score.overall, inInclusiveRange(0.0, 1.0));
+      expect(result.variance, isNonNegative);
+      expect(result.incidentCount, greaterThanOrEqualTo(0));
+      expect(result.executionMs, isNull);
     });
 
     test('rejects gpu backend explicitly', () {
@@ -87,7 +90,7 @@ void main() {
     });
 
     test('default simulator still returns bounded averages', () {
-      final score = defaultSimulator.simulate(
+      final result = defaultSimulator.simulate(
         runs: 100,
         speed: 65,
         gripFactor: 0.6,
@@ -96,10 +99,12 @@ void main() {
         seed: 19,
       );
 
-      expect(score.overall, inInclusiveRange(0.0, 1.0));
-      expect(score.gripScore, inInclusiveRange(0.0, 1.0));
-      expect(score.visibilityScore, inInclusiveRange(0.0, 1.0));
-      expect(score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      expect(result.score.overall, inInclusiveRange(0.0, 1.0));
+      expect(result.score.gripScore, inInclusiveRange(0.0, 1.0));
+      expect(result.score.visibilityScore, inInclusiveRange(0.0, 1.0));
+      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      expect(result.variance, isNonNegative);
+      expect(result.incidentCount, greaterThanOrEqualTo(0));
     });
   });
 
