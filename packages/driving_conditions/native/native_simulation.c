@@ -46,9 +46,10 @@ SimulationResponse simulation_run_batch(
   float speed,
   float grip_factor,
   uint32_t surface_code,
-  float visibility_meters
+  float visibility_meters,
+  float fleet_confidence
 ) {
-  const float fleet_confidence_score = 0.8f;
+  const float fleet_confidence_score = fleet_confidence;
   const uint32_t effective_runs = runs == 0u ? 1u : runs;
   clock_t start = clock();
   float total_overall = 0.0f;

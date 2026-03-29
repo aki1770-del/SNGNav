@@ -10,6 +10,8 @@ import 'dart:math';
 import 'package:navigation_safety/navigation_safety_core.dart';
 
 import '../models/road_surface_state.dart';
+import 'constant_fleet_confidence_provider.dart';
+import 'fleet_confidence_provider.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
@@ -20,10 +22,22 @@ import 'simulation_result.dart';
 /// Runs N stochastic simulations with jittered inputs to produce
 /// a probabilistic [SafetyScore]. Deterministic seeding for tests.
 ///
+/// Inject a [FleetConfidenceProvider] to replace the pre-Sprint 91
+/// hardcoded 0.8 fleet confidence baseline. Defaults to
+/// [ConstantFleetConfidenceProvider] (0.8) — behavior unchanged for
+/// existing call sites.
+///
 /// Performance gate: 1,000 runs < 200ms in `dart test`.
 class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates a CPU simulation engine.
-  const CpuSafetyScoreSimulationEngine();
+  ///
+  /// [provider] supplies the fleet confidence score for each simulation.
+  /// Defaults to [ConstantFleetConfidenceProvider] (0.8).
+  const CpuSafetyScoreSimulationEngine({
+    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+  }) : _provider = provider;
+
+  final FleetConfidenceProvider _provider;
 
   /// Run a single simulation with stochastic perturbation.
   ///
@@ -50,8 +64,7 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     final visNorm = (visibilityMeters / 1000.0).clamp(0.0, 1.0);
     final visibilityScore = (visNorm * (1.0 - visJitter)).clamp(0.0, 1.0);
 
-    // Fleet confidence placeholder — real fleet data is L2 scope.
-    const fleetConfidenceScore = 0.8;
+    final fleetConfidenceScore = _provider.confidence;
 
     // Weighted mean: grip 0.4, visibility 0.4, fleet 0.2.
     final overall =

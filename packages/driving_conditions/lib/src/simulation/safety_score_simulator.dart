@@ -14,7 +14,9 @@ import 'dart:math';
 import 'package:navigation_safety/navigation_safety_core.dart';
 
 import '../models/road_surface_state.dart';
+import 'constant_fleet_confidence_provider.dart';
 import 'cpu_safety_score_simulation_engine.dart';
+import 'fleet_confidence_provider.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
@@ -23,12 +25,15 @@ import 'simulation_result.dart';
 class SafetyScoreSimulator {
   const SafetyScoreSimulator({
     SafetyScoreSimulationEngine? engine,
-  }) : _engine = engine;
+    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+  }) : _engine = engine,
+       _provider = provider;
 
   final SafetyScoreSimulationEngine? _engine;
+  final FleetConfidenceProvider _provider;
 
   SafetyScoreSimulationEngine get _effectiveEngine =>
-      _engine ?? const CpuSafetyScoreSimulationEngine();
+      _engine ?? CpuSafetyScoreSimulationEngine(provider: _provider);
 
   /// Run a single simulation with stochastic perturbation.
   ///

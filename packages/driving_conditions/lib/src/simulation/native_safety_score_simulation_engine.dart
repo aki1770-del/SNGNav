@@ -7,6 +7,8 @@ library;
 import 'package:navigation_safety/navigation_safety_core.dart';
 
 import '../models/road_surface_state.dart';
+import 'constant_fleet_confidence_provider.dart';
+import 'fleet_confidence_provider.dart';
 import 'native_simulation_bindings.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_options.dart';
@@ -17,15 +19,18 @@ import 'simulation_result.dart';
 /// Uses [NativeSimulationBindings] to call the compiled
 /// `simulation_run_batch` function through `dart:ffi`.
 ///
-/// Provides variance, incident count, and execution time in addition
-/// to the mean [SafetyScore] — data that the C engine computes at
-/// no extra cost and that [CpuSafetyScoreSimulationEngine] also now exposes.
+/// Inject a [FleetConfidenceProvider] to supply real fleet data to the
+/// native engine. Defaults to [ConstantFleetConfidenceProvider] (0.8).
 class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates an engine backed by [bindings] (defaults to platform library).
-  NativeSafetyScoreSimulationEngine({NativeSimulationBindings? bindings})
-    : _bindings = bindings ?? NativeSimulationBindings();
+  NativeSafetyScoreSimulationEngine({
+    NativeSimulationBindings? bindings,
+    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+  }) : _bindings = bindings ?? NativeSimulationBindings(),
+       _provider = provider;
 
   final NativeSimulationBindings _bindings;
+  final FleetConfidenceProvider _provider;
 
   @override
   SimulationResult simulate({
@@ -42,6 +47,7 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       gripFactor: gripFactor,
       surfaceCode: surface.index,
       visibilityMeters: visibilityMeters,
+      fleetConfidence: _provider.confidence,
     );
 
     return SimulationResult(

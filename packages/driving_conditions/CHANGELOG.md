@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+- **New**: `FleetConfidenceProvider` abstract interface — pluggable fleet confidence for safety simulation.
+- **New**: `ConstantFleetConfidenceProvider` — explicit named replacement for the `0.8` literal.
+- **New**: `FleetHazardConfidenceAdapter` — derives confidence from `List<FleetReport>` using road condition safety factors (dry 1.0, wet 0.7, snowy 0.4, icy 0.1).
+- `CpuSafetyScoreSimulationEngine`, `NativeSafetyScoreSimulationEngine`, and `SafetyScoreSimulator` now accept an optional `FleetConfidenceProvider`. Default behaviour is unchanged (0.8 constant).
+- Native `simulation_run_batch` C function now accepts `fleet_confidence` as a parameter. Shared library rebuilt.
+- Adds `fleet_hazard: ^0.3.0` as a dependency.
+
 ## 0.4.0
 
 - **Breaking**: `SafetyScoreSimulator.simulate()` and `SafetyScoreSimulationEngine.simulate()` now return `SimulationResult` instead of `SafetyScore`.

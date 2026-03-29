@@ -46,6 +46,7 @@ typedef _RunBatchNative = NativeSimulationResponse Function(
   Float gripFactor,
   Uint32 surfaceCode,
   Float visibilityMeters,
+  Float fleetConfidence,
 );
 
 /// Dart-side signature after marshalling.
@@ -56,6 +57,7 @@ typedef _RunBatchDart = NativeSimulationResponse Function(
   double gripFactor,
   int surfaceCode,
   double visibilityMeters,
+  double fleetConfidence,
 );
 
 /// Loads the platform-specific native simulation library and provides
@@ -77,11 +79,20 @@ class NativeSimulationBindings {
     required double gripFactor,
     required int surfaceCode,
     required double visibilityMeters,
+    double fleetConfidence = 0.8,
   }) {
     final function = _library.lookupFunction<_RunBatchNative, _RunBatchDart>(
       'simulation_run_batch',
     );
-    return function(runs, seed, speed, gripFactor, surfaceCode, visibilityMeters);
+    return function(
+      runs,
+      seed,
+      speed,
+      gripFactor,
+      surfaceCode,
+      visibilityMeters,
+      fleetConfidence,
+    );
   }
 
   /// Returns the platform-appropriate path to the compiled C library.
