@@ -117,11 +117,13 @@ Monte Carlo scoring model:
 ```text
 gripScore = gripFactor * (1 - gripJitter) * (1 - speedFactor * 0.3)
 visibilityScore = clamp(visibilityMeters / 1000.0, 0, 1) * (1 - visJitter)
-fleetConfidenceScore = 0.8
+fleetConfidenceScore = FleetConfidenceProvider.confidence  // injectable; default 0.8
 overall = gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2
 ```
 
 Jitter is random `0.0..0.1` per run. Use `seed` for deterministic tests.
+
+Inject a `FleetHazardConfidenceAdapter` to replace the 0.8 baseline with real fleet data.
 
 ## Quick Start
 
@@ -227,6 +229,9 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 | `VisibilityDegradation` | UI-facing opacity and blur values derived from visibility distance. |
 | `SafetyScoreSimulator` | Monte Carlo simulator for advisory safety scoring under uncertain conditions. |
 | `SimulationResult` | Full output of a simulation run: mean `SafetyScore`, variance, incident count, and (native engine) execution time. |
+| `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. Inject to replace the 0.8 baseline. |
+| `ConstantFleetConfidenceProvider` | Returns a fixed confidence value. Default (0.8) preserves pre-Sprint-91 behaviour. |
+| `FleetHazardConfidenceAdapter` | Derives confidence from `List<FleetReport>` — dry 1.0, wet 0.7, snowy 0.4, icy 0.1. |
 | `CpuSafetyScoreSimulationEngine` | Pure-Dart Monte Carlo engine. Always available regardless of platform. |
 | `NativeSafetyScoreSimulationEngine` | C FFI engine for higher throughput. Exposes `executionMs` in `SimulationResult`. |
 | `SimulationBackend` / `SimulationOptions` | Extension points for native or alternative simulation engines. |
@@ -236,7 +241,7 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 Current package status:
 
 - Pure Dart — no Flutter dependency
-- 88 passing tests
+- 105 passing tests
 - Distributed as a monorepo path package within [SNGNav](https://github.com/aki1770-del/SNGNav) — use via path dependency or copy into your project
 
 ## Works With
@@ -245,7 +250,7 @@ Current package status:
 |---------|-----|
 | [driving_weather](https://pub.dev/packages/driving_weather) | Upstream — provides `WeatherCondition` input |
 | [navigation_safety](https://pub.dev/packages/navigation_safety) | Downstream — safety scores drive alert severity |
-| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Parallel — correlates road surface with fleet reports |
+| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Direct dependency — `FleetHazardConfidenceAdapter` bridges fleet reports into simulation |
 
 ## See Also
 

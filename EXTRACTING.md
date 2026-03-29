@@ -247,7 +247,7 @@ your_package:
 | map_viewport_bloc | 48 | Flutter + `_core` | G3 complete | 45 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
 | routing_bloc | 49 | Flutter + `_core` | G3 complete | 29 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
 | offline_tiles | 49 | Flutter + `_core` | G3 complete | 19 package tests, 898 app tests, analyze clean, pub.dev 0.1.0 published |
-| driving_conditions | 52 | Pure Dart | G3 complete | 88 package tests, 957 app tests, analyze clean, pub.dev 0.3.0 published (0.4.0 G1 ready — SimulationResult API) |
+| driving_conditions | 52 | Pure Dart | G3 complete | 105 package tests, 957 app tests, analyze clean, pub.dev 0.3.0 published (0.5.0 G1 ready — FleetConfidenceProvider + SimulationResult) |
 
 ## Discovery Checklist (post-publish)
 

@@ -36,7 +36,7 @@ cd packages/<name> && dart pub publish --dry-run && cd ../..
 flutter test --update-goldens
 ```
 
-**Expected test counts**: 957 app tests, plus per-package: kalman_dr 64, routing_engine 114, driving_weather 35, driving_consent 34, fleet_hazard 39, navigation_safety 85, map_viewport_bloc 66, routing_bloc 52, offline_tiles 40, driving_conditions 88, voice_guidance 49.
+**Expected test counts**: 957 app tests, plus per-package: kalman_dr 64, routing_engine 114, driving_weather 35, driving_consent 34, fleet_hazard 39, navigation_safety 85, map_viewport_bloc 66, routing_bloc 52, offline_tiles 40, driving_conditions 105, voice_guidance 49.
 
 ---
 
