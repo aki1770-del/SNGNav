@@ -22,7 +22,7 @@ dependencies:
   routing_bloc:
     ^0.2.0
   offline_tiles:
-    ^0.2.0
+    ^0.4.0
   fleet_hazard:
     path: packages/fleet_hazard
   navigation_safety:
@@ -37,7 +37,7 @@ dependencies:
   equatable: ^2.0.7
   dbus: ^0.7.10
   http: ^1.3.0
-  sqlite3: ^2.9.4
+  sqlite3: ^3.2.0
   path_provider: ^2.1.5
   path: ^1.9.1
 
