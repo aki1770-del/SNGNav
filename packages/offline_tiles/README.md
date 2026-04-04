@@ -1,17 +1,15 @@
 # offline_tiles
 
-Offline tile management for Flutter navigation maps with MBTiles-backed local
-fallback.
+[![pub package](https://img.shields.io/pub/v/offline_tiles.svg)](https://pub.dev/packages/offline_tiles)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-`offline_tiles` separates two concerns that are often mixed together:
+**Your map goes blank when the network drops.** offline_tiles keeps the map
+rendering with MBTiles-backed local fallback — pre-cache routes and regions,
+resolve tiles locally when offline.
 
-- coverage tiers: what to pre-download
-- runtime resolution: how a single tile request is resolved while rendering
-
-## When to use this package
-
-Use `offline_tiles` when your map must keep rendering through connectivity loss
-and you need explicit control over what gets cached versus how lookups resolve.
+Use `offline_tiles` when your map must keep rendering through connectivity loss.
+Separates what to cache (coverage tiers) from how tiles resolve at runtime.
 
 ## Features
 
@@ -24,7 +22,7 @@ and you need explicit control over what gets cached versus how lookups resolve.
 
 ```yaml
 dependencies:
-  offline_tiles: ^0.1.1
+  offline_tiles: ^0.4.0
 ```
 
 ## Quick Start
@@ -102,23 +100,22 @@ The example shows:
 - current viewport caching plan
 - runtime status when no MBTiles archive is present
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [flutter_map](https://pub.dev/packages/flutter_map) | `manager.tileProvider` plugs directly into flutter_map's TileLayer |
+| [routing_engine](https://pub.dev/packages/routing_engine) | Cache tiles along a calculated route with `cacheRoute()` |
+| [latlong2](https://pub.dev/packages/latlong2) | Shared coordinate types for route shapes |
+
 ## See Also
 
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing backend abstraction
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
+- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Viewport state machine for navigation maps
+- [routing_bloc](https://pub.dev/packages/routing_bloc) — Route lifecycle state machine
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
 
-## Part of SNGNav
-
-`offline_tiles` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

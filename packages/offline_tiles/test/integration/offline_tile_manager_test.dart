@@ -280,8 +280,8 @@ void main() {
       expect(File(path).existsSync(), isTrue);
       expect(firstFetched, isNotNull);
 
-      final archive = MbTiles(mbtilesPath: path);
-      addTearDown(archive.dispose);
+      final archive = MbTiles(path: path);
+      addTearDown(archive.close);
       final metadata = archive.getMetadata();
       expect(metadata.name, 'offline_tiles cache');
       expect(
@@ -451,7 +451,7 @@ Future<String> _createFixtureMbtiles(
 }) async {
   final path = '${tempDir.path}/fixture.mbtiles';
   final archive = MbTiles.create(
-    mbtilesPath: path,
+    path: path,
     metadata: const MbTilesMetadata(
       name: 'fixture',
       format: 'png',
@@ -463,7 +463,7 @@ Future<String> _createFixtureMbtiles(
   try {
     writeTile(archive);
   } finally {
-    archive.dispose();
+    archive.close();
   }
   return path;
 }

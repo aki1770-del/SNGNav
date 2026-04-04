@@ -181,7 +181,7 @@ class OfflineTileManager {
   Future<void> dispose() async {
     final archive = _resolver.mbtiles;
     if (archive != null) {
-      archive.dispose();
+      archive.close();
     }
     _resolver.clearMemoryCache();
     await _tileProvider.dispose();
@@ -191,7 +191,7 @@ class OfflineTileManager {
     if (path == null) return null;
     final file = File(path);
     if (!file.existsSync()) return null;
-    return MbTiles(mbtilesPath: path, editable: true);
+    return MbTiles(path: path, editable: true);
   }
 
   MbTiles _ensureWritableArchive({
@@ -210,14 +210,14 @@ class OfflineTileManager {
 
     final file = File(path);
     if (file.existsSync()) {
-      final archive = MbTiles(mbtilesPath: path, editable: true);
+      final archive = MbTiles(path: path, editable: true);
       _resolver.attachMbTiles(archive);
       return archive;
     }
 
     file.parent.createSync(recursive: true);
     final archive = MbTiles.create(
-      mbtilesPath: path,
+      path: path,
       metadata: MbTilesMetadata(
         name: 'offline_tiles cache',
         format: 'png',
