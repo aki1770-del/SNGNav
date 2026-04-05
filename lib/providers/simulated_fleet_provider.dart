@@ -32,6 +32,7 @@ class SimulatedFleetProvider implements FleetProvider {
 
   @override
   Future<void> startListening() async {
+    _timer?.cancel(); // prevent timer leak on double-start
     _tick = 0;
     _emit();
     _timer = Timer.periodic(interval, (_) => _emit());

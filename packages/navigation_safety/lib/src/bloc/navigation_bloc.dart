@@ -1,10 +1,24 @@
 /// Navigation session BLoC with advisory safety alerts.
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../models/alert_severity.dart';
 import 'navigation_event.dart';
 import 'navigation_state.dart';
+
+/// Returns true if [incoming] severity should replace [current].
+/// Prevents alert downgrade: lower severity never replaces higher.
+bool _canUpdateSeverity(AlertSeverity incoming, AlertSeverity? current) {
+  if (current == null) return true;
+  const order = {
+    AlertSeverity.info: 0,
+    AlertSeverity.warning: 1,
+    AlertSeverity.critical: 2,
+  };
+  return order[incoming]! >= order[current]!;
+}
 
 class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   NavigationBloc() : super(const NavigationState.idle()) {
@@ -54,10 +68,10 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     final nextIndex = state.currentManeuverIndex + 1;
     final totalManeuvers = state.route!.maneuvers.length;
 
-    if (nextIndex >= totalManeuvers) {
+    if (totalManeuvers == 0 || nextIndex >= totalManeuvers) {
       emit(state.copyWith(
         status: NavigationStatus.arrived,
-        currentManeuverIndex: totalManeuvers - 1,
+        currentManeuverIndex: (totalManeuvers - 1).clamp(0, totalManeuvers),
       ));
     } else {
       emit(state.copyWith(currentManeuverIndex: nextIndex));
@@ -83,6 +97,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       status: NavigationStatus.navigating,
       route: event.newRoute,
       currentManeuverIndex: 0,
+      clearAlert: true,
     ));
   }
 
@@ -90,17 +105,28 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     SafetyAlertReceived event,
     Emitter<NavigationState> emit,
   ) {
-    final currentSeverity = state.alertSeverity;
-    if (currentSeverity != null &&
-        event.severity.index < currentSeverity.index) {
-      return;
-    }
+    if (!_canUpdateSeverity(event.severity, state.alertSeverity)) return;
+
+    final Stopwatch? sw = kDebugMode ? (Stopwatch()..start()) : null;
 
     emit(state.copyWith(
       alertMessage: event.message,
       alertSeverity: event.severity,
       alertDismissible: event.dismissible,
     ));
+
+    assert(() {
+      sw?.stop();
+      final elapsed = sw?.elapsedMilliseconds ?? 0;
+      if (elapsed > 500) {
+        // ignore: avoid_print
+        print(
+          '[navigation_safety] LATENCY WARNING: SafetyAlertReceived '
+          'processing took ${elapsed}ms (OODA orient budget: 500ms)',
+        );
+      }
+      return true;
+    }());
   }
 
   void _onAlertDismissed(

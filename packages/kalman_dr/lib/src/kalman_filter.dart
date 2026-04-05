@@ -139,9 +139,13 @@ class KalmanFilter {
     // Convert degree² variance to metres using cos(lat) for longitude.
     final latRad = _x[0] * math.pi / 180.0;
     final lonScale = _metresPerDegreeLat * math.cos(latRad);
+    // Guard against numerical errors making variance slightly negative.
     return math.sqrt(
-      latVar * _metresPerDegreeLat * _metresPerDegreeLat +
-          lonVar * lonScale * lonScale,
+      math.max(
+        0.0,
+        latVar * _metresPerDegreeLat * _metresPerDegreeLat +
+            lonVar * lonScale * lonScale,
+      ),
     );
   }
 
@@ -292,10 +296,13 @@ class KalmanFilter {
     final latRad = lat * math.pi / 180.0;
     final distance = speed * dt;
 
+    final cosLat = math.cos(latRad);
+    final safeCosLat = cosLat.abs() < 0.001 ? 0.001 : cosLat; // pole guard
+
     final dLat = distance * math.cos(headingRad) / _metresPerDegreeLat;
     final dLon = distance *
         math.sin(headingRad) /
-        (_metresPerDegreeLat * math.cos(latRad));
+        (_metresPerDegreeLat * safeCosLat);
 
     return [lat + dLat, lon + dLon, speed, heading];
   }
@@ -313,6 +320,7 @@ class KalmanFilter {
     final cosH = math.cos(headingRad);
     final sinH = math.sin(headingRad);
     final cosLat = math.cos(latRad);
+    final safeCosLat = cosLat.abs() < 0.001 ? 0.001 : cosLat; // pole guard
     final sinLat = math.sin(latRad);
 
     // ∂lat'/∂speed = cos(heading)·dt / metresPerDegreeLat
@@ -328,17 +336,17 @@ class KalmanFilter {
         sinH *
         dt *
         sinLat /
-        (_metresPerDegreeLat * cosLat * cosLat) *
+        (_metresPerDegreeLat * safeCosLat * safeCosLat) *
         math.pi /
         180.0;
 
     // ∂lon'/∂speed = sin(heading)·dt / (metresPerDegreeLat·cos(lat))
-    final dLonDSpeed = sinH * dt / (_metresPerDegreeLat * cosLat);
+    final dLonDSpeed = sinH * dt / (_metresPerDegreeLat * safeCosLat);
 
     // ∂lon'/∂heading = speed·cos(heading)·dt /
     //                  (metresPerDegreeLat·cos(lat)) · (π/180)
     final dLonDHeading =
-        speed * cosH * dt / (_metresPerDegreeLat * cosLat) * math.pi / 180.0;
+        speed * cosH * dt / (_metresPerDegreeLat * safeCosLat) * math.pi / 180.0;
 
     return [
       [1, 0, dLatDSpeed, dLatDHeading], // ∂lat'/∂x

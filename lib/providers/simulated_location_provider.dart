@@ -51,6 +51,7 @@ class SimulatedLocationProvider implements LocationProvider {
 
   @override
   Future<void> start() async {
+    _timer?.cancel(); // prevent timer leak on double-start
     _controller ??= StreamController<GeoPosition>.broadcast();
     _step = 0;
     _emit();

@@ -43,6 +43,11 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
   ) async {
     if (state.isListening) return;
 
+    // Cancel any previous subscription before starting a new one
+    // (guards against retry after error state without an intervening stop).
+    await _reportSub?.cancel();
+    _reportSub = null;
+
     emit(state.copyWith(status: FleetStatus.listening));
 
     try {
@@ -78,7 +83,7 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     Emitter<FleetState> emit,
   ) {
     // Upsert: latest report per vehicle, then prune stale.
-    final updated = Map<String, dynamic>.from(state.activeReports);
+    final updated = Map<String, FleetReport>.from(state.activeReports);
     updated[event.report.vehicleId] = event.report;
 
     // Prune reports older than _reportMaxAge.
@@ -88,7 +93,7 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
 
     emit(state.copyWith(
       status: FleetStatus.listening,
-      activeReports: updated.cast(),
+      activeReports: updated,
     ));
   }
 
@@ -105,7 +110,7 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
   @override
   Future<void> close() async {
     await _reportSub?.cancel();
-    _provider.dispose();
+    await _provider.dispose();
     return super.close();
   }
 }

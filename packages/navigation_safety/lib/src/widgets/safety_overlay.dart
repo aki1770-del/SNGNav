@@ -24,6 +24,7 @@ class SafetyOverlay extends StatelessWidget {
     return BlocBuilder<NavigationBloc, NavigationState>(
       builder: (context, state) {
         final hasAlert = state.hasSafetyAlert;
+        final blockPop = hasAlert && !state.alertDismissible;
 
         if (!hasAlert) {
           return const Positioned.fill(
@@ -31,29 +32,32 @@ class SafetyOverlay extends StatelessWidget {
           );
         }
 
-        return Positioned.fill(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {},
-                  behavior: HitTestBehavior.opaque,
-                  child: ColoredBox(
-                    color: _backgroundForSeverity(state.alertSeverity),
+        return PopScope(
+          canPop: !blockPop,
+          child: Positioned.fill(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {},
+                    behavior: HitTestBehavior.opaque,
+                    child: ColoredBox(
+                      color: _backgroundForSeverity(state.alertSeverity),
+                    ),
                   ),
                 ),
-              ),
-              Center(
-                child: _AlertBanner(
-                  message: state.alertMessage!,
-                  severity: state.alertSeverity!,
-                  dismissible: state.alertDismissible,
-                  onDismiss: () => context
-                      .read<NavigationBloc>()
-                      .add(const SafetyAlertDismissed()),
+                Center(
+                  child: _AlertBanner(
+                    message: state.alertMessage!,
+                    severity: state.alertSeverity!,
+                    dismissible: state.alertDismissible,
+                    onDismiss: () => context
+                        .read<NavigationBloc>()
+                        .add(const SafetyAlertDismissed()),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -141,5 +145,31 @@ class _AlertBanner extends StatelessWidget {
       AlertSeverity.warning => Colors.amber.shade50,
       AlertSeverity.critical => Colors.red.shade50,
     };
+  }
+}
+
+/// Convenience scaffold that enforces [SafetyOverlay] Z-order.
+///
+/// Places [SafetyOverlay] as the topmost layer above [body].
+/// Use this instead of manually wrapping in a Stack.
+///
+/// ```dart
+/// SafetyNavigationScaffold(
+///   body: FlutterMap(/* ... */),
+/// )
+/// ```
+class SafetyNavigationScaffold extends StatelessWidget {
+  final Widget body;
+
+  const SafetyNavigationScaffold({super.key, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: body),
+        const SafetyOverlay(),
+      ],
+    );
   }
 }

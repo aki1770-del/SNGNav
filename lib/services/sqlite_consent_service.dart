@@ -119,7 +119,7 @@ class SqliteConsentService implements ConsentService {
 
   @override
   Future<void> dispose() async {
-    _db.dispose();
+    _db.close();
   }
 
   // ---------------------------------------------------------------------------

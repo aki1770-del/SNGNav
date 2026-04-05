@@ -115,9 +115,11 @@ class DeadReckoningState extends Equatable {
     // Flat-Earth displacement.
     final dLat = distance * math.cos(headingRad) / _metresPerDegreeLat;
     final latRad = latitude * math.pi / 180.0;
+    final cosLat = math.cos(latRad);
+    final safeCosLat = cosLat.abs() < 0.001 ? 0.001 : cosLat; // pole guard
     final dLon = distance *
         math.sin(headingRad) /
-        (_metresPerDegreeLat * math.cos(latRad));
+        (_metresPerDegreeLat * safeCosLat);
 
     return DeadReckoningState(
       latitude: latitude + dLat,

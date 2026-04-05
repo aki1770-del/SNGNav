@@ -74,7 +74,7 @@ void main() {
     });
 
     test('deterministic safety scoring degrades across worsening conditions', () {
-      const config = NavigationSafetyConfig();
+      final config = NavigationSafetyConfig();
 
       final clearScore = _scoreFor(
         S52TestFixtures.clearWeather,

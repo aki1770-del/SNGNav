@@ -43,6 +43,11 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   ) async {
     if (state.isMonitoring) return;
 
+    // Cancel any previous subscription before starting a new one
+    // (guards against retry after error state without an intervening stop).
+    await _conditionSub?.cancel();
+    _conditionSub = null;
+
     emit(state.copyWith(status: WeatherStatus.monitoring));
 
     try {
@@ -96,7 +101,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   @override
   Future<void> close() async {
     await _conditionSub?.cancel();
-    _provider.dispose();
+    await _provider.dispose();
     return super.close();
   }
 }

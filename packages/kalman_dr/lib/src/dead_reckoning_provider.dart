@@ -250,6 +250,7 @@ class DeadReckoningProvider implements LocationProvider {
 
   void _startDr() {
     _isDrActive = true;
+    _drTimer?.cancel(); // guard against double-start
     _emitDrPosition();
 
     _drTimer = Timer.periodic(extrapolationInterval, (_) {

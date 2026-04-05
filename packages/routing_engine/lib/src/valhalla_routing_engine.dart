@@ -105,7 +105,9 @@ class ValhallaRoutingEngine implements RoutingEngine {
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       return _parseRouteResponse(json, stopwatch.elapsed);
-    } on http.ClientException catch (e) {
+    } on RoutingException {
+      rethrow;
+    } on Exception catch (e) {
       throw RoutingException('Valhalla network error: $e');
     }
   }

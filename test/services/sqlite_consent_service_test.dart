@@ -309,7 +309,7 @@ void main() {
         "AND name IN ('consents', 'consent_audit_log') ORDER BY name;",
       );
       expect(tables, hasLength(2));
-      db2.dispose();
+      db2.close();
     });
 
     test('grant overwrites previous grant (upsert, not duplicate row)',

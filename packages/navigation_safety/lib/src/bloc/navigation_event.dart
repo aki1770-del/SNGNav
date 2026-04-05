@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 import '../models/alert_severity.dart';
+import '../models/safety_scenario.dart';
 
 sealed class NavigationEvent extends Equatable {
   const NavigationEvent();
@@ -57,14 +58,28 @@ class SafetyAlertReceived extends NavigationEvent {
   final AlertSeverity severity;
   final bool dismissible;
 
+  /// Optional scenario coordinate — identifies the type of road hazard.
+  ///
+  /// When set, downstream subscribers can filter or aggregate by
+  /// [SafetyScenario.namespace] without parsing the human-readable [message].
+  ///
+  /// Swarm composability: multiple independent packages emitting alerts with
+  /// the same [scenario] id contribute independent observations of the same
+  /// condition — the aggregator treats them additively.
+  ///
+  /// Null means the alert has no structured scenario context (legacy callers
+  /// unaffected — this field is optional and defaults to null).
+  final SafetyScenario? scenario;
+
   const SafetyAlertReceived({
     required this.message,
     required this.severity,
     this.dismissible = true,
+    this.scenario,
   });
 
   @override
-  List<Object?> get props => [message, severity, dismissible];
+  List<Object?> get props => [message, severity, dismissible, scenario];
 }
 
 class SafetyAlertDismissed extends NavigationEvent {

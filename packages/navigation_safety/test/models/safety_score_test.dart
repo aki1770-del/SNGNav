@@ -148,5 +148,27 @@ void main() {
 
       expect(score.toAlertSeverity(config), AlertSeverity.warning);
     });
+
+    test('overall = 0.0 → critical', () {
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: 0.0,
+        gripScore: 0.0,
+        visibilityScore: 0.0,
+        fleetConfidenceScore: 0.0,
+      );
+      expect(score.toAlertSeverity(config), AlertSeverity.critical);
+    });
+
+    test('overall = 1.0 → no alert', () {
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: 1.0,
+        gripScore: 1.0,
+        visibilityScore: 1.0,
+        fleetConfidenceScore: 1.0,
+      );
+      expect(score.toAlertSeverity(config), isNull);
+    });
   });
 }

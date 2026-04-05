@@ -46,7 +46,7 @@ class SafetyScoreSimulator {
     required double visibilityMeters,
     required Random random,
   }) {
-    return const CpuSafetyScoreSimulationEngine().runOnce(
+    return _effectiveEngine.runOnce(
       speed: speed,
       gripFactor: gripFactor,
       surface: surface,

@@ -16,5 +16,13 @@ void main() {
         containsAll(['info', 'warning', 'critical']),
       );
     });
+
+    test('info index < warning index', () {
+      expect(AlertSeverity.info.index, lessThan(AlertSeverity.warning.index));
+    });
+
+    test('warning index < critical index', () {
+      expect(AlertSeverity.warning.index, lessThan(AlertSeverity.critical.index));
+    });
   });
 }

@@ -105,6 +105,8 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     LocationStaleTimeout event,
     Emitter<LocationState> emit,
   ) {
+    // Dead reckoning is actively estimating position — not stale.
+    if (state.isDeadReckoning) return;
     // Only transition to stale if we had a fix or degraded state.
     if (state.quality == LocationQuality.fix ||
         state.quality == LocationQuality.degraded) {

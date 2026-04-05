@@ -34,7 +34,7 @@ class RouteProgressBar extends StatelessWidget {
   double get _progress {
     if (route == null || route!.maneuvers.isEmpty) return 0.0;
     if (status == RouteProgressStatus.arrived) return 1.0;
-    return currentManeuverIndex / route!.maneuvers.length;
+    return (currentManeuverIndex / route!.maneuvers.length).clamp(0.0, 1.0);
   }
 
   @override

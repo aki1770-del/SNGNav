@@ -114,6 +114,7 @@ class _ResolvedTileImageProvider extends ImageProvider<_ResolvedTileImageProvide
     final image = frame.image;
     final scaleFactor = resolution.scaleFactor;
     if (scaleFactor <= 1) {
+      image.dispose();
       return bytes;
     }
 
@@ -134,10 +135,14 @@ class _ResolvedTileImageProvider extends ImageProvider<_ResolvedTileImageProvide
 
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
+    final imageWidth = image.width;
+    final imageHeight = image.height;
     canvas.drawImageRect(image, srcRect, dstRect, ui.Paint());
+    image.dispose(); // release source image GPU memory
     final picture = recorder.endRecording();
-    final croppedImage = await picture.toImage(image.width, image.height);
+    final croppedImage = await picture.toImage(imageWidth, imageHeight);
     final byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+    croppedImage.dispose(); // release cropped image GPU memory
     return byteData!.buffer.asUint8List();
   }
 }

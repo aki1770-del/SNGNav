@@ -57,7 +57,7 @@ void main() {
           severity: AlertSeverity.warning,
           dismissible: false,
         ).props,
-        ['Ice ahead', AlertSeverity.warning, false],
+        ['Ice ahead', AlertSeverity.warning, false, null],
       );
     });
   });

@@ -64,7 +64,7 @@ class NavigationState extends Equatable {
   double get progress {
     if (route == null || route!.maneuvers.isEmpty) return 0.0;
     if (status == NavigationStatus.arrived) return 1.0;
-    return currentManeuverIndex / route!.maneuvers.length;
+    return (currentManeuverIndex / route!.maneuvers.length).clamp(0.0, 1.0);
   }
 
   NavigationState copyWith({

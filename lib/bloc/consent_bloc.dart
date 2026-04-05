@@ -57,6 +57,8 @@ class ConsentBloc extends Bloc<ConsentEvent, ConsentState> {
     ConsentGrantRequested event,
     Emitter<ConsentState> emit,
   ) async {
+    // Ignore grant requests while loading — the load result would overwrite them.
+    if (state.status == ConsentBlocStatus.loading) return;
     try {
       final record = await _service.grant(
         event.purpose,
@@ -82,6 +84,8 @@ class ConsentBloc extends Bloc<ConsentEvent, ConsentState> {
     ConsentRevokeRequested event,
     Emitter<ConsentState> emit,
   ) async {
+    // Ignore revoke requests while loading — the load result would overwrite them.
+    if (state.status == ConsentBlocStatus.loading) return;
     try {
       final record = await _service.revoke(event.purpose);
 

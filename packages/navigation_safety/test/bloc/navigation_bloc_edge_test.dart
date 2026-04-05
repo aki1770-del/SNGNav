@@ -375,4 +375,47 @@ void main() {
       expect(str, contains('alert=true'));
     });
   });
+
+  group('Alert lifecycle', () {
+    blocTest<NavigationBloc, NavigationState>(
+      'alert cleared when reroute completes',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.deviated,
+        route: _route,
+        alertMessage: 'Icy conditions ahead',
+        alertSeverity: AlertSeverity.warning,
+      ),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _route)),
+      expect: () => [
+        predicate<NavigationState>(
+          (s) => s.status == NavigationStatus.navigating && s.alertMessage == null,
+          'navigating with no alert',
+        ),
+      ],
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
+      'non-dismissible alert preserved across navigation stop',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _route,
+        alertMessage: 'Black ice — pull over',
+        alertSeverity: AlertSeverity.critical,
+        alertDismissible: false,
+      ),
+      act: (bloc) => bloc.add(const NavigationStopped()),
+      expect: () => [
+        predicate<NavigationState>(
+          (s) =>
+              s.status == NavigationStatus.idle &&
+              s.alertMessage == 'Black ice — pull over' &&
+              s.alertSeverity == AlertSeverity.critical &&
+              !s.alertDismissible,
+          'idle with non-dismissible critical alert preserved',
+        ),
+      ],
+    );
+  });
 }

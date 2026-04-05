@@ -138,7 +138,7 @@ void main() {
     final routingBloc = RoutingBloc(engine: _MockRoutingEngine());
     final navigationBloc = NavigationBloc();
     final mapBloc = MapBloc();
-    const safetyConfig = NavigationSafetyConfig();
+    final safetyConfig = NavigationSafetyConfig();
 
     late final StreamSubscription locationSub;
     late final StreamSubscription routingSub;

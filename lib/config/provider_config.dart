@@ -170,7 +170,7 @@ class ProviderConfig {
 
     const routingEnv = String.fromEnvironment(
       'ROUTING_ENGINE',
-      defaultValue: 'valhalla',
+      defaultValue: 'mock',
     );
 
     const drModeEnv = String.fromEnvironment(

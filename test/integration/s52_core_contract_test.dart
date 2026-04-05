@@ -14,9 +14,9 @@ void main() {
   group('S52 _core contract validation', () {
     test('navigation_safety_core symbols stay mirrored by the parent package barrel', () {
       final nav_core.NavigationSafetyConfig configFromFull =
-          const nav_full.NavigationSafetyConfig();
+          nav_full.NavigationSafetyConfig();
       final nav_full.NavigationSafetyConfig configFromCore =
-          const nav_core.NavigationSafetyConfig(
+          nav_core.NavigationSafetyConfig(
         safeScoreFloor: 0.9,
         infoScoreFloor: 0.6,
         warningScoreFloor: 0.4,

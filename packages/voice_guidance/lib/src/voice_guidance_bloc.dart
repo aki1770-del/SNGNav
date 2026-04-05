@@ -146,6 +146,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     emit(state.copyWith(
       status: VoiceGuidanceStatus.speaking,
       lastSpokenText: event.text,
+      lastManeuverIndex: _lastManeuverIndex,
     ));
 
     await _ttsEngine.speak(event.text);

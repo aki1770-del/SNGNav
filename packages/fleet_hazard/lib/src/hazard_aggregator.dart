@@ -96,7 +96,7 @@ class HazardAggregator {
             math.cos(_toRadians(b.latitude)) *
             sinDLon *
             sinDLon;
-    return 2 * earthRadius * math.asin(math.sqrt(h));
+    return 2 * earthRadius * math.asin(math.sqrt(h.clamp(0.0, 1.0)));
   }
 
   static double _toRadians(double degrees) => degrees * math.pi / 180;

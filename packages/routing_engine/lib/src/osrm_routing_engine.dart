@@ -77,7 +77,9 @@ class OsrmRoutingEngine implements RoutingEngine {
       }
 
       return _parseRouteResponse(json, stopwatch.elapsed);
-    } on http.ClientException catch (e) {
+    } on RoutingException {
+      rethrow;
+    } on Exception catch (e) {
       throw RoutingException('OSRM network error: $e');
     }
   }

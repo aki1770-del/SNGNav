@@ -7,7 +7,7 @@ import 'package:navigation_safety/navigation_safety_core.dart';
 void main() {
   group('NavigationSafetyConfig', () {
     test('defaults match planning thresholds', () {
-      const config = NavigationSafetyConfig();
+      final config = NavigationSafetyConfig();
 
       expect(config.safeScoreFloor, 0.80);
       expect(config.infoScoreFloor, 0.50);
@@ -21,7 +21,7 @@ void main() {
     });
 
     test('supports custom thresholds', () {
-      const config = NavigationSafetyConfig(
+      final config = NavigationSafetyConfig(
         safeScoreFloor: 0.9,
         infoScoreFloor: 0.6,
         warningScoreFloor: 0.4,
@@ -44,31 +44,50 @@ void main() {
       expect(config.criticalVisibilityMeters, 30);
     });
 
-    test('asserts when safe floor exceeds one', () {
+    test('throws RangeError when safe floor exceeds one', () {
       expect(
         () => NavigationSafetyConfig(safeScoreFloor: 1.1),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<RangeError>()),
       );
     });
 
-    test('asserts when info floor is below warning floor', () {
+    test('throws when safeScoreFloor is negative', () {
+      expect(
+        () => NavigationSafetyConfig(safeScoreFloor: -0.1),
+        throwsRangeError,
+      );
+    });
+
+    test('throws ArgumentError when info floor is below warning floor', () {
       expect(
         () => NavigationSafetyConfig(
           infoScoreFloor: 0.2,
           warningScoreFloor: 0.3,
         ),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
-    test('asserts when safe floor is below info floor', () {
+    test('throws ArgumentError when safe floor is below info floor', () {
       expect(
         () => NavigationSafetyConfig(
           safeScoreFloor: 0.4,
           infoScoreFloor: 0.5,
         ),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
+    });
+
+    test('equality holds for identical configs', () {
+      final a = NavigationSafetyConfig();
+      final b = NavigationSafetyConfig();
+      expect(a, equals(b));
+    });
+
+    test('inequality holds when a field differs', () {
+      final a = NavigationSafetyConfig();
+      final b = NavigationSafetyConfig(safeScoreFloor: 0.9);
+      expect(a, isNot(equals(b)));
     });
   });
 }

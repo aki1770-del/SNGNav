@@ -10,6 +10,10 @@ import 'routing_state.dart';
 class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
   final RoutingEngine _engine;
 
+  /// Incremented on every new RouteRequested so that a stale response
+  /// from an earlier request is discarded when a newer one is in-flight.
+  int _requestId = 0;
+
   RoutingBloc({required RoutingEngine engine})
       : _engine = engine,
         super(const RoutingState.idle()) {
@@ -22,6 +26,8 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
     RouteRequested event,
     Emitter<RoutingState> emit,
   ) async {
+    final requestId = ++_requestId;
+
     emit(RoutingState(
       status: RoutingStatus.loading,
       destinationLabel: event.destinationLabel,
@@ -35,6 +41,9 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
         costing: event.costing,
       ));
 
+      // Discard result if a newer request superseded this one.
+      if (requestId != _requestId) return;
+
       emit(RoutingState(
         status: RoutingStatus.routeActive,
         route: result,
@@ -42,6 +51,7 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
         engineAvailable: true,
       ));
     } catch (error) {
+      if (requestId != _requestId) return;
       emit(RoutingState(
         status: RoutingStatus.error,
         errorMessage: error.toString(),

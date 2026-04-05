@@ -27,8 +27,10 @@
 ///   ConsentBloc  → fleet data consent gate — SQLite-backed
 ///   FleetBloc    → simulated fleet reports (5 vehicles, consent-gated)
 ///
-/// Default: real weather (Open-Meteo), simulated location, Valhalla routing, fleet simulated.
+/// Default: simulated weather + location + mock routing — zero network, zero GPS, zero server.
 /// Demo scenario: Sakae Station → Route 153 → Higashiokazaki Station.
+/// Snow alert fires automatically at mountain pass summit (~90 seconds).
+/// To use real providers: --dart-define=WEATHER_PROVIDER=open_meteo --dart-define=ROUTING_ENGINE=valhalla
 library;
 
 import 'dart:io';
