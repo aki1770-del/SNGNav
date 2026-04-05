@@ -1,0 +1,20 @@
+name: map_viewport_bloc_example
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  map_viewport_bloc:
+    path: ../
+  latlong2: ^0.9.1
+  flutter_bloc: ^9.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

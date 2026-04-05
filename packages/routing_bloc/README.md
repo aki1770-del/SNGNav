@@ -1,17 +1,16 @@
 # routing_bloc
 
-Engine-agnostic route lifecycle state machine and glanceable route progress UI
-for driver-assisting navigation applications.
+[![pub package](https://img.shields.io/pub/v/routing_bloc.svg)](https://pub.dev/packages/routing_bloc)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-`routing_bloc` manages route request, loading, active-route, and error state
-while keeping route guidance small enough to read quickly. It depends on
-`routing_engine` for backend routing and does not require a specific engine
-implementation.
+**Route lifecycle in four states: idle, loading, active, error.** Clean
+state machine for route requests with a glanceable progress UI — works with
+any routing backend.
 
-## When to use this package
-
-Use `routing_bloc` when you want route lifecycle state and glanceable progress
-UI without coupling your screens to a specific routing backend.
+Use `routing_bloc` when you want route lifecycle state and a progress bar
+widget without coupling your screens to OSRM, Valhalla, or any specific
+routing engine.
 
 ## Features
 
@@ -21,13 +20,13 @@ UI without coupling your screens to a specific routing backend.
 - `ManeuverIcons` for engine-agnostic maneuver icon mapping.
 - Pure Dart `_core` exports for `RoutingStatus`, `RoutingState`, and
   `RouteProgressStatus`.
-- Reusable README/example posture for edge developers.
+- Composable with `navigation_safety` and `voice_guidance` without coupling to either.
 
 ## Install
 
 ```yaml
 dependencies:
-  routing_bloc: ^0.1.1
+  routing_bloc: ^0.3.0
 ```
 
 ## Quick Start
@@ -136,23 +135,22 @@ The included example app demonstrates:
 flutter run -d linux -t example/lib/main.dart
 ```
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [routing_engine](https://pub.dev/packages/routing_engine) | Backend abstraction — RoutingBloc wraps any RoutingEngine |
+| [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) | Route layer renders at Z1 in the viewport stack |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Safety overlay responds to route state changes |
+
 ## See Also
 
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing backend abstraction
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
+- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition monitoring
 
-## Part of SNGNav
-
-`routing_bloc` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

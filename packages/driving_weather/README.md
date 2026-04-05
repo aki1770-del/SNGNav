@@ -1,11 +1,15 @@
 # driving_weather
 
-Weather condition model and provider abstraction for driving applications.
+[![pub package](https://img.shields.io/pub/v/driving_weather.svg)](https://pub.dev/packages/driving_weather)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-## When to use this package
+**Know when road conditions turn dangerous.** Real-time weather monitoring with
+snow, ice, and visibility hazard detection — no API key required.
 
-Use `driving_weather` when you need a consistent weather model plus a swappable
-provider interface for real and simulated driving conditions.
+Use `driving_weather` when your app needs to warn drivers about hazardous
+conditions. Pluggable providers: real weather from Open-Meteo (free) or
+simulated scenarios for demos and testing.
 
 ## Features
 
@@ -21,7 +25,7 @@ provider interface for real and simulated driving conditions.
 
 ```yaml
 dependencies:
-  driving_weather: ^0.1.2
+  driving_weather: ^0.3.0
 ```
 
 ## Quick Start
@@ -166,22 +170,26 @@ class MyFleetWeatherProvider implements WeatherProvider {
 
 ## Safety
 
-ASIL-QM — display and advisory only. Not for vehicle control.
+Display and advisory only — does not control vehicle systems.
+Built with automotive-grade test discipline, usable in any Flutter app.
+
+## Works With
+
+| Package | How |
+|---------|-----|
+| [driving_conditions](https://pub.dev/packages/driving_conditions) | Converts weather into road surface, grip, and safety scores |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Displays weather-driven safety alerts to the driver |
+| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Correlates weather with fleet-reported road hazards |
 
 ## See Also
 
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
 - [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics
 
-## Part of SNGNav
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
-`driving_weather` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+## License
+
+BSD-3-Clause — see [LICENSE](LICENSE).

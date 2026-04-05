@@ -74,6 +74,52 @@ building for that driver is our customer.
 
 ---
 
+## Why SNGNav, not flutter_map?
+
+This is the right question to ask. The answer is: SNGNav uses flutter_map internally.
+If you want a tile renderer, use flutter_map directly. If you want a safety
+architecture that happens to render tiles, you are in the right place.
+
+The distinction matters because the problems are different:
+
+| Question | Right tool |
+|----------|-----------|
+| "How do I show a map in Flutter?" | `flutter_map` |
+| "How do I keep showing a map when GPS fails?" | `kalman_dr` + `offline_tiles` |
+| "How do I warn the driver before black ice?" | `driving_conditions` + `navigation_safety` |
+| "How do I stay navigating when the network drops?" | `routing_engine` (local Valhalla) |
+| "How do I absorb crowd-sourced hazard reports?" | `fleet_hazard` |
+| "How do I build all of this without starting from scratch?" | SNGNav |
+
+flutter_map is a tile renderer. It answers: "given a location and a zoom level,
+draw OSM tiles." It does that job well. SNGNav starts where flutter_map ends:
+after the tiles are on screen, what happens when the driver enters a tunnel, the
+cell signal dies, the road freezes, and a blizzard hits simultaneously?
+
+**What SNGNav adds above the tile layer**:
+
+- **Dead reckoning** — when GPS drops (tunnel, canyon, jamming), Kalman-filtered
+  inertial estimation keeps the location cursor moving accurately for minutes,
+  not seconds.
+- **Safety overlay** — a Z-ordered widget that lives permanently above the map
+  and navigation UI. It cannot be obscured. When conditions turn dangerous, it
+  fires unconditionally. ASIL-QM SOTIF boundary enforced in code.
+- **Offline-first pipeline** — MBTiles tiles + local Valhalla routing + simulated
+  weather fallback. The full application runs with zero network, zero GPS, zero
+  server. `flutter run -d linux -t lib/snow_scene.dart` — no flags needed.
+- **Weather hazard detection** — not a weather widget. A hazard pipeline:
+  raw forecast → road surface classification → grip score → safety alert → overlay.
+- **Consent-first fleet data** — deny-by-default, per-purpose, revocable,
+  SQLite-backed. Fleet hazard zones surface only after explicit driver consent.
+- **62-scenario registry** — the architecture is specified as a coverage matrix.
+  Open cells are contribution targets. Your domain knowledge maps directly to a
+  slot.
+
+If you are building a general-purpose map app, use flutter_map. If you are building
+navigation for a driver in conditions that can kill, SNGNav is the architecture.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -89,7 +135,9 @@ For the automated path, run `./scripts/setup.sh`. It installs the same Linux
 packages and requires interactive `sudo` access for Step 1.
 
 First run shows a simulated drive from Sakae Station to Higashiokazaki Station
-with real weather from Open-Meteo. No API keys required.
+with simulated weather and mock routing — zero network, zero GPS, zero server.
+Snow alert fires automatically at the mountain pass summit (~90 seconds).
+To use real providers: `--dart-define=WEATHER_PROVIDER=open_meteo --dart-define=ROUTING_ENGINE=valhalla`
 
 **Clone-to-render target**: < 15 minutes on fresh Ubuntu 24.04.
 
@@ -186,7 +234,7 @@ All behavior is controlled via `--dart-define` flags. No code changes needed.
 
 | Flag | Default | Options |
 |------|---------|---------|
-| `WEATHER_PROVIDER` | `open_meteo` | `simulated`, `open_meteo` |
+| `WEATHER_PROVIDER` | `simulated` | `simulated`, `open_meteo` |
 | `LOCATION_PROVIDER` | `simulated` | `simulated`, `geoclue` |
 | `DEAD_RECKONING` | `true` | `true`, `false` |
 | `DR_MODE` | `kalman` | `kalman`, `linear` |
@@ -314,6 +362,38 @@ Coverage areas in the workspace include:
 
 Probe tests (GeoClue2, OSRM, Open-Meteo) are excluded in CI via `--exclude-tags=probe`.
 When README statistics drift, treat the live test run as authoritative.
+
+---
+
+## Scenario Coverage
+
+The 62-scenario registry tracks which real-world driving situations the
+architecture covers. Each package declares its contribution in a
+`sngnav_coverage.yaml` file at the package root.
+
+| Package | Covered | Partial | Total contrib | Status |
+|---------|:-------:|:-------:|:-------------:|--------|
+| `navigation_safety` | 5 | 1 | 0.05 | [![nav](https://img.shields.io/badge/coverage-8%25-yellow)](packages/navigation_safety/sngnav_coverage.yaml) |
+| `driving_conditions` | 7 | 1 | 0.11 | [![dc](https://img.shields.io/badge/coverage-13%25-yellow)](packages/driving_conditions/sngnav_coverage.yaml) |
+| `driving_weather` | 5 | 2 | 0.08 | [![dw](https://img.shields.io/badge/coverage-11%25-yellow)](packages/driving_weather/sngnav_coverage.yaml) |
+| `fleet_hazard` | 4 | 1 | 0.065 | [![fh](https://img.shields.io/badge/coverage-8%25-yellow)](packages/fleet_hazard/sngnav_coverage.yaml) |
+| `snow_rendering` | 3 | 1 | 0.048 | [![sr](https://img.shields.io/badge/coverage-6%25-yellow)](packages/snow_rendering/sngnav_coverage.yaml) |
+| `route_condition_forecast` | 6 | 0 | 0.097 | [![rcf](https://img.shields.io/badge/coverage-10%25-yellow)](packages/route_condition_forecast/sngnav_coverage.yaml) |
+| `adaptive_reroute` | 6 | 0 | 0.097 | [![ar](https://img.shields.io/badge/coverage-10%25-yellow)](packages/adaptive_reroute/sngnav_coverage.yaml) |
+| **Total** | **36** | **6** | **~55%** | 53 scenarios open |
+
+**What "covered" means**: the scenario has a test that exercises it. Partial = the
+signal is ingested but the threshold or subtype logic is incomplete. Open = no
+coverage anywhere in the architecture today.
+
+The open cells are the founding document of the contributor swarm. If you own a
+domain (fleet operator, OEM winter testing, V2X, ADAS), one of those open cells
+is yours. See [`packages/navigation_safety/CONTRIBUTING.md`](packages/navigation_safety/CONTRIBUTING.md)
+for the contribution guide and the `sngnav.[category].[subcategory].[specific].v[N]`
+`SafetyScenario` namespace that makes parallel contributions composable.
+
+Machine-readable: each `sngnav_coverage.yaml` is schema version 1.0 — parseable
+for dashboards, CI checks, and gap-analysis tooling.
 
 ---
 

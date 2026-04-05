@@ -1,10 +1,15 @@
 # voice_guidance
 
-Engine-agnostic voice guidance foundation for turn announcements and safety
-warnings in driver-assisting navigation flows.
+[![pub package](https://img.shields.io/pub/v/voice_guidance.svg)](https://pub.dev/packages/voice_guidance)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-`voice_guidance` provides a small abstraction over text-to-speech (TTS) so the
-navigation domain can remain independent from platform TTS APIs.
+**"300 meters ahead, turn right."** Platform-agnostic voice guidance for
+navigation — works on mobile (flutter_tts), Linux (spd-say), and silently in
+CI.
+
+`voice_guidance` provides a small TTS abstraction so your navigation domain
+stays independent from platform speech APIs.
 
 ## Features
 
@@ -19,7 +24,7 @@ navigation domain can remain independent from platform TTS APIs.
 
 ```yaml
 dependencies:
-  voice_guidance: ^0.1.0
+  voice_guidance: ^0.3.0
 ```
 
 ## Quick Start
@@ -47,6 +52,23 @@ degrades silently when it is not installed.
 | `NoOpTtsEngine` | Silent fallback for CI/tests |
 | `VoiceGuidanceConfig` | Runtime voice behavior configuration |
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [routing_bloc](https://pub.dev/packages/routing_bloc) | Route lifecycle events trigger maneuver announcements |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Safety alerts trigger spoken hazard warnings |
+| [routing_engine](https://pub.dev/packages/routing_engine) | Route maneuver text is the source material for voice announcements |
+
+## See Also
+
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [driving_weather](https://pub.dev/packages/driving_weather) — Weather conditions that trigger hazard speech
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
+
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
+
 ## License
 
-BSD-3-Clause - see [LICENSE](LICENSE).
+BSD-3-Clause — see [LICENSE](LICENSE).

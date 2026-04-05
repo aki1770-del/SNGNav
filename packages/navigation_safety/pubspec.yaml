@@ -1,15 +1,15 @@
 name: navigation_safety
 description: >-
-  Safety-focused navigation session state machine and always-on-top alert
-  overlay for driver-assisting navigation. Flutter package with pure Dart
-  _core models for SafetyScore, AlertSeverity, and threshold configuration.
-version: 0.3.0
+  Show drivers what matters before it's too late. Safety alert overlay
+  that stays on top of your navigation UI. Navigation session state machine
+  with configurable severity thresholds. Display-only, never controlling.
+version: 0.4.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
   - safety
   - navigation
-  - bloc
+  - winter-driving
   - automotive
   - snow
 

@@ -1,8 +1,8 @@
 name: voice_guidance
 description: >-
-  Engine-agnostic voice guidance foundation for turn announcements and
-  safety warnings. Provides TTS abstraction, FlutterTts implementation,
-  and NoOp fallback for tests and headless environments.
+  "300 meters ahead, turn right." Platform-agnostic voice guidance for
+  navigation apps. Works on mobile (flutter_tts), Linux (spd-say), and
+  silently in CI. Pluggable TTS engine interface.
 version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues

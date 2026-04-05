@@ -1,0 +1,21 @@
+name: routing_bloc_example
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  routing_bloc:
+    path: ../
+  routing_engine: ^0.3.0
+  flutter_bloc: ^9.1.0
+  latlong2: ^0.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

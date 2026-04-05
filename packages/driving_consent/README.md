@@ -1,11 +1,15 @@
 # driving_consent
 
-Automotive-grade privacy consent model with Jidoka semantics — UNKNOWN equals DENIED.
+[![pub package](https://img.shields.io/pub/v/driving_consent.svg)](https://pub.dev/packages/driving_consent)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-## When to use this package
+**No consent? No data leaves the device.** Privacy-first consent gate where
+UNKNOWN equals DENIED — the pipeline stops itself until the user explicitly
+grants the exact sharing purpose.
 
-Use `driving_consent` when a data pipeline must stop itself unless the driver
-has explicitly granted the exact sharing purpose.
+Use `driving_consent` when your app handles location, telemetry, or diagnostic
+data and you need GDPR/CCPA/APPI-ready consent management with a safe default.
 
 ## Features
 
@@ -19,7 +23,7 @@ has explicitly granted the exact sharing purpose.
 
 ```yaml
 dependencies:
-  driving_consent: ^0.1.1
+  driving_consent: ^0.3.0
 ```
 
 ## Quick Start
@@ -163,23 +167,22 @@ class MyPersistentConsentService implements ConsentService {
 | `ConsentStatus` | Three-state consent gate where `unknown` is treated as denied. |
 | `Jurisdiction` | Captures the policy context for the recorded consent decision. |
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Gate fleet location sharing with per-purpose consent |
+| [driving_weather](https://pub.dev/packages/driving_weather) | Gate weather telemetry sharing with per-purpose consent |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Consent state informs which safety data pipelines are active |
+
 ## See Also
 
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM, Valhalla, local/public)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
 
-## Part of SNGNav
-
-`driving_consent` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

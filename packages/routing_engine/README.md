@@ -1,11 +1,14 @@
 # routing_engine
 
-Engine-agnostic routing interface for Dart with OSRM and Valhalla implementations.
+[![pub package](https://img.shields.io/pub/v/routing_engine.svg)](https://pub.dev/packages/routing_engine)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-## When to use this package
+**One routing API, multiple backends.** Switch between OSRM, Valhalla, or your
+own engine without rewriting app logic.
 
-Use `routing_engine` when you want one route API that can target OSRM,
-Valhalla, or a custom backend without rewriting app logic.
+Use `routing_engine` when you need route calculation that works with a public
+server today and a local server tomorrow — same code, same interface.
 
 ## Features
 
@@ -19,7 +22,8 @@ Valhalla, or a custom backend without rewriting app logic.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.1.2
+  routing_engine: ^0.3.0
+  latlong2: ^0.9.1          # for LatLng coordinates
 ```
 
 ## Quick Start
@@ -47,7 +51,7 @@ if (await engine.isAvailable()) {
 await engine.dispose();
 ```
 
-### Local Valhalla (canonical Machine E path)
+### Local Valhalla
 
 ```dart
 final engine = ValhallaRoutingEngine.local();
@@ -62,7 +66,8 @@ if (await engine.isAvailable()) {
 }
 ```
 
-`ValhallaRoutingEngine.local()` targets `http://localhost:8005`, which matches the canonical Machine E local runtime path proven in SNGNav. The plain `ValhallaRoutingEngine()` constructor still preserves the historical `http://localhost:8002` default for compatibility. Override `host`, `port`, `availabilityTimeout`, or `routeTimeout` when needed.
+`ValhallaRoutingEngine.local()` targets `http://localhost:8005`. Override
+`host`, `port`, `availabilityTimeout`, or `routeTimeout` when needed.
 
 ## Integration Pattern
 
@@ -165,23 +170,22 @@ class MyRoutingEngine implements RoutingEngine {
 | `EngineInfo` | Reports engine name, version, and observed query latency. |
 | `OsrmRoutingEngine` / `ValhallaRoutingEngine` | Concrete implementations for OSRM and Valhalla backends. |
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [flutter_map](https://pub.dev/packages/flutter_map) | Render route geometry on the map |
+| [kalman_dr](https://pub.dev/packages/kalman_dr) | Dead reckoning during GPS loss along the route |
+| [latlong2](https://pub.dev/packages/latlong2) | Shared coordinate types (already a dependency) |
+
 ## See Also
 
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [routing_bloc](https://pub.dev/packages/routing_bloc) — Route lifecycle state machine for Flutter
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
 
-## Part of SNGNav
-
-`routing_engine` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## Local Integration Test
 

@@ -5,10 +5,10 @@ packages:
     dependency: transitive
     description:
       name: async
-      sha256: "758e6d74e971c3e5aceb4110bfd6698efc7f501675bcfe0c775459a8140750eb"
+      sha256: e2eb0491ba5ddb6177742d2da23904574082139b07c1e33b8503b9f46f3e1a37
       url: "https://pub.dev"
     source: hosted
-    version: "2.13.0"
+    version: "2.13.1"
   bloc:
     dependency: transitive
     description:
@@ -80,6 +80,19 @@ packages:
     version: "9.1.1"
   flutter_test:
     dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  flutter_tts:
+    dependency: transitive
+    description:
+      name: flutter_tts
+      sha256: ce5eb209b40e95f2f4a1397116c87ab2fcdff32257d04ed7a764e75894c03775
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.5"
+  flutter_web_plugins:
+    dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -166,9 +179,10 @@ packages:
   navigation_safety:
     dependency: "direct main"
     description:
-      path: ".."
-      relative: true
-    source: path
+      name: navigation_safety
+      sha256: "70585a981b7e3b74470a1af827e21995d44a953496fb2711551b87e1e4a475de"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.3.0"
   nested:
     dependency: transitive
@@ -279,6 +293,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.2"
+  voice_guidance:
+    dependency: "direct main"
+    description:
+      path: ".."
+      relative: true
+    source: path
+    version: "0.3.0"
   web:
     dependency: transitive
     description:

@@ -1,8 +1,8 @@
 name: map_viewport_bloc
 description: >-
-  Declarative map viewport state machine for driver-assisting navigation.
-  Flutter package with pure Dart _core models for camera modes, layer types,
-  and Z-order constants.
+  Camera follow, free look, route overview — without reinventing viewport
+  logic. Declarative state machine for navigation map cameras and six-layer
+  composition. Bring your own renderer.
 version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues

@@ -4,15 +4,14 @@
 [![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-Kalman filter dead reckoning for Dart location services.
+**Your app goes blank when GPS drops out.** kalman_dr keeps the position alive.
 
-A 4D Extended Kalman Filter that predicts position through GPS loss using
-covariance-driven accuracy reporting. Pure Dart, no native dependencies.
+Use it alongside [geolocator](https://pub.dev/packages/geolocator) — when GPS
+fails in tunnels, urban canyons, or parking garages, kalman_dr maintains your
+position estimate using device sensors until GPS returns.
 
-## When to use this package
-
-Use `kalman_dr` when your app already has a location provider and you need GPS
-loss survivability with explicit uncertainty reporting instead of a blank map.
+4D Extended Kalman Filter with covariance-driven accuracy reporting.
+Pure Dart, no native dependencies.
 
 ## Features
 
@@ -26,7 +25,7 @@ loss survivability with explicit uncertainty reporting instead of a blank map.
 
 ```yaml
 dependencies:
-  kalman_dr: ^0.2.0
+  kalman_dr: ^0.3.0
 ```
 
 ## Quick Start
@@ -34,19 +33,29 @@ dependencies:
 ```dart
 import 'package:kalman_dr/kalman_dr.dart';
 
-// Create a Kalman filter
-final kf = KalmanFilter();
-
-// Predict position forward by 1 second
-final predicted = kf.predict(const Duration(seconds: 1));
-
-// Update with a GPS measurement
-final updated = kf.update(
+// Create a filter with an initial GPS fix
+final filter = KalmanFilter.withState(
   latitude: 35.1709,
   longitude: 136.8815,
-  accuracy: 5.0,
   speed: 12.5,
   heading: 90.0,
+  timestamp: DateTime.now(),
+  initialAccuracy: 5.0,
+);
+
+// Predict position forward by 1 second (GPS lost)
+final predicted = filter.predict(const Duration(seconds: 1));
+print('${predicted.lat}, ${predicted.lon} '
+    '(accuracy: ${predicted.accuracy.toStringAsFixed(0)}m)');
+
+// Update when GPS returns
+filter.update(
+  lat: 35.1710,
+  lon: 136.8820,
+  speed: 12.8,
+  heading: 91.0,
+  accuracy: 4.5,
+  timestamp: DateTime.now(),
 );
 ```
 
@@ -152,30 +161,29 @@ rendering instead of freezing.
 | `DeadReckoningMode` | Selects EKF or linear extrapolation mode. |
 | `KalmanPosition` | Carries predicted position, speed, heading, timestamp, and accuracy. |
 
-## Safety Classification
+## Safety
 
-ASIL-QM (display only). The filter provides position estimates for display
-purposes. It does not control vehicle systems. When accuracy exceeds the
-500m safety cap, the provider stops emitting positions rather than showing
-unreliable data.
+Display-only position estimates — does not control vehicle systems.
+When accuracy exceeds 500m, the provider stops emitting rather than showing
+unreliable data. Built with automotive-grade test discipline (200+ unit tests),
+usable in any Flutter app.
+
+## Works With
+
+| Package | How |
+|---------|-----|
+| [geolocator](https://pub.dev/packages/geolocator) | Feed geolocator's position stream into `DeadReckoningProvider` |
+| [flutter_map](https://pub.dev/packages/flutter_map) | Render predicted positions on the map during GPS loss |
+| [latlong2](https://pub.dev/packages/latlong2) | Shared coordinate types |
 
 ## See Also
 
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla, local/public)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla)
+- [navigation_safety](https://pub.dev/packages/navigation_safety) — Navigation safety state machine
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
 
-## Part of SNGNav
-
-`kalman_dr` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

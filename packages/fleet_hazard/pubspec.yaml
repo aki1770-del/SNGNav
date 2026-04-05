@@ -1,8 +1,8 @@
 name: fleet_hazard
 description: >-
-  Fleet telemetry hazard model and geographic clustering for driver-assisting
-  navigation. Road condition reports, hazard zones, and a pure Dart
-  aggregation algorithm with pluggable providers. No Flutter dependency.
+  Turn scattered vehicle reports into map-ready hazard zones. Geographic
+  clustering for snow and ice reports with severity aggregation. Pure Dart,
+  pluggable providers, no Flutter dependency.
 version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
@@ -11,7 +11,7 @@ topics:
   - hazard
   - automotive
   - navigation
-  - snow
+  - winter-driving
 
 environment:
   sdk: ^3.11.0

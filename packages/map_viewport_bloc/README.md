@@ -1,15 +1,16 @@
 # map_viewport_bloc
 
-Declarative viewport state machine for driver-assisting navigation maps.
+[![pub package](https://img.shields.io/pub/v/map_viewport_bloc.svg)](https://pub.dev/packages/map_viewport_bloc)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-`map_viewport_bloc` standardizes camera behavior, layer visibility, and route
-overview transitions so edge developers can plug a renderer into a stable
-contract instead of rebuilding viewport rules from scratch.
+**Camera follow, free look, route overview — without reinventing viewport
+logic.** Declarative state machine for navigation map cameras and layer
+composition.
 
-## When to use this package
-
-Use `map_viewport_bloc` when you need stable camera rules and a canonical
-layer contract, but want freedom to choose your own renderer.
+Use `map_viewport_bloc` when you need stable camera rules (follow, free look,
+overview) and a six-layer composition contract, but want freedom to choose your
+own map renderer.
 
 ## Features
 
@@ -24,7 +25,7 @@ layer contract, but want freedom to choose your own renderer.
 
 ```yaml
 dependencies:
-  map_viewport_bloc: ^0.1.1
+  map_viewport_bloc: ^0.3.0
 ```
 
 ## Quick Start
@@ -81,15 +82,12 @@ class MapViewportExample extends StatelessWidget {
 User toggles are intentionally restricted to Z1 through Z4. Z0 is foundational
 and Z5 is safety-critical.
 
-## KSF Summary
+## Design Principles
 
-| KSF | Package behavior |
-|-----|------------------|
-| KSF-1 | Camera modes remain explicit and testable instead of hiding behind booleans |
-| KSF-2 | Layer composition uses a canonical six-layer Z-order |
-| KSF-3 | Renderer work stays outside the bloc so the state machine remains lightweight |
-| KSF-4 | Free-look and overview transitions can be restored or replayed deterministically |
-| KSF-5 | Edge developers can swap renderers while preserving safety-critical viewport rules |
+- Camera modes are explicit enum values, not boolean flags — testable by default.
+- The Z-layer contract is fixed so safety (Z5) is never displaced by application code.
+- The state machine owns no renderer code — swap `flutter_map`, Mapbox, or anything else without touching the bloc.
+- Free-look and overview transitions are fully reversible and deterministic.
 
 ## Pure Dart Core
 
@@ -122,23 +120,22 @@ and live state updates without requiring a specific renderer.
 flutter run -d linux -t example/lib/main.dart
 ```
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [flutter_map](https://pub.dev/packages/flutter_map) | Drive flutter_map's camera from MapBloc state |
+| [navigation_safety](https://pub.dev/packages/navigation_safety) | Safety overlay occupies Z5 — always on top, never user-toggleable |
+| [offline_tiles](https://pub.dev/packages/offline_tiles) | Base tile layer (Z0) resolves through offline tile manager |
+
 ## See Also
 
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing backend abstraction
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [fleet_hazard](https://pub.dev/packages/fleet_hazard) — Fleet telemetry hazard model and geographic clustering
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
+- [routing_bloc](https://pub.dev/packages/routing_bloc) — Route lifecycle state machine
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
+- [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
 
-## Part of SNGNav
-
-`map_viewport_bloc` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 

@@ -1,8 +1,8 @@
 name: routing_bloc
 description: >-
-  Engine-agnostic route lifecycle state machine and glanceable route progress
-  UI for driver-assisting navigation. Flutter package with pure Dart _core
-  exports for routing state and route progress status.
+  Route lifecycle in four states: idle, loading, active, error. Clean state
+  machine for route requests with a glanceable progress UI. Works with any
+  routing backend via routing_engine.
 version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues

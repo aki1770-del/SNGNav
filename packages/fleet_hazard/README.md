@@ -1,11 +1,15 @@
 # fleet_hazard
 
-Fleet telemetry hazard model and geographic clustering for driver-assisting navigation.
+[![pub package](https://img.shields.io/pub/v/fleet_hazard.svg)](https://pub.dev/packages/fleet_hazard)
+[![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-## When to use this package
+**Turn scattered vehicle reports into map-ready hazard zones.** Clusters
+individual snow/ice reports by geography and severity — pure Dart, no Flutter
+dependency.
 
-Use `fleet_hazard` when you need to turn individual snowy or icy vehicle
-reports into clustered, map-ready hazard zones.
+Use `fleet_hazard` when you need to aggregate telemetry from multiple vehicles
+into hazard zones that can be rendered on any map widget.
 
 ## Features
 
@@ -19,7 +23,7 @@ reports into clustered, map-ready hazard zones.
 
 ```yaml
 dependencies:
-  fleet_hazard: ^0.1.1
+  fleet_hazard: ^0.3.0
 ```
 
 ## Quick Start
@@ -156,23 +160,22 @@ class MyFleetProvider implements FleetProvider {
 | `FleetProvider` | Stream-based interface for simulated, local, or remote fleet telemetry sources. |
 | `RoadCondition` | Canonical hazard labels such as `dry`, `snowy`, and `icy`. |
 
+## Works With
+
+| Package | How |
+|---------|-----|
+| [driving_weather](https://pub.dev/packages/driving_weather) | Weather conditions correlate with fleet-reported hazards |
+| [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) | Hazard zones render at Z3 in the viewport layer stack |
+| [driving_consent](https://pub.dev/packages/driving_consent) | Fleet data sharing requires explicit consent |
+
 ## See Also
 
-- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss (tunnels, urban canyons)
-- [routing_engine](https://pub.dev/packages/routing_engine) — Engine-agnostic routing (OSRM + Valhalla)
-- [driving_weather](https://pub.dev/packages/driving_weather) — Weather condition model for driving (snow, ice, visibility)
-- [driving_consent](https://pub.dev/packages/driving_consent) — Privacy consent with Jidoka semantics (UNKNOWN = DENIED)
-- [driving_conditions](https://pub.dev/packages/driving_conditions) — Pure Dart computation models for road surface, visibility, and safety score simulation
-- [navigation_safety](https://pub.dev/packages/navigation_safety) — Flutter navigation safety state machine and safety overlay
-- [map_viewport_bloc](https://pub.dev/packages/map_viewport_bloc) — Flutter viewport and layer composition state machine
-- [routing_bloc](https://pub.dev/packages/routing_bloc) — Flutter route lifecycle state machine and progress UI
-- [offline_tiles](https://pub.dev/packages/offline_tiles) — Flutter offline tile manager with MBTiles fallback
+- [driving_conditions](https://pub.dev/packages/driving_conditions) — Road surface and safety scoring
+- [navigation_safety](https://pub.dev/packages/navigation_safety) — Safety alert overlay
+- [kalman_dr](https://pub.dev/packages/kalman_dr) — Dead reckoning through GPS loss
 
-## Part of SNGNav
-
-`fleet_hazard` is one of the 10 packages in
-[SNGNav](https://github.com/aki1770-del/SNGNav), an offline-first,
-driver-assisting navigation reference product for embedded Linux.
+Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
+offline-first navigation on Flutter.
 
 ## License
 
