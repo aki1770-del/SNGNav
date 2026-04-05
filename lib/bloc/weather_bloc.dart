@@ -92,7 +92,8 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     WeatherErrorOccurred event,
     Emitter<WeatherState> emit,
   ) {
-    emit(WeatherState(
+    // Preserve last known condition so isHazardous stays correct on error.
+    emit(state.copyWith(
       status: WeatherStatus.error,
       errorMessage: event.message,
     ));
@@ -101,7 +102,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   @override
   Future<void> close() async {
     await _conditionSub?.cancel();
-    await _provider.dispose();
+    _provider.dispose();
     return super.close();
   }
 }

@@ -34,6 +34,7 @@ class ConsentBloc extends Bloc<ConsentEvent, ConsentState> {
     ConsentLoadRequested event,
     Emitter<ConsentState> emit,
   ) async {
+    if (state.status == ConsentBlocStatus.loading) return;
     emit(state.copyWith(status: ConsentBlocStatus.loading));
 
     try {

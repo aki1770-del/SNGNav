@@ -68,7 +68,7 @@ class SafetyScenario extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, version, parameters];
+  List<Object?> get props => [id, namespace, version, parameters];
 }
 
 /// Well-known scenario ids — ready to use without constructing manually.

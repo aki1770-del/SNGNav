@@ -20,6 +20,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
+import 'package:sngnav_snow_scene/adapters/navigation_route_adapter.dart';
 
 // ---------------------------------------------------------------------------
 // Mock engine (reusable from routing_bloc_test)
@@ -127,7 +128,7 @@ void main() {
       final route = routingBloc.state.route!;
 
       navigationBloc.add(NavigationStarted(
-        route: route,
+        route: route.toNavigationRoute(),
         destinationLabel: 'Toyota HQ',
       ));
 
@@ -147,7 +148,7 @@ void main() {
 
       // Verify NavigationBloc is navigating
       expect(navigationBloc.state.status, equals(NavigationStatus.navigating));
-      expect(navigationBloc.state.route, equals(route));
+      expect(navigationBloc.state.route, equals(route.toNavigationRoute()));
       expect(navigationBloc.state.currentManeuverIndex, equals(0));
       expect(navigationBloc.state.destinationLabel, equals('Toyota HQ'));
 
@@ -237,7 +238,7 @@ void main() {
     test('weather alert arrives during active navigation', () async {
       // Start navigation
       navigationBloc.add(NavigationStarted(
-        route: _defaultRoute,
+        route: _defaultRoute.toNavigationRoute(),
         destinationLabel: 'Toyota HQ',
       ));
       await Future<void>.delayed(Duration.zero);
@@ -425,13 +426,14 @@ void main() {
       // NavigationBloc accepts the route without caring about engine.
       final navBloc = NavigationBloc();
       navBloc.add(NavigationStarted(
-        route: bloc.state.route!,
+        route: bloc.state.route!.toNavigationRoute(),
         destinationLabel: 'Toyota HQ',
       ));
       await Future<void>.delayed(Duration.zero);
 
       expect(navBloc.state.status, NavigationStatus.navigating);
-      expect(navBloc.state.route?.engineInfo.name, 'osrm');
+      // Engine identity verified on RoutingState — NavigationRoute is engine-agnostic.
+      expect(bloc.state.route?.engineInfo.name, 'osrm');
 
       await navBloc.close();
       await bloc.close();
@@ -461,13 +463,14 @@ void main() {
       // NavigationBloc accepts Valhalla route identically.
       final navBloc = NavigationBloc();
       navBloc.add(NavigationStarted(
-        route: bloc.state.route!,
+        route: bloc.state.route!.toNavigationRoute(),
         destinationLabel: 'Toyota HQ',
       ));
       await Future<void>.delayed(Duration.zero);
 
       expect(navBloc.state.status, NavigationStatus.navigating);
-      expect(navBloc.state.route?.engineInfo.name, 'valhalla');
+      // Engine identity verified on RoutingState — NavigationRoute is engine-agnostic.
+      expect(bloc.state.route?.engineInfo.name, 'valhalla');
 
       await navBloc.close();
       await bloc.close();

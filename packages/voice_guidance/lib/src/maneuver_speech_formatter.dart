@@ -2,13 +2,12 @@
 library;
 
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 class ManeuverSpeechFormatter {
   const ManeuverSpeechFormatter();
 
   String formatManeuver(
-    RouteManeuver maneuver, {
+    NavigationManeuver maneuver, {
     required String languageTag,
   }) {
     final instruction = maneuver.instruction.trim();

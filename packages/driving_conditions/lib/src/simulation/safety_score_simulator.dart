@@ -46,13 +46,21 @@ class SafetyScoreSimulator {
     required double visibilityMeters,
     required Random random,
   }) {
-    return _effectiveEngine.runOnce(
+    // Delegate to simulate(runs: 1) — uses the engine's simulate() contract
+    // which all implementations provide, rather than a runOnce() method that
+    // only CpuSafetyScoreSimulationEngine exposes directly.
+    final result = _effectiveEngine.simulate(
       speed: speed,
       gripFactor: gripFactor,
       surface: surface,
       visibilityMeters: visibilityMeters,
-      random: random,
+      options: SimulationOptions(
+        backend: SimulationBackend.auto,
+        runs: 1,
+        seed: random.nextInt(0x7FFFFFFF),
+      ),
     );
+    return result.score;
   }
 
   /// Run N Monte Carlo simulations and return a [SimulationResult].

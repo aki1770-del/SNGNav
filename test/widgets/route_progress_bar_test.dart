@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 
 import 'package:routing_bloc/routing_bloc.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------
 
-final _nagoya = const LatLng(35.1709, 136.8815);
-final _inuyama = const LatLng(35.3886, 136.9444);
+const _nagoya = LatLng(35.1709, 136.8815);
+const _inuyama = LatLng(35.3886, 136.9444);
 
-RouteResult _testRoute() => RouteResult(
+NavigationRoute _testRoute() => const NavigationRoute(
       shape: [_nagoya, _inuyama],
       maneuvers: [
-        RouteManeuver(
+        NavigationManeuver(
           index: 0,
           instruction: 'Depart north on Route 41',
           type: 'depart',
@@ -23,15 +23,15 @@ RouteResult _testRoute() => RouteResult(
           timeSeconds: 120,
           position: _nagoya,
         ),
-        RouteManeuver(
+        NavigationManeuver(
           index: 1,
           instruction: 'Turn right onto Route 153',
           type: 'right',
           lengthKm: 0.8,
           timeSeconds: 60,
-          position: const LatLng(35.2, 136.9),
+          position: LatLng(35.2, 136.9),
         ),
-        RouteManeuver(
+        NavigationManeuver(
           index: 2,
           instruction: 'Arrive at Inuyama Castle',
           type: 'arrive',
@@ -43,7 +43,6 @@ RouteResult _testRoute() => RouteResult(
       totalDistanceKm: 4.2,
       totalTimeSeconds: 720, // 12 min
       summary: 'Route 41 → Route 153',
-      engineInfo: const EngineInfo(name: 'mock'),
     );
 
 // ---------------------------------------------------------------------------

@@ -3,16 +3,16 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_bloc/routing_bloc.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 const _nagoya = LatLng(35.1709, 136.8815);
 const _toyota = LatLng(35.0504, 137.1566);
 
-final _route = RouteResult(
+final _route = NavigationRoute(
   shape: const [_nagoya, _toyota],
   maneuvers: const [
-    RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Head east',
       type: 'depart',
@@ -20,7 +20,7 @@ final _route = RouteResult(
       timeSeconds: 720,
       position: _nagoya,
     ),
-    RouteManeuver(
+    NavigationManeuver(
       index: 1,
       instruction: 'Arrive at Toyota',
       type: 'arrive',
@@ -32,7 +32,6 @@ final _route = RouteResult(
   totalDistanceKm: 25.7,
   totalTimeSeconds: 1830,
   summary: '25.7 km, 31 min',
-  engineInfo: const EngineInfo(name: 'mock'),
 );
 
 Widget _wrap(Widget child) {

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0
+
+### Breaking changes
+- `NavigationStarted.route` is now `NavigationRoute` (was `RouteResult` from `routing_engine`)
+- `RerouteCompleted.newRoute` is now `NavigationRoute` (was `RouteResult`)
+- `NavigationState.route` is now `NavigationRoute?` (was `RouteResult?`)
+- `NavigationState.currentManeuver` now returns `NavigationManeuver?` (was `RouteManeuver?`)
+- `NavigationState.nextManeuver` now returns `NavigationManeuver?` (was `RouteManeuver?`)
+- `routing_engine` is no longer a dependency of `navigation_safety`
+
+### Added
+- `NavigationRoute` — navigation layer route model (shape, maneuvers, totalDistanceKm, totalTimeSeconds, summary, eta)
+- `NavigationManeuver` — navigation layer maneuver model (index, instruction, type, lengthKm, timeSeconds, position)
+
+### Migration
+Use `RouteResult.toNavigationRoute()` extension (in the main app's adapter) to convert at the boundary.
+
 ## 0.4.0
 
 **BREAKING**: `NavigationSafetyConfig()` constructor is no longer `const`. Any `const NavigationSafetyConfig(...)` call site must remove the `const` keyword.

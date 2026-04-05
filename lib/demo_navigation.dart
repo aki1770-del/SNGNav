@@ -24,6 +24,7 @@ import 'bloc/location_event.dart';
 import 'bloc/location_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
+import 'adapters/navigation_route_adapter.dart';
 import 'widgets/speed_display.dart';
 
 // ---------------------------------------------------------------------------
@@ -232,7 +233,7 @@ class _NavigationDemoPageState extends State<NavigationDemoPage> {
 
     // Dispatch NavigationStarted with the demo route
     context.read<NavigationBloc>().add(NavigationStarted(
-          route: _demoRoute,
+          route: _demoRoute.toNavigationRoute(),
           destinationLabel: 'Mikawa Highlands',
         ));
 

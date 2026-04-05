@@ -18,6 +18,7 @@ class SimulatedWeatherProvider implements WeatherProvider {
   StreamController<WeatherCondition>? _controller;
   Timer? _timer;
   int _step = 0;
+  bool _disposed = false;
 
   /// Creates a simulated weather provider.
   ///
@@ -35,7 +36,14 @@ class SimulatedWeatherProvider implements WeatherProvider {
 
   @override
   Future<void> startMonitoring() async {
+    // Guard: do not restart after dispose.
+    if (_disposed) return;
+
     _controller ??= StreamController<WeatherCondition>.broadcast();
+
+    // Cancel any existing timer — prevents leak on double-start.
+    _timer?.cancel();
+    _timer = null;
     _step = 0;
 
     // Emit initial condition immediately.
@@ -55,6 +63,7 @@ class SimulatedWeatherProvider implements WeatherProvider {
 
   @override
   void dispose() {
+    _disposed = true;
     _timer?.cancel();
     _timer = null;
     _controller?.close();

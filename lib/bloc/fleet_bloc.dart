@@ -101,7 +101,8 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     FleetErrorOccurred event,
     Emitter<FleetState> emit,
   ) {
-    emit(FleetState(
+    // Preserve activeReports so hasHazards stays correct after error.
+    emit(state.copyWith(
       status: FleetStatus.error,
       errorMessage: event.message,
     ));
@@ -110,7 +111,7 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
   @override
   Future<void> close() async {
     await _reportSub?.cancel();
-    await _provider.dispose();
+    _provider.dispose();
     return super.close();
   }
 }

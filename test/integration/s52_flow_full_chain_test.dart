@@ -13,6 +13,7 @@ import 'package:sngnav_snow_scene/bloc/bloc.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
 
 import 's52_test_fixtures.dart';
+import 'package:sngnav_snow_scene/adapters/navigation_route_adapter.dart';
 
 class _MockRoutingEngine implements RoutingEngine {
   @override
@@ -159,7 +160,7 @@ void main() {
       if (!state.hasRoute || navigationBloc.state.isNavigating) return;
       final route = state.route!;
       navigationBloc.add(NavigationStarted(
-        route: route,
+        route: route.toNavigationRoute(),
         destinationLabel: state.destinationLabel,
       ));
       mapBloc.add(FitToBounds(

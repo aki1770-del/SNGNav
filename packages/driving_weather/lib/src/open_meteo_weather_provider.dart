@@ -54,10 +54,19 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
 
   @override
   Future<void> startMonitoring() async {
-    _controller ??= StreamController<WeatherCondition>.broadcast();
+    // Guard: do not restart after dispose.
+    if (_controller == null) return;
+
+    // Cancel any existing timer before starting — prevents timer leak on
+    // double-start (e.g. retry after error without an intervening stop).
+    _timer?.cancel();
+    _timer = null;
 
     // Fetch immediately on start.
     await _fetchAndEmit();
+
+    // Guard: dispose may have been called while _fetchAndEmit was awaiting.
+    if (_controller == null || _controller!.isClosed) return;
 
     // Then poll at the configured interval.
     _timer = Timer.periodic(pollInterval, (_) => _fetchAndEmit());
@@ -141,13 +150,19 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     final snowfallList = hourly['snowfall'] as List<dynamic>;
     final visibilityList = hourly['visibility'] as List<dynamic>;
 
-    // Find the current hour index (use first entry as approximation).
-    final now = DateTime.now();
-    final currentHourIndex = now.hour.clamp(0, snowfallList.length - 1);
+    double snowfall = 0;
+    double visibility = 10000;
 
-    final snowfall = (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
-    final visibility =
-        (visibilityList[currentHourIndex] as num?)?.toDouble() ?? 10000;
+    if (snowfallList.isNotEmpty && visibilityList.isNotEmpty) {
+      // Find the current hour index (use first entry as approximation).
+      final now = DateTime.now();
+      final currentHourIndex =
+          now.hour.clamp(0, snowfallList.length - 1);
+      snowfall =
+          (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
+      visibility =
+          (visibilityList[currentHourIndex] as num?)?.toDouble() ?? 10000;
+    }
 
     // Map WMO weather code to our model.
     final (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall);

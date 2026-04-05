@@ -26,6 +26,7 @@ import 'package:sngnav_snow_scene/config/provider_config.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
+import 'package:sngnav_snow_scene/adapters/navigation_route_adapter.dart';
 
 // ---------------------------------------------------------------------------
 // Mock routing engine (network-free, deterministic)
@@ -415,7 +416,7 @@ void main() {
 
       // Step 3: Start navigation
       navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!,
+        route: routingBloc.state.route!.toNavigationRoute(),
         destinationLabel: '東岡崎駅',
       ));
       await Future<void>.delayed(Duration.zero);
@@ -438,7 +439,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!,
+        route: routingBloc.state.route!.toNavigationRoute(),
         destinationLabel: '東岡崎駅',
       ));
       await Future<void>.delayed(Duration.zero);
@@ -472,7 +473,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!,
+        route: routingBloc.state.route!.toNavigationRoute(),
         destinationLabel: '東岡崎駅',
       ));
       await Future<void>.delayed(Duration.zero);
@@ -501,7 +502,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!,
+        route: routingBloc.state.route!.toNavigationRoute(),
       ));
       await Future<void>.delayed(Duration.zero);
 
@@ -558,7 +559,7 @@ void main() {
       // Start navigation
       if (routingBloc.state.hasRoute) {
         navigationBloc.add(NavigationStarted(
-          route: routingBloc.state.route!,
+          route: routingBloc.state.route!.toNavigationRoute(),
           destinationLabel: '東岡崎駅',
         ));
       }

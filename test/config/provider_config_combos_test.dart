@@ -20,8 +20,8 @@ void main() {
   group('Combo: defaults (no flags)', () {
     const config = ProviderConfig();
 
-    test('weather = openMeteo', () {
-      expect(config.isRealWeather, isTrue);
+    test('weather = simulated (D-VGC132-1: all-simulated default)', () {
+      expect(config.isSimulatedWeather, isTrue);
     });
 
     test('location = simulated + Kalman DR', () {
@@ -29,8 +29,8 @@ void main() {
       expect(config.isKalmanDr, isTrue);
     });
 
-    test('routing = valhalla', () {
-      expect(config.isValhallaRouting, isTrue);
+    test('routing = mock (D-VGC132-1: all-simulated default)', () {
+      expect(config.isMockRouting, isTrue);
     });
 
     test('tiles = online', () {
@@ -42,13 +42,12 @@ void main() {
       final location = config.createLocationProvider();
       final routing = config.createRoutingEngine();
 
-      expect(weather, isA<OpenMeteoWeatherProvider>());
+      expect(weather, isA<SimulatedWeatherProvider>());
       expect(location, isA<DeadReckoningProvider>());
-      expect(routing, isNotNull); // valhalla returns real engine
+      expect(routing, isNull); // mock routing returns null (caller provides mock)
 
       weather.dispose();
       await location.dispose();
-      await routing!.dispose();
     });
   });
 

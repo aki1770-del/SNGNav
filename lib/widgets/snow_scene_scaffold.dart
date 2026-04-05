@@ -25,6 +25,7 @@ import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 
+import '../adapters/navigation_route_adapter.dart';
 import '../bloc/consent_bloc.dart';
 import '../bloc/consent_state.dart';
 import '../bloc/fleet_bloc.dart';
@@ -85,15 +86,17 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
     });
   }
 
-  void _fitRoute(RouteResult route) {
-    if (route.shape.isEmpty) return;
+  /// Fit the map to a list of shape points (works for RouteResult.shape
+  /// and NavigationRoute.shape — both are `List<LatLng>`).
+  void _fitRoute(List<LatLng> shape) {
+    if (shape.isEmpty) return;
 
-    var minLat = route.shape.first.latitude;
-    var maxLat = route.shape.first.latitude;
-    var minLon = route.shape.first.longitude;
-    var maxLon = route.shape.first.longitude;
+    var minLat = shape.first.latitude;
+    var maxLat = shape.first.latitude;
+    var minLon = shape.first.longitude;
+    var maxLon = shape.first.longitude;
 
-    for (final point in route.shape) {
+    for (final point in shape) {
       if (point.latitude < minLat) minLat = point.latitude;
       if (point.latitude > maxLat) maxLat = point.latitude;
       if (point.longitude < minLon) minLon = point.longitude;
@@ -132,7 +135,7 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
             builder: (context, state) {
               return IconButton(
                 tooltip: 'Fit route',
-                onPressed: state.route == null ? null : () => _fitRoute(state.route!),
+                onPressed: state.route == null ? null : () => _fitRoute(state.route!.shape),
                 icon: const Icon(Icons.fit_screen),
               );
             },
@@ -178,9 +181,9 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
             listener: (context, state) {
               if (!_navigationStarted && state.route != null) {
                 _navigationStarted = true;
-                _fitRoute(state.route!);
+                _fitRoute(state.route!.shape);
                 context.read<NavigationBloc>().add(NavigationStarted(
-                      route: state.route!,
+                      route: state.route!.toNavigationRoute(),
                       destinationLabel: state.destinationLabel,
                     ));
                 _startAutoAdvance();

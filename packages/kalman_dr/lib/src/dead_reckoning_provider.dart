@@ -98,6 +98,11 @@ class DeadReckoningProvider implements LocationProvider {
       _kalman = KalmanFilter();
     }
 
+    // Cancel any existing subscription before creating a new one — prevents
+    // duplicate position events when start() is called twice without stop().
+    await _innerSub?.cancel();
+    _innerSub = null;
+
     await _inner.start();
 
     _innerSub = _inner.positions.listen(

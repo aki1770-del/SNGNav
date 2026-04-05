@@ -2,9 +2,9 @@
 library;
 
 import 'package:equatable/equatable.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 import '../models/alert_severity.dart';
+import '../models/navigation_route.dart';
 import '../models/safety_scenario.dart';
 
 sealed class NavigationEvent extends Equatable {
@@ -15,7 +15,7 @@ sealed class NavigationEvent extends Equatable {
 }
 
 class NavigationStarted extends NavigationEvent {
-  final RouteResult route;
+  final NavigationRoute route;
   final String? destinationLabel;
 
   const NavigationStarted({
@@ -45,7 +45,7 @@ class RouteDeviationDetected extends NavigationEvent {
 }
 
 class RerouteCompleted extends NavigationEvent {
-  final RouteResult newRoute;
+  final NavigationRoute newRoute;
 
   const RerouteCompleted({required this.newRoute});
 

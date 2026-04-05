@@ -40,9 +40,9 @@ void main() {
   });
 
   group('ProviderConfig — weather defaults', () {
-    test('defaults to openMeteo weather', () {
+    test('defaults to simulated weather (D-VGC132-1: all-simulated default)', () {
       const config = ProviderConfig();
-      expect(config.weatherType, WeatherProviderType.openMeteo);
+      expect(config.weatherType, WeatherProviderType.simulated);
     });
 
     test('accepts explicit simulated weather', () {
@@ -119,9 +119,9 @@ void main() {
   group('ProviderConfig.fromEnvironment', () {
     // Note: --dart-define values are compile-time constants.
     // In tests without --dart-define, defaults apply.
-    test('defaults to openMeteo weather when no dart-define is set', () {
+    test('defaults to simulated weather when no dart-define is set (D-VGC132-1)', () {
       final config = ProviderConfig.fromEnvironment();
-      expect(config.weatherType, WeatherProviderType.openMeteo);
+      expect(config.weatherType, WeatherProviderType.simulated);
     });
 
     test('defaults to simulated location when no dart-define is set', () {
@@ -265,9 +265,9 @@ void main() {
   });
 
   group('ProviderConfig — routing defaults', () {
-    test('defaults to valhalla routing', () {
+    test('defaults to mock routing (D-VGC132-1: all-simulated default)', () {
       const config = ProviderConfig();
-      expect(config.routingType, RoutingEngineType.valhalla);
+      expect(config.routingType, RoutingEngineType.mock);
     });
 
     test('accepts explicit osrm routing', () {
@@ -312,9 +312,9 @@ void main() {
   });
 
   group('ProviderConfig.fromEnvironment — routing', () {
-    test('defaults to valhalla routing when no dart-define is set', () {
+    test('defaults to mock routing when no dart-define is set (D-VGC132-1)', () {
       final config = ProviderConfig.fromEnvironment();
-      expect(config.routingType, RoutingEngineType.valhalla);
+      expect(config.routingType, RoutingEngineType.mock);
     });
   });
 

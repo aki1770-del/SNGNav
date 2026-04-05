@@ -22,6 +22,8 @@ dependencies:
   equatable: ^2.0.7
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
+  navigation_safety:
+    path: ../navigation_safety
   routing_engine: ^0.3.0
 
 dev_dependencies:

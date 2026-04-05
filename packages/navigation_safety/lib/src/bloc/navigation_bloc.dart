@@ -43,6 +43,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       alertMessage: state.alertMessage,
       alertSeverity: state.alertSeverity,
       alertDismissible: state.alertDismissible,
+      alertScenario: state.alertScenario,
     ));
   }
 
@@ -55,6 +56,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       alertMessage: state.alertMessage,
       alertSeverity: state.alertSeverity,
       alertDismissible: state.alertDismissible,
+      alertScenario: state.alertScenario,
     ));
   }
 
@@ -71,7 +73,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     if (totalManeuvers == 0 || nextIndex >= totalManeuvers) {
       emit(state.copyWith(
         status: NavigationStatus.arrived,
-        currentManeuverIndex: (totalManeuvers - 1).clamp(0, totalManeuvers),
+        currentManeuverIndex: totalManeuvers > 0 ? totalManeuvers - 1 : 0,
       ));
     } else {
       emit(state.copyWith(currentManeuverIndex: nextIndex));
@@ -97,7 +99,9 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       status: NavigationStatus.navigating,
       route: event.newRoute,
       currentManeuverIndex: 0,
-      clearAlert: true,
+      // Only clear dismissible alerts — non-dismissible safety alerts persist
+      // through reroutes (e.g. "ice road ahead" must not be silenced by reroute).
+      clearAlert: state.alertDismissible,
     ));
   }
 
@@ -113,6 +117,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       alertMessage: event.message,
       alertSeverity: event.severity,
       alertDismissible: event.dismissible,
+      alertScenario: event.scenario,
     ));
 
     assert(() {

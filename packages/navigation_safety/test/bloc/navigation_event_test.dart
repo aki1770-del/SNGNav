@@ -3,15 +3,14 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 const _origin = LatLng(35.1709, 136.8815);
 const _destination = LatLng(35.0504, 137.1566);
 
-final _route = RouteResult(
+final _route = NavigationRoute(
   shape: const [_origin, _destination],
   maneuvers: const [
-    RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Depart',
       type: 'depart',
@@ -23,7 +22,6 @@ final _route = RouteResult(
   totalDistanceKm: 10,
   totalTimeSeconds: 600,
   summary: 'Test route',
-  engineInfo: const EngineInfo(name: 'mock'),
 );
 
 void main() {

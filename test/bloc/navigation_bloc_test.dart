@@ -9,9 +9,9 @@ library;
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 
 import 'package:sngnav_snow_scene/bloc/bloc.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -20,10 +20,10 @@ const _nagoya = LatLng(35.1709, 136.8815);
 const _toyota = LatLng(35.0504, 137.1566);
 const _inuyama = LatLng(35.3883, 136.9394);
 
-final _testRoute = RouteResult(
+final _testRoute = NavigationRoute(
   shape: const [_nagoya, _toyota],
   maneuvers: const [
-    RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Head east on Route 153',
       type: 'depart',
@@ -31,7 +31,7 @@ final _testRoute = RouteResult(
       timeSeconds: 720,
       position: _nagoya,
     ),
-    RouteManeuver(
+    NavigationManeuver(
       index: 1,
       instruction: 'Turn right onto Route 248',
       type: 'right',
@@ -39,7 +39,7 @@ final _testRoute = RouteResult(
       timeSeconds: 480,
       position: LatLng(35.1100, 137.0200),
     ),
-    RouteManeuver(
+    NavigationManeuver(
       index: 2,
       instruction: 'Arrive at Toyota HQ',
       type: 'arrive',
@@ -51,13 +51,12 @@ final _testRoute = RouteResult(
   totalDistanceKm: 25.7,
   totalTimeSeconds: 1200,
   summary: '25.7 km, 20 min',
-  engineInfo: const EngineInfo(name: 'mock'),
 );
 
-final _rerouteResult = RouteResult(
+final _rerouteResult = NavigationRoute(
   shape: const [_nagoya, _inuyama, _toyota],
   maneuvers: const [
-    RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Head north to Inuyama bypass',
       type: 'depart',
@@ -65,7 +64,7 @@ final _rerouteResult = RouteResult(
       timeSeconds: 900,
       position: _nagoya,
     ),
-    RouteManeuver(
+    NavigationManeuver(
       index: 1,
       instruction: 'Arrive at Toyota HQ',
       type: 'arrive',
@@ -77,13 +76,12 @@ final _rerouteResult = RouteResult(
   totalDistanceKm: 32.0,
   totalTimeSeconds: 1800,
   summary: '32.0 km, 30 min (via Inuyama bypass)',
-  engineInfo: const EngineInfo(name: 'mock'),
 );
 
-final _shortRoute = RouteResult(
+final _shortRoute = NavigationRoute(
   shape: const [_nagoya, _toyota],
   maneuvers: const [
-    RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Arrive',
       type: 'arrive',
@@ -95,7 +93,6 @@ final _shortRoute = RouteResult(
   totalDistanceKm: 1.0,
   totalTimeSeconds: 60,
   summary: '1.0 km, 1 min',
-  engineInfo: const EngineInfo(name: 'mock'),
 );
 
 // ---------------------------------------------------------------------------

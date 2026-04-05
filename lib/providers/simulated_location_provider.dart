@@ -37,6 +37,7 @@ class SimulatedLocationProvider implements LocationProvider {
   StreamController<GeoPosition>? _controller;
   Timer? _timer;
   int _step = 0;
+  bool _disposed = false;
 
   SimulatedLocationProvider({
     this.interval = const Duration(seconds: 1),
@@ -45,12 +46,17 @@ class SimulatedLocationProvider implements LocationProvider {
 
   @override
   Stream<GeoPosition> get positions {
-    _controller ??= StreamController<GeoPosition>.broadcast();
-    return _controller!.stream;
+    // Do not recreate the controller after dispose — callers get a dead stream
+    // rather than a live one that will never receive emissions.
+    if (!_disposed) {
+      _controller ??= StreamController<GeoPosition>.broadcast();
+    }
+    return (_controller ?? StreamController<GeoPosition>.broadcast()).stream;
   }
 
   @override
   Future<void> start() async {
+    if (_disposed) return;
     _timer?.cancel(); // prevent timer leak on double-start
     _controller ??= StreamController<GeoPosition>.broadcast();
     _step = 0;
@@ -69,6 +75,7 @@ class SimulatedLocationProvider implements LocationProvider {
 
   @override
   Future<void> dispose() async {
+    _disposed = true;
     _timer?.cancel();
     _timer = null;
     await _controller?.close();

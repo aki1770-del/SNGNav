@@ -5,16 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';
 
 class _MockTtsEngine extends Mock implements TtsEngine {}
 
-RouteResult _buildRoute() {
-  return const RouteResult(
+NavigationRoute _buildRoute() {
+  return const NavigationRoute(
     shape: [LatLng(35.1709, 136.8815), LatLng(35.0504, 137.1566)],
     maneuvers: [
-      RouteManeuver(
+      NavigationManeuver(
         index: 0,
         instruction: 'Nagoya Station を出発します。',
         type: 'depart',
@@ -22,7 +21,7 @@ RouteResult _buildRoute() {
         timeSeconds: 300,
         position: LatLng(35.1709, 136.8815),
       ),
-      RouteManeuver(
+      NavigationManeuver(
         index: 1,
         instruction: '右折です。',
         type: 'right',
@@ -34,7 +33,6 @@ RouteResult _buildRoute() {
     totalDistanceKm: 7.0,
     totalTimeSeconds: 420,
     summary: '7km',
-    engineInfo: EngineInfo(name: 'valhalla'),
   );
 }
 

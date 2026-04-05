@@ -79,13 +79,13 @@ final _gpsPosition = GeoPosition(
   timestamp: _now,
 );
 
-final _demoRoute = RouteResult(
-  shape: const [
+const _demoRoute = NavigationRoute(
+  shape: [
     LatLng(35.1709, 136.8815),
     LatLng(35.0700, 137.4000),
   ],
   maneuvers: [
-    const RouteManeuver(
+    NavigationManeuver(
       index: 0,
       instruction: 'Depart Nagoya Station via Route 153 East',
       type: 'depart',
@@ -93,7 +93,7 @@ final _demoRoute = RouteResult(
       timeSeconds: 180,
       position: LatLng(35.1709, 136.8815),
     ),
-    const RouteManeuver(
+    NavigationManeuver(
       index: 1,
       instruction: 'Continue east on Route 153',
       type: 'straight',
@@ -101,7 +101,7 @@ final _demoRoute = RouteResult(
       timeSeconds: 270,
       position: LatLng(35.1680, 136.9100),
     ),
-    const RouteManeuver(
+    NavigationManeuver(
       index: 2,
       instruction: 'Arrive at Mikawa Highlands',
       type: 'arrive',
@@ -113,10 +113,6 @@ final _demoRoute = RouteResult(
   totalDistanceKm: 38.1,
   totalTimeSeconds: 3060,
   summary: 'Nagoya → Mikawa Highlands',
-  engineInfo: const EngineInfo(
-    name: 'mock',
-    queryLatency: Duration(milliseconds: 5),
-  ),
 );
 
 // ---------------------------------------------------------------------------

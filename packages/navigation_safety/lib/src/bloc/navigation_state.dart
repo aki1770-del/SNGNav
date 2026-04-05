@@ -2,9 +2,10 @@
 library;
 
 import 'package:equatable/equatable.dart';
-import 'package:routing_engine/routing_engine.dart';
 
 import '../models/alert_severity.dart';
+import '../models/navigation_route.dart';
+import '../models/safety_scenario.dart';
 
 enum NavigationStatus {
   idle,
@@ -15,13 +16,17 @@ enum NavigationStatus {
 
 class NavigationState extends Equatable {
   final NavigationStatus status;
-  final RouteResult? route;
+  final NavigationRoute? route;
   final int currentManeuverIndex;
   final String? destinationLabel;
 
   final String? alertMessage;
   final AlertSeverity? alertSeverity;
   final bool alertDismissible;
+
+  /// Structured scenario coordinate for the active alert.
+  /// Null when no alert is active or when the alert has no scenario context.
+  final SafetyScenario? alertScenario;
 
   const NavigationState({
     required this.status,
@@ -31,6 +36,7 @@ class NavigationState extends Equatable {
     this.alertMessage,
     this.alertSeverity,
     this.alertDismissible = true,
+    this.alertScenario,
   });
 
   const NavigationState.idle()
@@ -40,7 +46,8 @@ class NavigationState extends Equatable {
         destinationLabel = null,
         alertMessage = null,
         alertSeverity = null,
-        alertDismissible = true;
+        alertDismissible = true,
+        alertScenario = null;
 
   bool get isNavigating => status == NavigationStatus.navigating;
 
@@ -48,13 +55,13 @@ class NavigationState extends Equatable {
 
   bool get hasSafetyAlert => alertMessage != null;
 
-  RouteManeuver? get currentManeuver {
+  NavigationManeuver? get currentManeuver {
     if (route == null) return null;
-    if (currentManeuverIndex >= route!.maneuvers.length) return null;
+    if (currentManeuverIndex < 0 || currentManeuverIndex >= route!.maneuvers.length) return null;
     return route!.maneuvers[currentManeuverIndex];
   }
 
-  RouteManeuver? get nextManeuver {
+  NavigationManeuver? get nextManeuver {
     if (route == null) return null;
     final nextIndex = currentManeuverIndex + 1;
     if (nextIndex >= route!.maneuvers.length) return null;
@@ -69,12 +76,14 @@ class NavigationState extends Equatable {
 
   NavigationState copyWith({
     NavigationStatus? status,
-    RouteResult? route,
+    NavigationRoute? route,
     int? currentManeuverIndex,
     String? destinationLabel,
+    bool clearDestinationLabel = false,
     String? alertMessage,
     AlertSeverity? alertSeverity,
     bool? alertDismissible,
+    SafetyScenario? alertScenario,
     bool clearAlert = false,
   }) {
     return NavigationState(
@@ -82,11 +91,14 @@ class NavigationState extends Equatable {
       route: route ?? this.route,
       currentManeuverIndex:
           currentManeuverIndex ?? this.currentManeuverIndex,
-      destinationLabel: destinationLabel ?? this.destinationLabel,
+      destinationLabel: clearDestinationLabel
+          ? null
+          : (destinationLabel ?? this.destinationLabel),
       alertMessage: clearAlert ? null : (alertMessage ?? this.alertMessage),
       alertSeverity: clearAlert ? null : (alertSeverity ?? this.alertSeverity),
       alertDismissible:
           clearAlert ? true : (alertDismissible ?? this.alertDismissible),
+      alertScenario: clearAlert ? null : (alertScenario ?? this.alertScenario),
     );
   }
 
@@ -99,6 +111,7 @@ class NavigationState extends Equatable {
         alertMessage,
         alertSeverity,
         alertDismissible,
+        alertScenario,
       ];
 
   @override

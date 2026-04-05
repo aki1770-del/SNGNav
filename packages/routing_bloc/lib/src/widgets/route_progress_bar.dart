@@ -2,14 +2,14 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:routing_engine/routing_engine.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 
 import '../models/route_progress_status.dart';
 import 'maneuver_icons.dart';
 
 class RouteProgressBar extends StatelessWidget {
   final RouteProgressStatus status;
-  final RouteResult? route;
+  final NavigationRoute? route;
   final int currentManeuverIndex;
   final String? destinationLabel;
   final EdgeInsetsGeometry margin;
@@ -23,7 +23,7 @@ class RouteProgressBar extends StatelessWidget {
     this.margin = const EdgeInsets.all(8),
   });
 
-  RouteManeuver? get _currentManeuver {
+  NavigationManeuver? get _currentManeuver {
     if (route == null) return null;
     if (currentManeuverIndex < 0 || currentManeuverIndex >= route!.maneuvers.length) {
       return null;

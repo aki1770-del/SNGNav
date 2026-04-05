@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';
 
 void main() {
@@ -39,10 +38,10 @@ void main() {
     });
 
     test('NavigationStateObserved equality uses navigation state', () {
-      const route = RouteResult(
+      const route = NavigationRoute(
         shape: [LatLng(35.17, 136.88), LatLng(35.05, 137.15)],
         maneuvers: [
-          RouteManeuver(
+          NavigationManeuver(
             index: 0,
             instruction: 'Depart',
             type: 'depart',
@@ -54,7 +53,6 @@ void main() {
         totalDistanceKm: 1.0,
         totalTimeSeconds: 60,
         summary: '1km',
-        engineInfo: EngineInfo(name: 'mock'),
       );
 
       const state = NavigationState(

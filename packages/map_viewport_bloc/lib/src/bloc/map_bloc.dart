@@ -75,7 +75,9 @@ class MapBloc extends Bloc<MapEvent, MapState> {
   }
 
   void _onZoomChanged(ZoomChanged event, Emitter<MapState> emit) {
-    emit(state.copyWith(zoom: event.zoom));
+    // Clamp to valid tile server range. Values outside [1, 22] produce blank
+    // tiles or divide-by-zero in mercator math.
+    emit(state.copyWith(zoom: event.zoom.clamp(1.0, 22.0)));
   }
 
   void _onFitToBounds(FitToBounds event, Emitter<MapState> emit) {

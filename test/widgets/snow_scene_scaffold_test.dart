@@ -78,7 +78,28 @@ class MockFleetBloc extends MockBloc<FleetEvent, FleetState>
 // Test data
 // ---------------------------------------------------------------------------
 
-final _testRoute = RouteResult(
+const _testRoute = NavigationRoute(
+  shape: [
+    LatLng(35.1709, 136.8815),
+    LatLng(35.0500, 137.3200),
+  ],
+  totalDistanceKm: 45.0,
+  totalTimeSeconds: 3600,
+  maneuvers: [
+    NavigationManeuver(
+      index: 0,
+      instruction: 'Head east',
+      type: 'depart',
+      lengthKm: 10.0,
+      timeSeconds: 600,
+      position: LatLng(35.1709, 136.8815),
+    ),
+  ],
+  summary: 'Nagoya → Mt. Sanage',
+);
+
+// RouteResult for RoutingBloc state (RoutingState.route is RouteResult).
+final _testRouteResult = RouteResult(
   shape: const [
     LatLng(35.1709, 136.8815),
     LatLng(35.0500, 137.3200),
@@ -96,11 +117,7 @@ final _testRoute = RouteResult(
     ),
   ],
   summary: 'Nagoya → Mt. Sanage',
-  engineInfo: const EngineInfo(
-    name: 'mock',
-    version: '1.0',
-    queryLatency: Duration.zero,
-  ),
+  engineInfo: const EngineInfo(name: 'mock'),
 );
 
 final _testPosition = GeoPosition(
@@ -364,7 +381,7 @@ void main() {
       // Emit route active state
       routingController.add(RoutingState(
         status: RoutingStatus.routeActive,
-        route: _testRoute,
+        route: _testRouteResult,
         destinationLabel: 'Mt. Sanage',
       ));
       await tester.pumpAndSettle();

@@ -9,7 +9,8 @@ dependencies:
     sdk: flutter
   voice_guidance:
     path: ../
-  navigation_safety: ^0.3.0
+  navigation_safety:
+    path: ../../navigation_safety
   routing_engine: ^0.3.0
   latlong2: ^0.9.1
   flutter_bloc: ^9.1.0

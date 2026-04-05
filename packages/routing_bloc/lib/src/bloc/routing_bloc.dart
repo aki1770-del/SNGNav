@@ -55,6 +55,7 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
       emit(RoutingState(
         status: RoutingStatus.error,
         errorMessage: error.toString(),
+        destinationLabel: event.destinationLabel,
         engineAvailable: state.engineAvailable,
       ));
     }

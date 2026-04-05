@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';
 
 void main() {
@@ -9,7 +8,7 @@ void main() {
 
   group('ManeuverSpeechFormatter', () {
     test('returns existing instruction when present', () {
-      const maneuver = RouteManeuver(
+      const maneuver = NavigationManeuver(
         index: 0,
         instruction: '200m ahead, turn right',
         type: 'right',
@@ -27,7 +26,7 @@ void main() {
     });
 
     test('falls back to japanese type phrase when instruction is empty', () {
-      const maneuver = RouteManeuver(
+      const maneuver = NavigationManeuver(
         index: 0,
         instruction: ' ',
         type: 'left',

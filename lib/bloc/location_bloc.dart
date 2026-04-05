@@ -40,7 +40,16 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     LocationStartRequested event,
     Emitter<LocationState> emit,
   ) async {
-    if (state.isTracking) return;
+    // Prevent double-start while already acquiring or tracking,
+    // but allow restart from error state (state machine: error → acquiring).
+    if (state.quality == LocationQuality.acquiring ||
+        state.quality == LocationQuality.fix ||
+        state.quality == LocationQuality.degraded ||
+        state.quality == LocationQuality.stale) return;
+
+    // Cancel any stale subscription before creating a new one.
+    await _positionSub?.cancel();
+    _positionSub = null;
 
     emit(const LocationState.acquiring());
 

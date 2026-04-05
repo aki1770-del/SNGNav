@@ -141,11 +141,11 @@ class ProviderConfig {
   final String mbtilesPath;
 
   const ProviderConfig({
-    this.weatherType = WeatherProviderType.openMeteo,
+    this.weatherType = WeatherProviderType.simulated,
     this.locationType = LocationProviderType.simulated,
     this.deadReckoningEnabled = true,
     this.drMode = DeadReckoningMode.kalman,
-    this.routingType = RoutingEngineType.valhalla,
+    this.routingType = RoutingEngineType.mock,
     this.valhallaBaseUrl = '',
     this.tileSource = TileSourceType.online,
     this.mbtilesPath = 'data/offline_tiles.mbtiles',
@@ -155,7 +155,7 @@ class ProviderConfig {
   factory ProviderConfig.fromEnvironment() {
     const weatherEnv = String.fromEnvironment(
       'WEATHER_PROVIDER',
-      defaultValue: 'open_meteo',
+      defaultValue: 'simulated',
     );
 
     const locationEnv = String.fromEnvironment(
