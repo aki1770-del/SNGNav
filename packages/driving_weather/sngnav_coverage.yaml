@@ -1,0 +1,84 @@
+# SNGNav Coverage Declaration — driving_weather
+# Schema version: 1.0
+# Package: driving_weather
+# Updated: 2026-04-05
+#
+# Each scenario entry declares whether this package contributes coverage.
+# status: covered | partial | uncovered
+# covered_by: field name or feature in this package
+# scenario_id: matches the canonical 62-scenario registry
+
+package: driving_weather
+version: "0.3.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category A: Weather / Precipitation ───────────────────────────────────
+  - id: S-008
+    name: Heavy snow onset (>10 cm/h)
+    status: covered
+    covered_by: WeatherHazard.snowfall threshold in SnowHazardDetector
+    confidence: confirmed_with_test
+
+  - id: S-009
+    name: Freezing rain transition
+    status: covered
+    covered_by: WeatherHazard.freezingRain in SnowHazardDetector
+    confidence: confirmed_with_test
+
+  - id: S-010
+    name: Visibility below 50 m
+    status: covered
+    covered_by: WeatherHazard.lowVisibility threshold in VisibilityHazardDetector
+    confidence: confirmed_with_test
+
+  - id: S-011
+    name: Offline fallback — no network
+    status: covered
+    covered_by: OfflineWeatherProvider (static fallback values)
+    confidence: confirmed_with_test
+
+  - id: S-012
+    name: Weather API timeout
+    status: covered
+    covered_by: http timeout + fallback chain in OpenMeteoWeatherProvider
+    confidence: confirmed_with_test
+
+  - id: S-013
+    name: Blizzard (wind + snow combined)
+    status: partial
+    covered_by: snowfall + windspeed fields available; combined threshold not yet defined
+    confidence: partial
+    note: Combined threshold logic open — see CONTRIBUTING.md
+
+  - id: S-016
+    name: Fog bank at dawn
+    status: partial
+    covered_by: visibility_km field; fog vs low cloud not distinguished
+    confidence: partial
+    note: Fog subtype detection open — see CONTRIBUTING.md
+
+  - id: S-017
+    name: Black ice temperature window (−5 °C to 0 °C)
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-018
+    name: Refreezing after daytime melt
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-020
+    name: Freezing drizzle on cold surface
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 5
+  this_package_partial: 2
+  this_package_uncovered: 55
+  weighted_contribution: 0.08

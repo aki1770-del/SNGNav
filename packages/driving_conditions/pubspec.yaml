@@ -11,7 +11,7 @@ topics:
   - safety
   - weather
   - navigation
-  - simulation
+  - winter-driving
 
 environment:
   sdk: ^3.11.0
@@ -21,6 +21,7 @@ dependencies:
   driving_weather: ^0.3.0
   fleet_hazard: ^0.3.0
   navigation_safety: ^0.3.0
+  snow_rendering: ^0.1.0
 
 dev_dependencies:
   latlong2: ^0.9.1

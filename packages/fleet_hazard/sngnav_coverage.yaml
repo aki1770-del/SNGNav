@@ -1,0 +1,77 @@
+# SNGNav Coverage Declaration — fleet_hazard
+# Schema version: 1.0
+# Package: fleet_hazard
+# Updated: 2026-04-05
+#
+# Each scenario entry declares whether this package contributes coverage.
+# status: covered | partial | uncovered
+# covered_by: field name or feature in this package
+# scenario_id: matches the canonical 62-scenario registry
+
+package: fleet_hazard
+version: "0.3.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category C: Fleet / Crowd-Source ──────────────────────────────────────
+  - id: S-034
+    name: Multiple reports cluster into hazard zone
+    status: covered
+    covered_by: HazardCluster + GeoClusterer (DBSCAN-inspired geographic grouping)
+    confidence: confirmed_with_test
+
+  - id: S-035
+    name: Severity aggregation across clustered reports
+    status: covered
+    covered_by: HazardZone.severity = max(report.severity) in aggregation
+    confidence: confirmed_with_test
+
+  - id: S-036
+    name: Stale report expiry
+    status: covered
+    covered_by: HazardReport.expiresAt enforced in HazardZoneBuilder
+    confidence: confirmed_with_test
+
+  - id: S-037
+    name: Single-vehicle report isolation (no cluster)
+    status: covered
+    covered_by: min cluster size = 1 (solo report promoted to zone)
+    confidence: confirmed_with_test
+
+  - id: S-038
+    name: Zone merge when clusters overlap
+    status: partial
+    covered_by: radius overlap check implemented; weighted centroid merge not yet
+    confidence: partial
+    note: Weighted centroid merge open — see CONTRIBUTING.md
+
+  - id: S-039
+    name: Report confidence decay over time
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-040
+    name: V2X hazard report ingestion
+    status: uncovered
+    covered_by: null
+    note: V2X provider interface open — see CONTRIBUTING.md
+
+  - id: S-041
+    name: Cross-vehicle report deduplication
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-042
+    name: Fleet hazard zone export to routing engine
+    status: uncovered
+    covered_by: null
+    note: Routing integration open — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 4
+  this_package_partial: 1
+  this_package_uncovered: 57
+  weighted_contribution: 0.065

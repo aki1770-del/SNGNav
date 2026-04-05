@@ -31,6 +31,12 @@ dependencies:
     ^0.2.0
   driving_conditions:
     path: packages/driving_conditions
+  snow_rendering:
+    ^0.1.0
+  route_condition_forecast:
+    path: packages/route_condition_forecast
+  adaptive_reroute:
+    path: packages/adaptive_reroute
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   flutter_bloc: ^9.1.0
@@ -67,8 +73,14 @@ dependency_overrides:
     path: packages/routing_bloc
   offline_tiles:
     path: packages/offline_tiles
+  snow_rendering:
+    path: packages/snow_rendering
   kalman_dr:
     path: packages/kalman_dr
+  route_condition_forecast:
+    path: packages/route_condition_forecast
+  adaptive_reroute:
+    path: packages/adaptive_reroute
 
 flutter:
   uses-material-design: true

@@ -1,0 +1,30 @@
+name: adaptive_reroute
+description: >-
+  Safety-driven route adaptation for winter driving. Evaluates route
+  condition forecasts, decides when rerouting is justified, and generates
+  detour waypoints to bypass hazard zones. Pure Dart, no Flutter dependency.
+version: 0.1.0
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - winter-driving
+  - routing
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+  latlong2: ^0.9.1
+  driving_weather: ^0.3.0
+  fleet_hazard: ^0.3.0
+  routing_engine: ^0.3.0
+  route_condition_forecast:
+    path: ../route_condition_forecast
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

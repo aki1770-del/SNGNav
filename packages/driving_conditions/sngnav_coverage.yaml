@@ -1,0 +1,89 @@
+# SNGNav Coverage Declaration — driving_conditions
+# Schema version: 1.0
+# Package: driving_conditions
+# Updated: 2026-04-05
+#
+# Each scenario entry declares whether this package contributes coverage.
+# status: covered | partial | uncovered
+# covered_by: field name or feature in this package
+# scenario_id: matches the canonical 62-scenario registry
+
+package: driving_conditions
+version: "0.5.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category B: Road Surface / Grip ───────────────────────────────────────
+  - id: S-021
+    name: Grip score below critical threshold
+    status: covered
+    covered_by: SafetyScore.gripScore + toAlertSeverity() critical boundary
+    confidence: confirmed_with_test
+
+  - id: S-023
+    name: Road surface ice classification
+    status: covered
+    covered_by: RoadSurface.ice in RoadSurfaceClassifier
+    confidence: confirmed_with_test
+
+  - id: S-024
+    name: Road surface snow classification
+    status: covered
+    covered_by: RoadSurface.snow in RoadSurfaceClassifier
+    confidence: confirmed_with_test
+
+  - id: S-025
+    name: Road surface wet-ice classification
+    status: covered
+    covered_by: RoadSurface.wetIce in RoadSurfaceClassifier
+    confidence: confirmed_with_test
+
+  - id: S-026
+    name: Monte Carlo safety score under uncertainty
+    status: covered
+    covered_by: MonteCarloSafetyScorer (uncertainty propagation)
+    confidence: confirmed_with_test
+
+  - id: S-027
+    name: Visibility degradation from precipitation
+    status: covered
+    covered_by: VisibilityDegradationModel
+    confidence: confirmed_with_test
+
+  - id: S-028
+    name: Grip warning (above critical, below warning threshold)
+    status: covered
+    covered_by: SafetyScore.gripScore + toAlertSeverity() warning boundary
+    confidence: confirmed_with_test
+
+  - id: S-029
+    name: Black ice grip model (near-zero friction)
+    status: partial
+    covered_by: RoadSurface.ice maps to minimum grip constant; no physics model
+    confidence: partial
+    note: Physics-based grip curve for ice open — see CONTRIBUTING.md
+
+  - id: S-030
+    name: Tire pressure compensation in grip model
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-032
+    name: Combined grip + visibility compound risk score
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-033
+    name: Speed-dependent grip estimation
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 7
+  this_package_partial: 1
+  this_package_uncovered: 54
+  weighted_contribution: 0.11

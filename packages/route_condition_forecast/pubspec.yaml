@@ -1,0 +1,28 @@
+name: route_condition_forecast
+description: >-
+  Per-segment weather and hazard forecasting along a planned route.
+  Projects driving_weather conditions and fleet_hazard zones onto route
+  segments with time-of-arrival weighting. Pure Dart, no Flutter dependency.
+version: 0.1.0
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - winter-driving
+  - routing
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+  latlong2: ^0.9.1
+  driving_weather: ^0.3.0
+  fleet_hazard: ^0.3.0
+  routing_engine: ^0.3.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

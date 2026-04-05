@@ -1,0 +1,95 @@
+# SNGNav Coverage Declaration — navigation_safety
+# Schema version: 1.0
+# Package: navigation_safety
+# Updated: 2026-04-05
+#
+# Each scenario entry declares whether this package contributes coverage.
+# status: covered | partial | uncovered
+# covered_by: field name or feature in this package
+# scenario_id: matches the canonical 62-scenario registry
+
+package: navigation_safety
+version: "0.4.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category E: HMI / Display ─────────────────────────────────────────────
+  - id: S-001
+    name: Safety overlay always on top
+    status: covered
+    covered_by: SafetyOverlay (Z=5, always rendered)
+    confidence: confirmed_with_test
+
+  - id: S-002
+    name: Non-dismissible alert blocks back gesture
+    status: covered
+    covered_by: PopScope(canPop: !blockPop) in SafetyNavigationScaffold
+    confidence: confirmed_with_test
+
+  - id: S-003
+    name: Alert severity ordering enforced
+    status: covered
+    covered_by: _canUpdateSeverity() const map in NavigationBloc
+    confidence: confirmed_with_test
+
+  - id: S-004
+    name: Route alerts cleared on reroute
+    status: covered
+    covered_by: RerouteCompleted(clearAlert: true)
+    confidence: confirmed_with_test
+
+  - id: S-005
+    name: OODA latency budget enforced
+    status: partial
+    covered_by: kDebugMode Stopwatch in _onSafetyAlert (debug only)
+    confidence: partial
+    note: Runtime enforcement (hard limit) planned v0.5.0
+
+  - id: S-006
+    name: SafetyScore grip threshold
+    status: covered
+    covered_by: gripScore field + toAlertSeverity()
+    confidence: confirmed_with_test
+
+  - id: S-007
+    name: Offline tile miss on region boundary
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-014
+    name: Black ice at intersection approach
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-015
+    name: Black ice on bridge deck
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-019
+    name: Aquaplaning risk at speed
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-022
+    name: Tunnel ventilation ice drip
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+  - id: S-031
+    name: Black ice pre-warning from V2X
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 5
+  this_package_partial: 1
+  this_package_uncovered: 56
+  weighted_contribution: 0.05

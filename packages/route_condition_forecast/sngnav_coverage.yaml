@@ -1,0 +1,65 @@
+# SNGNav Coverage Declaration — route_condition_forecast
+# Schema version: 1.0
+# Package: route_condition_forecast
+# Updated: 2026-04-05
+
+package: route_condition_forecast
+version: "0.1.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category F: Route-Level Forecasting ────────────────────────────────────
+  - id: S-051
+    name: Hazardous segment detected on route ahead
+    status: covered
+    covered_by: RouteConditionForecaster — firstHazardSegment
+    confidence: confirmed_with_test
+
+  - id: S-052
+    name: Fleet hazard zone intersects route segment
+    status: covered
+    covered_by: RouteConditionForecaster._intersectingZones
+    confidence: confirmed_with_test
+
+  - id: S-053
+    name: Forecast confidence degrades with ETA horizon
+    status: covered
+    covered_by: RouteConditionForecaster._confidence (half-life 8h)
+    confidence: confirmed_with_test
+
+  - id: S-054
+    name: ETA accumulates across route segments
+    status: covered
+    covered_by: elapsedSeconds accumulation in RouteConditionForecaster.forecast
+    confidence: confirmed_with_test
+
+  - id: S-055
+    name: Long segment subdivision for geographic resolution
+    status: covered
+    covered_by: RouteSegmenter.byDistance — maxKm subdivision
+    confidence: confirmed_with_test
+
+  - id: S-056
+    name: Route with no hazards returns clear forecast
+    status: covered
+    covered_by: RouteForecast.hasAnyHazard == false path
+    confidence: confirmed_with_test
+
+  - id: S-057
+    name: Multi-point forecast API integration
+    status: uncovered
+    covered_by: null
+    note: ForecastProvider interface exists; OpenMeteo hourly forecast impl open — see CONTRIBUTING.md
+
+  - id: S-058
+    name: Wind-adjusted segment risk (crosswind on bridge)
+    status: uncovered
+    covered_by: null
+    note: Open scenario slot — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 6
+  this_package_partial: 0
+  this_package_uncovered: 56
+  weighted_contribution: 0.097

@@ -1,0 +1,65 @@
+# SNGNav Coverage Declaration — adaptive_reroute
+# Schema version: 1.0
+# Package: adaptive_reroute
+# Updated: 2026-04-05
+
+package: adaptive_reroute
+version: "0.1.0"
+maintainer: aki1770@gmail.com
+
+scenarios:
+  # ── Category G: Adaptive Routing ───────────────────────────────────────────
+  - id: S-059
+    name: Reroute recommended when hazard within look-ahead window
+    status: covered
+    covered_by: RerouteEvaluator rule 4 (hazard in window + confidence met)
+    confidence: confirmed_with_test
+
+  - id: S-060
+    name: No reroute when hazard is beyond look-ahead window
+    status: covered
+    covered_by: RerouteEvaluator rule 2 (etaSeconds > hazardWindowSeconds)
+    confidence: confirmed_with_test
+
+  - id: S-061
+    name: No reroute when forecast confidence is below threshold
+    status: covered
+    covered_by: RerouteEvaluator rule 3 (confidence < minConfidenceToAct)
+    confidence: confirmed_with_test
+
+  - id: S-062
+    name: Detour waypoints generated for hazard zones on route
+    status: covered
+    covered_by: DetourPlanner — left + right bypass pair per HazardZone
+    confidence: confirmed_with_test
+
+  - id: S-063
+    name: Fleet hazard zone triggers reroute decision with waypoints
+    status: covered
+    covered_by: RerouteEvaluator + DetourPlanner integration
+    confidence: confirmed_with_test
+
+  - id: S-064
+    name: Reroute decision confidence matches forecast segment confidence
+    status: covered
+    covered_by: RerouteDecision.confidence = trigger.confidence
+    confidence: confirmed_with_test
+
+  - id: S-065
+    name: Multi-engine candidate route scoring
+    status: uncovered
+    covered_by: null
+    note: Scoring multiple RoutingEngine candidates against forecast open — see CONTRIBUTING.md
+
+  - id: S-066
+    name: Reroute cooldown (min interval between reroutes)
+    status: uncovered
+    covered_by: null
+    note: minRerouteIntervalSeconds guard open — see CONTRIBUTING.md
+
+coverage_summary:
+  total_scenarios: 62
+  this_package_covers: 6
+  this_package_partial: 0
+  this_package_uncovered: 56
+  weighted_contribution: 0.097
