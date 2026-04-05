@@ -448,6 +448,54 @@ void main() {
     );
 
     blocTest<NavigationBloc, NavigationState>(
+      'NavigationStarted preserves ALL alert fields: message, severity, dismissible',
+      build: NavigationBloc.new,
+      seed: () => const NavigationState(
+        status: NavigationStatus.idle,
+        alertMessage: 'Black ice — reduce speed immediately',
+        alertSeverity: AlertSeverity.critical,
+        alertDismissible: false,
+      ),
+      act: (bloc) => bloc.add(NavigationStarted(
+        route: _testRoute,
+        destinationLabel: 'Toyota HQ',
+      )),
+      expect: () => [
+        isA<NavigationState>()
+            .having((s) => s.status, 'status', NavigationStatus.navigating)
+            .having((s) => s.alertMessage, 'message',
+                'Black ice — reduce speed immediately')
+            .having((s) => s.alertSeverity, 'severity', AlertSeverity.critical)
+            .having((s) => s.alertDismissible, 'dismissible', isFalse),
+      ],
+      verify: (bloc) {
+        expect(bloc.state.alertMessage, isNotNull);
+        expect(bloc.state.alertSeverity, equals(AlertSeverity.critical));
+        expect(bloc.state.alertDismissible, isFalse);
+      },
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
+      'NavigationStopped preserves ALL alert fields: severity and dismissible',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+        alertMessage: 'Fog — visibility < 100 m',
+        alertSeverity: AlertSeverity.warning,
+        alertDismissible: true,
+      ),
+      act: (bloc) => bloc.add(const NavigationStopped()),
+      expect: () => [
+        isA<NavigationState>()
+            .having((s) => s.status, 'status', NavigationStatus.idle)
+            .having((s) => s.alertMessage, 'message', 'Fog — visibility < 100 m')
+            .having((s) => s.alertSeverity, 'severity', AlertSeverity.warning)
+            .having((s) => s.alertDismissible, 'dismissible', isTrue),
+      ],
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
       'stop clears route but preserves active safety alert state',
       build: NavigationBloc.new,
       seed: () => NavigationState(

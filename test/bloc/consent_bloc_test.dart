@@ -591,6 +591,46 @@ void main() {
     );
 
     blocTest<ConsentBloc, ConsentState>(
+      'grant ignored when state is already loading (loading guard)',
+      build: () => ConsentBloc(service: InMemoryConsentService()),
+      // Seed directly into loading state — simulates race condition where
+      // a grant arrives while a previous load is in progress.
+      seed: () => const ConsentState(status: ConsentBlocStatus.loading),
+      act: (bloc) => bloc.add(const ConsentGrantRequested(
+        purpose: ConsentPurpose.fleetLocation,
+        jurisdiction: Jurisdiction.gdpr,
+      )),
+      // Guard fires: no state change emitted.
+      expect: () => <ConsentState>[],
+      verify: (bloc) {
+        expect(bloc.state.status, equals(ConsentBlocStatus.loading));
+        expect(bloc.state.isFleetGranted, isFalse);
+      },
+    );
+
+    blocTest<ConsentBloc, ConsentState>(
+      'revoke ignored when state is already loading (loading guard)',
+      build: () => ConsentBloc(service: InMemoryConsentService()),
+      seed: () => const ConsentState(status: ConsentBlocStatus.loading),
+      act: (bloc) => bloc.add(
+        const ConsentRevokeRequested(purpose: ConsentPurpose.diagnostics),
+      ),
+      expect: () => <ConsentState>[],
+      verify: (bloc) {
+        expect(bloc.state.status, equals(ConsentBlocStatus.loading));
+      },
+    );
+
+    blocTest<ConsentBloc, ConsentState>(
+      'second ConsentLoadRequested ignored when already loading (double-load guard)',
+      build: () => ConsentBloc(service: InMemoryConsentService()),
+      seed: () => const ConsentState(status: ConsentBlocStatus.loading),
+      act: (bloc) => bloc.add(const ConsentLoadRequested()),
+      // Guard fires: second load request produces no state transition.
+      expect: () => <ConsentState>[],
+    );
+
+    blocTest<ConsentBloc, ConsentState>(
       'full lifecycle: load → grant → revoke',
       build: () => ConsentBloc(service: InMemoryConsentService()),
       act: (bloc) async {

@@ -586,6 +586,92 @@ void main() {
     );
   });
 
+  group('LocationBloc — stale timeout ignored when dead reckoning active', () {
+    blocTest<LocationBloc, LocationState>(
+      'LocationStaleTimeout is a no-op when isDeadReckoning=true',
+      build: () => LocationBloc(provider: MockLocationProvider()),
+      seed: () => LocationState(
+        quality: LocationQuality.fix,
+        position: _nagoyaFix,
+        isDeadReckoning: true,
+      ),
+      act: (bloc) => bloc.add(const LocationStaleTimeout()),
+      // Guard: no state change emitted — timer ignored while DR active.
+      expect: () => <LocationState>[],
+      verify: (bloc) {
+        expect(bloc.state.quality, equals(LocationQuality.fix));
+        expect(bloc.state.isDeadReckoning, isTrue);
+      },
+    );
+
+    blocTest<LocationBloc, LocationState>(
+      'LocationStaleTimeout transitions normally when isDeadReckoning=false',
+      build: () => LocationBloc(provider: MockLocationProvider()),
+      seed: () => LocationState(
+        quality: LocationQuality.fix,
+        position: _nagoyaFix,
+        isDeadReckoning: false,
+      ),
+      act: (bloc) => bloc.add(const LocationStaleTimeout()),
+      expect: () => [
+        LocationState(
+          quality: LocationQuality.stale,
+          position: _nagoyaFix,
+          isDeadReckoning: false,
+        ),
+      ],
+    );
+
+    blocTest<LocationBloc, LocationState>(
+      'stale timeout applies after DR stops (new position from non-DR provider clears flag)',
+      build: () => LocationBloc(provider: MockLocationProvider()),
+      seed: () => LocationState(
+        quality: LocationQuality.fix,
+        position: _nagoyaFix,
+        isDeadReckoning: true,
+      ),
+      act: (bloc) async {
+        // New position from MockLocationProvider — not a DeadReckoningProvider,
+        // so isDr is computed as false inside _onPositionReceived.
+        bloc.add(LocationPositionReceived(
+          GeoPosition(
+            latitude: 35.1720,
+            longitude: 136.8830,
+            accuracy: 4.0,
+            timestamp: DateTime(2026, 2, 27, 10, 5),
+          ),
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        // Now stale timeout should transition (DR flag is now off).
+        bloc.add(const LocationStaleTimeout());
+      },
+      expect: () => [
+        // DR flag cleared by new position from non-DR provider.
+        LocationState(
+          quality: LocationQuality.fix,
+          position: GeoPosition(
+            latitude: 35.1720,
+            longitude: 136.8830,
+            accuracy: 4.0,
+            timestamp: DateTime(2026, 2, 27, 10, 5),
+          ),
+          isDeadReckoning: false,
+        ),
+        // Stale transition now fires (DR is off).
+        LocationState(
+          quality: LocationQuality.stale,
+          position: GeoPosition(
+            latitude: 35.1720,
+            longitude: 136.8830,
+            accuracy: 4.0,
+            timestamp: DateTime(2026, 2, 27, 10, 5),
+          ),
+          isDeadReckoning: false,
+        ),
+      ],
+    );
+  });
+
   group('LocationBloc — close', () {
     test('close disposes provider', () async {
       final provider = MockLocationProvider();

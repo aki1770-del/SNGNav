@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -383,4 +385,86 @@ void main() {
       expect(engine.disposed, isTrue);
     });
   });
+
+  group('RoutingBloc - stale request guard (_requestId race)', () {
+    test('only latest response wins when two requests fire rapidly', () async {
+      // Controllable completer per call to simulate response timing.
+      var callCount = 0;
+      final firstCompleter = Completer<RouteResult>();
+      final secondCompleter = Completer<RouteResult>();
+
+      final engine = MockRoutingEngine();
+      // Override calculateRoute via a closure-based subclass.
+      final slowEngine = _SlowMockRoutingEngine(
+        onCall: (index) {
+          if (index == 1) return firstCompleter.future;
+          return secondCompleter.future;
+        },
+        callCounter: () => ++callCount,
+      );
+
+      final bloc = RoutingBloc(engine: slowEngine);
+
+      // Fire first request (will block on firstCompleter).
+      bloc.add(const RouteRequested(
+        origin: _nagoya,
+        destination: _toyota,
+        destinationLabel: 'First',
+      ));
+
+      // Yield to let the first request reach calculateRoute.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Fire second request before first response arrives.
+      bloc.add(const RouteRequested(
+        origin: _nagoya,
+        destination: _inuyama,
+        destinationLabel: 'Second',
+      ));
+
+      // Let second request reach calculateRoute.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Complete second response first.
+      secondCompleter.complete(_secondRoute);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Complete first (stale) response.
+      firstCompleter.complete(_defaultRoute);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Final state must reflect the second request only.
+      expect(bloc.state.status, equals(RoutingStatus.routeActive));
+      expect(bloc.state.route, equals(_secondRoute));
+      expect(bloc.state.destinationLabel, equals('Second'));
+
+      await bloc.close();
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Helper for race condition test — allows per-call future control.
+// ---------------------------------------------------------------------------
+
+class _SlowMockRoutingEngine implements RoutingEngine {
+  final Future<RouteResult> Function(int callIndex) onCall;
+  final int Function() callCounter;
+
+  _SlowMockRoutingEngine({required this.onCall, required this.callCounter});
+
+  @override
+  EngineInfo get info => const EngineInfo(name: 'slow-mock');
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<RouteResult> calculateRoute(RouteRequest request) {
+    final index = callCounter();
+    return onCall(index);
+  }
+
+  @override
+  Future<void> dispose() async {}
 }
