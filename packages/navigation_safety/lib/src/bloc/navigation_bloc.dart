@@ -35,6 +35,16 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     NavigationStarted event,
     Emitter<NavigationState> emit,
   ) {
+    // Only allow starting from idle or arrived.
+    // Deviated routes must complete via RerouteCompleted, not NavigationStarted.
+    if (state.status != NavigationStatus.idle &&
+        state.status != NavigationStatus.arrived) {
+      assert(
+        false,
+        'NavigationStarted fired in unexpected state: ${state.status}',
+      );
+      return;
+    }
     emit(NavigationState(
       status: NavigationStatus.navigating,
       route: event.route,

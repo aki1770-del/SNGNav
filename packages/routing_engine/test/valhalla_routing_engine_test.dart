@@ -21,7 +21,7 @@ import 'package:test/test.dart';
 /// configurable maneuvers.
 MockClient valhallaClient({
   List<Map<String, dynamic>>? maneuvers,
-  String shape = '_izlhA_c`|oO_seK_seK',
+  String shape = 'o}@o}@o}@o}@',
   double length = 25.7,
   double time = 1800,
 }) {
@@ -245,7 +245,7 @@ void main() {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
         client: valhallaClient(
-          shape: '_izlhA_c`|oO_seK_seK',
+          shape: 'o}@o}@o}@o}@',
         ),
       );
 
@@ -354,7 +354,7 @@ void main() {
                 'summary': {'length': 1.0, 'time': 60},
                 'legs': [
                   {
-                    'shape': '_izlhA_c`|oO',
+                    'shape': 'o}@o}@',
                     'maneuvers': [
                       {
                         'instruction': 'Go',
@@ -474,7 +474,7 @@ void main() {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
         client: valhallaClient(
-          shape: '_izlhA_c`|oO',
+          shape: 'o}@o}@',
           maneuvers: [
             {
               'instruction': 'Test',

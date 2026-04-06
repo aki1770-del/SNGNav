@@ -132,7 +132,7 @@ void main() {
               'summary': {'length': 25.7, 'time': 1800},
               'legs': [
                 {
-                  'shape': '_izlhA_c`|oO_seK_seK',
+                  'shape': 'o}@o}@o}@o}@',
                   'maneuvers': [
                     {
                       'instruction': 'Drive east.',
