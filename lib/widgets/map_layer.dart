@@ -31,6 +31,7 @@ import '../bloc/fleet_bloc.dart';
 import '../bloc/fleet_state.dart';
 import '../bloc/location_bloc.dart';
 import '../bloc/location_state.dart';
+import '../navigation/route_follower.dart';
 import '../bloc/weather_bloc.dart';
 import '../bloc/weather_state.dart';
 import '../fluorite/fluorite.dart';
@@ -257,48 +258,9 @@ class MapLayer extends StatelessWidget {
                                         weatherState.isHazardous)
                                       MarkerLayer(markers: _hazardMarkers),
                                     if (locState.hasPosition)
-                                      MarkerLayer(
-                                        markers: [
-                                          Marker(
-                                            point: LatLng(
-                                              locState.position!.latitude,
-                                              locState.position!.longitude,
-                                            ),
-                                            width: 36,
-                                            height: 36,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: _qualityColor(locState.quality)
-                                                    .withValues(alpha: 0.22),
-                                                border: Border.all(
-                                                  color: _qualityColor(locState.quality),
-                                                  width: 2,
-                                                ),
-                                              ),
-                                              child: Center(
-                                                child: Container(
-                                                  width: 16,
-                                                  height: 16,
-                                                  decoration: BoxDecoration(
-                                                    color: _qualityColor(locState.quality),
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                      color: Colors.white,
-                                                      width: 3,
-                                                    ),
-                                                    boxShadow: const [
-                                                      BoxShadow(
-                                                        color: Colors.black26,
-                                                        blurRadius: 6,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                      _SnappedMarkerLayer(
+                                        locState: locState,
+                                        routingState: routingState,
                                       ),
                                     const SimpleAttributionWidget(
                                       source: Text('\u00a9 OpenStreetMap contributors'),
@@ -443,4 +405,108 @@ class MapLayer extends StatelessWidget {
       child: Icon(Icons.warning_amber, color: Colors.orange, size: 24),
     ),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// _SnappedMarkerLayer
+//
+// StatefulWidget that holds the RouteFollower instance so it can maintain
+// monotonic segment state across GPS updates without converting MapLayer
+// to StatefulWidget.
+// ---------------------------------------------------------------------------
+
+class _SnappedMarkerLayer extends StatefulWidget {
+  const _SnappedMarkerLayer({
+    required this.locState,
+    required this.routingState,
+  });
+
+  final LocationState locState;
+  final RoutingState routingState;
+
+  @override
+  State<_SnappedMarkerLayer> createState() => _SnappedMarkerLayerState();
+}
+
+class _SnappedMarkerLayerState extends State<_SnappedMarkerLayer> {
+  RouteFollower? _follower;
+
+  @override
+  void didUpdateWidget(_SnappedMarkerLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset follower when the route changes (different shape object).
+    final oldShape = oldWidget.routingState.route?.shape;
+    final newShape = widget.routingState.route?.shape;
+    if (oldShape != newShape) {
+      _follower = newShape != null && newShape.length >= 2
+          ? RouteFollower(shape: newShape)
+          : null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pos = widget.locState.position!;
+    final route = widget.routingState.route;
+
+    // Initialise follower lazily on first build with a valid route.
+    if (_follower == null && route != null && route.shape.length >= 2) {
+      _follower = RouteFollower(shape: route.shape);
+    }
+
+    LatLng displayPoint;
+    bool isOffRoute = false;
+
+    if (_follower != null) {
+      final snapped = _follower!.update(pos);
+      isOffRoute = snapped.isOffRoute;
+      displayPoint = isOffRoute ? snapped.rawLatLng : snapped.snappedLatLng;
+    } else {
+      // No active route — show raw GPS.
+      displayPoint = LatLng(pos.latitude, pos.longitude);
+    }
+
+    final qualityColor = MapLayer._qualityColor(widget.locState.quality);
+
+    return MarkerLayer(
+      markers: [
+        Marker(
+          point: displayPoint,
+          width: 36,
+          height: 36,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: (isOffRoute ? Colors.orange : qualityColor)
+                  .withValues(alpha: 0.22),
+              border: Border.all(
+                color: isOffRoute ? Colors.orange : qualityColor,
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: isOffRoute ? Colors.orange : qualityColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 3,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
