@@ -180,29 +180,68 @@ class ValhallaRoutingEngine implements RoutingEngine {
     var lng = 0;
 
     while (index < encoded.length) {
-      var shift = 0;
-      var result = 0;
-      int b;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1F) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+      lat += _decodeChunk(encoded, index, (i) => index = i);
+      lng += _decodeChunk(encoded, index, (i) => index = i);
 
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1F) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
+      final decodedLat = lat / 1e6;
+      final decodedLng = lng / 1e6;
 
-      points.add(LatLng(lat / 1e6, lng / 1e6));
+      if (decodedLat < -90.0 ||
+          decodedLat > 90.0 ||
+          decodedLng < -180.0 ||
+          decodedLng > 180.0) {
+        throw RoutingException(
+          'Decoded coordinate out of range: ($decodedLat, $decodedLng). '
+          'Possible corrupt polyline or wrong precision.',
+        );
+      }
+
+      points.add(LatLng(decodedLat, decodedLng));
     }
 
     return points;
+  }
+
+  /// Decode one polyline chunk (lat or lng delta) and advance [indexSetter].
+  ///
+  /// Guards against:
+  /// - Truncated strings (bounds check before every byte read)
+  /// - Runaway continuation bytes on corrupt data (14-iteration cap)
+  /// - 32-bit shift overflow on Dart web JS targets (shift capped at 30)
+  int _decodeChunk(
+    String encoded,
+    int startIndex,
+    void Function(int) indexSetter,
+  ) {
+    const maxIter = 14; // 14 × 5 = 70 bits — exceeds any valid geo delta
+    var b = 0;
+    var shift = 0;
+    var result = 0;
+    var index = startIndex;
+    var iter = 0;
+
+    do {
+      if (index >= encoded.length) {
+        throw RoutingException('Truncated polyline at index $index');
+      }
+      if (iter++ >= maxIter) {
+        throw RoutingException(
+          'Polyline chunk exceeds $maxIter continuation bytes at index $index — '
+          'possible corrupt data.',
+        );
+      }
+      b = encoded.codeUnitAt(index++) - 63;
+      if (shift < 30) {
+        // Safe to shift on both VM (63-bit int) and web (32-bit bitwise).
+        result |= (b & 0x1F) << shift;
+      }
+      // shift >= 30: high bits are beyond the geographic coordinate range for
+      // precision-6 encoding (max |delta| ~180e6 ≈ 28 bits); discard safely.
+      shift += 5;
+    } while (b >= 0x20);
+
+    indexSetter(index);
+    return (result & 1) != 0 ? ~(result >> 1) : (result >> 1);
   }
 
   String _maneuverTypeString(int type) {
