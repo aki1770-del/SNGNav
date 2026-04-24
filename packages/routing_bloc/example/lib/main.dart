@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
+
+/// Local adapter mirroring lib/adapters/navigation_route_adapter.dart.
+/// RoutingState.route is RouteResult? (engine-shaped) while
+/// RouteProgressBar.route is NavigationRoute? (navigation-shaped);
+/// examples sit at that boundary and convert here.
+extension _RouteResultToNavigation on RouteResult {
+  NavigationRoute toNavigationRoute() => NavigationRoute(
+        shape: shape,
+        maneuvers: maneuvers
+            .map((m) => NavigationManeuver(
+                  index: m.index,
+                  instruction: m.instruction,
+                  type: m.type,
+                  lengthKm: m.lengthKm,
+                  timeSeconds: m.timeSeconds,
+                  position: m.position,
+                ))
+            .toList(),
+        totalDistanceKm: totalDistanceKm,
+        totalTimeSeconds: totalTimeSeconds,
+        summary: summary,
+      );
+}
 
 const _nagoya = LatLng(35.1709, 136.8815);
 
@@ -46,7 +70,7 @@ class _ExampleScreen extends StatelessWidget {
                 status: state.hasRoute
                     ? RouteProgressStatus.active
                     : RouteProgressStatus.idle,
-                route: state.route,
+                route: state.route?.toNavigationRoute(),
                 destinationLabel: state.destinationLabel,
               ),
               Expanded(

@@ -242,12 +242,11 @@ void main() {
 
       // RouteFollower on the south road — east heading vs south-bearing → penalised.
       final rfSouth = RouteFollower(shape: shapeSouth);
-      final snapSouth = rfSouth.update(gps);
+      rfSouth.update(gps);
 
-      // The south road's effective distance should be much larger due to penalty.
-      // snapSouth.distanceFromRoute is the raw geometric distance (no penalty),
-      // but the heading penalty prevented it from winning when alternatives existed.
-      // We verify the east road snap is tighter (closer to 10 m than the south road is).
+      // The south road's effective distance would be much larger due to penalty.
+      // The heading penalty prevented it from winning when alternatives existed.
+      // We verify the east road snap is tighter (closer to 10 m than the south road would be).
       expect(snapEast.distanceFromRoute, lessThan(20.0));
     });
   });

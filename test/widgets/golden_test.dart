@@ -28,7 +28,6 @@ import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 import 'package:kalman_dr/kalman_dr.dart';
-import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/widgets/speed_display.dart';
 import 'package:sngnav_snow_scene/widgets/weather_status_bar.dart';
 

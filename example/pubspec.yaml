@@ -13,20 +13,13 @@ dependencies:
   flutter_bloc: ^9.1.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-  driving_weather:
-    path: ../packages/driving_weather
-  map_viewport_bloc:
-    path: ../packages/map_viewport_bloc
-  navigation_safety:
-    path: ../packages/navigation_safety
-  offline_tiles:
-    path: ../packages/offline_tiles
-  routing_bloc:
-    path: ../packages/routing_bloc
-  routing_engine:
-    path: ../packages/routing_engine
-  voice_guidance:
-    path: ../packages/voice_guidance
+  driving_weather: ^0.3.0
+  map_viewport_bloc: ^0.3.0
+  navigation_safety: ^0.5.0
+  offline_tiles: ^0.4.0
+  routing_bloc: ^0.3.0
+  routing_engine: ^0.3.0
+  voice_guidance: ^0.3.0
 
 dev_dependencies:
   flutter_test:

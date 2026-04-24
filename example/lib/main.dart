@@ -13,6 +13,30 @@ import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';
 
+/// Local adapter mirroring lib/adapters/navigation_route_adapter.dart.
+/// The example tree has no access to that internal app path, so the
+/// extension is duplicated here verbatim — consumers of any
+/// routing_engine route must convert at this boundary before
+/// dispatching navigation events.
+extension _RouteResultToNavigation on RouteResult {
+  NavigationRoute toNavigationRoute() => NavigationRoute(
+        shape: shape,
+        maneuvers: maneuvers
+            .map((m) => NavigationManeuver(
+                  index: m.index,
+                  instruction: m.instruction,
+                  type: m.type,
+                  lengthKm: m.lengthKm,
+                  timeSeconds: m.timeSeconds,
+                  position: m.position,
+                ))
+            .toList(),
+        totalDistanceKm: totalDistanceKm,
+        totalTimeSeconds: totalTimeSeconds,
+        summary: summary,
+      );
+}
+
 const _origin = LatLng(35.1709, 136.8815);
 const _destination = LatLng(35.0700, 137.4000);
 const _toyotaCity = LatLng(35.0831, 137.1559);
@@ -384,7 +408,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     _navigationStarted = true;
     context.read<NavigationBloc>().add(
           NavigationStarted(
-            route: route,
+            route: route.toNavigationRoute(),
             destinationLabel: 'Mikawa Highlands',
           ),
         );
@@ -472,7 +496,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
       if (!mounted) {
         return;
       }
-      navBloc.add(RerouteCompleted(newRoute: _demoRoute));
+      navBloc.add(RerouteCompleted(newRoute: _demoRoute.toNavigationRoute()));
     });
   }
 

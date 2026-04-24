@@ -393,7 +393,6 @@ void main() {
       final firstCompleter = Completer<RouteResult>();
       final secondCompleter = Completer<RouteResult>();
 
-      final engine = MockRoutingEngine();
       // Override calculateRoute via a closure-based subclass.
       final slowEngine = _SlowMockRoutingEngine(
         onCall: (index) {

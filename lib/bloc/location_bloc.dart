@@ -45,7 +45,9 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     if (state.quality == LocationQuality.acquiring ||
         state.quality == LocationQuality.fix ||
         state.quality == LocationQuality.degraded ||
-        state.quality == LocationQuality.stale) return;
+        state.quality == LocationQuality.stale) {
+      return;
+    }
 
     // Cancel any stale subscription before creating a new one.
     await _positionSub?.cancel();

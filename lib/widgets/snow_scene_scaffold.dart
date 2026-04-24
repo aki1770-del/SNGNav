@@ -22,7 +22,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 import 'package:navigation_safety/navigation_safety.dart';
-import 'package:routing_engine/routing_engine.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 
 import '../adapters/navigation_route_adapter.dart';

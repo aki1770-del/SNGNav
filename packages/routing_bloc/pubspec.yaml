@@ -22,8 +22,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
-  navigation_safety:
-    path: ../navigation_safety
+  navigation_safety: ^0.5.0
   routing_engine: ^0.3.0
 
 dev_dependencies:
@@ -31,6 +30,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
+
+# Monorepo development: use local path for sibling packages. Published
+# releases resolve against pub.dev via the caret constraint above.
+dependency_overrides:
+  navigation_safety:
+    path: ../navigation_safety
 
 flutter:
   uses-material-design: true

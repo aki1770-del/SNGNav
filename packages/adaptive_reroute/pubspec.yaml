@@ -22,9 +22,14 @@ dependencies:
   driving_weather: ^0.3.0
   fleet_hazard: ^0.3.0
   routing_engine: ^0.3.0
-  route_condition_forecast:
-    path: ../route_condition_forecast
+  route_condition_forecast: ^0.1.0
 
 dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
+
+# Monorepo development: use local path for sibling packages. Published
+# releases resolve against pub.dev via the caret constraint above.
+dependency_overrides:
+  route_condition_forecast:
+    path: ../route_condition_forecast

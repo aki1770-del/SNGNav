@@ -179,11 +179,10 @@ packages:
   navigation_safety:
     dependency: "direct main"
     description:
-      name: navigation_safety
-      sha256: "70585a981b7e3b74470a1af827e21995d44a953496fb2711551b87e1e4a475de"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.3.0"
+      path: "../../navigation_safety"
+      relative: true
+    source: path
+    version: "0.5.0"
   nested:
     dependency: transitive
     description:

@@ -5,6 +5,28 @@ import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';
 
+/// Local adapter mirroring lib/adapters/navigation_route_adapter.dart.
+/// See that file for rationale; the production adapter is internal to
+/// the main app and not exported from any package public barrel.
+extension _RouteResultToNavigation on RouteResult {
+  NavigationRoute toNavigationRoute() => NavigationRoute(
+        shape: shape,
+        maneuvers: maneuvers
+            .map((m) => NavigationManeuver(
+                  index: m.index,
+                  instruction: m.instruction,
+                  type: m.type,
+                  lengthKm: m.lengthKm,
+                  timeSeconds: m.timeSeconds,
+                  position: m.position,
+                ))
+            .toList(),
+        totalDistanceKm: totalDistanceKm,
+        totalTimeSeconds: totalTimeSeconds,
+        summary: summary,
+      );
+}
+
 final _exampleRoute = RouteResult(
   shape: const [LatLng(35.1709, 136.9066), LatLng(34.9551, 137.1771)],
   maneuvers: const [
@@ -54,7 +76,7 @@ class VoiceGuidanceExampleApp extends StatelessWidget {
         providers: [
           BlocProvider(
             create: (_) => NavigationBloc()
-              ..add(NavigationStarted(route: _exampleRoute)),
+              ..add(NavigationStarted(route: _exampleRoute.toNavigationRoute())),
           ),
         ],
         child: const _ExampleScreen(),
