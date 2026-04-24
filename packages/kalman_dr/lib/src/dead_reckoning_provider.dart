@@ -24,6 +24,27 @@ import 'geo_position.dart';
 import 'kalman_filter.dart';
 import 'location_provider.dart';
 
+/// Thrown when dead reckoning exceeds its accuracy safety cap.
+///
+/// Emitted via the positions stream's error channel (not by being thrown
+/// from any public API) at the moment DR stops extrapolating. Consumers
+/// should treat this as the "position unavailable" terminal signal
+/// promised by the library docstring — the stream intentionally stops
+/// emitting new positions after this error, per ASIL-QM display-only
+/// safety boundary.
+class DeadReckoningAccuracyExceededException implements Exception {
+  /// Human-readable description of the trip reason (mode + cap).
+  final String message;
+
+  const DeadReckoningAccuracyExceededException([
+    this.message = 'Dead reckoning accuracy exceeded safety cap',
+  ]);
+
+  @override
+  String toString() =>
+      'DeadReckoningAccuracyExceededException: $message';
+}
+
 /// Dead reckoning mode selection.
 enum DeadReckoningMode {
   /// Linear extrapolation (constant velocity, constant heading).
@@ -268,6 +289,13 @@ class DeadReckoningProvider implements LocationProvider {
     _drTimer?.cancel(); // guard against double-start
     _emitDrPosition();
 
+    // If the first emission already tripped the accuracy cap,
+    // _emitDrPosition will have called _stopDr() synchronously and
+    // flipped _isDrActive back to false. Skip installing a periodic
+    // timer in that case — otherwise it would keep firing, re-tripping,
+    // and re-emitting the terminal error on every tick.
+    if (!_isDrActive) return;
+
     _drTimer = Timer.periodic(extrapolationInterval, (_) {
       _emitDrPosition();
     });
@@ -289,7 +317,21 @@ class DeadReckoningProvider implements LocationProvider {
     _lastState = _lastState!.predict(extrapolationInterval);
     final now = DateTime.now();
 
-    if (_lastState!.accuracyAt(now) > DeadReckoningState.maxAccuracy) {
+    final estimatedAccuracy = _lastState!.accuracyAt(now);
+    if (estimatedAccuracy > DeadReckoningState.maxAccuracy) {
+      // Terminal signal: emit "position unavailable" via stream error
+      // before stopping the timer. Without this, downstream consumers
+      // (e.g. LocationBloc) whose staleness watchdog is suppressed
+      // while state.isDeadReckoning is true would never observe the
+      // transition out of DR and could sit on a frozen last-known
+      // position indefinitely.
+      _controller?.addError(
+        DeadReckoningAccuracyExceededException(
+          'Linear DR estimated accuracy '
+          '${estimatedAccuracy.toStringAsFixed(1)}m exceeded '
+          '${DeadReckoningState.maxAccuracy.toStringAsFixed(0)}m safety cap',
+        ),
+      );
       _stopDr();
       return;
     }
@@ -303,6 +345,14 @@ class DeadReckoningProvider implements LocationProvider {
     final result = kf.predict(extrapolationInterval);
 
     if (kf.isAccuracyExceeded) {
+      // Terminal signal — see _emitDrPositionLinear for the same reason.
+      _controller?.addError(
+        DeadReckoningAccuracyExceededException(
+          'Kalman DR estimated accuracy '
+          '${kf.accuracyMetres.toStringAsFixed(1)}m exceeded '
+          '${DeadReckoningState.maxAccuracy.toStringAsFixed(0)}m safety cap',
+        ),
+      );
       _stopDr();
       return;
     }

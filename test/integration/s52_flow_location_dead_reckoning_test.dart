@@ -141,14 +141,25 @@ void main() {
 
       expect(bloc.state.quality, LocationQuality.fix);
 
-        await Future<void>.delayed(const Duration(milliseconds: 180));
+      await Future<void>.delayed(const Duration(milliseconds: 180));
 
       expect(provider.isDrActive, isFalse,
-          reason: 'Kalman DR should stop immediately when uncertainty exceeds the 500m safety cap');
+          reason: 'Kalman DR should stop immediately when uncertainty '
+              'exceeds the 500m safety cap');
 
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(bloc.state.quality, LocationQuality.stale,
-          reason: 'Once DR stops emitting, the stale timer should expire');
+      // DR cap trip now emits a DeadReckoningAccuracyExceededException on
+      // the positions stream error channel (explicit terminal signal).
+      // The LocationBloc's onError handler transitions to
+      // LocationQuality.error on that event — this is the intended,
+      // explicit "position unavailable" signal per the library docstring,
+      // observed immediately instead of via stale-timer silence inference.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.quality, LocationQuality.error,
+          reason: 'DR cap trip must emit an explicit error on the stream; '
+              'LocationBloc routes it to LocationQuality.error');
+      expect(bloc.state.errorMessage ?? '',
+          contains('DeadReckoningAccuracyExceededException'),
+          reason: 'error message should identify the cap-trip cause');
 
       await bloc.close();
     });

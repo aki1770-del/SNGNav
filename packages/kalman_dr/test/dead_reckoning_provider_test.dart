@@ -374,6 +374,155 @@ void main() {
     });
   });
 
+  group('DeadReckoningProvider — accuracy cap terminal signal', () {
+    late MockLocationProvider mockGps;
+
+    setUp(() {
+      mockGps = MockLocationProvider();
+    });
+
+    // GPS fix with base accuracy just under the 500m cap so DR trips
+    // within one or two extrapolation ticks. Linear degradation is
+    // +5 m/s, so 498m + 5*0.5s = 500.5m > 500m after ~500ms elapsed.
+    final nearCapFix = GeoPosition(
+      latitude: 35.1709,
+      longitude: 136.8815,
+      accuracy: 498.0,
+      speed: 13.89, // ~50 km/h
+      heading: 0.0,
+      timestamp: _baseTime,
+    );
+
+    test(
+      'linear mode emits DeadReckoningAccuracyExceededException via stream '
+      'error when the 500m cap is exceeded',
+      () async {
+        final provider = DeadReckoningProvider(
+          inner: mockGps,
+          gpsTimeout: const Duration(milliseconds: 300),
+          extrapolationInterval: const Duration(milliseconds: 200),
+        );
+        addTearDown(provider.dispose);
+
+        await provider.start();
+
+        final errors = <Object>[];
+        final positions = <GeoPosition>[];
+        final sub = provider.positions.listen(
+          positions.add,
+          onError: errors.add,
+        );
+
+        mockGps.emitPosition(nearCapFix);
+
+        // 300ms GPS timeout + several 200ms DR ticks → accuracy crosses 500m.
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+        final capErrors = errors
+            .whereType<DeadReckoningAccuracyExceededException>()
+            .toList();
+        expect(
+          capErrors,
+          hasLength(1),
+          reason: 'expected exactly one cap-trip error; got $errors',
+        );
+        expect(capErrors.single.message, contains('Linear'));
+        expect(capErrors.single.message, contains('safety cap'));
+        expect(
+          provider.isDrActive,
+          isFalse,
+          reason: 'DR timer must be stopped after cap trip',
+        );
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'kalman mode emits DeadReckoningAccuracyExceededException via stream '
+      'error when the covariance cap is exceeded',
+      () async {
+        final provider = DeadReckoningProvider(
+          inner: mockGps,
+          mode: DeadReckoningMode.kalman,
+          gpsTimeout: const Duration(milliseconds: 300),
+          extrapolationInterval: const Duration(milliseconds: 200),
+        );
+        addTearDown(provider.dispose);
+
+        await provider.start();
+
+        final errors = <Object>[];
+        final sub = provider.positions.listen(
+          (_) {},
+          onError: errors.add,
+        );
+
+        mockGps.emitPosition(nearCapFix);
+
+        await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+        final capErrors = errors
+            .whereType<DeadReckoningAccuracyExceededException>()
+            .toList();
+        expect(
+          capErrors,
+          hasLength(1),
+          reason: 'expected exactly one cap-trip error; got $errors',
+        );
+        expect(capErrors.single.message, contains('Kalman'));
+        expect(capErrors.single.message, contains('safety cap'));
+        expect(
+          provider.isDrActive,
+          isFalse,
+          reason: 'DR timer must be stopped after cap trip',
+        );
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'regression: cap trip does NOT fire during normal GPS→DR→GPS cycle',
+      () async {
+        // When GPS returns well before the cap, no terminal error should
+        // be emitted on the stream. Guards against false-positive fires.
+        final provider = DeadReckoningProvider(
+          inner: mockGps,
+          gpsTimeout: const Duration(milliseconds: 300),
+          extrapolationInterval: const Duration(milliseconds: 200),
+        );
+        addTearDown(provider.dispose);
+
+        await provider.start();
+
+        final errors = <Object>[];
+        final sub = provider.positions.listen(
+          (_) {},
+          onError: errors.add,
+        );
+
+        // Fresh GPS fix with low accuracy (5m) — far from the cap.
+        mockGps.emitPosition(_gpsFix);
+        await Future<void>.delayed(const Duration(milliseconds: 800));
+
+        // GPS returns before any cap issue.
+        mockGps.emitPosition(_gpsFixUpdated);
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+
+        final capErrors =
+            errors.whereType<DeadReckoningAccuracyExceededException>();
+        expect(
+          capErrors,
+          isEmpty,
+          reason: 'cap-trip error fired during normal GPS recovery',
+        );
+
+        await sub.cancel();
+      },
+    );
+  });
+
   group('DeadReckoningProvider — error handling', () {
     late MockLocationProvider mockGps;
     late DeadReckoningProvider provider;
