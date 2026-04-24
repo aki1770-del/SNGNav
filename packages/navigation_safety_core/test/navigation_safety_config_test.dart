@@ -1,8 +1,8 @@
 /// NavigationSafetyConfig unit tests.
 library;
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:navigation_safety/navigation_safety_core.dart';
+import 'package:test/test.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 void main() {
   group('NavigationSafetyConfig', () {

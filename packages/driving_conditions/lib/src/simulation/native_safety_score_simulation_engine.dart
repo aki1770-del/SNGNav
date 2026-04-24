@@ -4,7 +4,7 @@
 /// for higher throughput than the pure-Dart [CpuSafetyScoreSimulationEngine].
 library;
 
-import 'package:navigation_safety/navigation_safety_core.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 import '../models/road_surface_state.dart';
 import 'constant_fleet_confidence_provider.dart';

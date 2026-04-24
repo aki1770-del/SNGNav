@@ -20,10 +20,16 @@ dependencies:
   equatable: ^2.0.7
   driving_weather: ^0.3.0
   fleet_hazard: ^0.3.0
-  navigation_safety: ^0.3.0
+  navigation_safety_core: ^0.1.0
   snow_rendering: ^0.1.0
 
 dev_dependencies:
   latlong2: ^0.9.1
   test: ^1.25.0
   lints: ^5.1.1
+
+# Monorepo development: resolve sibling package locally; published
+# releases resolve against pub.dev via the caret constraint above.
+dependency_overrides:
+  navigation_safety_core:
+    path: ../navigation_safety_core

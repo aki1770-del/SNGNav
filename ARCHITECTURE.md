@@ -103,7 +103,8 @@ libraries where appropriate.
 | `driving_conditions` | Pure Dart | Road surface classification, grip factors, simulation |
 | `driving_consent` | Pure Dart | Per-purpose, per-jurisdiction consent model with deny-by-default semantics |
 | `fleet_hazard` | Pure Dart | Hazard reports, clustering, temporal decay |
-| `navigation_safety` | Flutter + BLoC | Safety boundaries, overlays, session-level alerts |
+| `navigation_safety_core` | Pure Dart | Safety vocabulary: severity, score, threshold config, route, scenario (extracted in `navigation_safety` 0.6.0 so pure-Dart consumers like `driving_conditions` don't pull Flutter transitively) |
+| `navigation_safety` | Flutter + BLoC | Safety boundaries, overlays, session-level alerts (re-exports `navigation_safety_core` for back-compat) |
 | `map_viewport_bloc` | Flutter + BLoC | Map camera and viewport state |
 | `offline_tiles` | Pure Dart | MBTiles-backed offline tile management |
 | `voice_guidance` | Flutter + Dart | Engine-agnostic turn-by-turn and hazard speech |
@@ -284,6 +285,7 @@ demonstrates composition:
 
 ```text
 packages/
+  adaptive_reroute/
   driving_conditions/
   driving_consent/
   driving_weather/
@@ -291,9 +293,12 @@ packages/
   kalman_dr/
   map_viewport_bloc/
   navigation_safety/
+  navigation_safety_core/
   offline_tiles/
+  route_condition_forecast/
   routing_bloc/
   routing_engine/
+  snow_rendering/
   voice_guidance/
 
 example/

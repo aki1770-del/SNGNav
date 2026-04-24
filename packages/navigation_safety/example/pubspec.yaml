@@ -17,5 +17,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+# Monorepo development: navigation_safety transitively pulls
+# navigation_safety_core; resolve it locally too.
+dependency_overrides:
+  navigation_safety_core:
+    path: ../../navigation_safety_core
+
 flutter:
   uses-material-design: true

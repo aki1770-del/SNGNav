@@ -67,6 +67,8 @@ dependency_overrides:
     path: packages/fleet_hazard
   navigation_safety:
     path: packages/navigation_safety
+  navigation_safety_core:
+    path: packages/navigation_safety_core
   map_viewport_bloc:
     path: packages/map_viewport_bloc
   routing_bloc:

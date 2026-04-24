@@ -41,6 +41,8 @@ dependency_overrides:
     path: ../packages/map_viewport_bloc
   navigation_safety:
     path: ../packages/navigation_safety
+  navigation_safety_core:
+    path: ../packages/navigation_safety_core
   offline_tiles:
     path: ../packages/offline_tiles
   routing_bloc:

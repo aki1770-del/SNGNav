@@ -14,7 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/navigation_bloc.dart';
 import '../bloc/navigation_event.dart';
 import '../bloc/navigation_state.dart';
-import '../models/alert_severity.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 class SafetyOverlay extends StatelessWidget {
   const SafetyOverlay({super.key});
