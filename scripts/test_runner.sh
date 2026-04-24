@@ -83,7 +83,8 @@ FLUTTER_EXTRA=()
 # These packages have NO flutter: sdk dependency and NO dart:ui imports.
 # dart test uses per-file VM JIT — no /tmp kernel files, no flutter_build dir.
 # Verified: adaptive_reroute, driving_conditions, driving_consent, driving_weather,
-#           fleet_hazard, kalman_dr, route_condition_forecast, routing_engine, snow_rendering
+#           fleet_hazard, kalman_dr, navigation_safety_core, route_condition_forecast,
+#           routing_engine, snow_rendering
 DART_PACKAGES=(
   adaptive_reroute
   driving_conditions
@@ -91,6 +92,7 @@ DART_PACKAGES=(
   driving_weather
   fleet_hazard
   kalman_dr
+  navigation_safety_core
   route_condition_forecast
   routing_engine
   snow_rendering

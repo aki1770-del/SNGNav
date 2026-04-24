@@ -36,6 +36,8 @@ dev_dependencies:
 dependency_overrides:
   navigation_safety:
     path: ../navigation_safety
+  navigation_safety_core:
+    path: ../navigation_safety_core
 
 flutter:
   uses-material-design: true

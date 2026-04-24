@@ -2,7 +2,7 @@
 library;
 
 import 'package:equatable/equatable.dart';
-import 'package:navigation_safety/navigation_safety_core.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 /// The full output of a [SafetyScoreSimulationEngine.simulate] call.
 ///

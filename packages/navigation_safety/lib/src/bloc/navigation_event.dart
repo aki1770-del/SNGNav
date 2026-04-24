@@ -3,9 +3,9 @@ library;
 
 import 'package:equatable/equatable.dart';
 
-import '../models/alert_severity.dart';
-import '../models/navigation_route.dart';
-import '../models/safety_scenario.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
+
+
 
 sealed class NavigationEvent extends Equatable {
   const NavigationEvent();

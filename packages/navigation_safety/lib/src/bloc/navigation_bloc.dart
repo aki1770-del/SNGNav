@@ -4,7 +4,7 @@ library;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../models/alert_severity.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'navigation_event.dart';
 import 'navigation_state.dart';
 
