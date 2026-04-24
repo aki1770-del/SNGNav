@@ -10,9 +10,9 @@
 # What this script does:
 #   1. Installs system packages (clang, cmake, ninja, GTK3, SQLite)
 #   2. Checks Flutter is installed and on PATH
-#   3. Runs flutter pub get
-#   4. Runs flutter analyze (zero errors expected)
-#   5. Runs flutter test
+#   3. Runs flutter pub get for the root app and every monorepo sibling package
+#   4. Runs flutter analyze (zero errors/warnings expected; infos non-fatal)
+#   5. Runs the disk-bounded monorepo test runner (scripts/test_runner.sh)
 #   6. Builds the release binary
 #   7. Reports results
 
@@ -62,28 +62,32 @@ FLUTTER_VERSION=$(flutter --version | head -1)
 echo "  $FLUTTER_VERSION"
 echo -e "${GREEN}[2/6] Flutter found.${NC}"
 
-# Step 3: Dependencies
+# Step 3: Dependencies (root app + all monorepo sibling packages)
 echo -e "${YELLOW}[3/6] Getting dependencies...${NC}"
+echo "  root app..."
 flutter pub get
-(cd packages/kalman_dr && dart pub get)
-(cd packages/routing_engine && dart pub get)
-echo -e "${GREEN}[3/6] Dependencies resolved.${NC}"
+for pkg in packages/*/; do
+  pkg_name=$(basename "$pkg")
+  echo "  packages/$pkg_name..."
+  (cd "$pkg" && flutter pub get)
+done
+echo -e "${GREEN}[3/6] Dependencies resolved (root + $(ls -d packages/*/ | wc -l) packages).${NC}"
 
-# Step 4: Analysis
+# Step 4: Analysis (set -e safe via if/else; --no-fatal-infos matches CI)
 echo -e "${YELLOW}[4/6] Running static analysis...${NC}"
-ANALYZE_OUTPUT=$(flutter analyze --no-fatal-infos 2>&1)
-ANALYZE_EXIT=$?
-if [ $ANALYZE_EXIT -eq 0 ]; then
-  echo -e "${GREEN}[4/6] Analysis clean — zero issues.${NC}"
+if flutter analyze --no-fatal-infos; then
+  echo -e "${GREEN}[4/6] Analysis clean — zero errors and warnings.${NC}"
 else
-  echo "$ANALYZE_OUTPUT"
-  echo -e "${YELLOW}[4/6] Analysis found issues (non-fatal).${NC}"
+  echo -e "${YELLOW}[4/6] Analysis found issues — see output above (non-fatal).${NC}"
 fi
 
-# Step 5: Tests
-echo -e "${YELLOW}[5/6] Running tests...${NC}"
+# Step 5: Tests — delegate to the disk-bounded monorepo runner so all
+# 14 sibling packages plus the root app are exercised. Under set -e a
+# non-zero exit aborts setup, which is correct: fresh-clone bring-up
+# should fail loudly when the monorepo isn't green.
+echo -e "${YELLOW}[5/6] Running tests (scripts/test_runner.sh)...${NC}"
 TEST_START=$(date +%s)
-flutter test --exclude-tags=probe 2>&1 | tail -3
+./scripts/test_runner.sh
 TEST_END=$(date +%s)
 TEST_DURATION=$((TEST_END - TEST_START))
 echo -e "${GREEN}[5/6] Tests completed in ${TEST_DURATION}s.${NC}"
