@@ -91,6 +91,12 @@ class DeadReckoningProvider implements LocationProvider {
 
   @override
   Future<void> start() async {
+    // Stop any in-progress DR and cancel watchdog before re-initializing.
+    // Prevents double-start from leaking a second DR timer or corrupting
+    // Kalman state while the old timer keeps calling predict().
+    _stopDr();
+    _cancelGpsWatchdog();
+
     _controller ??= StreamController<GeoPosition>.broadcast();
     _isDrActive = false;
     _lastState = null;
@@ -238,6 +244,10 @@ class DeadReckoningProvider implements LocationProvider {
   }
 
   void _onGpsTimeout() {
+    // Guard: do not re-enter _startDr() if DR is already running.
+    // Without this, a stale watchdog firing mid-DR resets Kalman state.
+    if (_isDrActive) return;
+
     if (mode == DeadReckoningMode.kalman) {
       // Kalman mode: filter must be initialised.
       if (_kalman == null || !_kalman!.isInitialized) return;

@@ -369,8 +369,14 @@ class KalmanFilter {
       ]);
 
   /// Create diagonal covariance from GPS accuracy (metres).
+  ///
+  /// [accuracyMetres] must be positive. Zero or negative accuracy produces a
+  /// zero-covariance matrix, causing the filter to reject all future
+  /// measurements (infinite Kalman gain trust in a zero-noise GPS).
   static Mat4 _diagFromAccuracy(double accuracyMetres) {
-    final accDeg = accuracyMetres / _metresPerDegreeLat;
+    // Floor to 1m — prevents zero/negative covariance from degenerate input.
+    final safeAccuracy = accuracyMetres < 1.0 ? 1.0 : accuracyMetres;
+    final accDeg = safeAccuracy / _metresPerDegreeLat;
     return _diag([
       accDeg * accDeg, // lat variance
       accDeg * accDeg, // lon variance
