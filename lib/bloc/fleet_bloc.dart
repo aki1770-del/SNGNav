@@ -51,11 +51,11 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     emit(state.copyWith(status: FleetStatus.listening));
 
     try {
-      await _provider.startListening();
       _reportSub = _provider.reports.listen(
         (report) => add(FleetReportReceived(report)),
         onError: (Object e) => add(FleetErrorOccurred(e.toString())),
       );
+      await _provider.startListening();
     } catch (e) {
       emit(FleetState(
         status: FleetStatus.error,
@@ -87,7 +87,8 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     updated[event.report.vehicleId] = event.report;
 
     // Prune reports older than _reportMaxAge.
-    final now = DateTime.now();
+    // Use UTC for comparison — report.timestamp arrives as UTC.
+    final now = DateTime.now().toUtc();
     updated.removeWhere((_, report) =>
         now.difference(report.timestamp) > _reportMaxAge);
 

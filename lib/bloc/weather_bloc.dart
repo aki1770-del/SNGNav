@@ -26,6 +26,10 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   final WeatherProvider _provider;
 
   StreamSubscription<dynamic>? _conditionSub;
+  // Guards the async gap between the isMonitoring check and the state emit.
+  // Without this, two concurrent WeatherMonitorStarted events can both pass
+  // the isMonitoring guard before either emits.
+  bool _startingUp = false;
 
   WeatherBloc({
     required WeatherProvider provider,
@@ -41,7 +45,8 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     WeatherMonitorStarted event,
     Emitter<WeatherState> emit,
   ) async {
-    if (state.isMonitoring) return;
+    if (state.isMonitoring || _startingUp) return;
+    _startingUp = true;
 
     // Cancel any previous subscription before starting a new one
     // (guards against retry after error state without an intervening stop).
@@ -51,16 +56,18 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     emit(state.copyWith(status: WeatherStatus.monitoring));
 
     try {
-      await _provider.startMonitoring();
       _conditionSub = _provider.conditions.listen(
         (condition) => add(WeatherConditionReceived(condition)),
         onError: (Object e) => add(WeatherErrorOccurred(e.toString())),
       );
+      await _provider.startMonitoring();
     } catch (e) {
       emit(WeatherState(
         status: WeatherStatus.error,
         errorMessage: e.toString(),
       ));
+    } finally {
+      _startingUp = false;
     }
   }
 

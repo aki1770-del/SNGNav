@@ -54,11 +54,11 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     emit(const LocationState.acquiring());
 
     try {
-      await _provider.start();
       _positionSub = _provider.positions.listen(
         (pos) => add(LocationPositionReceived(pos)),
         onError: (Object e) => add(LocationErrorOccurred(e.toString())),
       );
+      await _provider.start();
     } catch (e) {
       emit(LocationState(
         quality: LocationQuality.error,
@@ -115,7 +115,11 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     Emitter<LocationState> emit,
   ) {
     // Dead reckoning is actively estimating position — not stale.
-    if (state.isDeadReckoning) return;
+    // Rearm the watchdog so it keeps firing during DR.
+    if (state.isDeadReckoning) {
+      _resetStaleTimer();
+      return;
+    }
     // Only transition to stale if we had a fix or degraded state.
     if (state.quality == LocationQuality.fix ||
         state.quality == LocationQuality.degraded) {
