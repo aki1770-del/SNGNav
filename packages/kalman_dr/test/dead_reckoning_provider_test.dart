@@ -718,6 +718,40 @@ void main() {
 
       await sub.cancel();
     });
+
+    test('GPS fix with double.infinity heading does not corrupt filter', () async {
+      await provider.start();
+
+      final positions = <GeoPosition>[];
+      final sub = provider.positions.listen(positions.add);
+
+      // Seed the Kalman filter with a normal fix.
+      mockGps.emitPosition(_gpsFix);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final headingAfterSeed = provider.kalmanFilter!.state.heading;
+
+      // Now feed a GPS fix with infinity heading (sensor-error pattern).
+      mockGps.emitPosition(GeoPosition(
+        latitude: _gpsFix.latitude,
+        longitude: _gpsFix.longitude,
+        speed: _gpsFix.speed,
+        heading: double.infinity,
+        accuracy: _gpsFix.accuracy,
+        timestamp: _gpsFix.timestamp.add(const Duration(seconds: 1)),
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Filter heading must remain finite (the isFinite guard rejected the
+      // infinity fix and skipped the filter update; previous valid state
+      // preserved).
+      final headingAfterInfinity = provider.kalmanFilter!.state.heading;
+      expect(headingAfterInfinity.isFinite, isTrue,
+          reason: 'Kalman heading state must not absorb double.infinity');
+      expect(headingAfterInfinity, closeTo(headingAfterSeed, 1.0),
+          reason: 'heading should be unchanged when infinity fix is rejected');
+
+      await sub.cancel();
+    });
   });
 
   group('DeadReckoningProvider — Kalman mode DR', () {
