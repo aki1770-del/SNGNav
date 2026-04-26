@@ -217,8 +217,10 @@ class DeadReckoningProvider implements LocationProvider {
   void _onGpsPositionKalman(GeoPosition pos) {
     final kf = _kalman!;
 
-    // Feed GPS fix into Kalman filter.
-    if (!pos.speed.isNaN && !pos.heading.isNaN && pos.speed >= 0) {
+    // Feed GPS fix into Kalman filter. `isFinite` guards against both NaN
+    // and ±infinity — without it a stale or sensor-error GPS could push
+    // double.infinity into the filter and corrupt subsequent state.
+    if (pos.speed.isFinite && pos.heading.isFinite && pos.speed >= 0) {
       kf.update(
         lat: pos.latitude,
         lon: pos.longitude,
