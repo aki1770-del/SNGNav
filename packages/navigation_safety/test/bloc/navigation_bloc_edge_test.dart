@@ -107,7 +107,7 @@ void main() {
       build: NavigationBloc.new,
       seed: () => const NavigationState.idle(),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -119,7 +119,7 @@ void main() {
         currentManeuverIndex: 2,
       ),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -129,7 +129,7 @@ void main() {
         status: NavigationStatus.navigating,
       ),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
   });
 
@@ -165,7 +165,7 @@ void main() {
         message: 'Light rain ahead',
         severity: AlertSeverity.info,
       )),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -197,7 +197,7 @@ void main() {
         alertDismissible: false,
       ),
       act: (bloc) => bloc.add(const SafetyAlertDismissed()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -227,7 +227,7 @@ void main() {
         route: _route,
       ),
       act: (bloc) => bloc.add(const RouteDeviationDetected()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -235,7 +235,7 @@ void main() {
       build: NavigationBloc.new,
       seed: () => const NavigationState.idle(),
       act: (bloc) => bloc.add(const RouteDeviationDetected()),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
@@ -247,7 +247,7 @@ void main() {
       ),
       act: (bloc) =>
           bloc.add(RerouteCompleted(newRoute: _secondRoute)),
-      expect: () => [],
+      expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(

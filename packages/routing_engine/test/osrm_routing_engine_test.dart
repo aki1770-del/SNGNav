@@ -305,7 +305,7 @@ void main() {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
         client: MockClient((_) async => http.Response(
-              jsonEncode({'code': 'Ok', 'routes': []}),
+              jsonEncode({'code': 'Ok', 'routes': <dynamic>[]}),
               200,
             )),
       );

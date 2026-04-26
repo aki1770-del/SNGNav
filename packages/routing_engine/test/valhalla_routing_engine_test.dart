@@ -439,7 +439,7 @@ void main() {
               jsonEncode({
                 'trip': {
                   'summary': {'length': 0, 'time': 0},
-                  'legs': [],
+                  'legs': <dynamic>[],
                 },
               }),
               200,

@@ -57,7 +57,7 @@ void main() {
       await provider.startMonitoring();
 
       // Wait for two emissions (initial + first timer tick)
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(emissions.length, greaterThanOrEqualTo(2));
       expect(emissions[1].precipType, PrecipitationType.snow);
@@ -73,7 +73,7 @@ void main() {
       await provider.startMonitoring();
 
       // Wait for all 6 phases (initial + 5 ticks at 50ms each)
-      await Future.delayed(const Duration(milliseconds: 350));
+      await Future<void>.delayed(const Duration(milliseconds: 350));
 
       expect(emissions.length, greaterThanOrEqualTo(6));
 
@@ -100,7 +100,7 @@ void main() {
       await provider.startMonitoring();
 
       // Wait for 7 emissions (full cycle + one more)
-      await Future.delayed(const Duration(milliseconds: 400));
+      await Future<void>.delayed(const Duration(milliseconds: 400));
 
       expect(emissions.length, greaterThanOrEqualTo(7));
       // Phase 6 = Phase 0 (cycle)
@@ -114,11 +114,11 @@ void main() {
       final sub = provider.conditions.listen(emissions.add);
       await provider.startMonitoring();
 
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       final countBeforeStop = emissions.length;
 
       await provider.stopMonitoring();
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // No new emissions after stop
       expect(emissions.length, countBeforeStop);
@@ -131,11 +131,11 @@ void main() {
       await provider.startMonitoring();
       final sub = provider.conditions.listen(emissions.add);
 
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
       final countBeforeDispose = emissions.length;
 
       provider.dispose();
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // No new emissions after dispose
       expect(emissions.length, countBeforeDispose);
@@ -148,7 +148,7 @@ void main() {
       final sub = provider.conditions.listen(emissions.add);
       await provider.startMonitoring();
 
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
 
       expect(emissions.length, greaterThanOrEqualTo(4));
       expect(emissions[3].isHazardous, true);
@@ -163,7 +163,7 @@ void main() {
       final sub = provider.conditions.listen(emissions.add);
       await provider.startMonitoring();
 
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
 
       expect(emissions.length, greaterThanOrEqualTo(5));
       expect(emissions[4].iceRisk, true);
@@ -183,11 +183,11 @@ void main() {
       await provider.startMonitoring();
 
       // After 150ms, only the initial emission should have fired
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(emissions.length, 1);
 
       // After 350ms total, 2 emissions (initial + 1 tick)
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
       expect(emissions.length, 2);
 
       await sub.cancel();
