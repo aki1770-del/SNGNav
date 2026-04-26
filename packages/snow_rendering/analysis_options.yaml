@@ -1,4 +1,4 @@
-include: package:lints/recommended.yaml
+
 
 # Strict-mode flags (per SNGNav review 2026-04-25 P2 finding #12).
 # V14 protection for future contributions; codebase currently strict-clean.
