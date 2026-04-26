@@ -3,12 +3,20 @@
 set -u
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGES=(
-  "navigation_safety"
-  "map_viewport_bloc"
-  "routing_bloc"
-  "offline_tiles"
-)
+
+# Enumerate packages dynamically so additions to packages/ auto-cover.
+# Per SNGNav review 2026-04-25 P1 finding: hardcoded list silently missed
+# 11 of 15 packages. Dynamic enumeration is V14-aligned (no silent drift
+# when the monorepo grows). Packages with `publish_to: none` are skipped
+# (none today; the filter exists for future intentional non-publish entries).
+PACKAGES=()
+while IFS= read -r pkg_dir; do
+  pkg_name="$(basename "$pkg_dir")"
+  if grep -qE "^publish_to:[[:space:]]*none[[:space:]]*$" "$pkg_dir/pubspec.yaml" 2>/dev/null; then
+    continue
+  fi
+  PACKAGES+=("$pkg_name")
+done < <(find "$ROOT_DIR/packages" -mindepth 1 -maxdepth 1 -type d | sort)
 
 RUN_LOCAL=1
 RUN_APP=1
