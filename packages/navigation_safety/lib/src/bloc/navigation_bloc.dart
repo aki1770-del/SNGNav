@@ -10,14 +10,14 @@ import 'navigation_state.dart';
 
 /// Returns true if [incoming] severity should replace [current].
 /// Prevents alert downgrade: lower severity never replaces higher.
+///
+/// Uses `.index` for ordering. The semantics rely on enum declaration
+/// order in `AlertSeverity` (info < warning < critical) and are locked
+/// by `severity_ordering_lock_test.dart`. Adding or reordering enum
+/// values requires updating that test deliberately.
 bool _canUpdateSeverity(AlertSeverity incoming, AlertSeverity? current) {
   if (current == null) return true;
-  const order = {
-    AlertSeverity.info: 0,
-    AlertSeverity.warning: 1,
-    AlertSeverity.critical: 2,
-  };
-  return order[incoming]! >= order[current]!;
+  return incoming.index >= current.index;
 }
 
 class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
