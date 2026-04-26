@@ -24,6 +24,26 @@ This document shows what has been built, what is in progress, and what comes nex
 - **Package integration patterns** — documented cross-package BLoC composition, provider override, and testing recipes
 - **GeoClue hardening** — fault-tolerant location provider with graceful offline fallback
 
+### Current State (April 2026)
+
+- **15-package monorepo** — grew from 11 to 15 since March 2026 (added: `adaptive_reroute`, `route_condition_forecast`, `snow_rendering`, `navigation_safety_core`)
+- **~1625 tests** passing across root and all 15 package suites (count drifts as the suite grows; per the 2026-04-25 review P2 finding, a future PR will replace the hardcoded number with a CI-generated badge)
+- **Package versions** — independent per package, no longer harmonized at a single version:
+
+  | Package | Version | Package | Version |
+  |---|---|---|---|
+  | `kalman_dr` | 0.3.0 | `routing_engine` | 0.3.0 |
+  | `driving_conditions` | 0.5.0 | `routing_bloc` | 0.3.0 |
+  | `driving_consent` | 0.3.0 | `map_viewport_bloc` | 0.3.0 |
+  | `driving_weather` | 0.3.0 | `voice_guidance` | 0.3.0 |
+  | `fleet_hazard` | 0.3.0 | `offline_tiles` | 0.4.0 |
+  | `navigation_safety` | 0.6.0 | `navigation_safety_core` | 0.1.0 |
+  | `adaptive_reroute` | 0.1.0 | `snow_rendering` | 0.1.0 |
+  | `route_condition_forecast` | 0.1.0 | | |
+
+- **App version**: 0.4.0
+- **CI**: 3-job matrix (Analyze + Test + Build Linux), Flutter pinned to 3.41.4 (per OPS-RULE-042 governance)
+
 ### Documentation
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — package composition, provider chain, BLoC event flow

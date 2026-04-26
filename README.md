@@ -17,11 +17,11 @@ Latest article: [1005 Tests, Zero AI: Building Offline-First Navigation with Flu
 Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
 ```
-Status:   v0.6.0
-Tests:    1627 passing (root + all package suites)
-Platform: Linux desktop (Flutter 3.11.0)
+Status:   v0.6.0 (latest release tag)
+Tests:    ~1625 passing (root + all 15 package suites; count drifts as suite grows)
+Platform: Linux desktop (Flutter 3.41.4 pinned in CI; SDK constraint ^3.11.0)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 11 packages, all at 0.3.0 on pub.dev
+Ecosystem: 15 packages on pub.dev, independent versions (see ROADMAP.md Current State for table)
 ```
 
 ## Why "Snow Guard"?
