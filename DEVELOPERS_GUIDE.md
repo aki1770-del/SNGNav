@@ -60,11 +60,13 @@ describe how we built them — it shows you how *you* build with them.
 
 ## §2 Architecture Overview
 
-### The 10-Package Ecosystem
+### The 15-Package Ecosystem
 
 SNGNav's architecture is a set of independently usable packages organized
-by domain. Six are pure Dart (no Flutter dependency). Four are Flutter
-packages that expose pure Dart `_core` libraries for non-Flutter reuse.
+by domain. Ten are pure Dart (no Flutter dependency). Five are Flutter
+packages — four expose pure Dart `_core` libraries for non-Flutter reuse;
+the fifth (`voice_guidance`) is Flutter-only because it integrates a
+platform TTS plugin.
 
 #### Pure Dart Packages (use anywhere — CLI, server, test harness, Flutter)
 
@@ -76,15 +78,20 @@ packages that expose pure Dart `_core` libraries for non-Flutter reuse.
 | `driving_consent` | Consent | Consent lifecycle — record, revoke, query |
 | `fleet_hazard` | Fleet | Fleet reports → hazard zone clustering |
 | `driving_conditions` | Safety | Road surface, visibility, Monte Carlo simulation |
+| `navigation_safety_core` | Safety | Pure Dart core extracted from `navigation_safety` (SafetyScore + AlertSeverity models) |
+| `adaptive_reroute` | Routing | Adaptive reroute decision logic |
+| `route_condition_forecast` | Routing | Route-aligned weather + condition forecasting |
+| `snow_rendering` | Visualization | Snow/precipitation render-state model |
 
-#### Flutter + `_core` Packages (Flutter BLoCs + pure Dart core)
+#### Flutter Packages (Flutter BLoCs / widgets / platform plugins)
 
 | Package | Domain | What it manages |
 |---------|--------|----------------|
-| `navigation_safety` | Safety UI | Safety session BLoC + SafetyScore model |
+| `navigation_safety` | Safety UI | Safety session BLoC + SafetyScore widgets (uses `navigation_safety_core`) |
 | `map_viewport_bloc` | Viewport | Camera modes, layer visibility, fit-to-bounds |
 | `routing_bloc` | Routing UI | Route lifecycle BLoC + progress display |
 | `offline_tiles` | Tiles | Offline tile manager + runtime resolver |
+| `voice_guidance` | Voice UI | Flutter TTS integration for turn announcements + hazard warnings |
 
 ### Dependency Graph
 
@@ -153,15 +160,16 @@ You need only Dart — no Flutter required.
 ### Step 1: Add the packages
 
 ```yaml
-# pubspec.yaml
+# pubspec.yaml — versions current as of April 2026; check pub.dev for latest
 dependencies:
-  driving_conditions: ^0.1.0
-  kalman_dr: ^0.1.0
-  navigation_safety: ^0.1.0
-  driving_weather: ^0.1.0
-  driving_consent: ^0.1.0
-  fleet_hazard: ^0.1.0
-  routing_engine: ^0.1.0
+  driving_conditions: ^0.5.0
+  kalman_dr: ^0.3.0
+  navigation_safety: ^0.6.0           # Flutter UI (or use navigation_safety_core for Pure Dart)
+  navigation_safety_core: ^0.1.0      # Pure Dart core (SafetyScore + AlertSeverity)
+  driving_weather: ^0.3.0
+  driving_consent: ^0.3.0
+  fleet_hazard: ^0.3.0
+  routing_engine: ^0.3.0
 ```
 
 ### Step 2: Compute a safety score
