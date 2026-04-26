@@ -30,6 +30,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.4'
 
       - name: Resolve dependencies
         run: |
@@ -50,6 +51,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.4'
 
       - name: Resolve dependencies
         run: |
@@ -119,6 +121,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.41.4'
 
       - name: Resolve dependencies
         run: |
