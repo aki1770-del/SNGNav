@@ -9,6 +9,20 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# Strict-casts (per SNGNav review 2026-04-25 P2 finding #12):
+# Surface unchecked dynamic casts at analyze-time rather than letting
+# them rot into runtime bugs. The review specifically called out
+# unchecked JSON casts in routing engines; this flag catches that class.
+# The codebase is currently strict-casts-clean.
+#
+# strict-inference + strict-raw-types are deliberately NOT enabled here
+# yet: they would surface ~55 mechanical fixes in test/ files (Future<void>
+# .delayed(), explicit collection-literal types, etc.). Queued for a
+# follow-up PR that does the test-fixture cleanup first.
+analyzer:
+  language:
+    strict-casts: true
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
