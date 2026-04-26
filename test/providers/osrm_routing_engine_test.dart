@@ -306,7 +306,7 @@ void main() {
 
       test('throws RoutingException on empty routes array', () async {
         final engine = OsrmRoutingEngine(
-          client: _mockClient({'code': 'Ok', 'routes': []}),
+          client: _mockClient({'code': 'Ok', 'routes': <dynamic>[]}),
         );
 
         expect(

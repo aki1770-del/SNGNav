@@ -277,7 +277,7 @@ void main() {
         await provider.startMonitoring();
 
         // Wait for initial + 2 poll cycles.
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         expect(fetchCount, greaterThanOrEqualTo(2));
         expect(emissions.length, greaterThanOrEqualTo(2));
@@ -312,7 +312,7 @@ void main() {
         await provider.startMonitoring();
 
         // Wait for initial success + at least one failed poll.
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         // Should have at least 2 emissions (first real, then fallback).
         expect(emissions.length, greaterThanOrEqualTo(2));
@@ -341,7 +341,7 @@ void main() {
         await provider.startMonitoring();
 
         // Wait a bit — should emit nothing.
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         expect(emissions, isEmpty);
 
@@ -369,11 +369,11 @@ void main() {
         await provider.startMonitoring();
 
         // Wait for initial fetch.
-        await Future.delayed(const Duration(milliseconds: 30));
+        await Future<void>.delayed(const Duration(milliseconds: 30));
         final countAfterStart = fetchCount;
 
         await provider.stopMonitoring();
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
         // No additional fetches after stop.
         expect(fetchCount, countAfterStart);

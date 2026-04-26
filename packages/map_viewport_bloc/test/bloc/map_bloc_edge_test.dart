@@ -23,7 +23,7 @@ void main() {
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.baseTile, visible: false),
       ),
-      expect: () => [],
+      expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
@@ -37,7 +37,7 @@ void main() {
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.safety, visible: false),
       ),
-      expect: () => [],
+      expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
@@ -56,7 +56,7 @@ void main() {
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.route, visible: true),
       ),
-      expect: () => [],
+      expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
@@ -71,7 +71,7 @@ void main() {
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.weather, visible: false),
       ),
-      expect: () => [],
+      expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
@@ -149,7 +149,7 @@ void main() {
         bloc.add(const UserPanDetected());
         bloc.add(const UserPanDetected());
       },
-      expect: () => [],
+      expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
@@ -162,7 +162,7 @@ void main() {
         cameraMode: CameraMode.follow,
       ),
       act: (bloc) => bloc.add(const FreeLookTimeoutElapsed()),
-      expect: () => [],
+      expect: () => <MapState>[],
     );
   });
 

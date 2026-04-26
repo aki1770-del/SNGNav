@@ -445,7 +445,7 @@ void main() {
           client: _mockClient({
             'trip': {
               'summary': {'length': 0, 'time': 0},
-              'legs': [],
+              'legs': <dynamic>[],
             },
           }),
         );

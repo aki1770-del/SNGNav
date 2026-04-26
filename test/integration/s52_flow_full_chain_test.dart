@@ -141,9 +141,9 @@ void main() {
     final mapBloc = MapBloc();
     final safetyConfig = NavigationSafetyConfig();
 
-    late final StreamSubscription locationSub;
-    late final StreamSubscription routingSub;
-    late final StreamSubscription weatherSub;
+    late final StreamSubscription<dynamic> locationSub;
+    late final StreamSubscription<dynamic> routingSub;
+    late final StreamSubscription<dynamic> weatherSub;
 
     mapBloc.add(const MapInitialized(center: S52TestFixtures.nagoya, zoom: 14));
 

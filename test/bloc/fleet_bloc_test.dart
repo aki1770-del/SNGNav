@@ -460,7 +460,7 @@ void main() {
       build: () => FleetBloc(provider: _MockFleetProvider()),
       seed: () => const FleetState(status: FleetStatus.listening),
       act: (bloc) => bloc.add(const FleetListenStarted()),
-      expect: () => [],
+      expect: () => <FleetState>[],
     );
   });
 }
