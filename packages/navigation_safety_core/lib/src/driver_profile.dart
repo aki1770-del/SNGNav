@@ -63,4 +63,18 @@ enum DriverProfile {
   /// match snowZoneExperienced; the off-route semantic is a downstream
   /// extension.
   agriculturalForestry,
+
+  /// Foreign-tourist driver in an unfamiliar snow-zone (e.g. Hokkaido
+  /// rental-car visitor in winter). Combines novice-equivalent
+  /// unfamiliarity with the local conditions + likely non-winterised
+  /// rental vehicle + language-localization gaps in road signage. Defaults:
+  /// most-conservative on every dimension; warn earliest on weather +
+  /// visibility; highest score floors. Hokkaido winter accidents involve
+  /// foreign self-driving tourists at meaningful rates — the previous
+  /// 5-profile taxonomy mis-mapped this class to either snowZoneExperienced
+  /// (catastrophically wrong — they have neither experience nor local
+  /// equipment) or noviceUrban (location-wrong). This profile closes that
+  /// gap; added in 0.3.0 per published evidence and the unit's V100
+  /// equal-dignity discipline.
+  foreignTouristSnowZone,
 }

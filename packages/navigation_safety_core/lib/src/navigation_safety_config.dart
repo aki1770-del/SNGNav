@@ -31,15 +31,23 @@ class NavigationSafetyConfig extends Equatable {
   factory NavigationSafetyConfig.forProfile(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.ageingRural:
-        // More conservative: warn earlier on weather + visibility;
-        // require higher score for "safe". 70+ drivers have slower
-        // reaction time + may be EV-novice; the loom shifts caution.
+        // 0.3.0 calibration corrections per published literature.
+        // - infoTemperatureCelsius: 0.2.0 had 5°C; combined with
+        //   infoVisibilityMeters 1500m this fired alert-fatigue on
+        //   most autumn evenings in Hokkaido/Tohoku (V14 silent
+        //   safety failure per arxiv 2410.06388 + AAA-FTS). Lowered
+        //   to 4°C to preserve information-tier signal without
+        //   firing on routine cold autumn evenings.
+        // - warningTemperatureCelsius: 0.2.0 had 1°C; black ice
+        //   forms at road-surface ≤0°C even when ambient air is
+        //   several degrees warmer (well-documented). 1°C left no
+        //   margin above formation envelope. Raised to 2°C.
         return NavigationSafetyConfig(
           safeScoreFloor: 0.85,
           infoScoreFloor: 0.55,
           warningScoreFloor: 0.35,
-          infoTemperatureCelsius: 5,
-          warningTemperatureCelsius: 1,
+          infoTemperatureCelsius: 4,
+          warningTemperatureCelsius: 2,
           criticalTemperatureCelsius: -3,
           infoVisibilityMeters: 1500,
           warningVisibilityMeters: 300,
@@ -50,9 +58,14 @@ class NavigationSafetyConfig extends Equatable {
         // snow-zone driver's interpretation of standard warnings.
         return NavigationSafetyConfig();
       case DriverProfile.noviceUrban:
-        // Warn earlier on visibility (low low-visibility experience),
-        // higher safe-score floor. Threshold-only shift; explainer
-        // surfaces live in the consuming Flutter UX layer.
+        // 0.3.0 calibration correction per published literature.
+        // - warningVisibilityMeters: 0.2.0 had 250m (+50m over
+        //   standard). Novice hazard-perception RT is 3.58s vs 1.32s
+        //   experienced (PubMed 16313881). At 60 km/h that's ~37m
+        //   additional reaction-distance from RT alone — +50m left
+        //   no braking margin. Raised to 320m to give RT-margin +
+        //   braking margin per published novice-fog crash-rate
+        //   elevation (Konstantopoulos PubMed 22664714).
         return NavigationSafetyConfig(
           safeScoreFloor: 0.85,
           infoScoreFloor: 0.55,
@@ -61,7 +74,7 @@ class NavigationSafetyConfig extends Equatable {
           warningTemperatureCelsius: 0,
           criticalTemperatureCelsius: -5,
           infoVisibilityMeters: 1500,
-          warningVisibilityMeters: 250,
+          warningVisibilityMeters: 320,
           criticalVisibilityMeters: 60,
         );
       case DriverProfile.professional:
@@ -75,6 +88,28 @@ class NavigationSafetyConfig extends Equatable {
         // as snowZoneExperienced; the off-route semantic extension is
         // a downstream package's job.
         return NavigationSafetyConfig();
+      case DriverProfile.foreignTouristSnowZone:
+        // 0.3.0 — most-conservative defaults across every dimension.
+        // Foreign tourists in unfamiliar snow-zones have novice-equivalent
+        // unfamiliarity with local conditions + likely non-winterised
+        // rental vehicle + language-localization gaps in road signage.
+        // The loom shifts caution further than any other profile;
+        // alerts arrive earliest on weather + visibility; score floors
+        // highest. Hokkaido winter accidents involve foreign self-driving
+        // tourists at meaningful rates — this profile closes a V100 gap
+        // the previous taxonomy mis-mapped to either snowZoneExperienced
+        // (catastrophically wrong) or noviceUrban (location-wrong).
+        return NavigationSafetyConfig(
+          safeScoreFloor: 0.90,
+          infoScoreFloor: 0.60,
+          warningScoreFloor: 0.40,
+          infoTemperatureCelsius: 5,
+          warningTemperatureCelsius: 2,
+          criticalTemperatureCelsius: -2,
+          infoVisibilityMeters: 1800,
+          warningVisibilityMeters: 400,
+          criticalVisibilityMeters: 100,
+        );
     }
   }
 
