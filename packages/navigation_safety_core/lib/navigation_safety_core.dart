@@ -16,6 +16,7 @@ export 'src/alert_severity.dart';
 export 'src/driver_profile.dart';
 export 'src/navigation_route.dart';
 export 'src/navigation_safety_config.dart';
+export 'src/road_surface_condition.dart';
 export 'src/safety_scenario.dart';
 export 'src/safety_score.dart';
 export 'src/ux_differentiation.dart';
