@@ -3,6 +3,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 
+import 'alert_density_throttle.dart';
 import 'driver_profile.dart';
 
 class NavigationSafetyConfig extends Equatable {
@@ -17,6 +18,17 @@ class NavigationSafetyConfig extends Equatable {
   final int infoVisibilityMeters;
   final int warningVisibilityMeters;
   final int criticalVisibilityMeters;
+
+  /// Optional override for the per-profile alerts/min cap used by
+  /// [AlertDensityThrottle]. When `null` (the default), the throttle
+  /// uses the literature-anchored per-profile default from
+  /// [AlertDensityThrottle.defaultCapFor]. Integrating apps with their
+  /// own measured per-population data should set this.
+  ///
+  /// Resolved via [effectiveAlertsPerMinuteCap] — pass the active
+  /// [DriverProfile] and receive the cap that should be applied
+  /// (override if set, profile default otherwise).
+  final double? alertsPerMinuteCapOverride;
 
   /// Build a config with thresholds tuned to a [DriverProfile].
   ///
@@ -123,6 +135,7 @@ class NavigationSafetyConfig extends Equatable {
     this.infoVisibilityMeters = 1000,
     this.warningVisibilityMeters = 200,
     this.criticalVisibilityMeters = 50,
+    this.alertsPerMinuteCapOverride,
   }) {
     if (safeScoreFloor < 0 || safeScoreFloor > 1) {
       throw RangeError.range(safeScoreFloor, 0, 1, 'safeScoreFloor');
@@ -145,6 +158,14 @@ class NavigationSafetyConfig extends Equatable {
     }
   }
 
+  /// Resolve the alerts/min cap for [profile]: the override if set,
+  /// the literature-anchored per-profile default otherwise.
+  ///
+  /// Use this when constructing an [AlertDensityThrottle] from a
+  /// config that may carry an integrating-app override.
+  double effectiveAlertsPerMinuteCap(DriverProfile profile) =>
+      alertsPerMinuteCapOverride ?? AlertDensityThrottle.defaultCapFor(profile);
+
   @override
   List<Object?> get props => [
         safeScoreFloor,
@@ -156,5 +177,6 @@ class NavigationSafetyConfig extends Equatable {
         infoVisibilityMeters,
         warningVisibilityMeters,
         criticalVisibilityMeters,
+        alertsPerMinuteCapOverride,
       ];
 }
