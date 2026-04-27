@@ -204,6 +204,69 @@ same defer pattern as the 0.3.0 threshold magnitudes.
 
 ---
 
+## AlertDensityThrottle + AlertExplainer (added in 0.4.0)
+
+### Per-profile caps are literature-anchored DEFAULTS, not population-validated
+
+The 6 per-profile alerts/min cap defaults (`professional` 4.0,
+`snowZoneExperienced` 3.0, `agriculturalForestry` 2.0, `noviceUrban`
+1.5, `ageingRural` 1.2, `foreignTouristSnowZone` 1.0) come from the
+literature anchors cited in `alert_density_throttle.dart` and the
+0.4.0 changelog entry — alarm-fatigue ([PMC12181921](https://pmc.ncbi.nlm.nih.gov/articles/PMC12181921/)),
+ADAS exposure ([AAA-FTS](https://aaafoundation.org/wp-content/uploads/2023/09/202309-AAAFTS-ADAS-Exposure-and-Driver-Workload.pdf)),
+hazard-perception RT ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)),
+voice-format cost differential by age ([PMC7283540](https://pmc.ncbi.nlm.nih.gov/articles/PMC7283540/)),
+novice-fog crash-rate elevation ([PubMed 22664714](https://pubmed.ncbi.nlm.nih.gov/22664714/)),
+and over-warning silent failure ([arxiv 2410.06388](https://arxiv.org/html/2410.06388)).
+
+These are DEFAULTS, not invariants. None of these caps has been
+validated against actual population field-data — that work is
+deferred until field telemetry exists (the same defer pattern as the
+0.3.0 threshold magnitudes and the 0.3.1 per-profile vocabulary).
+
+Integrating apps with measured per-population data should override
+via `NavigationSafetyConfig.alertsPerMinuteCapOverride`.
+
+### `bypassForCritical = true` is a documented invariant
+
+The `AlertDensityThrottle` constructor accepts `bypassForCritical`
+as a parameter for testability and for forward-compatibility, but the
+documented contract is that this stays `true`. Changing the default
+to `false` would alter the package's safety contract: the throttle
+exists to prevent advisory-tier desensitization, not to mask
+high-severity warnings. Any change to this default in a future
+release requires governance ratification.
+
+### Action-string speed references are advisory, not enforced
+
+The action strings produced by `AlertExplainer.forConditionAndProfile`
+include speed references (30 km/h, 20 km/h). These are published
+reference points sourced from JAF / MLIT public driver-guidance
+materials, expressed in advisory mood (「以下に減速」 / "Slow to" /
+"drive below"). The package does NOT actuate the vehicle. The driver
+retains full speed authority. Applications integrating these strings
+must not present them as system-enforced limits.
+
+### Per-profile action vocabulary not yet population-validated
+
+The 36 (condition × profile) action strings reflect documented
+Japanese-driver vocabulary preferences and the per-profile verbosity
+mapping designed for this release. Population-validation (does each
+profile's actual cohort prefer the proposed wording?) is deferred
+until field-data exists — same defer pattern as the 0.3.1 per-profile
+glossary speak-strings.
+
+### Cap arithmetic uses strict less-than
+
+`AlertDensityThrottle.shouldFire` admits a new alert when
+`in_window_count < cap`. With `cap = 1.5` and 1 prior alert in the
+window, 1 < 1.5 → fire (count becomes 2); with 2 prior, 2 < 1.5 is
+false → drop. This is the documented semantic — fractional caps
+function as integer ceilings on per-window count. Apps that need
+strict integer caps should pass an integer literal as the override.
+
+---
+
 ## Why we publish this honestly
 
 The package serves drivers — including drivers in HER cohort (the

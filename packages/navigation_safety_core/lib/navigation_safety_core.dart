@@ -12,6 +12,8 @@
 /// these types.
 library;
 
+export 'src/alert_density_throttle.dart';
+export 'src/alert_explainer.dart';
 export 'src/alert_severity.dart';
 export 'src/driver_profile.dart';
 export 'src/navigation_route.dart';

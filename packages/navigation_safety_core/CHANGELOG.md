@@ -1,5 +1,112 @@
 # Changelog
 
+## 0.4.0 — 2026-04-28
+
+Adds two driver-facing surfaces that together address the documented
+alert-fatigue and condition-without-action failure modes in consumer
+ADAS / nav advisory layers.
+
+### Added
+
+- **`AlertDensityThrottle`** — per-profile rolling-window rate limiter
+  for advisory alerts. Prevents desensitization on info / warning tiers
+  while preserving credibility of `AlertSeverity.critical` (which
+  bypasses the throttle as a documented invariant).
+  - `AlertDensityThrottle.forProfile(profile)` — constructs a throttle
+    with the literature-anchored per-profile cap.
+  - `AlertDensityThrottle.defaultCapFor(profile)` — exposes the cap
+    table for integration with `NavigationSafetyConfig`.
+  - `shouldFire(now, severity)` — gating method; returns the firing
+    decision and (on permit) records the timestamp.
+  - `currentWindowCount(now)` — test-only inspection.
+  - Per-profile cap defaults (alerts/min):
+    - `professional` 4.0
+    - `snowZoneExperienced` 3.0
+    - `agriculturalForestry` 2.0
+    - `noviceUrban` 1.5
+    - `ageingRural` 1.2
+    - `foreignTouristSnowZone` 1.0
+- **`NavigationSafetyConfig.alertsPerMinuteCapOverride`** — optional
+  field for integrating apps to override the per-profile default with
+  measured per-population data. Helper:
+  `effectiveAlertsPerMinuteCap(profile)` returns the override if set,
+  the profile default otherwise.
+- **`AlertExplainer`** — pairs a `RoadSurfaceCondition` with a
+  pre-localized recommended action in the verbosity that fits the
+  active `DriverProfile`.
+  - `AlertExplainer.forConditionAndProfile(condition, profile)` —
+    returns the AAA-designed (condition, action) tuple, the verbosity
+    level, and the locale tag.
+  - 36 high-action cells (6 profiles × 6 high-action conditions: WET,
+    SNOW, ICE, SLUSH, WET_ICE, LOOSE_GRAVEL); UNKNOWN and DRY are
+    profile-flat per design brief.
+  - `VerbosityLevel` enum: `terse`, `brief`, `standard`, `full`.
+  - Verbosity mapping per profile: professional → terse;
+    snowZoneExperienced → brief; noviceUrban + agriculturalForestry →
+    standard; ageingRural + foreignTouristSnowZone → full.
+  - Locale: `en` for `foreignTouristSnowZone`; `ja` for others.
+
+### Why this exists
+
+- **Alert-density throttle**: alarm-fatigue is the documented failure
+  mode for systems that fire too many alerts. The medical alarm-fatigue
+  scoping review ([PMC12181921](https://pmc.ncbi.nlm.nih.gov/articles/PMC12181921/))
+  finds >60% of alarms get no timely response and 85% of clinicians
+  report overwhelm. The [AAA-FTS ADAS-exposure / driver-workload
+  report](https://aaafoundation.org/wp-content/uploads/2023/09/202309-AAAFTS-ADAS-Exposure-and-Driver-Workload.pdf)
+  extends the same pattern to consumer ADAS;
+  [arxiv 2410.06388](https://arxiv.org/html/2410.06388) frames
+  over-warning as a silent safety failure. Per-profile caps reflect
+  reaction-time and overwhelm differentials documented in
+  [PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/) (novice
+  hazard-perception RT 3.58s vs experienced 1.32s),
+  [PMC7283540](https://pmc.ncbi.nlm.nih.gov/articles/PMC7283540/)
+  (older drivers cost +8s eyes-off-road on identical voice formats),
+  and [PubMed 22664714](https://pubmed.ncbi.nlm.nih.gov/22664714/)
+  (novice-fog crash-rate elevation).
+- **Action-coupled explainer**: alerts that name a condition without
+  the implied action degrade compliance. Medication-adherence
+  literature ([PMID 34111571](https://pubmed.ncbi.nlm.nih.gov/34111571/))
+  shows action-coupled instructions improve adherence over
+  condition-only; CGM (continuous glucose monitor) alert-design
+  literature (MDPI 2024 review of CGM UX patterns) finds the same in
+  ambient-monitoring contexts. Driving translation: "icy road" is
+  incomplete; "icy road → reduce speed to 30 km/h" is actionable.
+  Per [PubMed 38669900](https://pubmed.ncbi.nlm.nih.gov/38669900/)
+  (Bian), earlier triggering reduces collisions only when alerts
+  persist long enough to be processed — coupling the action with the
+  condition gives the driver the second the alert needs to land.
+
+### Action-text discipline
+
+- Action verbs are advisory (「以下に減速」 / "reduce" / "avoid" /
+  "maintain"), not imperative-on-control. Speed numbers are published
+  reference points (JAF / MLIT vocabulary), not system-enforced limits.
+- "Stop in a safe place" is the strongest action; phrased "if
+  possible" / 「可能であれば」 — no implication that the system stops
+  the vehicle.
+- No action string promises an outcome.
+
+### Backwards-compatibility
+
+Pure addition. No existing API changed. The default constructor
+`NavigationSafetyConfig()` still produces the historical defaults
+unchanged. New `alertsPerMinuteCapOverride` field defaults to `null`
+(use the per-profile literature default).
+
+### Known limitations not closed in 0.4.0
+
+- Per-profile alert/min caps are literature-anchored DEFAULTS, not
+  population-validated. Integrating apps with measured per-population
+  data should override.
+- `bypassForCritical` defaults to `true` and is a documented
+  invariant. Changing this default would alter the package's safety
+  contract.
+- Action-string speed references (30 km/h / 20 km/h) are advisory,
+  not system-enforced.
+- See `KNOWN_LIMITATIONS.md` for the full list inherited from earlier
+  versions.
+
 ## 0.3.1 — 2026-04-28
 
 Surfaces road-surface condition vocabulary aligned to the upstream VSS
