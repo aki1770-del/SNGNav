@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.3.1 — 2026-04-28
+
+Surfaces road-surface condition vocabulary aligned to the upstream VSS
+`Vehicle.Exterior.RoadSurfaceCondition` signal landing via
+[COVESA/vehicle_signal_specification PR #892](https://github.com/COVESA/vehicle_signal_specification/pull/892).
+
+### Added
+
+- **`RoadSurfaceCondition`** — enum aligned to VSS allowed-value set
+  (`UNKNOWN`, `DRY`, `WET`, `SNOW`, `ICE`, `SLUSH`, `WET_ICE`,
+  `LOOSE_GRAVEL`). Round-trip helpers `vssValue` and `fromVss` preserve
+  the upstream string vocabulary verbatim so consuming code can
+  interoperate with VSS-derived telemetry without re-mapping.
+- **`RoadSurfaceConditionGlossary`** — display labels and TTS-ready
+  phrases per condition, with optional per-profile overrides for the
+  high-risk subset (`ICE` / `SNOW` / `WET_ICE`):
+  - `forCondition(c)` — profile-neutral default
+  - `forConditionAndProfile(c, profile)` — applies per-profile
+    speak-string variants where vocabulary precision matters
+- Per-profile vocabulary discipline:
+  - `ageingRural` — kanji-native (凍結, 圧雪) per generational
+    recognition reliability
+  - `snowZoneExperienced` / `professional` — terse single-word phrases
+  - `noviceUrban` — condition + hazard tag for explicit risk framing
+  - `agriculturalForestry` — condition + off-road consideration where
+    relevant
+  - `foreignTouristSnowZone` — English-default TTS + simplified
+    Japanese (no kanji-only output; non-native readers cannot parse
+    mid-drive)
+
+### Why this exists
+
+Documented Japanese snow-zone driver pain point (literature review):
+no major nav app provides an in-app glossary for road-surface terms
+(凍結 / 圧雪 / シャーベット / ブラックアイス / アイスバーン), each with
+distinct safe-driving semantic. Drivers learn through accidents or
+YouTube. Sources: [JAF snow-driving safety](https://jaf.org.jp/common/attention/snow),
+[MLIT Hokkaido snow-road guide](https://www.hrr.mlit.go.jp/hokugi/yukinavi/),
+[JARTIC](https://www.jartic.or.jp/), [Yahoo!カーナビ winter
+guidance](https://note.com/yahoo_carnavi/n/n0ecdc7700eb0).
+
+### Backwards-compatibility
+
+Pure addition. No existing API changed. The glossary is informational
+(display labels + TTS phrases); it does not actuate any vehicle
+behavior and is not safety-critical in the control sense. Bare
+glossary text is conservative — no specific km/h advice (speed advice
+belongs to a separate action-coupled explainer surface, planned for
+a future minor release).
+
+### Known limitations not closed in 0.3.1
+
+- ブラックアイス (black ice) is documented as a sub-class of `ICE`; the
+  upstream VSS signal does not expose it as a separate enum value, so
+  this package does not invent one.
+- Glossary text is informational only. Speed advisories, action-coupled
+  explanations, and alert-density throttling are separate surfaces
+  planned for the next minor release.
+- See `KNOWN_LIMITATIONS.md` for the full list inherited from 0.3.0.
+
 ## 0.3.0 — 2026-04-27
 
 Closes the V100 gap surfaced by post-0.2.0 autoresearch: the previous

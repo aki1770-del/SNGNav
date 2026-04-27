@@ -168,6 +168,42 @@ If you are an app developer integrating `navigation_safety_core`:
 
 ---
 
+## RoadSurfaceCondition glossary (added in 0.3.1)
+
+### Black ice not separately enumerated
+
+The 0.3.1 patch adds `RoadSurfaceCondition` aligned to the upstream VSS
+allowed-value set (`UNKNOWN, DRY, WET, SNOW, ICE, SLUSH, WET_ICE,
+LOOSE_GRAVEL`). [Black ice](https://en.wikipedia.org/wiki/Black_ice) is
+a documented sub-class of `ICE` (transparent ice film, hardest to
+detect by visual inspection) but is not a distinct enum value because
+the upstream VSS signal does not expose it. The glossary acknowledges
+this in code comments; it does not invent a value not in the upstream
+signal. If a future VSS revision adds black-ice as a distinct allowed
+value, this enum updates to match.
+
+### Glossary text is informational only
+
+The 0.3.1 glossary surfaces display labels (`jaName`, `enName`) and
+TTS-ready phrases (`jaSpeakString`, `enSpeakString`). It does NOT
+actuate any vehicle behavior and is NOT safety-critical in the control
+sense (per the package's ASIL-QM display-only stance). Speed
+advisories, action-coupled explanations, and alert-density throttling
+are separate surfaces planned for the next minor release.
+
+### Per-profile vocabulary tested but not yet population-validated
+
+The per-profile speak-string variants (`forConditionAndProfile`) reflect
+documented Japanese-driver vocabulary preferences (kanji-native for
+`ageingRural`, terse for `snowZoneExperienced` / `professional`,
+English-default for `foreignTouristSnowZone`). They are sourced from
+JAF / MLIT / NEXCO public driver-guidance materials, not invented.
+Population-validation (does each profile's actual cohort prefer the
+proposed wording?) is deferred until field-data exists; this is the
+same defer pattern as the 0.3.0 threshold magnitudes.
+
+---
+
 ## Why we publish this honestly
 
 The package serves drivers — including drivers in HER cohort (the
