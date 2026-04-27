@@ -13,6 +13,7 @@
 library;
 
 export 'src/alert_severity.dart';
+export 'src/driver_profile.dart';
 export 'src/navigation_route.dart';
 export 'src/navigation_safety_config.dart';
 export 'src/safety_scenario.dart';
