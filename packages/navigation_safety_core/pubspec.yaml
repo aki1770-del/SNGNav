@@ -6,7 +6,7 @@ description: >-
   (the full Flutter + BLoC package) and any other pure-Dart consumer
   that needs the safety vocabulary without paying for the Flutter
   rendering surface.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

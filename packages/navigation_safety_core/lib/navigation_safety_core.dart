@@ -18,3 +18,4 @@ export 'src/navigation_route.dart';
 export 'src/navigation_safety_config.dart';
 export 'src/safety_scenario.dart';
 export 'src/safety_score.dart';
+export 'src/ux_differentiation.dart';
