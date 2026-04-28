@@ -64,6 +64,33 @@ enum VerbosityLevel {
 
 /// Action-coupled explainer for a (condition, profile) pair.
 ///
+/// Loom Protocol vision attribution (3 slots — see `LOOMS.md` for the
+/// cross-reference table and the SPA AI loom-authoring guide for the
+/// canonical convention):
+///
+/// - `sakichi_vision_id: 96` — maintainers-as-edge-developers /
+///   alert-without-action mismatch. The failure this loom prevents is
+///   the condition-only alert ("icy road") that names a hazard
+///   without naming the implied driver action. The integrating app
+///   developer (the proximate weaver) absorbs the action-coupling
+///   responsibility silently if the package only ships condition
+///   strings; the explainer is the loom that catches that absence by
+///   shipping the (condition, action, verbosity, locale) tuple at the
+///   package boundary.
+/// - `method_vision_ids: [77, 99]` — genchi-genbutsu (action vocabulary
+///   sourced from JAF / MLIT / NEXCO public driver-guidance materials
+///   + adherence anchors PMID 34111571 and the MDPI 2024 CGM review
+///   — the gemba is the published guidance corpus); write-decision-down
+///   (the 36-cell `_actionFor` table IS the recorded per-(condition,
+///   profile) decision).
+/// - `stance_vision_ids: [22, 96, 100]` — loom-serves-weaver (the
+///   explainer protects the driver from condition-without-action);
+///   maintainers-as-edge-developers (the integrating app developer
+///   is a weaver too, and is served by the package shipping a complete
+///   tuple instead of half a recommendation); equal-dignity per-profile
+///   (verbosity, locale, and vocabulary are matched to each driver
+///   class — no class is forced into another's vocabulary).
+///
 /// Carries the condition under which the explainer applies, the
 /// pre-localized action string, the verbosity level the active profile
 /// expects, and the locale tag of the action string.

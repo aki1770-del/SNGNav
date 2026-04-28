@@ -267,6 +267,46 @@ strict integer caps should pass an integer literal as the override.
 
 ---
 
+## `looms.dart` barrel + `LOOMS.md` (added in 0.4.1)
+
+### No runtime registry
+
+The 0.4.1 `lib/src/looms.dart` barrel re-exports the runtime looms
+(`AlertDensityThrottle`, `AlertExplainer`) under a category-level
+doc-comment, and `LOOMS.md` documents each loom's 3-slot vision
+attribution. The catalog does NOT auto-discover its members: there is
+no runtime registry, no introspection at app start, and no
+auto-instantiation. Integrating apps instantiate each loom explicitly
+where they wire it into their alert pipeline. A reflection-based or
+code-generated registry is **deferred** to a future minor release
+(likely v0.5+) — once enough runtime looms exist that explicit wiring
+becomes a meaningful integration cost.
+
+### No cross-language Loom Protocol verification
+
+The 3-slot vision attribution (`sakichi_vision_id` /
+`method_vision_ids` / `stance_vision_ids`) on each runtime loom is a
+**documentation convention** today. No runtime check enforces that a
+Dart loom and a Python loom (in the SPA AI build-time loom kit)
+sharing the same conceptual `loom_id` declare matching attribution
+slots. There is also no schema validator that the values land in the
+documented `1..100` range. **Deferred** — cross-language verification
+requires a shared schema registry that does not exist yet (the
+`LoomProtocolJsonSchema` candidate is in the SPA AI roadmap,
+unscheduled).
+
+### Vision IDs are documentation, not type-checked
+
+The 3-slot attribution is plain doc-comment text. Mistyping a vision
+number, omitting a slot, or letting a slot drift out of date as the
+loom evolves will not be caught at compile time. Reviewers should
+treat the attribution slots like any other doc-comment field. A future
+package release may add a custom Dart `analyzer_plugin` rule that
+parses these slots; for v0.4.1 the responsibility lives with
+reviewers.
+
+---
+
 ## Why we publish this honestly
 
 The package serves drivers — including drivers in HER cohort (the
