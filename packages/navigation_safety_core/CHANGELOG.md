@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.4.1 — 2026-04-28
+
+Names and documents what 0.4.0 already shipped as runtime looms, and
+binds them to the cross-language Loom Protocol vocabulary used by the
+SPA AI build-time loom kit. Documentation patch — no API surface
+change.
+
+### Added
+
+- **`lib/src/looms.dart`** — category barrel re-exporting
+  `AlertDensityThrottle` and `AlertExplainer` with a class-level
+  doc-comment naming them as runtime looms. Either of these imports
+  surfaces the same symbols; the barrel adds the runtime-loom
+  category framing:
+  ```dart
+  import 'package:navigation_safety_core/navigation_safety_core.dart';
+  // or
+  import 'package:navigation_safety_core/src/looms.dart';
+  ```
+- **`LOOMS.md`** at the package root — cross-reference table mapping
+  each runtime loom to its 3-slot vision attribution
+  (`sakichi_vision_id` / `method_vision_ids` / `stance_vision_ids`),
+  plus a brief explanation of how the 3-slot schema binds this
+  package's runtime looms to SPA AI's build-time looms.
+- **3-slot vision attribution doc-comments** on `AlertDensityThrottle`
+  and `AlertExplainer` class declarations, matching the convention
+  documented in
+  [SPA AI's loom-authoring guide](https://github.com/aki1770-del/spa-ai/blob/main/docs/loom_authoring_guide.md).
+  - `AlertDensityThrottle` — `sakichi_vision_id: 14`,
+    `method_vision_ids: [77, 18, 99]`, `stance_vision_ids: [22, 100]`.
+  - `AlertExplainer` — `sakichi_vision_id: 96`,
+    `method_vision_ids: [77, 99]`, `stance_vision_ids: [22, 96, 100]`.
+
+### Why this exists
+
+`AlertDensityThrottle` and `AlertExplainer` shipped in 0.4.0 are
+runtime looms — Pure Dart classes that catch documented failure modes
+(alert-fatigue, condition-without-action) at the package boundary
+inside the consuming app's process. The Loom Protocol vocabulary used
+by SPA AI's build-time loom kit applies to them too; 0.4.1 names that
+explicitly so the cross-language convention is discoverable from this
+package's own surface. This is documentation work; the runtime
+behavior is unchanged from 0.4.0.
+
+### Backwards-compatibility
+
+Pure documentation patch. No existing API changed. Existing imports
+of `AlertDensityThrottle` and `AlertExplainer` via
+`package:navigation_safety_core/navigation_safety_core.dart` continue
+to work unchanged. The new `src/looms.dart` barrel is additive.
+
+### Known limitations not closed in 0.4.1
+
+- No runtime registry. The catalog does not auto-discover its
+  members; integrating apps instantiate each loom explicitly.
+- No cross-language verification of the 3-slot attribution. The
+  attribution is a documentation convention today; no runtime check
+  enforces matching slots between this package's Dart looms and the
+  SPA AI Python looms.
+- See `KNOWN_LIMITATIONS.md` for the full list inherited from 0.4.0
+  and earlier.
+
 ## 0.4.0 — 2026-04-28
 
 Adds two driver-facing surfaces that together address the documented

@@ -10,6 +10,12 @@
 /// boundary can keep importing
 /// `package:navigation_safety/navigation_safety.dart` and still see
 /// these types.
+///
+/// Runtime looms — `AlertDensityThrottle` and `AlertExplainer` — are
+/// also surfaced as a category via `package:navigation_safety_core/
+/// src/looms.dart` (added in 0.4.1). See `LOOMS.md` at the package
+/// root for the runtime-loom catalog and 3-slot vision-attribution
+/// cross-reference.
 library;
 
 export 'src/alert_density_throttle.dart';
