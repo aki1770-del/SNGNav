@@ -4,7 +4,11 @@ library;
 import 'package:equatable/equatable.dart';
 
 import 'alert_density_throttle.dart';
+import 'calibration/humidity_dependent_temperature.dart';
+import 'calibration/precipitation_history_decay.dart';
+import 'calibration/speed_dependent_visibility.dart';
 import 'driver_profile.dart';
+import 'navigation_safety_context.dart';
 
 class NavigationSafetyConfig extends Equatable {
   final double safeScoreFloor;
@@ -122,6 +126,124 @@ class NavigationSafetyConfig extends Equatable {
           warningVisibilityMeters: 400,
           criticalVisibilityMeters: 100,
         );
+    }
+  }
+
+  /// Build a config tuned to a [DriverProfile] AND live driving conditions.
+  ///
+  /// Delegates to [NavigationSafetyConfig.forProfile] when [context] is
+  /// `null`, preserving the per-profile baseline. When [context] is
+  /// supplied, the relevant thresholds adjust as follows:
+  ///
+  /// - If `context.speedMps` is non-null, the warning visibility floor
+  ///   raises to fit reaction time + braking distance for the current
+  ///   speed, using a per-profile reaction-time default. The
+  ///   per-profile baseline acts as a lower bound: context can only
+  ///   warn earlier (longer visibility floor), never later.
+  /// - If both `context.humidityRH` and `context.ambientTempCelsius`
+  ///   are non-null, the warning temperature raises to cover
+  ///   dew-point-driven black-ice risk: the effective road-surface
+  ///   temperature (ambient minus dew-point depression) replaces
+  ///   ambient when it crosses the warning threshold earlier.
+  /// - If `context.timeSincePrecipitation` is non-null, the warning
+  ///   visibility additionally raises by a residual-moisture margin
+  ///   proportional to the surface-moisture fraction (longer
+  ///   visibility floor while the road is still drying).
+  ///
+  /// The factory respects the per-profile baseline as a floor for
+  /// every threshold: context can only add caution, not remove it.
+  ///
+  /// Citations for each formula are documented in the
+  /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
+  factory NavigationSafetyConfig.forProfileWithContext(
+    DriverProfile profile, {
+    DrivingContext? context,
+  }) {
+    final base = NavigationSafetyConfig.forProfile(profile);
+    if (context == null) return base;
+
+    var infoVisibility = base.infoVisibilityMeters;
+    var warningVisibility = base.warningVisibilityMeters;
+    var criticalVisibility = base.criticalVisibilityMeters;
+    var warningTemperature = base.warningTemperatureCelsius;
+
+    // Speed-dependent visibility floor.
+    if (context.speedMps != null) {
+      final adjusted = computeSpeedAdjustedVisibilityMeters(
+        profileBaseMeters: base.warningVisibilityMeters.toDouble(),
+        speedMps: context.speedMps!,
+        driverReactionTimeSeconds: _reactionTimeSecondsFor(profile),
+      );
+      warningVisibility = adjusted.ceil();
+    }
+
+    // Precipitation-history surface-moisture margin.
+    if (context.timeSincePrecipitation != null) {
+      final ambient = context.ambientTempCelsius ?? 5.0;
+      final fraction = computeSurfaceMoistureFraction(
+        timeSincePrecipitation: context.timeSincePrecipitation!,
+        ambientCelsius: ambient,
+      );
+      // Conservative add-on: residual-moisture margin scales with the
+      // moisture fraction times the per-profile baseline, capped at
+      // the baseline (i.e. up to 100% additional headroom while the
+      // surface is still fully wet, decaying with moisture).
+      final margin = (base.warningVisibilityMeters * fraction).round();
+      final candidate = base.warningVisibilityMeters + margin;
+      if (candidate > warningVisibility) {
+        warningVisibility = candidate;
+      }
+    }
+
+    // Humidity-dependent effective temperature for black-ice risk.
+    if (context.humidityRH != null && context.ambientTempCelsius != null) {
+      final effective = computeEffectiveTemperatureCelsius(
+        ambientCelsius: context.ambientTempCelsius!,
+        humidityRH: context.humidityRH!,
+      );
+      // If the effective temperature reaches the baseline warning
+      // temperature earlier than ambient, raise the warning so the
+      // alert fires on ambient-temperature inputs that would today
+      // pass the baseline check.
+      if (effective <= base.warningTemperatureCelsius.toDouble()) {
+        final lift = (base.warningTemperatureCelsius -
+                effective.floor())
+            .clamp(0, 10);
+        warningTemperature = base.warningTemperatureCelsius + lift;
+      }
+    }
+
+    return NavigationSafetyConfig(
+      safeScoreFloor: base.safeScoreFloor,
+      infoScoreFloor: base.infoScoreFloor,
+      warningScoreFloor: base.warningScoreFloor,
+      infoTemperatureCelsius: base.infoTemperatureCelsius,
+      warningTemperatureCelsius: warningTemperature,
+      criticalTemperatureCelsius: base.criticalTemperatureCelsius,
+      infoVisibilityMeters: infoVisibility,
+      warningVisibilityMeters: warningVisibility,
+      criticalVisibilityMeters: criticalVisibility,
+      alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
+    );
+  }
+
+  /// Per-profile reaction-time defaults in seconds. See
+  /// `lib/src/calibration/speed_dependent_visibility.dart` module
+  /// header for citations and UNVERIFIED flags.
+  static double _reactionTimeSecondsFor(DriverProfile profile) {
+    switch (profile) {
+      case DriverProfile.ageingRural:
+        return 2.5;
+      case DriverProfile.noviceUrban:
+        return 3.58;
+      case DriverProfile.snowZoneExperienced:
+        return 1.8;
+      case DriverProfile.professional:
+        return 1.5;
+      case DriverProfile.agriculturalForestry:
+        return 2.0;
+      case DriverProfile.foreignTouristSnowZone:
+        return 3.5;
     }
   }
 

@@ -1,5 +1,85 @@
 # Changelog
 
+## 0.5.0 — 2026-04-30
+
+Adds an additive context-aware factory and a driving-context value
+object so consuming apps can pass live conditions (speed, humidity,
+precipitation history, ambient temperature) into the threshold-config
+factory and receive thresholds tuned to both the per-profile baseline
+and the live conditions.
+
+### Added
+
+- **`DrivingContext`** — immutable value-object with four optional
+  fields: `speedMps`, `humidityRH`, `timeSincePrecipitation`,
+  `ambientTempCelsius`. Each field is optional; a null field means
+  "context not available; fall back to the non-context baseline".
+  Const-constructible and equatable.
+- **`NavigationSafetyConfig.forProfileWithContext(profile, context: ...)`** —
+  new factory alongside the existing `forProfile()`. When context is
+  null, delegates to `forProfile(profile)` for backwards-compat. When
+  context fields are non-null, adjusts the relevant thresholds:
+  - Speed → warning visibility floor raises to fit reaction time +
+    braking distance via standard kinematics.
+  - Humidity + ambient → warning temperature raises to cover
+    dew-point-driven black-ice risk via the Magnus formula.
+  - Precipitation history → warning visibility raises by a residual
+    surface-moisture margin via exponential decay (default half-life
+    90 minutes; conservative).
+- **`lib/src/calibration/` directory** with three formula modules:
+  - `speed_dependent_visibility.dart` — speed + reaction time +
+    braking deceleration → required visibility.
+  - `humidity_dependent_temperature.dart` — Magnus formula for
+    dew-point-based effective road-surface temperature.
+  - `precipitation_history_decay.dart` — exponential surface-moisture
+    decay with overridable half-life.
+
+### Why this exists
+
+Per-profile baseline thresholds tuned for typical commute conditions
+can leave no margin at higher speeds, dry-air black-ice mornings, or
+residual-wet-surface windows. Adding a context-aware factory lets a
+consuming app raise the threshold floor when live conditions warrant
+without changing the per-profile baseline used by apps that lack the
+sensor inputs. The factory is additive: the existing `forProfile()`
+factory and every existing call site behave identically.
+
+Citations for each formula are documented in the module headers:
+
+- Reaction-time defaults — [PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)
+  (novice 3.58s vs experienced 1.32s); other per-profile RTs are
+  reasonable defaults pending field validation (UNVERIFIED — see
+  `KNOWN_LIMITATIONS.md`).
+- Braking-distance — standard kinematics; default deceleration 5.5
+  m/s² for typical dry pavement.
+- Magnus formula — modern parameter constants `a = 17.625`,
+  `b = 243.04°C` per Alduchov & Eskridge 1996; black-ice formation
+  envelope per [Wikipedia black ice](https://en.wikipedia.org/wiki/Black_ice).
+- Exponential surface-moisture decay — first-order-evaporation model;
+  90-minute half-life default is conservative (UNVERIFIED for
+  population values).
+
+### Backwards-compatibility
+
+Pure addition. Every existing API is unchanged. `forProfile()`
+returns the same configuration as in 0.4.x. Existing call sites
+continue to work without modification.
+
+### Known limitations not closed in 0.5.0
+
+- Four of the six per-profile reaction-time defaults are UNVERIFIED
+  specific cites (anchors derived from surrounding literature; not
+  population-validated).
+- The 90-minute precipitation-decay half-life is a conservative
+  default; integrating apps with telemetry should override.
+- The dew-point-based effective temperature is a conservative
+  estimate, not a measured road-surface temperature; real surface
+  temperature depends on emissivity, cloud cover, surface material,
+  and time-of-night.
+- See `KNOWN_LIMITATIONS.md` for the full list inherited from earlier
+  versions, plus the new "Driving-context formulas (added in 0.5.0)"
+  section.
+
 ## 0.4.2 — 2026-04-29
 
 Documents the package's driving-automation-regime applicability at the

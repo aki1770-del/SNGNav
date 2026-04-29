@@ -417,6 +417,98 @@ consumes these surfaces.
 
 ---
 
+## Driving-context formulas (added in 0.5.0)
+
+The 0.5.0 minor release adds a context-aware factory
+`NavigationSafetyConfig.forProfileWithContext(profile, context: ...)`
+that adjusts thresholds based on a `DrivingContext` value-object
+carrying optional speed, humidity, precipitation-history, and ambient
+temperature inputs. The factory is purely additive: the existing
+`forProfile()` factory is unchanged, and a null context delegates to
+`forProfile()`. No existing call site is affected.
+
+The new factory composes three formulas, each in
+`lib/src/calibration/`:
+
+### Speed-dependent visibility floor (`speed_dependent_visibility.dart`)
+
+Returns `max(profileBase, RT_distance + braking_distance)` where
+`RT_distance = reactionTime × speed` and
+`braking_distance = speed² / (2 × deceleration)`. Standard kinematics.
+
+Reaction-time per-profile defaults are documented in the module
+header and used by the factory. Two of the six are
+literature-anchored:
+
+- `noviceUrban` 3.58s — sourced from
+  [PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)
+  (hazard-perception RT 3.58s novice vs 1.32s experienced).
+- `ageingRural` 2.5s — older drivers; published distribution.
+
+The other four (`snowZoneExperienced` 1.8s, `professional` 1.5s,
+`agriculturalForestry` 2.0s, `foreignTouristSnowZone` 3.5s) are
+**UNVERIFIED** specific cites — they are reasonable defaults derived
+from the surrounding literature (e.g. experienced 1.32s + a snow-margin
+for `snowZoneExperienced`; novice-equivalent 3.5s for foreign tourist),
+but no single published source quotes those exact numbers. Same defer
+pattern as the 0.3.1 per-profile vocabulary speak-strings and the 0.4.0
+density caps.
+
+The default braking deceleration is 5.5 m/s² (typical dry pavement).
+For snow / ice surfaces the consumer should pass a lower value; surface
+friction is the dominant variable and no single default fits every road
+condition.
+
+### Humidity-dependent effective temperature (`humidity_dependent_temperature.dart`)
+
+Computes a dew-point-based effective road-surface temperature using the
+Magnus formula (Magnus 1844; modern parameter constants `a = 17.625`,
+`b = 243.04°C` per Alduchov & Eskridge 1996). Black ice can form on a
+road surface when ambient air is several degrees above 0°C if
+clear-sky radiative cooling drops the surface to the dew point — see
+[Wikipedia black ice](https://en.wikipedia.org/wiki/Black_ice).
+
+The approximation `effective = ambient - depression` is **conservative
+but UNVERIFIED** for any specific surface. Real road-surface
+temperature depends on emissivity, sky cloud cover, surface material,
+and time-of-night. No single published value captures every road
+context. Treat the output as a frost-risk indicator, not a measured
+surface temperature.
+
+### Precipitation-history exponential decay (`precipitation_history_decay.dart`)
+
+Returns `exp(-ln2 × t / halfLife)` clamped to `[0, 1]`. Default
+half-life 90 minutes — **deliberately conservative** so the consuming
+app warns longer rather than shorter on residual surface moisture.
+Most road surfaces dry faster under sun and wind; some dry slower
+(shaded, cold, low-wind environments). The 90-minute default is
+**UNVERIFIED** as a population value; consumers with telemetry that
+informs a more accurate half-life should override.
+
+The exponential-decay shape is the standard first-order-evaporation
+model used in pavement-engineering and atmospheric-science references;
+the `ambientCelsius` parameter is accepted for forward-compatible API
+shape but does not currently modulate the half-life. A future revision
+may modulate it without an API break.
+
+### API surface is additive only
+
+`NavigationSafetyConfig.forProfile(profile)` is unchanged in 0.5.0.
+The new `forProfileWithContext(profile, context: ...)` factory adds
+context-aware adjustments alongside the existing factory. The
+per-profile baseline acts as a floor for every threshold: context can
+only warn earlier (raise the floor / shift toward conservative), never
+later. Consumers that do not pass a context, or pass a context with
+all fields null, receive the same configuration as
+`forProfile(profile)` — no behaviour change.
+
+The equal-dignity invariant continues to apply: severity-driven
+visibility, severity ordering, and plane allocation are not affected
+by the new factory or by `DrivingContext`. Context tunes thresholds,
+not the severity of the resulting alerts.
+
+---
+
 ## Why we publish this honestly
 
 The package serves drivers — including drivers in HER cohort (the
