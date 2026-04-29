@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.4.2 — 2026-04-29
+
+Documents the package's driving-automation-regime applicability at the
+package boundary so consumers can ground their integration decisions
+in the documented scope. Documentation patch — no API surface change.
+
+### Added
+
+- **`README.md` "Scope: driving automation regimes" section** — plain
+  declaration that this package targets SAE J3016 Level 0 / Level 1
+  supportive use and explicitly does not provide L2+ handover-class
+  supervision; standards-mapping summary one-liner; concrete consumer
+  guidance on when the package's alerts are appropriate vs.
+  insufficient; equal-dignity invariant pointer.
+- **`KNOWN_LIMITATIONS.md` "Standards mapping (current advisory
+  framing)" section** — full paragraphs on:
+  - **ISO 26262**: current QM-likely framing at the application layer
+    under advisory-only intent; integrator owns the final ASIL
+    determination for their integration; evidence supporting the
+    framing cited (advisory-mood wording discipline,
+    `bypassForCritical` invariant, public-corpus speed references).
+  - **SAE J3016**: L0/L1 supportive mapping; explicit non-claim on L2+;
+    re-classification trigger named for any consuming app evolving
+    toward L2+ pilots.
+  - **JIS / JASO**: explicit not-mapped at this scope; qualified
+    Japanese-domestic functional-safety partner consultation required
+    before any IVI-vendor / OEM-pilot integration targeting the
+    Japanese-domestic certification surface.
+  - **Equal-dignity invariant**: alert visibility, severity ordering,
+    and plane-allocation priority MUST be severity-driven, never
+    profile-driven; profile-aware behaviour belongs in verbosity,
+    locale, and density-cap surfaces, not in visibility / preemption /
+    plane-allocation paths.
+
+### Why this exists
+
+The package's surfaces are increasingly being considered as substrates
+for HMI integrations (display-server, hardware-overlay-plane, IVI
+vendor pilots). Without an explicit driving-automation-regime
+declaration at the package boundary, integrators can mis-frame the
+package as a supervision-loop input or as L2+-handover-capable, which
+would be a misuse of its documented scope. This release adds the
+declaration so future integrators and future package-internal cycles
+can ground their work in the same intent. The standards-mapping detail
+in `KNOWN_LIMITATIONS.md` is sourced from an internal standards
+review.
+
+### Backwards-compatibility
+
+Pure documentation patch. No existing API changed. No file under
+`lib/` modified.
+
+### Known limitations not closed in 0.4.2
+
+- ISO 26262 ASIL classification at the integration boundary remains
+  with the integrator and depends on their hazard analysis; this
+  package does not certify any specific ASIL outcome.
+- JIS / JASO conformance is not mapped at this scope. Vendor / OEM
+  integration targeting Japanese-domestic certification requires a
+  qualified domestic functional-safety partner.
+- See `KNOWN_LIMITATIONS.md` for the full list inherited from earlier
+  versions.
+
 ## 0.4.1 — 2026-04-28
 
 Names and documents what 0.4.0 already shipped as runtime looms, and

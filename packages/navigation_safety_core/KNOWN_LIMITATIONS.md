@@ -307,6 +307,116 @@ reviewers.
 
 ---
 
+## Standards mapping (current advisory framing)
+
+This section declares the package's working standards-mapping framing
+under the current advisory-only shape. It is the package authors'
+internal interpretation under documented design discipline, not a
+certified classification. Where the mapping is conditional or
+undetermined, this section flags it explicitly so integrators can
+re-run the classification at their own integration boundary.
+
+### ISO 26262 (functional safety, road vehicles)
+
+The package's surfaces — `AlertSeverity`, `AlertExplainer`,
+`AlertDensityThrottle`, `SafetyScore`, `NavigationSafetyConfig`,
+`RoadSurfaceCondition` — are HMI for safety-relevant **advisories**.
+They inform the driver; they never actuate the vehicle, never close a
+control loop, and never participate in an automation-handover safety
+contract.
+
+Under that framing, the package likely sits at **QM (quality-managed,
+no ASIL)** at the application layer. The wording discipline supports
+this framing: `AlertExplainer` action verbs are advisory-mood, not
+imperative-on-control; speed numbers are published reference points
+sourced from public driver-guidance materials (JAF / MLIT / NEXCO),
+not system-enforced limits; no action string promises an outcome.
+`AlertDensityThrottle.bypassForCritical = true` is documented as a
+safety contract: criticals always fire. These choices are consistent
+with QM at the application layer.
+
+**FLAG: undetermined at the integration boundary.** Whether ISO 26262
+governs a specific deployment depends on the **integrator's hazard
+analysis**, not on this package alone. If an integrator builds a
+deployment where this package's alerts are part of a driver-supervision
+loop whose closure includes alert acknowledgment, or where actuation
+depends on an alert chain, the ASIL classification can rise. **The
+integrator owns the final ASIL determination for their integration.**
+Evidence supporting current QM-likely framing lives in the wording
+discipline cited above and in the `bypassForCritical` invariant; that
+evidence does not certify any specific ASIL outcome.
+
+### SAE J3016 (driving automation levels)
+
+This package is **L0 / L1 supportive**: the driver performs the
+dynamic driving task (DDT); the alert is supportive; loss of an alert
+frame degrades support but does not lose a fallback. This is the
+most-permissive regime under J3016, and it matches the package's
+current shape.
+
+**Non-claim on L2+.** Consumers operating at L2 or above are
+responsible for adding their own handover-class supervision —
+take-over-request signalling, driver-attention monitoring,
+minimum-risk-manoeuvre fallback. This package does not provide those
+surfaces. Treating advisory output as the supervision surface in a
+partial-or-higher-automation regime is a misuse of the package's
+documented scope.
+
+If a consuming app evolves toward L2+ pilots, the substrate-fitness
+question for this package's surfaces would need to be re-asked under
+the J3016 handover-class safety contract — that work is **out of
+scope today** and would require explicit re-classification.
+
+### JIS / JASO (Japanese-domestic automotive standards)
+
+**FLAG: not mapped at this scope.** Japanese-domestic HMI standards
+likely apply to deployments targeting the Japanese-domestic
+certification surface — for example JASO Z 008 driver-information
+display guidelines and JIS D 0207 series for display ergonomics — but
+this package has not done a deep mapping against those standards.
+The action-string vocabulary in `AlertExplainer` is sourced from
+public driver-guidance materials (JAF, MLIT, NEXCO), which are
+public-corpus anchors rather than certified JIS/JASO-conformant text.
+
+**Recommendation for vendor / OEM integration**: when a consuming app
+moves toward IVI-vendor or OEM-pilot integration that targets the
+Japanese-domestic certification surface, run a dedicated JIS / JASO
+conformance pass via a **qualified Japanese-domestic functional-safety
+partner** before substrate adoption. The package authors' internal
+interpretation does not substitute for certification.
+
+### Equal-dignity invariant: severity-driven, not profile-driven
+
+Cross-package design invariant for any HMI built on top of this
+package: **alert visibility, severity ordering, and plane-allocation
+priority in the consuming HMI must be severity-driven, never
+profile-driven.** Per-profile differentiation has a legitimate home in
+verbosity (`AlertExplainer` `VerbosityLevel`), in locale tagging
+(`AlertExplainer` locale), and in density-cap behaviour
+(`AlertDensityThrottle.forProfile` / `defaultCapFor`). It does NOT
+have a legitimate home in:
+
+- the visibility decision (does the alert reach the driver at all?)
+- severity preemption order (does a critical preempt a warning?)
+- hardware-overlay-plane allocation in a display-server / KMS layer
+  (which alert is composed onto a hardware overlay plane vs. software-
+  composited fallback?)
+
+Encoding `DriverProfile` into any of those three paths would create a
+"VIP-path" failure: a `professional` profile alert reaches the driver
+faster or with higher fidelity than a `foreignTouristSnowZone` alert
+under contention. That is a violation of equal-dignity-per-driver-class
+and is incompatible with the package's documented design intent.
+Consumers that want profile-aware behaviour must route it through the
+density cap and the explainer-verbosity surface, NOT through
+visibility, preemption, or plane allocation.
+
+This invariant is named here so it is preserved across the package
+boundary and inherited by any HMI / display-server integration that
+consumes these surfaces.
+
+---
+
 ## Why we publish this honestly
 
 The package serves drivers — including drivers in HER cohort (the

@@ -21,6 +21,53 @@ If you're building a Flutter app and want the BLoC layer too, depend on
 `navigation_safety` instead; it re-exports everything here for
 back-compatibility.
 
+## Scope: driving automation regimes
+
+This package is intended for **SAE J3016 Level 0 and Level 1 supportive
+use** — the driver performs the dynamic driving task (DDT) at all
+times; this package's surfaces (alert severity, alert-density throttle,
+condition explainer, safety score, road-surface vocabulary) inform the
+driver but never actuate the vehicle and never close a control loop.
+
+**This package does not provide L2+ automation or handover-class
+supervision.** Consumers operating at SAE J3016 Level 2 or above are
+responsible for adding their own handover-class driver-attention
+monitoring, take-over-request signalling, and minimum-risk-manoeuvre
+fallback. Treating this package's advisory output as input to an
+automation-handover safety contract is out of the documented scope.
+
+**Standards-mapping summary** (full detail in
+[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md#standards-mapping-current-advisory-framing)):
+
+- **ISO 26262**: under the current advisory-only framing, this package
+  is product-quality scope, not functional-safety scope. The integrator
+  performs the hazard analysis and decides the final ASIL classification
+  for their integration; the package's wording discipline is consistent
+  with QM at the application layer.
+- **SAE J3016**: L0/L1 supportive. No L2+ claim.
+- **JIS / JASO** (Japanese-domestic automotive standards): not mapped at
+  this scope. Consult a qualified Japanese-domestic functional-safety
+  partner before any IVI-vendor or OEM-pilot integration that targets
+  the Japanese-domestic certification surface.
+
+**When this package's alerts are appropriate**: informational +
+density-throttled HMI surfaces over a base map, in a navigation app
+where the driver retains full control authority and the alert is one
+of several driver-supervision aids.
+
+**When this package's alerts are insufficient**: any deployment where
+alert acknowledgment is part of an automation-handover safety contract,
+or where loss of an alert frame must be guaranteed-bounded by a
+functional-safety case rather than by product-quality reliability.
+
+**Equal-dignity invariant**: alert visibility, severity ordering, and
+plane-allocation priority in the consuming HMI MUST be **severity-driven,
+never profile-driven**. Per-profile differentiation belongs in
+verbosity, locale, and density-cap surfaces (already provided by
+`AlertExplainer` and `AlertDensityThrottle`); it MUST NOT enter the
+visibility / preemption path. See `KNOWN_LIMITATIONS.md` for full
+discussion.
+
 ## What's in here
 
 - **`SafetyScore`** — composite score across road-surface, visibility,
