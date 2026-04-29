@@ -7,7 +7,9 @@ import 'alert_density_throttle.dart';
 import 'calibration/humidity_dependent_temperature.dart';
 import 'calibration/precipitation_history_decay.dart';
 import 'calibration/speed_dependent_visibility.dart';
+import 'driver_context.dart';
 import 'driver_profile.dart';
+import 'driver_state.dart';
 import 'navigation_safety_context.dart';
 
 class NavigationSafetyConfig extends Equatable {
@@ -247,6 +249,108 @@ class NavigationSafetyConfig extends Equatable {
     }
   }
 
+  /// Build a config tuned to both the trait axis ([DriverProfile]) and
+  /// the state axis ([DriverState]) of a [DriverContext]. Optionally
+  /// composes with a live [DrivingContext] (the v0.5.0 environmental
+  /// context); when both are passed, the trait baseline is computed
+  /// first, then the state delta, then the environmental delta — each
+  /// step conservative-only (warns earlier, never later).
+  ///
+  /// State deltas at this spike (0.6.0) are intentionally small and
+  /// flagged UNVERIFIED in `KNOWN_LIMITATIONS.md` (state-axis section).
+  /// The shape of the API is the load-bearing piece; the magnitudes
+  /// are placeholders pending state-axis literature anchoring (Regan
+  /// PMC4001671 + downstream).
+  ///
+  /// 0.5.0 callers that pass [DriverProfile] alone to
+  /// [forProfile] / [forProfileWithContext] see no behaviour change;
+  /// state-axis tuning is opt-in via this factory only.
+  factory NavigationSafetyConfig.forDriverContext(
+    DriverContext driverContext, {
+    DrivingContext? environmentalContext,
+  }) {
+    // Step 1: trait + (optional) environmental baseline reuses the
+    // proven 0.5.0 path so any future calibration update there is
+    // automatically inherited here.
+    final base = NavigationSafetyConfig.forProfileWithContext(
+      driverContext.profile,
+      context: environmentalContext,
+    );
+
+    // Step 2: apply state-axis delta. Conservative-only; never weaker
+    // than `base`. Magnitudes UNVERIFIED — see KNOWN_LIMITATIONS.md
+    // (state-axis section, 0.6.0).
+    final delta = _stateDeltaFor(driverContext.state);
+    final reactionPenaltySeconds = delta.reactionTimePenaltySeconds;
+    final tempLiftCelsius = delta.warningTempLiftCelsius;
+    final visibilityScale = delta.visibilityScale;
+
+    var warningVisibility = base.warningVisibilityMeters;
+    var infoVisibility = base.infoVisibilityMeters;
+    var criticalVisibility = base.criticalVisibilityMeters;
+    var warningTemperature = base.warningTemperatureCelsius;
+
+    if (reactionPenaltySeconds > 0 && environmentalContext?.speedMps != null) {
+      // When we have a live speed sample, translate the reaction-time
+      // penalty into additional visibility headroom on the same kinematic
+      // basis used by the 0.5.0 speed-dependent visibility calibration.
+      final extraMeters = environmentalContext!.speedMps! * reactionPenaltySeconds;
+      final candidate =
+          base.warningVisibilityMeters + extraMeters.ceil();
+      if (candidate > warningVisibility) {
+        warningVisibility = candidate;
+      }
+    }
+
+    if (visibilityScale > 1.0) {
+      // Speed-independent visibility scale-up (e.g. impairedVisibility
+      // state). Applies to all three visibility tiers proportionally
+      // so tier ordering is preserved.
+      warningVisibility = (warningVisibility * visibilityScale).ceil();
+      infoVisibility = (infoVisibility * visibilityScale).ceil();
+      criticalVisibility = (criticalVisibility * visibilityScale).ceil();
+    }
+
+    if (tempLiftCelsius > 0) {
+      warningTemperature = base.warningTemperatureCelsius + tempLiftCelsius;
+    }
+
+    return NavigationSafetyConfig(
+      safeScoreFloor: base.safeScoreFloor,
+      infoScoreFloor: base.infoScoreFloor,
+      warningScoreFloor: base.warningScoreFloor,
+      infoTemperatureCelsius: base.infoTemperatureCelsius,
+      warningTemperatureCelsius: warningTemperature,
+      criticalTemperatureCelsius: base.criticalTemperatureCelsius,
+      infoVisibilityMeters: infoVisibility,
+      warningVisibilityMeters: warningVisibility,
+      criticalVisibilityMeters: criticalVisibility,
+      alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
+    );
+  }
+
+  /// Per-state delta. Magnitudes UNVERIFIED at 0.6.0 spike — see
+  /// KNOWN_LIMITATIONS.md (state-axis section).
+  static _StateDelta _stateDeltaFor(DriverState state) {
+    switch (state) {
+      case DriverState.alert:
+        return const _StateDelta();
+      case DriverState.fatigued:
+        return const _StateDelta(
+          reactionTimePenaltySeconds: 0.5,
+          warningTempLiftCelsius: 1,
+        );
+      case DriverState.distracted:
+        return const _StateDelta(
+          reactionTimePenaltySeconds: 1.0,
+        );
+      case DriverState.impairedVisibility:
+        return const _StateDelta(
+          visibilityScale: 1.25,
+        );
+    }
+  }
+
   NavigationSafetyConfig({
     this.safeScoreFloor = 0.80,
     this.infoScoreFloor = 0.50,
@@ -301,4 +405,19 @@ class NavigationSafetyConfig extends Equatable {
         criticalVisibilityMeters,
         alertsPerMinuteCapOverride,
       ];
+}
+
+/// Internal-only descriptor of the per-state delta applied by
+/// `NavigationSafetyConfig.forDriverContext`. Magnitudes UNVERIFIED at
+/// 0.6.0 spike — see `KNOWN_LIMITATIONS.md` (state-axis section).
+class _StateDelta {
+  final double reactionTimePenaltySeconds;
+  final int warningTempLiftCelsius;
+  final double visibilityScale;
+
+  const _StateDelta({
+    this.reactionTimePenaltySeconds = 0.0,
+    this.warningTempLiftCelsius = 0,
+    this.visibilityScale = 1.0,
+  });
 }
