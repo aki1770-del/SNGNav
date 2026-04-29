@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.6.0 — 2026-04-30 — trait/state spike (NOT YET PUBLISHED)
+
+Adds the trait/state matrix per Regan-Hallett-Gordon 2011 (PMC4001671)
+as an additive, opt-in axis. Existing 0.5.0 callers see no behaviour
+change; state-axis tuning is opt-in via the new factory only.
+
+This is a **spike**: state-effect magnitudes are intentionally small
+and flagged UNVERIFIED in `KNOWN_LIMITATIONS.md` (state-axis section).
+The shape of the API is the load-bearing piece; magnitudes pending
+state-axis literature anchoring.
+
+### Added
+
+- **`DriverState`** — enum with four values: `alert`, `fatigued`,
+  `distracted`, `impairedVisibility`. Live (transient) axis,
+  orthogonal to `DriverProfile` (trait).
+- **`DriverContext`** — immutable value-object coupling a
+  `DriverProfile` (trait) with a `DriverState` (state). Constructible
+  via the default constructor or the named factory
+  `DriverContext.combineWith(profile:, state:)`. Includes
+  `withState(newState)` for mid-trip state updates without losing
+  the trait.
+- **`NavigationSafetyConfig.forDriverContext(context, {environmentalContext})`**
+  — new factory tuning thresholds to both the trait baseline and the
+  state-axis delta. Optionally composes with the v0.5.0
+  `DrivingContext`. Conservative-only: warns earlier than the
+  per-profile baseline, never later.
+
+### Unchanged (back-compat)
+
+- `NavigationSafetyConfig.forProfile(profile)` — identical behaviour to 0.5.0.
+- `NavigationSafetyConfig.forProfileWithContext(profile, context:)` — identical behaviour to 0.5.0.
+- All other 0.5.0 surface unchanged.
+
 ## 0.5.0 — 2026-04-30
 
 Adds an additive context-aware factory and a driving-context value

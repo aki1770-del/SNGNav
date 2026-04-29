@@ -9,6 +9,58 @@ than letting silent gaps reach drivers.
 
 ---
 
+## DriverState (state-axis spike, added in 0.6.0) — UNVERIFIED magnitudes
+
+The `DriverState` enum and `DriverContext` trait/state composite were
+added in 0.6.0 per Regan-Hallett-Gordon 2011 (PMC4001671) trait/state
+separation. The **shape** of the API is intentional and stable for
+this spike (Regan T3); the **magnitudes** of the per-state delta
+applied by `NavigationSafetyConfig.forDriverContext` are NOT
+literature-anchored and are placeholders pending state-axis
+calibration.
+
+### What is UNVERIFIED at 0.6.0
+
+- **`fatigued` state** — reaction-time penalty (+0.5 s) and warning-
+  temperature lift (+1 °C) are placeholder magnitudes. Direction
+  (conservative-only) is sound; magnitude is engineering judgement
+  pending fatigue-RT literature anchoring (e.g. Williamson & Feyer
+  2000, Dawson & Reid 1997 on fatigue ↔ alcohol-equivalent RT).
+- **`distracted` state** — reaction-time penalty (+1.0 s) is a
+  placeholder. Direction is sound; magnitude pending distraction-RT
+  literature anchoring (e.g. Strayer et al. on cognitive workload,
+  Regan et al. PMC4001671 follow-on work, NHTSA visual-manual).
+- **`impairedVisibility` state** — visibility-tier scale-up (×1.25)
+  is a placeholder. Direction is sound; magnitude pending sun-glare
+  / whiteout / fog visual-acuity-degradation literature anchoring.
+- **`alert` state** — no delta applied; this is by definition the
+  baseline and is verified to be unchanged from 0.5.0 behaviour.
+
+### What is verified at 0.6.0
+
+- **API shape** — trait × state separation per Regan-Hallett-Gordon
+  2011 (PMC4001671) T3 finding.
+- **Conservative-only contract** — state delta may make thresholds
+  warn earlier than the per-profile baseline, never later. Verified
+  by tests that compare `forDriverContext(ctx)` against
+  `forProfile(ctx.profile)` for every state and assert
+  warningTemperatureCelsius monotonic-up and visibility-tier
+  monotonic-up.
+- **Back-compat** — `forProfile` and `forProfileWithContext`
+  unchanged from 0.5.0.
+
+### Out of scope at 0.6.0
+
+- The full trait × state matrix (`DriverProfile` × `DriverState`)
+  with per-cell calibration is a v1.0 architecture decision per
+  insight #23 of the HER Pivot 100. 0.6.0 ships the orthogonal axes
+  and the composition factory; per-cell calibration is deferred.
+- Live state detection (drowsiness from steering entropy, distraction
+  from gaze trackers, etc.) is out of scope. The state value is
+  caller-supplied; this package does not infer it.
+
+---
+
 ## DriverProfile taxonomy (added in 0.2.0)
 
 ### Missing classes
