@@ -1,0 +1,11 @@
+name: navigation_lend_mode_experiment
+description: Aviation-style lend-mode handoff for snow-zone navigation. Explore-phase; never published.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0
