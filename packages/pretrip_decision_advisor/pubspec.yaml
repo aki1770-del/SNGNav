@@ -1,0 +1,10 @@
+name: pretrip_decision_advisor
+description: Pre-trip departure-timing decision advisor for snow-zone navigation. Explore-phase interface; no published implementation.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dev_dependencies:
+  test: ^1.25.0
