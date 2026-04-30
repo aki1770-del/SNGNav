@@ -22,17 +22,42 @@ calibration.
 ### What is UNVERIFIED at 0.6.0
 
 - **`fatigued` state** — reaction-time penalty (+0.5 s) and warning-
-  temperature lift (+1 °C) are placeholder magnitudes. Direction
-  (conservative-only) is sound; magnitude is engineering judgement
-  pending fatigue-RT literature anchoring (e.g. Williamson & Feyer
-  2000, Dawson & Reid 1997 on fatigue ↔ alcohol-equivalent RT).
-- **`distracted` state** — reaction-time penalty (+1.0 s) is a
-  placeholder. Direction is sound; magnitude pending distraction-RT
-  literature anchoring (e.g. Strayer et al. on cognitive workload,
-  Regan et al. PMC4001671 follow-on work, NHTSA visual-manual).
-- **`impairedVisibility` state** — visibility-tier scale-up (×1.25)
-  is a placeholder. Direction is sound; magnitude pending sun-glare
-  / whiteout / fog visual-acuity-degradation literature anchoring.
+  temperature lift (+1 °C). The +0.5 s magnitude is a conservative
+  lower-bound consistent with Williamson & Feyer 2000
+  ([PubMed 10984335](https://pubmed.ncbi.nlm.nih.gov/10984335/)),
+  which reports that 17–19 hours of wakefulness produces response-speed
+  degradation of up to 50% on some tasks (equivalent to ~0.05% BAC),
+  and 24+ hours produces impairment equivalent to ~0.10% BAC. The
+  package's +0.5 s sits within the lower-bound region of that
+  distribution; full per-hour-of-wakefulness calibration is deferred
+  pending field telemetry. The +1 °C warning-temperature lift remains
+  engineering judgement (no direct literature anchor for the
+  fatigue↔frost-margin mapping).
+- **`distracted` state** — reaction-time penalty (+1.0 s). Strayer &
+  Drews 2007
+  ([Cell-Phone-Induced Driver Distraction](https://appliedcognition.psych.utah.edu/publications/cellphone.pdf))
+  and the AAA Foundation cognitive-distraction series
+  ([Cognitive Distraction: Something to Think About](https://aaafoundation.org/wp-content/uploads/2018/01/CognitiveDistractionReport.pdf))
+  document a roughly two-fold increase in failure-to-detect rate plus
+  measurable RT slowing under cognitive load (with P300 amplitude
+  reduced ~50% during hands-free conversation). The +1.0 s magnitude
+  is a conservative population-applicable bracket consistent with the
+  RT-slowing distributions reported in that body of work; per-task
+  calibration (texting vs. conversation vs. nav-menu) is deferred.
+- **`impairedVisibility` state** — visibility-tier scale-up (×1.25).
+  FHWA roadway-visibility research
+  ([Current Research and Practices, FHWA visibility section](https://highways.dot.gov/safety/other/visibility/roadway-visibility-research-needs-assessment/2-current-research-and))
+  documents that fog reduces contrast and produces longer visual
+  response times, with drivers underestimating speed and reducing
+  preview distance; the eLife "Foggy perception slows us down"
+  finding ([eLife article](https://elifesciences.org/articles/00031))
+  reports drivers averaging 85.1 km/h in good visibility dropping to
+  70.9 km/h in severe fog. The ×1.25 scale-up is directional and
+  sits within the qualitative envelope of those reductions, but no
+  published source maps a single visibility-tier multiplier to a
+  fixed acuity-degradation factor across fog / whiteout / glare; the
+  exact magnitude remains UNVERIFIED and will be refined when a
+  per-condition multiplier is field-calibrated.
 - **`alert` state** — no delta applied; this is by definition the
   baseline and is verified to be unchanged from 0.5.0 behaviour.
 
@@ -499,12 +524,43 @@ literature-anchored:
 
 The other four (`snowZoneExperienced` 1.8s, `professional` 1.5s,
 `agriculturalForestry` 2.0s, `foreignTouristSnowZone` 3.5s) are
-**UNVERIFIED** specific cites — they are reasonable defaults derived
-from the surrounding literature (e.g. experienced 1.32s + a snow-margin
-for `snowZoneExperienced`; novice-equivalent 3.5s for foreign tourist),
-but no single published source quotes those exact numbers. Same defer
-pattern as the 0.3.1 per-profile vocabulary speak-strings and the 0.4.0
-density caps.
+derived defaults rather than direct cites:
+
+- `professional` 1.5s — bracketed by professional-truck-driver
+  simulator work ([Driver Response Time and Age Impact, MDPI](https://www.mdpi.com/2227-7390/10/9/1489),
+  [Evaluation of Driver's Reaction Time PMC9099898](https://pmc.ncbi.nlm.nih.gov/articles/PMC9099898/))
+  reporting professional-driver RT around 1.0–1.35s in controlled
+  conditions; 1.5s sits as a conservative on-road default with margin.
+- `snowZoneExperienced` 1.8s — derived as the experienced-baseline
+  1.32s ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/))
+  plus a surface-friction margin for snow/ice; no single source
+  quotes this composite directly.
+- `agriculturalForestry` 2.0s — informed by the FHWA rural-roadway
+  finding that drivers familiar with rural roadways show **slower**
+  brake-activation RT than unfamiliar drivers in sudden-event
+  scenarios ([FHWA Rural Two-Lane Curved Roadways](https://www.fhwa.dot.gov/publications/research/safety/12073/index.cfm))
+  combined with the ageing-farmer demographic profile (average ~60y
+  with documented age-related RT slowing — 2–6 ms per decade plus
+  task-load multipliers per
+  [PMC9423772](https://pmc.ncbi.nlm.nih.gov/articles/PMC9423772/)).
+  The 2.0s default is a directional bracket; no single source quotes
+  this exact value.
+- `foreignTouristSnowZone` 3.5s — bracketed by the novice
+  hazard-perception RT of 3.58s
+  ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/))
+  on the assumption that foreign tourists driving Hokkaido / Tohoku
+  snow roads for the first time face a novice-equivalent
+  hazard-perception load on the snow-specific axis (rental-car
+  industry reports document concrete tourist-accident clusters at
+  TOMARE intersections and on whiteout-prone passes — see
+  [ExploreLifeHub Hokkaido Winter Driving](https://www.explorelifehub.com/en/hokkaido-winter-driving-guide/),
+  [Powderlife driving and surviving Hokkaido winters](https://www.powderlife.com/blog/driving-surviving-hokkaido-winters/)).
+  The exact magnitude remains an engineering bracket; no source
+  quotes 3.5s for this specific population.
+
+Same defer pattern as the 0.3.1 per-profile vocabulary speak-strings
+and the 0.4.0 density caps — these are literature-informed defaults,
+not field-validated population values.
 
 The default braking deceleration is 5.5 m/s² (typical dry pavement).
 For snow / ice surfaces the consumer should pass a lower value; surface
@@ -520,12 +576,24 @@ road surface when ambient air is several degrees above 0°C if
 clear-sky radiative cooling drops the surface to the dew point — see
 [Wikipedia black ice](https://en.wikipedia.org/wiki/Black_ice).
 
-The approximation `effective = ambient - depression` is **conservative
-but UNVERIFIED** for any specific surface. Real road-surface
-temperature depends on emissivity, sky cloud cover, surface material,
-and time-of-night. No single published value captures every road
-context. Treat the output as a frost-risk indicator, not a measured
-surface temperature.
+The approximation `effective = ambient - depression` is anchored in
+documented road-meteorology physics: on clear nights with light winds,
+road surfaces commonly cool 2–5 °F (≈1.1–2.8 °C) below ambient air
+temperature via radiative cooling, and the surface temperature must
+reach the dew point for frost / ice formation
+([Roadway Icing and Weather tutorial, U. Washington](https://www.atmos.washington.edu/~cliff/Roadway3.html);
+[Investigating Road Ice Formation Mechanisms, MDPI Climate](https://www.mdpi.com/2225-1154/12/5/63);
+[Wikipedia radiative cooling](https://en.wikipedia.org/wiki/Radiative_cooling)).
+Modern Magnus parameter constants (a = 17.625, b = 243.04 °C) are
+from Alduchov & Eskridge 1996.
+
+The approximation remains **directional but UNVERIFIED** for any
+specific surface as a predicted ground-truth measurement: the actual
+surface temperature depends on emissivity, sky cloud cover, surface
+material, time-of-night, and wind speed. No single published value
+captures every road context. Treat the output as a frost-risk
+indicator anchored in published radiative-cooling magnitudes, not a
+measured surface temperature.
 
 ### Precipitation-history exponential decay (`precipitation_history_decay.dart`)
 
@@ -533,9 +601,24 @@ Returns `exp(-ln2 × t / halfLife)` clamped to `[0, 1]`. Default
 half-life 90 minutes — **deliberately conservative** so the consuming
 app warns longer rather than shorter on residual surface moisture.
 Most road surfaces dry faster under sun and wind; some dry slower
-(shaded, cold, low-wind environments). The 90-minute default is
-**UNVERIFIED** as a population value; consumers with telemetry that
-informs a more accurate half-life should override.
+(shaded, cold, low-wind environments).
+
+Research attempted: published road-pavement and urban-surface
+evaporation work
+([Mechanisms and Empirical Modeling of Evaporation from Hardened
+Surfaces in Urban Areas, PMC7917919](https://pmc.ncbi.nlm.nih.gov/articles/PMC7917919/))
+documents first-order-evaporation as the standard model and reports
+that hardened-surface evaporation occupies 16–29% of total urban
+evaporation, with cooling effects from precipitation lasting on the
+order of "a few days." Practical-engineering guidance commonly cites
+asphalt drying timeframes of 48–72 hours under typical conditions,
+with relative humidity above 80% roughly doubling drying time. None
+of these sources publishes a single half-life value for residual
+surface-moisture impact on driver-relevant friction. **The 90-minute
+default remains UNVERIFIED as a population value;** it sits at a
+conservatively short fraction of the practical-drying envelope so
+the warning fires longer rather than shorter. Consumers with
+telemetry that informs a more accurate half-life should override.
 
 The exponential-decay shape is the standard first-order-evaporation
 model used in pavement-engineering and atmospheric-science references;
