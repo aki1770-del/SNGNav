@@ -4,108 +4,232 @@
 [![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-**Pure Dart core models for driving-navigation safety.**
+**Pure-Dart core models for driving-navigation safety.** Threshold
+configuration, road-surface vocabulary, alert severity, alert-density
+throttle, and an action-coupled alert explainer — tuned per
+driver-class, optionally tuned to live driving conditions and live
+driver state. Suitable for navigation apps that surface advisory
+alerts (winter weather, low visibility, hazardous surface) over a base
+map. No Flutter dependency: the Pure-Dart shape lets CLI tools,
+server-side logic, test fixtures, and other pure-Dart packages depend
+on the safety vocabulary without inheriting Flutter or
+`flutter_bloc`. The companion package
+[`navigation_safety`](https://pub.dev/packages/navigation_safety)
+re-exports everything here and adds a Flutter BLoC layer.
 
-`SafetyScore`, `AlertSeverity`, `NavigationRoute`, `SafetyScenario`,
-`NavigationSafetyConfig` — the type vocabulary that
-[`navigation_safety`](https://pub.dev/packages/navigation_safety) wraps
-with Flutter BLoCs and widgets.
+## Quick start
 
-This package exists so that **non-Flutter consumers** — CLI tools,
-server-side logic, test fixtures, pure-Dart packages like
-[`driving_conditions`](https://pub.dev/packages/driving_conditions) —
-can depend on the safety vocabulary without inheriting Flutter +
-flutter_bloc.
+### a. Install + import
 
-If you're building a Flutter app and want the BLoC layer too, depend on
-`navigation_safety` instead; it re-exports everything here for
-back-compatibility.
-
-## Scope: driving automation regimes
-
-This package is intended for **SAE J3016 Level 0 and Level 1 supportive
-use** — the driver performs the dynamic driving task (DDT) at all
-times; this package's surfaces (alert severity, alert-density throttle,
-condition explainer, safety score, road-surface vocabulary) inform the
-driver but never actuate the vehicle and never close a control loop.
-
-**This package does not provide L2+ automation or handover-class
-supervision.** Consumers operating at SAE J3016 Level 2 or above are
-responsible for adding their own handover-class driver-attention
-monitoring, take-over-request signalling, and minimum-risk-manoeuvre
-fallback. Treating this package's advisory output as input to an
-automation-handover safety contract is out of the documented scope.
-
-**Standards-mapping summary** (full detail in
-[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md#standards-mapping-current-advisory-framing)):
-
-- **ISO 26262**: under the current advisory-only framing, this package
-  is product-quality scope, not functional-safety scope. The integrator
-  performs the hazard analysis and decides the final ASIL classification
-  for their integration; the package's wording discipline is consistent
-  with QM at the application layer.
-- **SAE J3016**: L0/L1 supportive. No L2+ claim.
-- **JIS / JASO** (Japanese-domestic automotive standards): not mapped at
-  this scope. Consult a qualified Japanese-domestic functional-safety
-  partner before any IVI-vendor or OEM-pilot integration that targets
-  the Japanese-domestic certification surface.
-
-**When this package's alerts are appropriate**: informational +
-density-throttled HMI surfaces over a base map, in a navigation app
-where the driver retains full control authority and the alert is one
-of several driver-supervision aids.
-
-**When this package's alerts are insufficient**: any deployment where
-alert acknowledgment is part of an automation-handover safety contract,
-or where loss of an alert frame must be guaranteed-bounded by a
-functional-safety case rather than by product-quality reliability.
-
-**Equal-dignity invariant**: alert visibility, severity ordering, and
-plane-allocation priority in the consuming HMI MUST be **severity-driven,
-never profile-driven**. Per-profile differentiation belongs in
-verbosity, locale, and density-cap surfaces (already provided by
-`AlertExplainer` and `AlertDensityThrottle`); it MUST NOT enter the
-visibility / preemption path. See `KNOWN_LIMITATIONS.md` for full
-discussion.
-
-## What's in here
-
-- **`SafetyScore`** — composite score across road-surface, visibility,
-  hazard-density, and route-condition axes.
-- **`AlertSeverity`** — `info` / `warning` / `critical`. Declaration
-  order is load-bearing (callers compare `.index` to enforce monotonic
-  alert upgrades; lower severity never replaces higher).
-- **`NavigationRoute`** — typed route representation independent of
-  any specific routing engine.
-- **`SafetyScenario`** — enumeration of driving-condition scenarios
-  (clear / wet / icy / heavy-snow / etc.) used by the score computation.
-- **`NavigationSafetyConfig`** — knobs for safety-overlay behavior
-  (alert thresholds, dismissibility, severity caps).
-
-Pure Dart, no native dependencies, no Flutter.
-
-## Install
+Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  navigation_safety_core: ^0.1.0
+  navigation_safety_core: ^0.6.0
 ```
 
-## Use
+Then import:
 
 ```dart
 import 'package:navigation_safety_core/navigation_safety_core.dart';
-
-void main() {
-  const config = NavigationSafetyConfig();
-  final scenario = SafetyScenario.heavySnow;
-  final score = SafetyScore.forScenario(scenario, config: config);
-
-  if (score.severity.index >= AlertSeverity.warning.index) {
-    print('Alert: ${score.severity.name} — ${score.advisoryMessage}');
-  }
-}
 ```
+
+### b. Basic usage — `forProfile`
+
+Pick a driver-class profile; receive a config tuned for that class:
+
+```dart
+final config = NavigationSafetyConfig.forProfile(
+  DriverProfile.snowZoneExperienced,
+);
+
+print(config.warningVisibilityMeters);    // 200
+print(config.warningTemperatureCelsius);  // 0
+```
+
+The six profiles (`ageingRural`, `snowZoneExperienced`, `noviceUrban`,
+`professional`, `agriculturalForestry`, `foreignTouristSnowZone`) ship
+literature-anchored thresholds for visibility, temperature, and score
+floors. Pick the one closest to the active driver context; fall back
+to `snowZoneExperienced` (the historical default) when uncertain.
+
+### c. Advanced usage — context-aware factories
+
+When the app has live driving conditions (current speed, humidity,
+ambient temperature, time-since-precipitation), pass a `DrivingContext`
+to `forProfileWithContext` and the relevant thresholds adjust:
+
+```dart
+final config = NavigationSafetyConfig.forProfileWithContext(
+  DriverProfile.snowZoneExperienced,
+  context: const DrivingContext(
+    speedMps: 22.2,                                 // ~80 km/h
+    humidityRH: 0.92,
+    ambientTempCelsius: 1.0,
+    timeSincePrecipitation: Duration(minutes: 30),
+  ),
+);
+```
+
+When the app additionally has a live driver-state signal (fatigued,
+distracted, sensorily-impaired), pair it with the profile in a
+`DriverContext` and pass to `forDriverContext`:
+
+```dart
+final config = NavigationSafetyConfig.forDriverContext(
+  const DriverContext(
+    profile: DriverProfile.snowZoneExperienced,
+    state: DriverState.fatigued,
+  ),
+  environmentalContext: const DrivingContext(speedMps: 22.2),
+);
+```
+
+Every context input is **conservative-only**: it can make the
+thresholds warn earlier than the per-profile baseline, never later.
+The per-profile baseline is the floor.
+
+A runnable end-to-end walkthrough lives in
+[`example/main.dart`](example/main.dart).
+
+## Concepts
+
+The package separates three orthogonal axes:
+
+| Axis | Type | Question | Lifetime |
+|---|---|---|---|
+| **Trait** | `DriverProfile` | Who is the driver (class)? | Per-trip / per-session |
+| **State** | `DriverState`   | What state are they in right now? | Sub-trip; can change mid-trip |
+| **Live conditions** | `DrivingContext` | What does the road / weather look like right now? | Real-time; updates on every sample |
+
+The trait + state pairing is `DriverContext`, anchored to the
+trait/state distinction in the driver-distraction literature
+(Regan, Hallett & Gordon, 2011). Trait is who the driver is; state is
+what state the driver is in right now. The two are independent inputs
+to threshold tuning. State adjustments at 0.6.0 are intentionally
+small — the API shape is stable; the magnitudes are flagged
+UNVERIFIED in [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) pending
+state-axis literature anchoring.
+
+Two runtime helpers ship alongside the threshold config:
+
+- **`AlertDensityThrottle`** — per-profile alerts/min cap with a
+  rolling 60-second window. Critical alerts always fire (documented
+  invariant); info and warning alerts are gated to prevent driver
+  desensitisation. Per-profile cap defaults are anchored to the
+  alarm-fatigue and ADAS driver-workload literature.
+- **`AlertExplainer`** — pre-localised
+  `(condition, action, verbosity, locale)` tuple for each
+  `(RoadSurfaceCondition, DriverProfile)` pair. Action vocabulary
+  sourced from JAF / MLIT / NEXCO published driver-guidance
+  materials. Action mood is advisory ("reduce", "avoid", "maintain"),
+  never imperative-on-control.
+
+## Calibration formulas
+
+Three context-dependent calibrations live in
+`lib/src/calibration/`:
+
+- **Speed-dependent visibility** (`speed_dependent_visibility.dart`)
+  — at higher speed the warning visibility floor must cover reaction
+  time + braking distance; the per-profile reaction-time default is
+  used to translate a live speed sample into an additional visibility
+  margin.
+- **Humidity-dependent effective temperature**
+  (`humidity_dependent_temperature.dart`) — black ice forms at
+  road-surface temperature ≤ 0 °C, which can be several degrees below
+  ambient when humidity is high; the dew-point-aware effective
+  temperature replaces ambient when it crosses the warning threshold
+  earlier.
+- **Time-since-precipitation surface moisture**
+  (`precipitation_history_decay.dart`) — surface moisture decays
+  exponentially after the last rain or snowfall; the residual moisture
+  fraction adds a margin to the visibility floor proportional to
+  how wet the road still is.
+
+Per-formula citations live in each calibration module's header
+comment.
+
+## Standards mapping
+
+This package is intended for **SAE J3016 Level 0 and Level 1
+supportive use** — the driver performs the dynamic driving task at
+all times; the package's surfaces inform the driver but never actuate
+the vehicle and never close a control loop.
+
+| Standard | Mapping |
+|---|---|
+| **SAE J3016** | L0 / L1 supportive. **No L2+ claim.** |
+| **ISO 26262** | Product-quality scope at the package boundary, not functional-safety scope. The integrator performs the hazard analysis and decides the final ASIL classification for their integration. The package's wording discipline is consistent with QM at the application layer. |
+| **JIS / JASO** (Japanese-domestic automotive standards) | Not mapped at this scope. Consult a qualified Japanese-domestic functional-safety partner before any IVI-vendor or OEM-pilot integration that targets the Japanese-domestic certification surface. |
+
+Full standards-mapping detail and the per-formula UNVERIFIED-magnitude
+flags live in
+[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md#standards-mapping-current-advisory-framing).
+
+## What this is NOT
+
+- **Not an L2+ automation or handover-class supervision package.** Any
+  deployment where alert acknowledgment is part of an
+  automation-handover safety contract requires the integrator to add
+  their own handover-class driver-attention monitoring,
+  take-over-request signalling, and minimum-risk-manoeuvre fallback.
+- **Not ASIL-certified.** No functional-safety case is asserted at
+  the package boundary; the integrator owns the hazard analysis and
+  the certification path for their integration.
+- **Not JIS / JASO conformant.** Japanese-domestic certification is
+  out of scope at this layer.
+- **Not a control surface.** Action verbs in `AlertExplainer` are
+  advisory; speed numbers are published reference points, not
+  system-enforced limits. The driver retains full control authority.
+- **Not a routing engine.** `NavigationRoute` is a typed route
+  representation independent of any specific routing engine; it
+  describes a route, it does not compute one.
+
+## Equal-dignity invariant
+
+Alert visibility, severity ordering, and plane-allocation priority in
+the consuming HMI MUST be **severity-driven, never profile-driven**.
+Per-profile differentiation belongs in verbosity, locale, and
+density-cap surfaces (provided by `AlertExplainer` and
+`AlertDensityThrottle`); it MUST NOT enter the visibility or
+preemption path. See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+for the full discussion.
+
+## Public API surface
+
+- **`NavigationSafetyConfig`** — threshold configuration with three
+  factories: `forProfile`, `forProfileWithContext`,
+  `forDriverContext`.
+- **`DriverProfile`** — six driver-class profiles (trait axis).
+- **`DriverState`** — four live-state values (transient state axis).
+- **`DriverContext`** — trait + state composite.
+- **`DrivingContext`** — live driving-conditions value-object.
+- **`AlertDensityThrottle`** — per-profile alerts/min cap with
+  critical-bypass invariant.
+- **`AlertExplainer`** — action-coupled per-(condition, profile)
+  text with verbosity + locale.
+- **`AlertSeverity`** — `info` / `warning` / `critical`. Declaration
+  order is load-bearing.
+- **`RoadSurfaceCondition`** — eight road-surface vocabulary values
+  with a published glossary.
+- **`SafetyScore`** — composite score across road-surface,
+  visibility, hazard-density, and route-condition axes.
+- **`SafetyScenario`** — enumeration of driving-condition scenarios
+  used by the score computation.
+- **`NavigationRoute`** — typed route representation independent of
+  any specific routing engine.
+
+## Further reading
+
+- [`example/main.dart`](example/main.dart) — runnable walkthrough of
+  every public surface.
+- [`CHANGELOG.md`](CHANGELOG.md) — per-version behaviour deltas.
+- [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) — UNVERIFIED-magnitude
+  disclosures, standards-mapping detail, and the full
+  equal-dignity-invariant discussion.
+- [`LOOMS.md`](LOOMS.md) — runtime-loom catalog (the
+  `AlertDensityThrottle` and `AlertExplainer` pair).
 
 ## License
 
