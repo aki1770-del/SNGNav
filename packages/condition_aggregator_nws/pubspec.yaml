@@ -1,0 +1,28 @@
+name: condition_aggregator_nws
+description: >-
+  NOAA / NWS adapter for the condition_aggregator interface. Maps
+  WinterAlert records from noaa_nws_adapter to the source-neutral
+  Advisory typed event. Pure Dart, no Flutter dependency.
+version: 0.0.2
+
+# Default publish target = https://pub.dev (no `publish_to:` line).
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - aggregator
+  - advisory
+  - noaa
+  - nws
+  - winter-driving
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  condition_aggregator: ^0.0.1
+  noaa_nws_adapter: ^0.0.1
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

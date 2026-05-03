@@ -1,0 +1,161 @@
+# condition_aggregator
+
+Source-neutral interface for severity-qualified meteorological-advisory
+aggregation. Defines the typed `Advisory` event, the `AdvisoryProvider`
+adapter contract, and the `AdvisoryAggregator` multi-source fan-out
+primitive consumed by per-source adapter packages.
+
+**Phase**: explore (`publish_to: none` in `pubspec.yaml`).
+Deploy graduation requires the FDD spike-to-package promotion gate
+(clean smoke test, ≥1 test per public class, this README's HER-trace +
+driver-facing-loom + phase declarations, the AAA-class boundary record
+in `SAFETY_BOUNDARY.md`, version + license clean, and explicit
+J3016 / ASIL / SOTIF / WP.29 / JIS-JASO declarations).
+
+Pure Dart. No Flutter dependency. Sole runtime dependency: `equatable`.
+
+## What this package is
+
+The interface defines:
+
+- `Advisory` — one typed advisory event, normalized across publisher
+  sources. Fields: `source`, `eventClass`, `severity`, `certainty`,
+  `urgency`, `areaDescription`, `effective`, `expires`, `headline`,
+  `description`. Equatable for stream de-duplication.
+- `AdvisorySource` — enum naming the publisher (`nwsUnitedStates`,
+  `jmaJapan`, `other`).
+- `AdvisorySeverity` / `AdvisoryCertainty` / `AdvisoryUrgency` —
+  CAP-class normalized scales. Non-CAP sources (e.g. JMA) map their
+  native classification to these scales at adapter boundary.
+- `AdvisoryProvider` — adapter contract. One method:
+  `fetchActiveAdvisoriesAtPoint(lat, lon)`. Plus an `init()` lifecycle
+  hook for surfacing schema-version / configuration errors before any
+  caller depends on a broken provider.
+- `AdvisoryAggregator` — multi-source fan-out primitive. Holds N
+  providers; init's them all; queries them all; returns merged results
+  plus per-provider error list (warn-and-continue, not abort).
+- `AdvisoryProviderInitException` — uniform init-failure exception
+  type adapters MAY throw; subtypable for adapter-specific
+  discrimination.
+- `AdvisoryAggregateResult` / `AdvisoryProviderError` — fan-out result
+  types.
+
+## What this package is not
+
+- Not a publisher. The package consumes and merges; it does not generate
+  advisories. Per-source adapter packages (`condition_aggregator_nws`,
+  `condition_aggregator_jma`, etc.) wrap publisher feeds.
+- Not a renderer. The package returns typed value objects; it does not
+  paint UI. Integrators (e.g. `driving_conditions`, `driving_weather`,
+  app HMI) consume `Advisory` records.
+- Not a forecaster. The package never time-shifts, derives, or fuses
+  publisher data into novel predictions. Severity-not-profile invariant
+  applies: `Advisory.severity` reflects the publisher's authority; the
+  package adds no severity assertion of its own.
+- Not a control loop. The package emits no actuator signal; the driver
+  always drives.
+
+## HER-trace (≤4-hop)
+
+```
+publisher advisory feed (NWS / JMA / etc.)
+  → per-source adapter (condition_aggregator_<source>)
+  → AdvisoryAggregator typed merge
+  → integrator HMI surfaces advisory to the driver in unexpected snow
+```
+
+4 hops. The driver in unexpected snow receives a typed `Advisory`
+event with severity / certainty / urgency / area / effective / expires
+normalized across whichever publisher (NWS, JMA, etc.) issued the
+underlying alert.
+
+## Driver-facing loom
+
+When a publisher (NWS, JMA, etc.) has issued an advisory for the
+driver's current point, the integrator HMI surfaces a typed `Advisory`
+event with severity / certainty / urgency / area / effective / expires
+normalized across sources — as the driver's decision substrate, not as
+raw GeoJSON or XML feed text. The Sakichi reading: the loom is a
+multi-postman who carries each publisher's letter to the driver
+without rewriting it; the loom does ONE thing well — typed merge with
+warn-and-continue per-provider failure handling — and does NOT add
+layers the driver did not ask for and the publishers did not author.
+
+## Composition with sibling packages
+
+```
+noaa_nws_adapter (raw NWS HTTP+GeoJSON adapter)
+  → condition_aggregator_nws (maps WinterAlert → Advisory)
+  → condition_aggregator (this package; AdvisoryAggregator merges)
+  → driving_conditions / driving_weather integrators
+  → SNGNav app HMI / driver
+```
+
+## Usage
+
+```dart
+import 'package:condition_aggregator/condition_aggregator.dart';
+import 'package:condition_aggregator_nws/condition_aggregator_nws.dart';
+
+final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
+  NwsAdvisoryProvider(
+    userAgent: '(myapp.example, contact@myapp.example)',
+  ),
+  // additional adapters added here as further sources graduate
+]);
+
+await agg.init();
+
+final result = await agg.fetchActiveAdvisoriesAtPoint(
+  latitude: 47.9253,
+  longitude: -97.0329,
+);
+
+for (final a in result.advisories) {
+  print('[${a.source.name}] ${a.eventClass}: ${a.headline}');
+}
+
+for (final err in result.providerErrors) {
+  // surface staleness honestly to the integrator HMI
+  print('warn: ${err.source.name} unavailable: ${err.message}');
+}
+```
+
+## Behaviours worth knowing
+
+- **Init is mandatory.** Calling `fetchActiveAdvisoriesAtPoint` before
+  `init` throws `StateError`. Init failures (schema-version mismatch,
+  required configuration missing) propagate from `init` — the
+  aggregator does NOT swallow init failures, since init is the
+  canonical surface for surfacing configuration drift before any
+  caller depends on a broken provider.
+
+- **Per-provider failures do not abort the fan-out.** When one provider
+  raises during `fetchActiveAdvisoriesAtPoint`, its error is captured
+  in `result.providerErrors`; surviving providers' advisories appear
+  in `result.advisories`. The integrator surfaces staleness to the
+  driver honestly (e.g. "JMA unavailable; NWS data shown").
+
+- **`Advisory` is Equatable.** Stream de-duplication can use
+  `distinct()` directly.
+
+- **Adapter package boundary is per-publisher.** Each publisher (NWS,
+  JMA, JARTIC, NEXCO, prefectural, etc.) ships its own
+  `condition_aggregator_<source>` package. License, cybersecurity, and
+  AAA-class safety boundary are audited per adapter package, not at
+  this interface.
+
+## Dependency posture
+
+- Pure Dart. No Flutter dependency.
+- Sole runtime dependency: `equatable` ^2.0.7.
+- Dev dependencies: `test` ^1.25.0, `lints` ^5.1.1.
+- Strict-cast / strict-inference / strict-raw-types analyser settings.
+
+## Status
+
+Explore phase. `publish_to: none` until the FDD promotion gate fires.
+
+## License
+
+BSD-3-Clause. See [LICENSE](LICENSE) (matches the rest of SNGNav).
