@@ -1,0 +1,30 @@
+name: noaa_nws_adapter
+description: >-
+  NOAA / National Weather Service direct-consume wrapper. Smallest-slice
+  GeoJSON client for api.weather.gov active winter alerts by point.
+  Pure Dart, no Flutter dependency. Explore-phase (publish_to: none).
+version: 0.0.1
+
+# Explore-phase per FDD bylaws Rule 1 + OPS-RULE-046. Deploy graduation
+# requires separate Komada-voice ratification + Rule 6 (i)-(vi) gate.
+publish_to: none
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - weather
+  - noaa
+  - nws
+  - winter-driving
+  - alerts
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.7
+  http: ^1.3.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
