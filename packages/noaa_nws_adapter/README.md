@@ -1,10 +1,5 @@
 # noaa_nws_adapter
 
-> **Status: explore-phase. Not published to pub.dev.**
-> `publish_to: none` is set in `pubspec.yaml`. This adapter is internal
-> SNGNav substrate while we shape the consumer surface; deploy is a
-> separate gate.
-
 Smallest-slice direct-consume wrapper around the
 [NOAA / National Weather Service public API](https://www.weather.gov/documentation/services-web-api)
 (`https://api.weather.gov`).
