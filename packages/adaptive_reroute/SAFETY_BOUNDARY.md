@@ -1,0 +1,82 @@
+# adaptive_reroute — Safety-Class Boundary Record
+
+**Package**: `adaptive_reroute`
+**Version**: 0.1.0 (DEPLOY; explore→early-deploy CANDIDATE per FDD recommendation)
+**Boundary record version**: 1.0
+**Authoring skill**: AAA (automotive-adas-analyst)
+**Date**: 2026-05-03
+**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+
+---
+
+## 1 — SAE J3016 driver-task regime
+
+**Level**: L0 / L1 supportive use only.
+**Driver-task assignment**: the driver performs the dynamic driving task at all times. The package's `RerouteEvaluator.evaluate()` returns a `RerouteDecision` containing `shouldReroute` (boolean) + `reason` (string) + `detourWaypoints` (List); the integrator HMI **surfaces this to the driver as advisory; the driver chooses to accept the reroute or override**. The package never autonomously commits a reroute against driver intent.
+**No L2+ claim.** The detour-waypoint output is consumed by the integrator's routing engine to compute an alternate route — but **the driver decides whether to follow it**. There is no automated handover; no minimum-risk-manoeuvre fallback claim; no take-over-request. The integrator HMI presents the decision; the driver acts.
+
+## 2 — ISO 26262 ASIL classification
+
+**Package boundary**: **QM** (Quality Management; not functional-safety-scope).
+**Reasoning**: package outputs are advisory-class decision logic (threshold-driven evaluation of `RouteForecast` against config-tuned hazard thresholds). No control authority. No ASIL-A through ASIL-D claim asserted at the package boundary.
+**Integrator responsibility**: any integration where the reroute decision gates a control loop (e.g. autonomous lane-change to detour exit) requires the integrator to perform fresh ASIL classification — the package outputs typed advisory data, not commit-class decisions.
+**Early-deploy version-class consideration**: at 0.1.0 the test surface + threshold-magnitudes anchoring + literature-citation discipline are **light** (per V77 README measurement: README is 88L; minimal calibration documentation). FDD Rule 6 spike-to-package gate at 0.2.0 graduation should expand calibration substrate before broader deployment. AAA does not block 0.1.0 explore-phase deployment but flags this for FDD bylaws audit at next package PR cycle.
+
+## 3 — SOTIF (ISO 21448) posture
+
+**Stance**: **advisory not control.**
+**Reasoning**: SOTIF addresses Safety Of The Intended Functionality at automated-driving-feature scope. This package delivers an advisory decision layer ("do we reroute now, around what?") consumed by integrator HMI for driver presentation; SOTIF triage is performed by the integrator at the HMI scope where the reroute prompt is rendered to the driver.
+**Reroute-thrashing discipline** (SOTIF-class operational discipline): per README.md L29-31 — `AdaptiveRerouteConfig` includes "minimum-progress-before-reroute logic (avoids rerouting thrashing when the driver has just started)." This is explicit SOTIF-class hazard mitigation against alarm-fatigue-class driver-confusion failure mode. AAA endorses the discipline; subsequent versions should document the magnitude (current: undocumented at README-class).
+
+## 4 — WP.29 cybersecurity touchpoint
+
+**Touchpoint location**: **upstream consumer-side at `RouteForecast` ingress.** This package consumes `RouteForecast` from `route_condition_forecast` (upstream, per pubspec.yaml dependency); WP.29 touchpoint is at the integrator's forecast-source ingress not at this package's boundary. Package itself ingests no external network data.
+**Detour-waypoint output**: the output `detourWaypoints` is fed back to the integrator's routing engine; routing-engine WP.29 surface is at the integrator's `RoutingEngine` implementation (per `routing_engine` package dependency). This package neither holds nor expands the cybersecurity surface.
+
+## 5 — JIS / JASO conformance
+
+**Conformance status**: **not mapped at this scope.**
+**Reasoning**: Japanese-domestic certification is integrator-class concern. Reroute-decision logic is geographically-agnostic (consumes typed `RouteForecast` from any region); JIS / JASO equivalents (where they exist for ADAS-routing-class advisory packages) are reconciled by the integrator at the integration certification surface.
+**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to advisory-class navigation packages; surfaces relevant publication deltas to AAA at next monthly cycle.
+
+## 6 — Severity-not-profile invariant
+
+**Status**: **applies in scope by design — profile-agnostic by construction.**
+**Concrete reasoning**: this package consumes `RouteForecast` (already-aggregated route hazard data) and `currentPosition`; no `DriverProfile` axis exists at this package's API surface. Reroute decision is computed from threshold-driven evaluation of forecast hazards, not profile-class differentiation. Severity-not-profile invariant from `navigation_safety_core` 0.6.0 is satisfied at this package's boundary trivially.
+**Future-version consideration**: if 0.2.0+ introduces profile-class differentiation for reroute thresholds (e.g. `noviceUrban` reroutes earlier than `professional`), the integration MUST flow through `navigation_safety_core` `DriverProfile` factories and MUST preserve severity-not-profile-driven HMI-presentation invariant — verbosity / locale / density may differ; the *visibility and preemption path* of the reroute prompt itself MUST stay severity-driven. AAA pre-flags this for next-version design review.
+
+## 7 — Driver-always-drives invariant
+
+**Status**: **applies in scope by design.**
+**Concrete reasoning**: package outputs are deterministic `RerouteDecision` value-objects consumed by integrator HMI; the integrator surfaces the decision to the driver who chooses whether to follow the detour. The package emits no commit-class signal; the integrator's routing engine recomputes route from `detourWaypoints` only when invoked by integrator code (which integrator implements per their UX choice — typically driver-confirms-prompt class).
+**Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object. Adaptive routing serves HER cognitive moment of choice when conditions ahead change. The package surfaces *"should we reroute now? Around what? Why?"* to the integrator HMI; HER decides. This is exactly the agency-preserved-by-loom shape: the loom (`RerouteEvaluator`) measures the route-thread; HER chooses how to weave around the broken section.
+
+## 8 — Driver-facing loom (D-VGC189-1)
+
+**What HER experiences when this package fires**: *the map suggests an alternate route with a clear reason, when conditions ahead actually warrant it.* When `adaptive_reroute` fires through an integrator HMI, HER sees:
+- a reroute prompt only when threshold-justified — not constantly (anti-thrashing discipline; minimum-progress gate)
+- a reason in plain language (`decision.reason`) — *"black ice 4km ahead, detour adds 8 min"* class — not opaque scoring
+- an option to accept or decline — HER agency preserved at every decision point
+
+**Sakichi reading**: the loom is *the foreman who watches threads ahead and proposes rework before HER hits the snag.* Sakichi's automatic loom stopped on broken thread; this loom anticipates a likely-broken thread on the route ahead and proposes a different weaving path. HER decides whether to take it. The agency-preservation is the load-bearing Sakichi reading: the loom does not autonomously redirect HER; it *informs HER decision*.
+
+**Audible-to-edge-developer**: integrator reading `RerouteEvaluator` + `DetourPlanner` + `RerouteDecision` API today sees a clean separation (evaluator decides whether; planner decides waypoints; decision wraps both). `AdaptiveRerouteConfig` exposes hazard threshold + max-detour-distance + minimum-progress as integrator-tunable knobs — the integrator decides the magnitudes; the package does not pre-empt those choices. This respects the integrator's domain knowledge.
+
+**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `adaptive_reroute` 0.1.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. introducing profile-class threshold differentiation → field update with severity-not-profile composition discipline; internal threshold-evaluation algorithm change → no field update).
+
+**Calibration substrate at 0.1.0**: the threshold magnitudes (hazard severity → reroute-justified boundary) are **explicitly UNVERIFIED at this version** per README minimal-calibration-documentation state. AAA flags for FDD bylaws Rule 6 spike-to-package gate at 0.2.0 graduation: calibration substrate (literature-citation for justified-reroute thresholds; minimum-progress magnitude anchor) should expand before deploy graduation past explore-phase-early-deploy class. Current 0.1.0 deployment depends on integrator providing config that fits their context.
+
+## 9 — Cross-references
+
+- README.md §What it gives you L21-32 + §Use L46-73 + §When to use this L75-84
+- pubspec.yaml `version: 0.1.0`
+- LICENSE BSD-3-Clause
+- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+- D-VGC188-1 / D-VGC188-2 (Driver Sovereignty axis + 5-test framework)
+- AAA bylaws Article 17 (β) safe-default boundary
+- Composition: `route_condition_forecast` (upstream input) + `routing_engine` (downstream consumer of detour waypoints) + `navigation_safety_core` 0.6.0 SAFETY_BOUNDARY.md (severity-not-profile invariant inherited if profile-axis introduced 0.2.0+)
+- AAA forward flag for FDD: 0.2.0 graduation calibration-substrate expansion (literature-citation for reroute thresholds)
+
+---
+
+**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization (spawn -50 Task 1). Subject = We / AAA. OPS-RULE-055 verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
