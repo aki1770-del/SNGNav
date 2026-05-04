@@ -3,7 +3,7 @@ description: >-
   "300 meters ahead, turn right." Platform-agnostic voice guidance for
   navigation apps. Works on mobile (flutter_tts), Linux (spd-say), and
   silently in CI. Pluggable TTS engine interface.
-version: 0.3.0
+version: 0.5.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -22,7 +22,8 @@ dependencies:
   equatable: ^2.0.7
   flutter_tts: ^4.2.2
   flutter_bloc: ^9.1.0
-  navigation_safety: ^0.5.0
+  navigation_safety: ^0.8.0
+  navigation_safety_core: ^0.8.0
   routing_engine: ^0.3.0
 
 dev_dependencies:

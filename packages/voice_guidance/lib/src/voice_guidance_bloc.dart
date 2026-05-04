@@ -18,9 +18,11 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     required Stream<NavigationState> navigationStateStream,
     VoiceGuidanceConfig config = const VoiceGuidanceConfig(),
     ManeuverSpeechFormatter formatter = const ManeuverSpeechFormatter(),
+    DriverProfile? profile,
   })  : _ttsEngine = ttsEngine,
         _config = config,
         _formatter = formatter,
+        _profile = profile,
         super(config.enabled
             ? const VoiceGuidanceState.idle()
             : const VoiceGuidanceState(status: VoiceGuidanceStatus.muted)) {
@@ -43,6 +45,16 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   final VoiceGuidanceConfig _config;
   final ManeuverSpeechFormatter _formatter;
 
+  /// Active driver profile (0.5.0). When supplied alongside a
+  /// `NavigationState.alertCondition`, the bloc resolves the per-
+  /// (condition, profile) action string via
+  /// `AlertExplainer.forConditionAndProfile` and speaks that string
+  /// at the explainer's locale tag — overriding the raw
+  /// [NavigationState.alertMessage] for the hazard branch only.
+  /// Null preserves pre-0.5.0 back-compat: hazard branch falls back
+  /// to the raw alertMessage.
+  final DriverProfile? _profile;
+
   StreamSubscription<NavigationState>? _navigationSub;
 
   int? _lastManeuverIndex;
@@ -55,6 +67,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   Future<void> _initializeTts() async {
     await _ttsEngine.setLanguage(_config.languageTag);
     await _ttsEngine.setVolume(_config.volume);
+    await _ttsEngine.setSpeechRate(_config.speakingRate);
   }
 
   Future<void> _onVoiceEnabled(
@@ -122,13 +135,44 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
       final alertChanged = navigationState.alertMessage != _lastAlertMessage ||
           navigationState.alertSeverity != _lastAlertSeverity;
       if (shouldAnnounceAlert && alertChanged) {
-        final text = _formatter.formatHazard(
-          message: navigationState.alertMessage!,
-          severity: navigationState.alertSeverity!,
-          languageTag: _config.languageTag,
-        );
+        // Action-coupled hazard rendering (0.5.0). When the state
+        // carries a road-surface condition AND the bloc has a driver
+        // profile, the explainer's per-(condition, profile) action
+        // string + locale tag override the raw alertMessage. The
+        // explainer's localeTag also drives the TTS engine language
+        // for this announcement so the EN-locale variant for the
+        // foreign-tourist profile speaks in English without the
+        // integrator switching the bloc-wide config.
+        final condition = navigationState.alertCondition;
+        String hazardText;
+        String? overrideLocaleTag;
+        if (condition != null && _profile != null) {
+          final explainer =
+              AlertExplainer.forConditionAndProfile(condition, _profile);
+          hazardText = _formatter.formatHazard(
+            message: explainer.action,
+            severity: navigationState.alertSeverity!,
+            languageTag: explainer.localeTag,
+          );
+          overrideLocaleTag = explainer.localeTag;
+        } else {
+          hazardText = _formatter.formatHazard(
+            message: navigationState.alertMessage!,
+            severity: navigationState.alertSeverity!,
+            languageTag: _config.languageTag,
+          );
+        }
+
+        if (overrideLocaleTag != null &&
+            overrideLocaleTag != _config.languageTag) {
+          // Honour the per-condition locale on this announcement.
+          // Setting language on the engine takes effect for the
+          // subsequent speak call.
+          unawaited(_ttsEngine.setLanguage(overrideLocaleTag));
+        }
+
         add(HazardAnnounced(
-          message: text,
+          message: hazardText,
           severity: navigationState.alertSeverity!,
         ));
       }

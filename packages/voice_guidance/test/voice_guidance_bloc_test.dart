@@ -50,6 +50,7 @@ void main() {
 
     when(() => ttsEngine.setLanguage(any())).thenAnswer((_) async {});
     when(() => ttsEngine.setVolume(any())).thenAnswer((_) async {});
+    when(() => ttsEngine.setSpeechRate(any())).thenAnswer((_) async {});
     when(() => ttsEngine.speak(any())).thenAnswer((_) async {});
     when(() => ttsEngine.stop()).thenAnswer((_) async {});
     when(() => ttsEngine.dispose()).thenAnswer((_) async {});
@@ -177,4 +178,81 @@ void main() {
           .having((state) => state.status, 'status', VoiceGuidanceStatus.idle),
     ],
   );
+
+  // ----------------------------------------------------------------
+  // 0.5.0 — action-coupled hazard rendering (condition + profile)
+  // ----------------------------------------------------------------
+
+  group('VoiceGuidanceBloc — action-coupled hazard (0.5.0)', () {
+    test('condition + profile -> explainer.action spoken (JA profile)',
+        () async {
+      final bloc = VoiceGuidanceBloc(
+        ttsEngine: ttsEngine,
+        navigationStateStream: navController.stream,
+        profile: DriverProfile.snowZoneExperienced,
+      );
+
+      navController.add(const NavigationState(
+        status: NavigationStatus.navigating,
+        alertMessage: 'fallback if explainer not used',
+        alertSeverity: AlertSeverity.warning,
+        alertCondition: RoadSurfaceCondition.ice,
+      ));
+      await _drain();
+
+      verifyInOrder([
+        () => ttsEngine.stop(),
+        () => ttsEngine.speak('注意。凍結路面。30km/h以下に減速'),
+      ]);
+      await bloc.close();
+    });
+
+    test('condition + profile -> localeTag passed to engine (EN profile)',
+        () async {
+      final bloc = VoiceGuidanceBloc(
+        ttsEngine: ttsEngine,
+        navigationStateStream: navController.stream,
+        profile: DriverProfile.foreignTouristSnowZone,
+      );
+
+      navController.add(const NavigationState(
+        status: NavigationStatus.navigating,
+        alertMessage: 'fallback if explainer not used',
+        alertSeverity: AlertSeverity.warning,
+        alertCondition: RoadSurfaceCondition.ice,
+      ));
+      await _drain();
+
+      // EN-locale switch fires before speak.
+      verify(() => ttsEngine.setLanguage('en')).called(1);
+      verify(() => ttsEngine.speak(
+            'Warning. Icy road. Slow to 30 km/h. Avoid sudden braking.',
+          )).called(1);
+      await bloc.close();
+    });
+
+    test('fallback to alertMessage when condition+profile absent', () async {
+      final bloc = VoiceGuidanceBloc(
+        ttsEngine: ttsEngine,
+        navigationStateStream: navController.stream,
+        // No profile supplied — back-compat path.
+      );
+
+      navController.add(const NavigationState(
+        status: NavigationStatus.navigating,
+        alertMessage: '圧雪路です。速度を落としてください。',
+        alertSeverity: AlertSeverity.warning,
+        alertCondition: RoadSurfaceCondition.snow,
+      ));
+      await _drain();
+
+      verifyInOrder([
+        () => ttsEngine.stop(),
+        () => ttsEngine.speak('注意。圧雪路です。速度を落としてください。'),
+      ]);
+      // No language switch when profile absent.
+      verifyNever(() => ttsEngine.setLanguage('en'));
+      await bloc.close();
+    });
+  });
 }
