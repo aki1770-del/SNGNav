@@ -24,6 +24,7 @@ export 'src/alert_severity.dart';
 export 'src/driver_context.dart';
 export 'src/driver_profile.dart';
 export 'src/driver_state.dart';
+export 'src/loom_fit_telemetry.dart';
 export 'src/navigation_route.dart';
 export 'src/navigation_safety_config.dart';
 export 'src/navigation_safety_context.dart';

@@ -19,3 +19,4 @@ library;
 
 export 'alert_density_throttle.dart';
 export 'alert_explainer.dart';
+export 'loom_fit_telemetry.dart';

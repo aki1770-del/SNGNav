@@ -1,5 +1,195 @@
 # Changelog
 
+## 0.8.0 — 2026-05-04 — emit-only telemetry stream for alert-firing observations
+
+Adds `LoomFitTelemetry` — a Pure Dart, emit-only broadcast stream of
+`LoomFitTelemetryRecord` observations covering the four disjoint
+outcome classes (`fired` / `droppedByThrottle` / `criticalBypass` /
+`coldStart`) of `AlertDensityThrottle.shouldFire` decisions. The
+class is the package-boundary surface for the calibration loop that
+asks *did the loom fit each driver-class?* — the package observes
+its own firing decisions and surfaces them on a broadcast stream;
+the consuming application's analytics layer owns classification
+logic, the privacy-class boundary, and the threshold for "the loom
+does not fit this driver-class."
+
+### Added
+
+- **`LoomFitTelemetry`** — broadcast stream of telemetry records;
+  emit-only at the package boundary. Methods:
+  - `records` — `Stream<LoomFitTelemetryRecord>` (broadcast).
+  - `record(LoomFitTelemetryRecord r)` — emit a single record.
+  - `dispose()` — close the stream; idempotent.
+- **`LoomFitTelemetryRecord`** — immutable value-object carrying:
+  - `profileClass` (`DriverProfile`)
+  - `ambientThreshold` (nullable `String` identifier, e.g.
+    `"icy_road_30km"`)
+  - `alertSequence` (`List<DateTime>`; defensively unmodifiable)
+  - `responseLatency` (nullable `Duration`)
+  - `outcome` (`LoomFitOutcome`)
+- **`LoomFitOutcome`** enum: `fired`, `droppedByThrottle`,
+  `criticalBypass`, `coldStart`. Disjoint and exhaustive over
+  `shouldFire` decisions.
+- Re-exported from `package:navigation_safety_core/navigation_safety_core.dart`
+  + the `lib/src/looms.dart` runtime-loom barrel.
+
+### Why this exists
+
+The throttle's per-profile cap defaults are literature-anchored
+DEFAULTS, not population-validated. To know whether a per-profile
+cap actually fits the driver-class it is nominally tuned for, the
+consuming application needs to observe firing decisions in
+operation: drop-rate, critical-share, cold-start-share. Those are
+calibration-class questions only the integrator has the data to
+answer. `LoomFitTelemetry` is the package-boundary surface for
+those observations.
+
+Anchors:
+- Medical alarm-fatigue scoping review
+  ([PMC12181921](https://pmc.ncbi.nlm.nih.gov/articles/PMC12181921/))
+  — calibration discipline for alert-density bounds.
+- AAA-FTS ADAS-exposure / driver-workload report — per-profile
+  overwhelm differentials.
+- Bian et al [PubMed 38669900](https://pubmed.ncbi.nlm.nih.gov/38669900/)
+  — alert-magnitude × duration as one product; format-mismatch
+  erases earlier-alert benefit.
+
+### Discipline
+
+- **Emit-only.** No detection logic, no policy enaction, no
+  classification — those live in the integrator's analytics layer.
+- **No driver-grading.** The schema names the OUTCOME of the loom,
+  not the DRIVER. `responseLatency` (when supplied) is information
+  about the loom's fit, not the driver's competence.
+- **No data harvest.** An integrator that never subscribes incurs
+  zero data-flow cost. The package ships no records anywhere by
+  itself.
+- **Pure Dart.** No Flutter dependency, no I/O, no platform
+  channels.
+- **Severity-not-profile invariant preserved.** The telemetry
+  surface observes outcomes; it does not modulate severity-class.
+
+### Tests
+
+- 9 new tests in `test/loom_fit_telemetry_test.dart` covering:
+  defensive copy of `alertSequence`; record + listen round-trip;
+  multiple records arrive in order; broadcast stream allows
+  multiple listeners; all four outcome enum values can be emitted;
+  `dispose` closes the stream; `record` after dispose silently
+  no-ops; `dispose` is idempotent; record with null
+  `ambientThreshold` + null `responseLatency` works.
+
+### Unchanged (back-compat)
+
+- All 0.7.x / 0.6.x / 0.5.x / 0.4.x surface unchanged. The new
+  class is purely additive; existing `AlertDensityThrottle` and
+  `AlertExplainer` callers see no behaviour change.
+
+## 0.7.1 — 2026-05-05 — SLUSH added to per-profile high-risk subset
+
+Adds `SLUSH` (シャーベット) to the per-profile speak-string override
+set in `RoadSurfaceConditionGlossary.forConditionAndProfile()`. The
+high-risk subset now covers ICE / SNOW / WET_ICE / SLUSH; the lateral-
+slip risk of partially-melted snow is documented by JAF guidance
+materials as a distinct skid-class hazard, and drivers unfamiliar with
+snow-zone road state underestimate it.
+
+### Added
+
+- Per-profile SLUSH speak-string overrides for all six profiles:
+  - `ageingRural` — full kanji-native phrasing with brief action cue.
+  - `snowZoneExperienced` — terse single-token (`シャーベット`).
+  - `professional` — terse single-token (`シャーベット`).
+  - `agriculturalForestry` — terse formal label (`シャーベット路面`).
+  - `noviceUrban` — explicit hazard wording (slip-class warning).
+  - `foreignTouristSnowZone` — simplified JA + EN-default
+    (`Slush on road, slippery`).
+
+### Tests
+
+- 4 new tests in `test/road_surface_condition_test.dart` covering the
+  four SLUSH per-profile classes (ageingRural action-cue;
+  snowZoneExperienced + professional terse single-token; noviceUrban
+  explicit-hazard wording; foreignTouristSnowZone EN-default policy).
+  Existing exhaustive (profile × condition) coverage test continues
+  to pass.
+
+### Substrate anchor
+
+- VSS PR #892 (canonical road-surface allowed-value set, includes
+  SLUSH).
+- JAF / MLIT / NEXCO / Yahoo!カーナビ public driver-guidance
+  vocabulary (slush as distinct skid-class hazard).
+
+### Discipline
+
+- **Additive only.** No existing speak-string mapping changed; SLUSH
+  was previously a fall-through to defaults; it now resolves through
+  the per-profile override path. PATCH bump (0.7.0 → 0.7.1) reflects
+  the additive vocab-map expansion with no API breakage.
+- **Severity-not-profile invariant preserved.** The per-profile
+  speak-string overrides shape rendering vocabulary; severity-class
+  gating remains upstream at the `AlertSeverity` boundary.
+
+### Unchanged (back-compat)
+
+- API surface unchanged (no new public functions).
+- 0.7.0 / 0.6.0 / 0.5.0 / 0.4.x callers see no behavior change for
+  ICE / SNOW / WET_ICE; SLUSH callers previously got the default
+  glossary entry, now get a profile-tuned one (additive enrichment).
+
+## 0.7.0 — 2026-05-04 — UX differentiation hook activated
+
+Activates the previously-stub `assertUxDifferentiated()` runtime hook
+into a working registration-and-assertion mechanism. Closes the first
+concrete operationalization of the package's architectural anchor:
+*"the threshold layer is necessary but not sufficient for an alert
+that arrives in time + makes sense + is calm enough to ignore safely;
+the per-profile UX-differentiation layer is the second half."*
+
+### Added
+
+- **`registerUxDifferentiator(profile, tag)`** — consuming Flutter
+  packages (`voice_guidance`, `navigation_safety`) call this at
+  app-bootstrap time to record that they have wired profile-aware
+  behavior for `profile` under a descriptive `tag`. Idempotent on
+  `(profile, tag)` pairs; accumulates distinct tags per profile.
+- **`registeredUxDifferentiators(profile)`** — returns the unmodifiable
+  set of tags registered for `profile`. Empty set means no
+  UX-differentiator is registered.
+- **`debugClearUxDifferentiatorRegistry()`** — test-only helper for
+  isolating cases.
+
+### Changed
+
+- **`assertUxDifferentiated(profile)`** is no longer a no-op stub. In
+  a debug build, an unregistered profile throws an `AssertionError`
+  with an actionable message naming the profile + naming where to
+  register + citing the published evidence anchors (Bian et al PubMed
+  38669900 / Strayer-AAA PMC7283540). In a release build, the
+  assertion is erased — production driver-facing builds never crash on
+  a misconfigured profile; the gap surfaces during integration
+  testing.
+
+### Tests
+
+- 11 new tests in `test/ux_differentiation_test.dart` covering
+  empty-registry behavior, single-profile registration, idempotency,
+  multi-tag accumulation, unmodifiable-view discipline,
+  AssertionError throw on unregistered profile, AssertionError
+  message-content discipline (profile name + registration site +
+  evidence anchors), and pass/fail isolation between profiles in the
+  same registry run.
+
+### Unchanged (back-compat)
+
+- All 0.6.0 / 0.5.0 / 0.4.x surface unchanged. Existing call-sites
+  that called the no-op stub continue to compile and run; in a debug
+  build they now throw if no differentiator has been registered for
+  the profile in question — the desired behavior, since a silent
+  no-op gave integrators no signal that the architectural intent was
+  being missed.
+
 ## 0.6.0 — 2026-04-30 — trait/state spike (NOT YET PUBLISHED)
 
 Adds the trait/state matrix per Regan-Hallett-Gordon 2011 (PMC4001671)
