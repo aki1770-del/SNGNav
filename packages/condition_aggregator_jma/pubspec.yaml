@@ -1,0 +1,35 @@
+name: condition_aggregator_jma
+description: >-
+  Japan Meteorological Agency adapter for the condition_aggregator interface.
+  Maps JMA disaster-info XML feeds to the source-neutral Advisory typed event
+  shape so integrators consume one shape across publishers (NWS / JMA / etc.).
+  Pure Dart, no Flutter dependency. Explore-phase scaffold.
+version: 0.0.1
+
+# Explore-phase: NOT publishing to pub.dev. Deploy graduation BLOCKS on
+# Komada-voice engagement-shape election (alpha/beta/gamma) for jmaxml.
+# See README.md "Status" section for the gate enumeration.
+publish_to: none
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - aggregator
+  - advisory
+  - jma
+  - winter-driving
+  - meteorology
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  condition_aggregator: ^0.0.2
+  # xml is the canonical Dart XML parser. Pinned permissively to match
+  # interface package style. Used for CAP-class disaster-info XML parsing
+  # at deploy-time; current scaffold does not yet exercise it.
+  xml: ^6.5.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
