@@ -21,7 +21,14 @@ bool _canUpdateSeverity(AlertSeverity incoming, AlertSeverity? current) {
 }
 
 class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
-  NavigationBloc() : super(const NavigationState.idle()) {
+  NavigationBloc({
+    DriverProfile? profile,
+    AlertDensityThrottle? throttle,
+    LoomFitTelemetry? telemetry,
+  })  : _profile = profile,
+        _throttle = throttle,
+        _telemetry = telemetry,
+        super(const NavigationState.idle()) {
     on<NavigationStarted>(_onStarted);
     on<NavigationStopped>(_onStopped);
     on<ManeuverAdvanced>(_onManeuverAdvanced);
@@ -30,6 +37,20 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     on<SafetyAlertReceived>(_onSafetyAlert);
     on<SafetyAlertDismissed>(_onAlertDismissed);
   }
+
+  /// Active driver profile, when supplied. Null preserves pre-0.8.0
+  /// back-compat (no per-profile throttling, no explainer rendering).
+  final DriverProfile? _profile;
+
+  /// Per-profile alert-density throttle. Lazily constructed on first
+  /// `_onSafetyAlert` if [_profile] is non-null and no throttle was
+  /// supplied to the constructor.
+  AlertDensityThrottle? _throttle;
+
+  /// Optional emit-only telemetry stream for fired / dropped /
+  /// criticalBypass / coldStart outcomes. Null preserves back-compat
+  /// (no records emitted).
+  final LoomFitTelemetry? _telemetry;
 
   void _onStarted(
     NavigationStarted event,
@@ -123,11 +144,56 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
 
     final Stopwatch? sw = kDebugMode ? (Stopwatch()..start()) : null;
 
+    // Per-profile alert-density throttle (0.8.0). Active only when a
+    // driver profile was supplied to the bloc; lazy-constructs on
+    // first call so apps that never supply a profile pay no
+    // construction cost. Critical alerts always fire by documented
+    // invariant; the throttle protects info / warning tiers from
+    // desensitization.
+    LoomFitOutcome? outcome;
+    if (_profile != null) {
+      _throttle ??= AlertDensityThrottle.forProfile(_profile);
+      final now = DateTime.now();
+      // Cold-start = first call against a fresh throttle.
+      final coldStart = _throttle!.currentWindowCount(now) == 0;
+      final permitted = _throttle!.shouldFire(now, event.severity);
+
+      if (!permitted) {
+        // Dropped by throttle. Emit telemetry (if subscribed) and
+        // return without state change — the alert does not surface
+        // to the driver.
+        outcome = LoomFitOutcome.droppedByThrottle;
+        _emitTelemetry(event, now, outcome);
+        return;
+      }
+
+      // Permitted — classify cold-start / critical-bypass / fired.
+      if (coldStart) {
+        outcome = LoomFitOutcome.coldStart;
+      } else if (event.severity == AlertSeverity.critical) {
+        outcome = LoomFitOutcome.criticalBypass;
+      } else {
+        outcome = LoomFitOutcome.fired;
+      }
+      _emitTelemetry(event, now, outcome);
+    }
+
+    // Action-coupled message resolution (0.8.0). When the event carries
+    // a road-surface condition AND the bloc has a driver profile, the
+    // explainer's per-(condition, profile) action string replaces the
+    // free-form message. Otherwise the free-form message is used
+    // verbatim (back-compat).
+    final message = (event.condition != null && _profile != null)
+        ? AlertExplainer.forConditionAndProfile(event.condition!, _profile)
+            .action
+        : event.message;
+
     emit(state.copyWith(
-      alertMessage: event.message,
+      alertMessage: message,
       alertSeverity: event.severity,
       alertDismissible: event.dismissible,
       alertScenario: event.scenario,
+      alertCondition: event.condition,
     ));
 
     assert(() {
@@ -142,6 +208,26 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       }
       return true;
     }());
+  }
+
+  /// Emit a telemetry record onto the configured `LoomFitTelemetry`
+  /// stream when one was supplied to the bloc. No-op when the bloc
+  /// has no telemetry instance.
+  void _emitTelemetry(
+    SafetyAlertReceived event,
+    DateTime now,
+    LoomFitOutcome outcome,
+  ) {
+    final telemetry = _telemetry;
+    if (telemetry == null) return;
+    if (_profile == null) return;
+    telemetry.record(LoomFitTelemetryRecord(
+      profileClass: _profile,
+      ambientThreshold: event.ambientThreshold,
+      alertSequence: <DateTime>[now],
+      responseLatency: null,
+      outcome: outcome,
+    ));
   }
 
   void _onAlertDismissed(

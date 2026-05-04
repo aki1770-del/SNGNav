@@ -28,6 +28,15 @@ class NavigationState extends Equatable {
   /// Null when no alert is active or when the alert has no scenario context.
   final SafetyScenario? alertScenario;
 
+  /// Road-surface condition associated with the active alert (0.8.0).
+  ///
+  /// When non-null, downstream renderers (e.g. `voice_guidance`) may
+  /// resolve a per-(condition, profile) action string via
+  /// `AlertExplainer.forConditionAndProfile`. Null preserves
+  /// pre-0.8.0 behaviour: renderers fall back to the raw
+  /// [alertMessage] string.
+  final RoadSurfaceCondition? alertCondition;
+
   const NavigationState({
     required this.status,
     this.route,
@@ -37,6 +46,7 @@ class NavigationState extends Equatable {
     this.alertSeverity,
     this.alertDismissible = true,
     this.alertScenario,
+    this.alertCondition,
   });
 
   const NavigationState.idle()
@@ -47,7 +57,8 @@ class NavigationState extends Equatable {
         alertMessage = null,
         alertSeverity = null,
         alertDismissible = true,
-        alertScenario = null;
+        alertScenario = null,
+        alertCondition = null;
 
   bool get isNavigating => status == NavigationStatus.navigating;
 
@@ -84,6 +95,7 @@ class NavigationState extends Equatable {
     AlertSeverity? alertSeverity,
     bool? alertDismissible,
     SafetyScenario? alertScenario,
+    RoadSurfaceCondition? alertCondition,
     bool clearAlert = false,
   }) {
     return NavigationState(
@@ -99,6 +111,8 @@ class NavigationState extends Equatable {
       alertDismissible:
           clearAlert ? true : (alertDismissible ?? this.alertDismissible),
       alertScenario: clearAlert ? null : (alertScenario ?? this.alertScenario),
+      alertCondition:
+          clearAlert ? null : (alertCondition ?? this.alertCondition),
     );
   }
 
@@ -112,6 +126,7 @@ class NavigationState extends Equatable {
         alertSeverity,
         alertDismissible,
         alertScenario,
+        alertCondition,
       ];
 
   @override

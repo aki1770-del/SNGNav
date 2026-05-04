@@ -71,15 +71,34 @@ class SafetyAlertReceived extends NavigationEvent {
   /// unaffected — this field is optional and defaults to null).
   final SafetyScenario? scenario;
 
+  /// Optional road-surface condition for action-coupled rendering.
+  ///
+  /// When set together with the bloc's [DriverProfile], the bloc resolves
+  /// the per-(condition, profile) action string via
+  /// `AlertExplainer.forConditionAndProfile` and uses that as the
+  /// rendered alert message instead of the free-form [message] field.
+  /// The free-form [message] remains the fallback when [condition] is
+  /// null OR the bloc has no driver profile configured (back-compat).
+  final RoadSurfaceCondition? condition;
+
+  /// Optional caller-supplied identifier of the active threshold context
+  /// (e.g. `"icy_road_30km"`). Surfaced into telemetry records when the
+  /// bloc has a `LoomFitTelemetry` instance configured. Pass null when
+  /// no specific named threshold applies.
+  final String? ambientThreshold;
+
   const SafetyAlertReceived({
     required this.message,
     required this.severity,
     this.dismissible = true,
     this.scenario,
+    this.condition,
+    this.ambientThreshold,
   });
 
   @override
-  List<Object?> get props => [message, severity, dismissible, scenario];
+  List<Object?> get props =>
+      [message, severity, dismissible, scenario, condition, ambientThreshold];
 }
 
 class SafetyAlertDismissed extends NavigationEvent {

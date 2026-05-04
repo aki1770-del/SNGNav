@@ -514,4 +514,138 @@ void main() {
       ],
     );
   });
+
+  // ------------------------------------------------------------------
+  // 0.8.0 — per-profile throttle + explainer + emit-only telemetry
+  // ------------------------------------------------------------------
+
+  group('NavigationBloc — per-profile throttle + explainer (0.8.0)', () {
+    blocTest<NavigationBloc, NavigationState>(
+      'emits state when throttle returns true (under cap)',
+      build: () => NavigationBloc(
+        profile: DriverProfile.snowZoneExperienced,
+      ),
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+      ),
+      act: (bloc) => bloc.add(const SafetyAlertReceived(
+        message: 'Icy patch ahead',
+        severity: AlertSeverity.warning,
+      )),
+      expect: () => [
+        isA<NavigationState>()
+            .having((s) => s.alertMessage, 'message', 'Icy patch ahead')
+            .having((s) => s.alertSeverity, 'severity', AlertSeverity.warning),
+      ],
+    );
+
+    test('drops alert + emits telemetry when throttle returns false',
+        () async {
+      final telemetry = LoomFitTelemetry();
+      final received = <LoomFitOutcome>[];
+      final sub = telemetry.records.listen((r) => received.add(r.outcome));
+
+      // foreignTouristSnowZone cap = 1.0 — second non-critical alert
+      // in the rolling window is dropped.
+      final bloc = NavigationBloc(
+        profile: DriverProfile.foreignTouristSnowZone,
+        telemetry: telemetry,
+      );
+
+      bloc.add(const SafetyAlertReceived(
+        message: 'First',
+        severity: AlertSeverity.warning,
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      bloc.add(const SafetyAlertReceived(
+        message: 'Second',
+        severity: AlertSeverity.warning,
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      // First emits state (cold-start outcome); second is dropped.
+      expect(received, contains(LoomFitOutcome.coldStart));
+      expect(received, contains(LoomFitOutcome.droppedByThrottle));
+      // The active state still reflects only the first emission.
+      expect(bloc.state.alertMessage, 'First');
+
+      await sub.cancel();
+      await telemetry.dispose();
+      await bloc.close();
+    });
+
+    test('critical bypass fires regardless of throttle in-window count',
+        () async {
+      final telemetry = LoomFitTelemetry();
+      final received = <LoomFitOutcome>[];
+      final sub = telemetry.records.listen((r) => received.add(r.outcome));
+
+      final bloc = NavigationBloc(
+        profile: DriverProfile.foreignTouristSnowZone,
+        telemetry: telemetry,
+      );
+
+      // Fill the cap with a non-critical, then fire a critical.
+      bloc.add(const SafetyAlertReceived(
+        message: 'First info',
+        severity: AlertSeverity.warning,
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      bloc.add(const SafetyAlertReceived(
+        message: 'Critical hazard',
+        severity: AlertSeverity.critical,
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      expect(received, contains(LoomFitOutcome.criticalBypass));
+      expect(bloc.state.alertSeverity, AlertSeverity.critical);
+      expect(bloc.state.alertMessage, 'Critical hazard');
+
+      await sub.cancel();
+      await telemetry.dispose();
+      await bloc.close();
+    });
+
+    blocTest<NavigationBloc, NavigationState>(
+      'condition + profile -> explainer text used as alert message',
+      build: () => NavigationBloc(
+        profile: DriverProfile.foreignTouristSnowZone,
+      ),
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+      ),
+      act: (bloc) => bloc.add(const SafetyAlertReceived(
+        message: 'fallback if explainer not used',
+        severity: AlertSeverity.warning,
+        condition: RoadSurfaceCondition.ice,
+      )),
+      expect: () => [
+        isA<NavigationState>().having(
+          (s) => s.alertMessage,
+          'message',
+          'Icy road. Slow to 30 km/h. Avoid sudden braking.',
+        ),
+      ],
+    );
+
+    blocTest<NavigationBloc, NavigationState>(
+      'no profile -> message-as-fallback (back-compat)',
+      build: NavigationBloc.new,
+      seed: () => NavigationState(
+        status: NavigationStatus.navigating,
+        route: _testRoute,
+      ),
+      act: (bloc) => bloc.add(const SafetyAlertReceived(
+        message: 'Free-form fallback',
+        severity: AlertSeverity.warning,
+        condition: RoadSurfaceCondition.ice,
+      )),
+      expect: () => [
+        isA<NavigationState>()
+            .having((s) => s.alertMessage, 'message', 'Free-form fallback'),
+      ],
+    );
+  });
 }
