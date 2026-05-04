@@ -67,6 +67,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   Future<void> _initializeTts() async {
     await _ttsEngine.setLanguage(_config.languageTag);
     await _ttsEngine.setVolume(_config.volume);
+    await _ttsEngine.setSpeechRate(_config.speakingRate);
   }
 
   Future<void> _onVoiceEnabled(

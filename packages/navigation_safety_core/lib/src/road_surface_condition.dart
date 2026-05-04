@@ -237,9 +237,15 @@ class RoadSurfaceConditionGlossary {
   ///
   /// Per-profile speak-string overrides apply ONLY for the high-risk
   /// conditions where vocabulary precision matters most: `ICE`, `SNOW`,
-  /// and `WET_ICE`. Other conditions (`UNKNOWN`, `DRY`, `WET`, `SLUSH`,
-  /// `LOOSE_GRAVEL`) fall through to the default speak-strings from
-  /// [forCondition].
+  /// `WET_ICE`, and (added 0.7.1) `SLUSH`. Other conditions (`UNKNOWN`,
+  /// `DRY`, `WET`, `LOOSE_GRAVEL`) fall through to the default
+  /// speak-strings from [forCondition].
+  ///
+  /// SLUSH (シャーベット) was added to the high-risk subset in 0.7.1
+  /// because the lateral-slip risk of partially-melted snow is
+  /// underestimated by drivers unfamiliar with snow-zone road state;
+  /// the JAF guidance materials list slush separately from compacted
+  /// snow as a distinct skid-class hazard.
   ///
   /// Profile-specific design rules:
   /// - `ageingRural` — full kanji-native phrasing with a brief action
@@ -263,10 +269,11 @@ class RoadSurfaceConditionGlossary {
   ) {
     final defaults = forCondition(c);
 
-    // Per-profile overrides apply only for ICE, SNOW, WET_ICE.
+    // Per-profile overrides apply only for ICE, SNOW, WET_ICE, SLUSH.
     if (c != RoadSurfaceCondition.ice &&
         c != RoadSurfaceCondition.snow &&
-        c != RoadSurfaceCondition.wetIce) {
+        c != RoadSurfaceCondition.wetIce &&
+        c != RoadSurfaceCondition.slush) {
       return defaults;
     }
 
@@ -292,6 +299,15 @@ class RoadSurfaceConditionGlossary {
               jaName: defaults.jaName,
               enName: defaults.enName,
               jaSpeakString: 'アイスバーンです。最も滑りやすい状態です',
+              enSpeakString: defaults.enSpeakString,
+            );
+          case RoadSurfaceCondition.slush:
+            // Full kanji-native phrasing with brief action cue
+            // (matches JAF older-driver materials).
+            return RoadSurfaceConditionGlossary(
+              jaName: defaults.jaName,
+              enName: defaults.enName,
+              jaSpeakString: 'シャーベット路面です。横滑りに注意してください',
               enSpeakString: defaults.enSpeakString,
             );
           default:
@@ -320,6 +336,15 @@ class RoadSurfaceConditionGlossary {
               jaSpeakString: 'アイスバーン',
               enSpeakString: defaults.enSpeakString,
             );
+          case RoadSurfaceCondition.slush:
+            // Terse single-token (matches expert driver vocabulary;
+            // minimum cognitive load).
+            return RoadSurfaceConditionGlossary(
+              jaName: defaults.jaName,
+              enName: defaults.enName,
+              jaSpeakString: 'シャーベット',
+              enSpeakString: defaults.enSpeakString,
+            );
           default:
             return defaults;
         }
@@ -344,6 +369,15 @@ class RoadSurfaceConditionGlossary {
               jaName: defaults.jaName,
               enName: defaults.enName,
               jaSpeakString: 'アイスバーンです、最大限注意してください',
+              enSpeakString: defaults.enSpeakString,
+            );
+          case RoadSurfaceCondition.slush:
+            // Explicit hazard wording (less low-vis / icy-road
+            // experience; phrasing surfaces the danger explicitly).
+            return RoadSurfaceConditionGlossary(
+              jaName: defaults.jaName,
+              enName: defaults.enName,
+              jaSpeakString: 'シャーベット路面、横滑りの危険があります',
               enSpeakString: defaults.enSpeakString,
             );
           default:
@@ -372,6 +406,15 @@ class RoadSurfaceConditionGlossary {
               jaSpeakString: 'アイスバーン',
               enSpeakString: defaults.enSpeakString,
             );
+          case RoadSurfaceCondition.slush:
+            // Terse single-token (commercial drivers value
+            // minimum-distraction phrasing; trained vocabulary).
+            return RoadSurfaceConditionGlossary(
+              jaName: defaults.jaName,
+              enName: defaults.enName,
+              jaSpeakString: 'シャーベット',
+              enSpeakString: defaults.enSpeakString,
+            );
           default:
             return defaults;
         }
@@ -396,6 +439,14 @@ class RoadSurfaceConditionGlossary {
               jaName: defaults.jaName,
               enName: defaults.enName,
               jaSpeakString: 'アイスバーンあり',
+              enSpeakString: defaults.enSpeakString,
+            );
+          case RoadSurfaceCondition.slush:
+            // Terse formal label (matches off-road operating context).
+            return RoadSurfaceConditionGlossary(
+              jaName: defaults.jaName,
+              enName: defaults.enName,
+              jaSpeakString: 'シャーベット路面',
               enSpeakString: defaults.enSpeakString,
             );
           default:
@@ -428,6 +479,14 @@ class RoadSurfaceConditionGlossary {
               jaSpeakString: 'ぬれた凍結路面、最も滑ります',
               enSpeakString:
                   'Wet ice, very slippery, drive very slowly',
+            );
+          case RoadSurfaceCondition.slush:
+            // Simplified vocabulary; explicit slip-class warning.
+            return const RoadSurfaceConditionGlossary(
+              jaName: 'シャーベット路面',
+              enName: 'Slush',
+              jaSpeakString: 'シャーベット、滑ります',
+              enSpeakString: 'Slush on road, slippery',
             );
           default:
             return defaults;

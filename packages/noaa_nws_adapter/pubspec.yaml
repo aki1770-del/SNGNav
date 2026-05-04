@@ -3,7 +3,7 @@ description: >-
   NOAA / National Weather Service direct-consume wrapper. Smallest-slice
   GeoJSON client for api.weather.gov active winter alerts by point.
   Pure Dart, no Flutter dependency.
-version: 0.0.1
+version: 0.0.3
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 

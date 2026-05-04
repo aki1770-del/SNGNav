@@ -34,7 +34,14 @@
 library;
 
 export 'src/advisory.dart'
-    show Advisory, AdvisorySource, AdvisorySeverity, AdvisoryCertainty, AdvisoryUrgency;
+    show
+        Advisory,
+        AdvisorySource,
+        AdvisorySourceAttribution,
+        AdvisorySeverity,
+        AdvisoryCertainty,
+        AdvisoryUrgency,
+        AdvisoryDeserializationException;
 export 'src/advisory_provider.dart'
     show AdvisoryProvider, AdvisoryProviderInitException;
 export 'src/advisory_aggregator.dart'

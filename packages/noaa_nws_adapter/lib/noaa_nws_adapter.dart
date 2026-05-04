@@ -49,6 +49,9 @@ library;
 export 'src/winter_alert.dart'
     show
         WinterAlert,
+        WinterAlertArea,
+        WinterAlertCircle,
+        GeoPoint,
         NoaaNwsParseException,
         AlertSeverity,
         AlertCertainty,
@@ -56,4 +59,5 @@ export 'src/winter_alert.dart'
         AlertMessageType,
         AlertStatus,
         kNwsWinterEventTypes;
-export 'src/noaa_nws_client.dart' show NoaaNwsClient, NoaaNwsHttpException;
+export 'src/noaa_nws_client.dart'
+    show NoaaNwsClient, NoaaNwsHttpException, NoaaNwsRetryPolicy;

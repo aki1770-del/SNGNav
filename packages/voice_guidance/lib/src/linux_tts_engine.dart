@@ -35,6 +35,7 @@ class LinuxTtsEngine implements TtsEngine {
   bool _disposed = false;
   String _languageCode = 'en';
   double _volume = 1.0;
+  double _speechRate = 1.0;
   Process? _activeProcess;
   String? _resolvedExecutable;
 
@@ -69,6 +70,14 @@ class LinuxTtsEngine implements TtsEngine {
   }
 
   @override
+  Future<void> setSpeechRate(double rate) async {
+    if (_disposed) return;
+    // Speech-Dispatcher rate range is roughly -100 .. +100; we keep
+    // the normalized rate locally and translate at speak() time.
+    _speechRate = rate.clamp(0.25, 2.0).toDouble();
+  }
+
+  @override
   Future<void> speak(String text) async {
     if (_disposed) return;
     final trimmed = text.trim();
@@ -91,6 +100,8 @@ class LinuxTtsEngine implements TtsEngine {
         _languageCode,
         '--volume',
         _toSpeechDispatcherVolume(_volume).toString(),
+        '--rate',
+        _toSpeechDispatcherRate(_speechRate).toString(),
         trimmed,
       ]);
       _activeProcess = process;
@@ -154,5 +165,20 @@ class LinuxTtsEngine implements TtsEngine {
   static int _toSpeechDispatcherVolume(double normalizedVolume) {
     final clamped = normalizedVolume.clamp(0.0, 1.0).toDouble();
     return ((clamped * 200) - 100).round();
+  }
+
+  /// Maps a normalized speaking rate (0.25 .. 2.0; 1.0 == base) onto
+  /// Speech-Dispatcher's `-100 .. +100` rate scale where 0 == base.
+  /// Slower-than-base rates produce negative values; faster produce
+  /// positive.
+  static int _toSpeechDispatcherRate(double normalizedRate) {
+    final clamped = normalizedRate.clamp(0.25, 2.0).toDouble();
+    // 0.25 -> -100; 1.0 -> 0; 2.0 -> +100.
+    if (clamped <= 1.0) {
+      // Linear from 0.25..1.0 mapping to -100..0.
+      return (((clamped - 1.0) / 0.75) * 100).round();
+    }
+    // Linear from 1.0..2.0 mapping to 0..+100.
+    return (((clamped - 1.0) / 1.0) * 100).round();
   }
 }

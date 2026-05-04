@@ -11,6 +11,20 @@ abstract class TtsEngine {
   /// Sets normalized output volume in `[0.0, 1.0]`.
   Future<void> setVolume(double volume);
 
+  /// Sets normalized speaking rate. Engines map this onto their own
+  /// rate scale; the default base rate is `1.0` (engine-default).
+  /// Implementations clamp the value to a sensible per-engine range.
+  ///
+  /// **Driver-facing rationale**: a Japanese announcer's standard
+  /// pace is too fast for an older rural driver and a foreign-tourist
+  /// driver in unexpected snow; per-profile rate lets each driver
+  /// hear the line at a pace they can act on. The
+  /// `VoiceGuidanceConfig.speakingRateForProfile()` helper returns
+  /// per-profile rate multipliers anchored on the Strayer-AAA
+  /// auditory-load study (PMC7283540) and the package's published
+  /// per-profile threshold differentiation.
+  Future<void> setSpeechRate(double rate);
+
   /// Speaks the provided text.
   Future<void> speak(String text);
 

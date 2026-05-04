@@ -50,6 +50,7 @@ void main() {
 
     when(() => ttsEngine.setLanguage(any())).thenAnswer((_) async {});
     when(() => ttsEngine.setVolume(any())).thenAnswer((_) async {});
+    when(() => ttsEngine.setSpeechRate(any())).thenAnswer((_) async {});
     when(() => ttsEngine.speak(any())).thenAnswer((_) async {});
     when(() => ttsEngine.stop()).thenAnswer((_) async {});
     when(() => ttsEngine.dispose()).thenAnswer((_) async {});

@@ -9,10 +9,12 @@ class NoOpTtsEngine implements TtsEngine {
   bool _disposed = false;
   String _languageTag = 'ja-JP';
   double _volume = 1.0;
+  double _speechRate = 1.0;
   final List<String> _spokenTexts = <String>[];
 
   String get languageTag => _languageTag;
   double get volume => _volume;
+  double get speechRate => _speechRate;
   UnmodifiableListView<String> get spokenTexts =>
       UnmodifiableListView<String>(_spokenTexts);
 
@@ -29,6 +31,12 @@ class NoOpTtsEngine implements TtsEngine {
   Future<void> setVolume(double volume) async {
     if (_disposed) return;
     _volume = volume.clamp(0.0, 1.0).toDouble();
+  }
+
+  @override
+  Future<void> setSpeechRate(double rate) async {
+    if (_disposed) return;
+    _speechRate = rate.clamp(0.0, 2.0).toDouble();
   }
 
   @override

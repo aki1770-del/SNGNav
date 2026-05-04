@@ -105,9 +105,10 @@ void main() {
     test('every (profile × condition) pair returns non-empty entry', () {
       // L7 lock — exhaustive coverage. 6 profiles × 8 conditions = 48
       // combinations must each produce a non-null, non-empty glossary
-      // entry. Per-profile overrides apply for ICE / SNOW / WET_ICE
-      // (the high-risk subset where vocabulary precision matters);
-      // other conditions fall through to defaults.
+      // entry. Per-profile overrides apply for ICE / SNOW / WET_ICE /
+      // SLUSH (the high-risk subset where vocabulary precision matters;
+      // SLUSH added in 0.7.1). Other conditions fall through to
+      // defaults.
       for (final p in DriverProfile.values) {
         for (final c in RoadSurfaceCondition.values) {
           final g = RoadSurfaceConditionGlossary.forConditionAndProfile(c, p);
@@ -158,9 +159,9 @@ void main() {
     });
 
     test('non-overridden conditions fall through to defaults', () {
-      // The override table covers ICE / SNOW / WET_ICE only (high-risk
-      // subset). DRY / WET / SLUSH / LOOSE_GRAVEL / UNKNOWN should
-      // return the same entry regardless of profile (defaults).
+      // The override table covers ICE / SNOW / WET_ICE / SLUSH (SLUSH
+      // added 0.7.1). DRY / WET / LOOSE_GRAVEL / UNKNOWN should return
+      // the same entry regardless of profile (defaults).
       final defaultDry = RoadSurfaceConditionGlossary.forCondition(
         RoadSurfaceCondition.dry,
       );
@@ -173,5 +174,75 @@ void main() {
         expect(g.jaSpeakString, defaultDry.jaSpeakString);
       }
     });
+
+    test(
+      'SLUSH ageingRural uses full kanji-native phrasing with action cue '
+      '(0.7.1)',
+      () {
+        // 0.7.1 expansion: SLUSH (シャーベット) added to high-risk subset
+        // because lateral-slip risk of partially-melted snow is
+        // underestimated by drivers unfamiliar with snow-zone road
+        // state. ageingRural override gives full phrasing + action cue
+        // per JAF older-driver materials.
+        final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
+          RoadSurfaceCondition.slush,
+          DriverProfile.ageingRural,
+        );
+        expect(g.jaSpeakString, contains('シャーベット'));
+        expect(g.jaSpeakString, contains('横滑り'));
+      },
+    );
+
+    test(
+      'SLUSH snowZoneExperienced + professional get terse single-token '
+      '(0.7.1)',
+      () {
+        // Terse vocabulary mirrors ICE/SNOW/WET_ICE pattern for these
+        // two trained-driver profiles.
+        final gExperienced =
+            RoadSurfaceConditionGlossary.forConditionAndProfile(
+          RoadSurfaceCondition.slush,
+          DriverProfile.snowZoneExperienced,
+        );
+        expect(gExperienced.jaSpeakString, 'シャーベット');
+
+        final gPro = RoadSurfaceConditionGlossary.forConditionAndProfile(
+          RoadSurfaceCondition.slush,
+          DriverProfile.professional,
+        );
+        expect(gPro.jaSpeakString, 'シャーベット');
+      },
+    );
+
+    test(
+      'SLUSH noviceUrban gets explicit hazard wording (0.7.1)',
+      () {
+        // Less low-vis / icy-road experience; phrasing surfaces
+        // skid-class danger explicitly.
+        final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
+          RoadSurfaceCondition.slush,
+          DriverProfile.noviceUrban,
+        );
+        expect(g.jaSpeakString, contains('シャーベット'));
+        expect(g.jaSpeakString, contains('危険'));
+      },
+    );
+
+    test(
+      'SLUSH foreignTouristSnowZone uses EN-default + simplified JA '
+      '(0.7.1)',
+      () {
+        // EN-default policy per AAA design brief: foreign tourists
+        // cannot parse kanji-only output mid-drive; EN string is
+        // TTS-default; simplified JA available as secondary.
+        final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
+          RoadSurfaceCondition.slush,
+          DriverProfile.foreignTouristSnowZone,
+        );
+        expect(g.enSpeakString, contains('Slush'));
+        expect(g.enSpeakString, contains('slippery'));
+        expect(g.jaSpeakString, contains('シャーベット'));
+      },
+    );
   });
 }

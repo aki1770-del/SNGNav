@@ -14,10 +14,64 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
 import 'winter_alert.dart';
+
+/// Retry policy for transient network failures on the NWS endpoint.
+///
+/// Driver-facing loom: *"winter alert in publisher's exact wording,
+/// even when the publisher's network briefly hiccups."* A single
+/// transient failure (5xx, brief connection reset, brief DNS
+/// hiccup) should not silently drop the alert reach for the driver
+/// in unexpected snow. The retry policy is conservative on intent
+/// (transient-only; never retries 4xx) and bounded on attempts
+/// (3 retries max) so an integrator's logs remain honest about how
+/// many calls actually went out.
+///
+/// 4xx responses are NOT retried — they signal client-class error
+/// (bad point, missing User-Agent, malformed request) where retry
+/// will produce the same failure and waste the publisher's quota.
+class NoaaNwsRetryPolicy {
+  /// Maximum number of retry attempts after the initial call.
+  /// Default: 3. Total HTTP calls = 1 + maxRetries on full exhaust.
+  final int maxRetries;
+
+  /// Base delay before the first retry. Default: 1 second. Successive
+  /// retries multiply this by 2^retryIndex (1s, 2s, 4s on default).
+  final Duration baseDelay;
+
+  /// HTTP status codes that count as transient (retryable). Default:
+  /// 500, 502, 503, 504, 408 (Request Timeout), 429 (Too Many
+  /// Requests). 429 follows the publisher's recommended ~5-second
+  /// retry-after, but we cap at this policy's bounded backoff.
+  final Set<int> retryableStatusCodes;
+
+  const NoaaNwsRetryPolicy({
+    this.maxRetries = 3,
+    this.baseDelay = const Duration(seconds: 1),
+    this.retryableStatusCodes = const <int>{408, 429, 500, 502, 503, 504},
+  }) : assert(maxRetries >= 0);
+
+  /// No-retry policy: zero retries; preserves the historical 0.0.1
+  /// behavior where the caller decides backoff.
+  static const NoaaNwsRetryPolicy none =
+      NoaaNwsRetryPolicy(maxRetries: 0);
+
+  /// Computes the delay before retry attempt [retryIndex] (0-indexed).
+  /// 0 -> baseDelay; 1 -> baseDelay × 2; 2 -> baseDelay × 4.
+  Duration delayForAttempt(int retryIndex) {
+    assert(retryIndex >= 0);
+    final factor = 1 << retryIndex; // 2^retryIndex
+    return Duration(microseconds: baseDelay.inMicroseconds * factor);
+  }
+
+  /// True if [statusCode] is in the configured retryable set.
+  bool isRetryableStatus(int statusCode) =>
+      retryableStatusCodes.contains(statusCode);
+}
 
 /// Default API base. Exposed for testing or for the rare case of
 /// pointing at a staging NWS endpoint.
@@ -74,6 +128,16 @@ class NoaaNwsClient {
   /// `Accept` header value. Defaults to GeoJSON.
   final String acceptHeader;
 
+  /// Retry policy applied to transient failures. Defaults to
+  /// [NoaaNwsRetryPolicy.none] for backwards-compat with 0.0.1
+  /// (caller decides backoff). Pass an explicit
+  /// `NoaaNwsRetryPolicy()` to opt in to bounded retry-with-backoff.
+  final NoaaNwsRetryPolicy retryPolicy;
+
+  /// Sleep function — injectable for testing so tests can pass a
+  /// no-wait stub instead of really sleeping the bounded backoff.
+  final Future<void> Function(Duration) _sleep;
+
   /// Constructs a client. Throws [ArgumentError] if [userAgent] is
   /// empty, since the publisher will refuse anonymous requests.
   NoaaNwsClient({
@@ -81,7 +145,10 @@ class NoaaNwsClient {
     http.Client? client,
     this.apiBase = kDefaultNwsApiBase,
     this.acceptHeader = kDefaultAcceptHeader,
-  }) : _http = client ?? http.Client() {
+    this.retryPolicy = NoaaNwsRetryPolicy.none,
+    Future<void> Function(Duration)? sleep,
+  })  : _http = client ?? http.Client(),
+        _sleep = sleep ?? Future<void>.delayed {
     if (userAgent.trim().isEmpty) {
       throw ArgumentError.value(
         userAgent,
@@ -103,13 +170,18 @@ class NoaaNwsClient {
   /// Returns an empty list when the point has no active winter alerts —
   /// this is the common case at most points most of the time.
   ///
-  /// Throws [NoaaNwsHttpException] on 4xx/5xx or transport failure.
+  /// Throws [NoaaNwsHttpException] on 4xx (no retry) or after retry
+  /// exhaust on 5xx/transport failure.
   /// Throws [NoaaNwsParseException] on GeoJSON shape mismatch.
   ///
-  /// On 429, this client does NOT auto-retry; the caller decides
-  /// whether to back off (the publisher recommends ~5 seconds).
-  /// Keeping retry policy in the caller keeps this client honest about
-  /// what it actually did.
+  /// **Retry behavior** (via [retryPolicy]; default is no retry for
+  /// 0.0.1 back-compat): on a transient failure (5xx, 408, 429,
+  /// transport-class), the call is retried with exponential backoff
+  /// up to [NoaaNwsRetryPolicy.maxRetries] times. 4xx (other than
+  /// 408 / 429) is NOT retried — these are client-class errors where
+  /// retry produces the same failure and wastes the publisher's
+  /// quota. After retry exhaust, the most recent failure surfaces as
+  /// [NoaaNwsHttpException].
   Future<List<WinterAlert>> fetchActiveWinterAlerts({
     required double latitude,
     required double longitude,
@@ -118,28 +190,7 @@ class NoaaNwsClient {
     final uri = Uri.parse(
       '$apiBase/alerts/active?point=$latitude,$longitude',
     );
-
-    final http.Response response;
-    try {
-      response = await _http.get(uri, headers: <String, String>{
-        'User-Agent': userAgent,
-        'Accept': acceptHeader,
-      });
-    } catch (e) {
-      throw NoaaNwsHttpException(
-        'Transport failure contacting NWS: $e',
-        uri: uri,
-      );
-    }
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw NoaaNwsHttpException(
-        'NWS returned non-2xx',
-        statusCode: response.statusCode,
-        uri: uri,
-      );
-    }
-
+    final response = await _fetchWithRetry(uri);
     final Object? decoded;
     try {
       decoded = jsonDecode(response.body);
@@ -147,6 +198,59 @@ class NoaaNwsClient {
       throw NoaaNwsParseException('NWS response was not valid JSON: $e');
     }
     return parseFeatureCollection(decoded, actualOnly: actualOnly);
+  }
+
+  /// Performs a GET on [uri] with the configured headers and applies
+  /// [retryPolicy]. Returns a 2xx response or throws
+  /// [NoaaNwsHttpException] on non-retryable failure / retry exhaust.
+  Future<http.Response> _fetchWithRetry(Uri uri) async {
+    final headers = <String, String>{
+      'User-Agent': userAgent,
+      'Accept': acceptHeader,
+    };
+    int attempt = 0;
+    NoaaNwsHttpException lastException = NoaaNwsHttpException(
+      'No attempt was made (internal logic error).',
+      uri: uri,
+    );
+    while (true) {
+      http.Response? response;
+      try {
+        response = await _http.get(uri, headers: headers);
+      } on SocketException catch (e) {
+        lastException = NoaaNwsHttpException(
+          'Transport failure contacting NWS: $e',
+          uri: uri,
+        );
+      } catch (e) {
+        // Other transport-class failures (TlsException, http.ClientException
+        // wrapping a connection-reset). Treated as transient.
+        lastException = NoaaNwsHttpException(
+          'Transport failure contacting NWS: $e',
+          uri: uri,
+        );
+      }
+      if (response != null) {
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return response;
+        }
+        lastException = NoaaNwsHttpException(
+          'NWS returned non-2xx',
+          statusCode: response.statusCode,
+          uri: uri,
+        );
+        if (!retryPolicy.isRetryableStatus(response.statusCode)) {
+          throw lastException; // 4xx — do not retry; caller's bug.
+        }
+      }
+      // At this point we have a transient failure: response==null
+      // (transport-class) OR a retryable status code.
+      if (attempt >= retryPolicy.maxRetries) {
+        throw lastException;
+      }
+      await _sleep(retryPolicy.delayForAttempt(attempt));
+      attempt += 1;
+    }
   }
 
   /// Parses one GeoJSON `FeatureCollection` payload into a winter-only
@@ -184,7 +288,11 @@ class NoaaNwsClient {
       if (propsRaw is! Map<String, dynamic>) continue;
       final WinterAlert alert;
       try {
-        alert = WinterAlert.fromProperties(propsRaw);
+        // Use fromFeature to also pick up the typed `area` from the
+        // feature's top-level geometry. fromFeature delegates to
+        // fromProperties for the field-level extraction; back-compat
+        // is preserved for callers using fromProperties directly.
+        alert = WinterAlert.fromFeature(feature);
       } on NoaaNwsParseException {
         // One malformed feature does not poison the whole batch. Skip
         // it and keep going; the publisher occasionally ships features

@@ -54,6 +54,17 @@ class FlutterTtsEngine implements TtsEngine {
   }
 
   @override
+  Future<void> setSpeechRate(double rate) async {
+    // flutter_tts accepts a normalized 0.0..1.0 default-rate scale on
+    // most platforms (with platform-specific interpretations). We map
+    // our 0.25..2.0 normalized scale into 0.0..1.0 by clamping +
+    // halving; 1.0 (our base) -> 0.5 (flutter_tts default-rate).
+    final clamped = rate.clamp(0.25, 2.0).toDouble();
+    final flutterTtsRate = (clamped / 2.0).clamp(0.0, 1.0);
+    await _guardPluginCall(() => _flutterTts.setSpeechRate(flutterTtsRate));
+  }
+
+  @override
   Future<void> speak(String text) async {
     if (_disposed || !_pluginAvailable) return;
     if (text.trim().isEmpty) return;
