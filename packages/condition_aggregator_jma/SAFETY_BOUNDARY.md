@@ -1,10 +1,10 @@
 # condition_aggregator_jma — Safety-Class Boundary Record
 
 **Package**: `condition_aggregator_jma`
-**Version**: 0.0.1 (explore-phase; `publish_to: none`)
-**Boundary record version**: 1.0
+**Version**: 0.1.0 (first deploy via direct-Dart-XML-parse path)
+**Boundary record version**: 1.1
 **Authoring skill**: FDD (with AAA-class boundary template per sibling adapters)
-**Date**: 2026-05-06
+**Date**: 2026-05-04
 
 ---
 
@@ -224,9 +224,11 @@ enumeration in CHANGELOG. Nothing patronizes the developer.
 
 **Driver-facing-loom field**: this section is the canonical
 driver-facing-loom declaration for `condition_aggregator_jma`
-0.0.1 explore-phase. At deploy graduation (post-engagement-shape
-election + parser binding integration + per-report-family CAP
-mapping table validation), this field is re-audited; subsequent
+0.1.0 (first deploy via direct-Dart-XML-parse path). The jmaxml
+engagement-shape election (alpha/beta/gamma) for an upstream
+typed binding remains a separate open question (OQ-1); a future
+major version may swap the direct-parse path for the elected
+binding, at which point this field is re-audited. Subsequent
 versions update on material changes to the driver-experience
 surface.
 

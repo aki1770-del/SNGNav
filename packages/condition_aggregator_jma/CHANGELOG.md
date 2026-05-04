@@ -1,57 +1,85 @@
 # Changelog
 
-## 0.0.1 — 2026-05-06 — Explore-phase scaffold
+## 0.1.0 — 2026-05-04 — first deploy via direct-Dart-XML-parse path
 
-**Status: PUBLISH-PENDING.** Deploy graduation BLOCKS on a separate
-engagement-shape election (alpha / beta / gamma) for the upstream
-parser substrate (jmaxml). This entry records the scaffold landing
-on disk; pub.dev publish does NOT happen at this version.
-`publish_to: none` is set in `pubspec.yaml`.
+**Status: DEPLOYED** to pub.dev. The provider fetches the JMA
+disaster-info atom feed (`extra_l.xml`), filters to the
+prefecture-class warning report families
+(`気象警報・注意報（Ｈ２７）`, `気象特別警報・警報・注意報`), parses each
+linked per-prefecture report XML directly with the canonical Dart
+`xml` package, and surfaces winter-snow-class advisories
+(大雪警報 / 大雪注意報 / 暴風雪警報 / 暴風雪注意報 / 着雪注意報) as
+source-neutral `Advisory` records.
+
+The jmaxml engagement-shape election (alpha/beta/gamma) for an
+upstream typed binding remains a separate open question (OQ-1) and
+does not block this version's publish.
 
 ### Added
 
-- `JmaAdvisoryProvider` implementing `AdvisoryProvider` from
-  `condition_aggregator`. Constructor accepts an `endpointBaseUrl`
-  (default = the public JMA disaster-info XML feed root). `init()`
-  is no-op; `fetchActiveAdvisoriesAtPoint` is a stub returning an
-  empty list at every point until the upstream parser integration
-  lands.
-- `JmaForecastRecord` placeholder record shape used by the
-  explore-phase scaffold. Replaced at graduation by the upstream
-  parser's report-typed shape (e.g. `jmaxml`'s `Forecast` family).
-- `mapJmaForecastToAdvisory(JmaForecastRecord)` mapper with locked
-  shape: `source`, `eventClass`, `areaDescription`, `headline`,
-  `description`, `effective`, `expires` are passthrough today;
-  `severity` / `certainty` / `urgency` map to `unknown` at
-  explore-phase and graduate to the per-report-family CAP
-  normalization table at deploy-time.
-- 9 tests covering: provider source identity, init contract,
-  endpoint injectability, stub returns empty at any point,
-  uninitialized fetch raises `AdvisoryProviderInitException`,
-  mapper preserves JMA report family code verbatim, mapper
-  passes through area / headline / description / effective /
-  expires, mapper severity / certainty / urgency placeholder.
-- `SAFETY_BOUNDARY.md` per-package boundary record at scaffold-time.
-- BSD-3-Clause license (matches the rest of SNGNav).
+- `JmaAdvisoryProvider` now performs real HTTP I/O against the JMA
+  atom feed (default
+  `https://www.data.jma.go.jp/developer/xml/feed/extra_l.xml`) +
+  per-prefecture report XML; the constructor accepts an
+  injectable `http.Client` for testing and a configurable
+  `userAgent` (default
+  `(sngnav-class app, https://github.com/aki1770-del/sngnav)`).
+- `JmaAdvisoryFetchException` for transport / non-2xx / oversize-body
+  failures (caps: 50 KB atom feed, 200 KB per report, 30 s wall
+  clock).
+- `parseJmaAtomFeed(String)` + `parseJmaReportXml(String)`
+  exposed for direct consumer use against fixture payloads (e.g.
+  integrator-side replay tests).
+- `JmaAtomEntry` projection of the atom-feed entry fields the
+  provider keys on (`title`, `updated`, `author`, `reportUrl`).
+- `JmaForecastRecord` re-shaped to carry per-`<Item>` × per-`<Area>`
+  publisher fields verbatim (`eventName`, `eventCode`, `headline`,
+  `areaName`, `areaCode`, `reportDateTime`, `targetDateTime`).
+- `kJmaSnowAdvisoryEventNames` const set — 5 event names the
+  adapter surfaces at this version.
+- `kJmaPrefectureBoundingBoxes` + `prefectureCodeForPoint` —
+  bounding-box catalog for 6 snow-zone prefectures
+  (Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata).
+  Points outside the catalog return empty without an HTTP fetch.
+- Severity mapping: 警報 → `severe`; 注意報 → `moderate`;
+  特別警報 → `extreme`. JMA's verbatim event name is preserved in
+  `Advisory.eventClass` either way per Article 17 (β).
+- ≥6 new tests covering: prefecture-code resolution, atom-feed
+  parse, report-XML parse, snow-class filter, prefecture filter,
+  HTTP 5xx → exception, body-cap → exception, no-fetch on
+  out-of-catalog point.
 
-### Deploy-graduation gate (does NOT fire at 0.0.1)
+### Changed
 
-This package's deploy graduation BLOCKS on:
+- `pubspec.yaml`: removed `publish_to: none`; bumped
+  `version: 0.0.1` → `0.1.0`; added `http: ^1.0.0`; bumped
+  `condition_aggregator: ^0.0.2` → `^0.0.3` (matching
+  pub.dev-latest).
+- README "Status" replaced "explore-phase scaffold" with the
+  direct-parse deploy posture.
+- Library doc + provider doc + mapper doc updated to reflect the
+  direct-parse path; the placeholder JMA-report-family code
+  (`VPWW54`) language replaced with the publisher's per-event
+  name (`大雪警報` etc.).
 
-1. Komada-voice engagement-shape election for the upstream parser
-   substrate (alpha / beta / gamma — election cadence is scheduled
-   per the engagement governance track).
-2. Upstream parser binding integration — either WASM bridge to the
-   existing Rust crate OR Dart-native codegen port of the parser
-   pipeline (both shapes were canvassed in the substrate prep, the
-   election picks one).
-3. Per-report-family CAP severity / certainty / urgency mapping
-   table validation against multiple JMA sample feeds.
-4. Region resolution from WGS84 lat/lon → JMA region code (the
-   feed is region-segmented).
-5. Aspiration → Deploy gate enumeration per the package's spec
-   discipline (PHIL-001 8/8, CEO Vision Test 6/6, Article 17 (β)
-   determination, JIS / JASO conformance audit, cybersecurity
-   audit).
+### Open questions retained from 0.0.1
 
-Until those gates fire, this package stays at `publish_to: none`.
+- **OQ-1 jmaxml engagement-shape election** (alpha/beta/gamma) —
+  separate from this version's deploy. A future major version may
+  swap the direct-parse path for the elected upstream binding;
+  the public API is shaped so the swap does not produce churn.
+- Per-event-class CAP severity / certainty / urgency table
+  validation against multiple JMA sample feeds — 0.1.0 ships a
+  conservative suffix-based severity mapping; a richer table
+  lands at the same time as the engagement-shape election or
+  later if validated against expanded fixtures.
+- Prefecture catalogue expansion past 6 (currently
+  Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata) — adding
+  prefectures is a deliberate version bump.
+
+## 0.0.1 — 2026-05-06 — Explore-phase scaffold
+
+**Status: superseded by 0.1.0.** This version was never published
+(`publish_to: none`); it shipped on disk as the API-shape lock so
+consuming packages could wire against the interface during
+explore-phase. See 0.1.0 for the first deployed shape.

@@ -3,13 +3,13 @@ description: >-
   Japan Meteorological Agency adapter for the condition_aggregator interface.
   Maps JMA disaster-info XML feeds to the source-neutral Advisory typed event
   shape so integrators consume one shape across publishers (NWS / JMA / etc.).
-  Pure Dart, no Flutter dependency. Explore-phase scaffold.
-version: 0.0.1
+  Pure Dart, no Flutter dependency.
+version: 0.1.0
 
-# Explore-phase: NOT publishing to pub.dev. Deploy graduation BLOCKS on
-# Komada-voice engagement-shape election (alpha/beta/gamma) for jmaxml.
-# See README.md "Status" section for the gate enumeration.
-publish_to: none
+# 0.1.0 deploys via the direct-Dart-XML-parse path (no jmaxml binding
+# in transit). The jmaxml engagement-shape election (alpha/beta/gamma)
+# is a separate open question (OQ-1) and does not block this package's
+# pub.dev publish. See README.md "Status" + CHANGELOG.md "0.1.0".
 
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
@@ -24,11 +24,12 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  condition_aggregator: ^0.0.2
-  # xml is the canonical Dart XML parser. Pinned permissively to match
-  # interface package style. Used for CAP-class disaster-info XML parsing
-  # at deploy-time; current scaffold does not yet exercise it.
+  condition_aggregator: ^0.0.3
+  # xml is the canonical Dart XML parser; used for atom-feed +
+  # per-prefecture report parsing on the direct-parse path.
   xml: ^6.5.0
+  # http is used to fetch the atom feed + per-prefecture report XML.
+  http: ^1.0.0
 
 dev_dependencies:
   test: ^1.25.0
