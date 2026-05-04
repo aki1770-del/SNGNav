@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 — 2026-05-04 — atom-feed byte cap raised to 4 MB
+
+The 0.1.0 byte cap on the atom feed (`50 KiB`) was set conservatively
+without a real-world measurement. Observation against the live JMA
+`extra_l.xml` endpoint shows the feed is approximately 1.6 MB during
+normal cadence — it lists all recent JMA reports across Japan, not
+per-point. A 50 KiB cap aborts the fetch at the size guard before
+any parsing can run.
+
+`kJmaAtomFeedMaxBytes` raised to `4 * 1024 * 1024` (4 MB), which gives
+generous headroom for busy weather days while still preventing a
+runaway publisher response from exhausting integrator memory. The
+per-report cap (`kJmaReportXmlMaxBytes`, 200 KiB) is unchanged —
+prefecture warning XML reports are typically well under that.
+
+No other behavior change. No API change.
+
 ## 0.1.0 — 2026-05-04 — first deploy via direct-Dart-XML-parse path
 
 **Status: DEPLOYED** to pub.dev. The provider fetches the JMA

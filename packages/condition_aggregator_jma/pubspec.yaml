@@ -4,7 +4,7 @@ description: >-
   Maps JMA disaster-info XML feeds to the source-neutral Advisory typed event
   shape so integrators consume one shape across publishers (NWS / JMA / etc.).
   Pure Dart, no Flutter dependency.
-version: 0.1.0
+version: 0.1.1
 
 # 0.1.0 deploys via the direct-Dart-XML-parse path (no jmaxml binding
 # in transit). The jmaxml engagement-shape election (alpha/beta/gamma)

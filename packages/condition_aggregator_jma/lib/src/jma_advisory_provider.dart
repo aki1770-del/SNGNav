@@ -48,7 +48,12 @@ const Set<String> kJmaPrefectureWarningReportTitles = <String>{
 /// Hard caps applied to network I/O so a runaway publisher response
 /// cannot exhaust integrator memory or stall the driver-facing UI.
 const Duration kJmaFetchWallClockBudget = Duration(seconds: 30);
-const int kJmaAtomFeedMaxBytes = 50 * 1024;
+// Atom feed lists ALL recent JMA reports across Japan (not per-point),
+// so the response is publisher-wide rather than caller-scoped. Observed
+// at ~1.6 MB during normal cadence; busy weather days run larger. 4 MB
+// gives generous headroom while still preventing a runaway publisher
+// response from exhausting integrator memory.
+const int kJmaAtomFeedMaxBytes = 4 * 1024 * 1024;
 const int kJmaReportXmlMaxBytes = 200 * 1024;
 
 /// Thrown when the provider cannot reach the JMA endpoint, the
