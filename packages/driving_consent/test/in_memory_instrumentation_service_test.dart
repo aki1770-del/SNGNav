@@ -24,7 +24,7 @@ void main() {
           timestamp: t,
           driverPseudonym: instr.driverPseudonym,
           alertClass: 'alert_x',
-          severity: AlertSeverity.info,
+          severity: AlertSeverityClass.info,
           modalDuration: const Duration(seconds: 4),
           dismissalState: AlertDismissalState.ranToCompletion,
           driverProfile: DriverProfileClass.defaultProfile,

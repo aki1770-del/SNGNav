@@ -102,7 +102,7 @@ Four hops; HER (the driver whose data the consent governs) is terminal beneficia
 - `lib/src/consent_record.dart` (`ConsentStatus` / `ConsentPurpose` / `Jurisdiction` enums; `ConsentRecord` value-object). v0.4.0: `ConsentPurpose` extended with four instrumentation-class values.
 - `lib/src/consent_service.dart` (`ConsentService` abstract interface)
 - `lib/src/in_memory_consent_service.dart` (test-class implementation; not for production use)
-- `lib/src/instrumentation_event.dart` (v0.4.0; sealed `InstrumentationEvent` parent + four subtypes: `AlertFired` / `VoicePaceAdjusted` / `CohortMultiplierObserved` / `TripContextCaptured`; supporting enums: `AlertSeverity` / `AlertDismissalState` / `VoicePaceAdjustmentReason` / `CohortMultiplierClass` / `ObservedFitClass` / `VehicleClass` / `PassengerPresenceClass` / `TimeOfDayClass` / `ConsecutiveDrivingDayClass` / `DriverProfileClass`)
+- `lib/src/instrumentation_event.dart` (v0.4.0; sealed `InstrumentationEvent` parent + four subtypes: `AlertFired` / `VoicePaceAdjusted` / `CohortMultiplierObserved` / `TripContextCaptured`; supporting enums: `AlertSeverityClass` / `AlertDismissalState` / `VoicePaceAdjustmentReason` / `CohortMultiplierClass` / `ObservedFitClass` / `VehicleClass` / `PassengerPresenceClass` / `TimeOfDayClass` / `ConsecutiveDrivingDayClass` / `DriverProfileClass`)
 - `lib/src/instrumentation_service.dart` (v0.4.0; `InstrumentationService` abstract interface; `recordEvent` / `readEvents` / `getRetention` / `setRetention` / `deleteAllEvents` / `pruneExpired` / `driverPseudonym`)
 - `lib/src/in_memory_instrumentation_service.dart` (v0.4.0; test-class implementation; **not for production**; explicit comment at file top)
 - `pubspec.yaml` `version: 0.4.0`

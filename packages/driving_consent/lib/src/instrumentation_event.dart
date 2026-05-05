@@ -46,7 +46,7 @@ sealed class InstrumentationEvent extends Equatable {
 /// Profile-blind: severity decides whether/what; the integrator's HMI
 /// renders the same severity differently per driver profile, but the gate
 /// itself reads severity, never profile.
-enum AlertSeverity {
+enum AlertSeverityClass {
   /// Advisory information; no action required.
   info,
 
@@ -218,7 +218,7 @@ final class AlertFired extends InstrumentationEvent {
   final String alertClass;
 
   /// Severity at firing time.
-  final AlertSeverity severity;
+  final AlertSeverityClass severity;
 
   /// Intended modal duration on the HMI.
   final Duration modalDuration;

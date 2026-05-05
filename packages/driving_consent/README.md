@@ -195,7 +195,7 @@ await instrumentation.recordEvent(
     timestamp: DateTime.now(),
     driverPseudonym: instrumentation.driverPseudonym,
     alertClass: 'snow_road_warning',
-    severity: AlertSeverity.warning,
+    severity: AlertSeverityClass.warning,
     modalDuration: const Duration(seconds: 6),
     dismissalState: AlertDismissalState.ranToCompletion,
     driverProfile: DriverProfileClass.snowZoneExperienced,
@@ -222,7 +222,7 @@ class AlertInstrumentationGateway {
 
   Future<void> onAlertFired({
     required String alertClass,
-    required AlertSeverity severity,
+    required AlertSeverityClass severity,
     required Duration modalDuration,
     required AlertDismissalState dismissalState,
     required DriverProfileClass driverProfile,

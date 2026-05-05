@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1
+
+- **Renamed** the `AlertSeverity` enum (introduced in 0.4.0) to
+  `AlertSeverityClass`. The 0.4.0 name collided with `AlertSeverity` in
+  `navigation_safety_core` and `noaa_nws_adapter`, breaking compilation
+  for any consumer importing both packages. The renamed name is
+  consistent with the other instrumentation enums (`...Class` /
+  `...State` / `...Reason`).
+- Consumers that pulled 0.4.0 in the brief window before 0.4.1 should
+  update `AlertSeverity` references on `AlertFired.severity` to
+  `AlertSeverityClass`. The values (`info`, `warning`, `critical`,
+  `unknown`) are unchanged.
+- No other API changes.
+
 ## 0.4.0
 
 - Added: 4 new `ConsentPurpose` enum values for instrumentation-class

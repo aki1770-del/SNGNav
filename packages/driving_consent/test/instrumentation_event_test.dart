@@ -8,7 +8,7 @@ void main() {
         timestamp: DateTime(2026, 5, 5, 9),
         driverPseudonym: 'pseudo-1',
         alertClass: 'snow_road_warning',
-        severity: AlertSeverity.warning,
+        severity: AlertSeverityClass.warning,
         modalDuration: const Duration(seconds: 6),
         dismissalState: AlertDismissalState.ranToCompletion,
         driverProfile: DriverProfileClass.snowZoneExperienced,
@@ -16,7 +16,7 @@ void main() {
 
       expect(ev, isA<InstrumentationEvent>());
       expect(ev.alertClass, 'snow_road_warning');
-      expect(ev.severity, AlertSeverity.warning);
+      expect(ev.severity, AlertSeverityClass.warning);
     });
 
     test('VoicePaceAdjusted is an InstrumentationEvent', () {
@@ -40,7 +40,7 @@ void main() {
           timestamp: DateTime(2026, 5, 5, 9),
           driverPseudonym: 'p',
           alertClass: 'a',
-          severity: AlertSeverity.info,
+          severity: AlertSeverityClass.info,
           modalDuration: const Duration(seconds: 1),
           dismissalState: AlertDismissalState.ranToCompletion,
           driverProfile: DriverProfileClass.defaultProfile,
@@ -90,7 +90,7 @@ void main() {
         timestamp: t,
         driverPseudonym: 'p',
         alertClass: 'snow_road_warning',
-        severity: AlertSeverity.warning,
+        severity: AlertSeverityClass.warning,
         modalDuration: const Duration(seconds: 6),
         dismissalState: AlertDismissalState.ranToCompletion,
         driverProfile: DriverProfileClass.snowZoneExperienced,
@@ -99,7 +99,7 @@ void main() {
         timestamp: t,
         driverPseudonym: 'p',
         alertClass: 'snow_road_warning',
-        severity: AlertSeverity.warning,
+        severity: AlertSeverityClass.warning,
         modalDuration: const Duration(seconds: 6),
         dismissalState: AlertDismissalState.ranToCompletion,
         driverProfile: DriverProfileClass.snowZoneExperienced,

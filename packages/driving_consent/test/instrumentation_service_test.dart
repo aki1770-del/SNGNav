@@ -20,7 +20,7 @@ void main() {
           timestamp: t,
           driverPseudonym: instr.driverPseudonym,
           alertClass: 'snow_road_warning',
-          severity: AlertSeverity.warning,
+          severity: AlertSeverityClass.warning,
           modalDuration: const Duration(seconds: 6),
           dismissalState: AlertDismissalState.ranToCompletion,
           driverProfile: DriverProfileClass.snowZoneExperienced,
