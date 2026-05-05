@@ -159,10 +159,15 @@ void main() {
     });
 
     test('all ConsentPurpose values exist', () {
-      expect(ConsentPurpose.values, hasLength(3));
+      // 3 v0.3.0 values + 4 v0.4.0 instrumentation-class values = 7
+      expect(ConsentPurpose.values, hasLength(7));
       expect(ConsentPurpose.values, contains(ConsentPurpose.fleetLocation));
       expect(ConsentPurpose.values, contains(ConsentPurpose.weatherTelemetry));
       expect(ConsentPurpose.values, contains(ConsentPurpose.diagnostics));
+      expect(ConsentPurpose.values, contains(ConsentPurpose.alertExperienceInstrumentation));
+      expect(ConsentPurpose.values, contains(ConsentPurpose.voiceExperienceInstrumentation));
+      expect(ConsentPurpose.values, contains(ConsentPurpose.cohortCalibrationInstrumentation));
+      expect(ConsentPurpose.values, contains(ConsentPurpose.tripContextInstrumentation));
     });
 
     test('all Jurisdiction values exist', () {
@@ -411,7 +416,7 @@ void main() {
             .having((s) => s.status, 'status', ConsentBlocStatus.loading),
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
-            .having((s) => s.consents.length, 'consents count', 3)
+            .having((s) => s.consents.length, 'consents count', ConsentPurpose.values.length)
             .having((s) => s.isAllDenied, 'all denied', true),
       ],
     );

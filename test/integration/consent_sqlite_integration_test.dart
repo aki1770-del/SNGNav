@@ -38,7 +38,7 @@ void main() {
             .having((s) => s.status, 'status', ConsentBlocStatus.loading),
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
-            .having((s) => s.consents.length, 'count', 3)
+            .having((s) => s.consents.length, 'count', ConsentPurpose.values.length)
             .having((s) => s.isAllDenied, 'all denied', true),
       ],
     );
