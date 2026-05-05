@@ -7,10 +7,13 @@ import 'alert_density_throttle.dart';
 import 'calibration/humidity_dependent_temperature.dart';
 import 'calibration/precipitation_history_decay.dart';
 import 'calibration/speed_dependent_visibility.dart';
+import 'circadian_phase.dart';
+import 'confidence_provider.dart';
 import 'driver_context.dart';
 import 'driver_profile.dart';
 import 'driver_state.dart';
 import 'navigation_safety_context.dart';
+import 'session_state_provider.dart';
 import 'vehicle_threshold_overrides.dart';
 
 class NavigationSafetyConfig extends Equatable {
@@ -294,16 +297,60 @@ class NavigationSafetyConfig extends Equatable {
   /// 0.5.0 callers that pass [DriverProfile] alone to
   /// [forProfile] / [forProfileWithContext] see no behaviour change;
   /// state-axis tuning is opt-in via this factory only.
+  ///
+  /// **DriverState-axis scaffolding (0.10.0)**: four new optional
+  /// named parameters compose with the existing trait + state +
+  /// live-context layering as additional caution-adding adjustments
+  /// applied AFTER the state-delta in the existing layering order:
+  ///
+  /// - [vehicleOverrides] — vehicle-class threshold-override registry
+  ///   (0.9.0). When supplied, the registry composes through
+  ///   `forProfileWithContext` (caution-add-only invariant enforced
+  ///   in `VehicleThresholdOverrides.applyOverrideForToken`).
+  /// - [circadianPhase] — time-of-day circadian classification
+  ///   (#28). When supplied, the per-phase multiplier
+  ///   ([CircadianPhaseMultiplier.multiplier], always `>= 1.0`) is
+  ///   applied to the warning-tier visibility floor
+  ///   (caution-add-only).
+  /// - [sessionState] — driving-session-state with consecutive-day
+  ///   counter + cumulative-fatigue classification (#29). When
+  ///   supplied, a per-class lift adjusts the warning-tier visibility
+  ///   floor (caution-add-only; `rested` no-op).
+  /// - [confidence] + [isHighConfidenceConfirmed] —
+  ///   self-assessed-confidence signal with cap-override-with-
+  ///   confirmation pattern (#30). [Confidence.low] tightens the
+  ///   alerts-per-minute cap automatically. [Confidence.high]
+  ///   loosens the cap ONLY when [isHighConfidenceConfirmed] is
+  ///   `true`; otherwise treated as [Confidence.medium] (no-op).
+  ///   The driver-always-drives invariant requires affirmative
+  ///   driver confirmation for cap-loosening; the system never
+  ///   auto-relaxes from a high-confidence reading alone.
+  ///
+  /// Magnitudes for the four new inputs are **design-default
+  /// hypotheses** pending field-measurement validation; see
+  /// `KNOWN_LIMITATIONS.md` (DriverState-scaffolding section, 0.10.0)
+  /// for the per-input UNVERIFIED-magnitude flag.
   factory NavigationSafetyConfig.forDriverContext(
     DriverContext driverContext, {
     DrivingContext? environmentalContext,
+    VehicleThresholdOverrides? vehicleOverrides,
+    CircadianPhase? circadianPhase,
+    SessionState? sessionState,
+    Confidence? confidence,
+    bool isHighConfidenceConfirmed = false,
   }) {
-    // Step 1: trait + (optional) environmental baseline reuses the
-    // proven 0.5.0 path so any future calibration update there is
-    // automatically inherited here.
+    // Step 1: trait + (optional) environmental + (optional) vehicle-
+    // class override baseline reuses the proven 0.5.0 / 0.9.0 path so
+    // any future calibration update there is automatically inherited
+    // here. The vehicle-class override (if any) applies AFTER the
+    // per-profile baseline AND AFTER the live-context adjustment in
+    // `forProfileWithContext`; the caution-add-only +
+    // severity-not-profile invariants are enforced there at runtime
+    // via debug-mode assertions.
     final base = NavigationSafetyConfig.forProfileWithContext(
       driverContext.profile,
       context: environmentalContext,
+      vehicleOverrides: vehicleOverrides,
     );
 
     // Step 2: apply state-axis delta. Conservative-only; never weaker
@@ -344,6 +391,68 @@ class NavigationSafetyConfig extends Equatable {
       warningTemperature = base.warningTemperatureCelsius + tempLiftCelsius;
     }
 
+    // Step 3 (0.10.0): circadian-phase multiplier. Applied to the
+    // warning-tier visibility floor only (caution-add-only;
+    // multiplier always `>= 1.0` per the
+    // [CircadianPhaseMultiplier.multiplier] contract). Asserted at
+    // runtime in debug builds.
+    if (circadianPhase != null) {
+      final m = circadianPhase.multiplier;
+      assert(
+        m >= 1.0,
+        'CircadianPhase.${circadianPhase.name} multiplier $m violates '
+        'caution-add-only floor (must be >= 1.0).',
+      );
+      final candidate = (warningVisibility * m).ceil();
+      if (candidate > warningVisibility) {
+        warningVisibility = candidate;
+      }
+    }
+
+    // Step 4 (0.10.0): session-state cumulative-fatigue lift. Applied
+    // to the warning-tier visibility floor only; `rested` no-op.
+    // Magnitudes UNVERIFIED — design-default hypotheses pending
+    // fleet-class field measurement.
+    if (sessionState != null) {
+      final lift = _sessionFatigueVisibilityLiftMeters(
+        sessionState.cumulativeFatigue,
+      );
+      assert(
+        lift >= 0,
+        'CumulativeFatigueClass.${sessionState.cumulativeFatigue.name} '
+        'visibility lift $lift violates caution-add-only floor '
+        '(must be >= 0).',
+      );
+      if (lift > 0) {
+        warningVisibility = warningVisibility + lift;
+      }
+    }
+
+    // Step 5 (0.10.0): confidence cap-override-with-confirmation.
+    // - `low` tightens the alerts-per-minute cap (caution-add).
+    // - `medium` is a no-op.
+    // - `high` requires `isHighConfidenceConfirmed == true` to loosen
+    //   the cap; without confirmation it is treated as `medium`
+    //   (no-op). Driver-always-drives invariant: the system never
+    //   auto-relaxes the cap from a high-confidence reading alone.
+    final newCap = _confidenceAdjustedCap(
+      baseCap: base.alertsPerMinuteCapOverride,
+      profile: driverContext.profile,
+      confidence: confidence,
+      isHighConfidenceConfirmed: isHighConfidenceConfirmed,
+    );
+
+    // Driver-always-drives runtime debug-assertion: if confidence is
+    // `high` but not confirmed, the resolved cap MUST equal the
+    // baseline cap (no auto-loosening path exists).
+    assert(
+      !(confidence == Confidence.high && !isHighConfidenceConfirmed) ||
+          newCap == base.alertsPerMinuteCapOverride,
+      'Confidence.high without isHighConfidenceConfirmed must NOT '
+      'modify alertsPerMinuteCapOverride; driver-always-drives '
+      'invariant violated.',
+    );
+
     return NavigationSafetyConfig(
       safeScoreFloor: base.safeScoreFloor,
       infoScoreFloor: base.infoScoreFloor,
@@ -354,8 +463,67 @@ class NavigationSafetyConfig extends Equatable {
       infoVisibilityMeters: infoVisibility,
       warningVisibilityMeters: warningVisibility,
       criticalVisibilityMeters: criticalVisibility,
-      alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
+      alertsPerMinuteCapOverride: newCap,
     );
+  }
+
+  /// Per-`CumulativeFatigueClass` visibility lift in meters applied
+  /// to the warning-tier visibility floor by
+  /// [forDriverContext]. Caution-add-only: every value `>= 0`.
+  /// Magnitudes UNVERIFIED at 0.10.0 — design-default hypotheses
+  /// pending fleet-class field measurement (see
+  /// `KNOWN_LIMITATIONS.md` session-state section).
+  static int _sessionFatigueVisibilityLiftMeters(
+    CumulativeFatigueClass fatigue,
+  ) {
+    switch (fatigue) {
+      case CumulativeFatigueClass.rested:
+        return 0;
+      case CumulativeFatigueClass.mild:
+        return 25;
+      case CumulativeFatigueClass.accumulated:
+        return 50;
+      case CumulativeFatigueClass.severe:
+        return 100;
+    }
+  }
+
+  /// Resolve the alerts-per-minute cap under the
+  /// cap-override-with-confirmation pattern (0.10.0). Returns the
+  /// baseline cap (carried through the layering chain) when no
+  /// confidence signal is supplied, when confidence is `medium`, or
+  /// when confidence is `high` without `isHighConfidenceConfirmed`.
+  /// Tightens the cap on `low`; loosens on `high`-confirmed only.
+  ///
+  /// Magnitudes UNVERIFIED at 0.10.0 — design-default hypotheses
+  /// pending field-measurement validation (see
+  /// `KNOWN_LIMITATIONS.md` confidence-provider section).
+  static double? _confidenceAdjustedCap({
+    required double? baseCap,
+    required DriverProfile profile,
+    required Confidence? confidence,
+    required bool isHighConfidenceConfirmed,
+  }) {
+    if (confidence == null) return baseCap;
+    final effectiveBase =
+        baseCap ?? AlertDensityThrottle.defaultCapFor(profile);
+    switch (confidence) {
+      case Confidence.medium:
+        return baseCap;
+      case Confidence.low:
+        // Tighten by 25%: the less-confident driver gets fewer
+        // advisory alerts per minute to reduce overload. Floor at
+        // 1.0 alerts/min so the cap remains operational.
+        final tightened = effectiveBase * 0.75;
+        return tightened < 1.0 ? 1.0 : tightened;
+      case Confidence.high:
+        if (!isHighConfidenceConfirmed) {
+          // Driver-always-drives invariant: no auto-loosen.
+          return baseCap;
+        }
+        // Loosen by 25% (only with affirmative confirmation).
+        return effectiveBase * 1.25;
+    }
   }
 
   /// Per-state delta. Magnitudes UNVERIFIED at 0.6.0 spike — see

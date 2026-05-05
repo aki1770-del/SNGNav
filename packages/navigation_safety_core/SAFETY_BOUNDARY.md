@@ -1,8 +1,8 @@
 # navigation_safety_core — Safety-Class Boundary Record
 
 **Package**: `navigation_safety_core`
-**Version**: 0.9.0 (DEPLOY)
-**Boundary record version**: 1.2 (0.9.0 addendum: vehicle-class threshold-override surface)
+**Version**: 0.10.0 (DEPLOY)
+**Boundary record version**: 1.3 (0.10.0 addendum: DriverState-axis scaffolding — CircadianPhase + SessionStateProvider + ConfidenceProvider)
 **Authoring skill**: AAA (automotive-adas-analyst)
 **Date**: 2026-05-05
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
@@ -150,6 +150,76 @@ the package boundary). **WP.29 touchpoint** at integrator's
 analytics boundary, not at this package (per §4; the
 `VehicleClassProvider` interface is consumer-implemented; the
 package consumes only the typed token at this layer).
+
+## 7.3 — DriverState-axis scaffolding (0.10.0)
+
+This section addends the safety-class boundary for the DriverState-
+axis scaffolding added in 0.10.0 (`CircadianPhase` +
+`SessionStateProvider` + `SessionState` + `CumulativeFatigueClass` +
+`ConfidenceProvider` + `Confidence` + four new optional named
+parameters on `NavigationSafetyConfig.forDriverContext`). All three
+inputs compose as caution-adding adjustments AFTER the trait
+baseline, the live-context layering, the vehicle-class override, AND
+the existing state-delta.
+
+**Caution-add-only invariant**: circadian-phase + session-state
+adjustments may make warning thresholds fire EARLIER than the
+per-profile baseline + live-context + state-delta floor; NEVER
+later. The factory enforces the multiplier `>= 1.0` floor (circadian)
+and the visibility lift `>= 0` floor (session-state) at runtime via
+debug-mode assertions in `forDriverContext`. Negative-test coverage
+in `test/circadian_phase_test.dart`,
+`test/session_state_provider_test.dart`,
+`test/confidence_provider_test.dart`, and
+`test/navigation_safety_config_driver_state_inputs_test.dart`
+confirms the assertions fire on relaxing inputs. The
+cap-override-with-confirmation pattern (#30) is the ONLY exception
+to the warn-thresholds-only-add-caution rule and applies only to the
+alerts-per-minute cap (rate-limit), never to the warning visibility
+/ temperature floors.
+
+**Severity-not-profile invariant** (load-bearing per §6 above): all
+three inputs tune warning TIMING (warn-earlier-floors) + alert
+DENSITY (cap modification under #30) only. They do NOT modify the
+score-floor tiers (`safeScoreFloor` / `infoScoreFloor` /
+`warningScoreFloor`), the critical thresholds, or the
+critical-bypass behaviour (`AlertSeverity.critical` always fires
+regardless of cap). The DriverState-axis scaffolding lives entirely
+in the threshold-tuning + density-rate-limit layer; it does NOT
+enter the visibility / preemption / severity-ordering paths.
+
+**Driver-always-drives invariant** (load-bearing per §7 above):
+`SessionStateProvider` and `ConfidenceProvider` return advisory
+signals consumed for threshold tuning. They do NOT actuate the
+vehicle, NOT close any control loop, NOT modulate alert severity.
+`CircadianPhase` is a purely-typed advisory enum carrying no
+side-effect surface. The **cap-override-with-confirmation pattern**
+explicitly encodes the driver-always-drives invariant for #30:
+`Confidence.high` does NOT auto-loosen the alerts-per-minute cap;
+the integrator must build a confirmation surface and set
+`isHighConfidenceConfirmed = true` ONLY after the driver has
+affirmatively confirmed. Without the affirmative confirmation flag,
+`Confidence.high` is treated as `Confidence.medium` (no-op). The
+factory carries a runtime debug-assertion that catches any divergence
+(*"Confidence.high without isHighConfidenceConfirmed must NOT modify
+alertsPerMinuteCapOverride; driver-always-drives invariant violated."*).
+The driver retains full control authority over cap-loosening
+decisions; the system never auto-relaxes the safety cap from a
+high-confidence reading alone.
+
+**UNVERIFIED-magnitude flags**: per-phase circadian multipliers,
+per-class fatigue lifts, and confidence cap modifiers are
+**design-default hypotheses** pending field-measurement validation;
+see `CHANGELOG.md` 0.10.0 entry and `KNOWN_LIMITATIONS.md`
+(DriverState-scaffolding section, 0.10.0) for the per-input
+disclosure.
+
+**ASIL-QM advisory** per §2 (no functional-safety claim asserted at
+the package boundary). **WP.29 touchpoint** at integrator's
+analytics boundary, not at this package (per §4; the
+`SessionStateProvider` and `ConfidenceProvider` interfaces are
+consumer-implemented; the package consumes only the typed value at
+this layer).
 
 ## 8 — Driver-facing loom (D-VGC189-1)
 

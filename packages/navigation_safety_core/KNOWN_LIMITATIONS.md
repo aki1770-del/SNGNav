@@ -9,6 +9,84 @@ than letting silent gaps reach drivers.
 
 ---
 
+## DriverState-axis scaffolding (#28+#29+#30, added in 0.10.0) — UNVERIFIED magnitudes
+
+The 0.10.0 release scaffolds three additional state-axis inputs onto
+the existing `forDriverContext` factory: time-of-day circadian-phase
+(#28), driving-session-state (#29), and self-assessed-confidence with
+cap-override-with-confirmation pattern (#30). The **API shapes** are
+load-bearing for the #23 DriverState complete-class graduation
+(Wave 3); the **magnitudes** in the per-input lookup tables are
+design-default hypotheses pending field-measurement validation.
+
+### What is UNVERIFIED at 0.10.0
+
+- **`CircadianPhase` per-phase multipliers** (`earlyMorning` 1.2 /
+  `morning` 1.0 / `afternoon` 1.1 / `evening` 1.05 / `night` 1.3 /
+  `lateNight` 1.5). The phase boundaries (00:00 / 04:00 / 08:00 /
+  12:00 / 16:00 / 20:00) follow the four-hour-block partitioning
+  used in driver-fatigue reporting and are qualitatively-anchored in
+  chronobiology (sleep inertia post-wake, post-lunch dip, evening
+  fatigue accumulation, circadian-low-into-trough overnight). The
+  multiplier values themselves are NOT yet anchored in a published
+  population study mapping hour-of-day to an
+  effective-reaction-time-multiplier specifically; the values are
+  conservative-only (every multiplier `>= 1.0`) and ordered to match
+  the qualitative literature. Per-population calibration is deferred
+  pending fleet-class field measurement.
+- **`CumulativeFatigueClass` day-thresholds** (`rested` 0–2 / `mild`
+  3–4 / `accumulated` 5–6 / `severe` 7+). The boundaries are
+  design-default hypotheses; the integrator's own fleet-class data
+  may show different empirical breakpoints. The **per-class
+  visibility lifts** (`mild` +25m / `accumulated` +50m / `severe`
+  +100m) are similarly conservative engineering-judgement values
+  pending field-measurement validation.
+- **`Confidence` cap modifiers** (low: cap × 0.75 with floor 1.0
+  alerts/min; high-confirmed: cap × 1.25). The 25% magnitude is
+  engineering judgement consistent with the alert-density bound
+  literature (PMC12181921 + AAA-FTS), but no published source maps
+  driver self-assessed-confidence directly to an
+  optimal-cap-tighten-ratio. Per-population calibration is deferred.
+
+### What is verified at 0.10.0
+
+- **API shape** — three inputs compose orthogonally into the
+  existing trait + state + live-context + vehicle-class layering;
+  every input is opt-in (defaults preserve 0.9.x behaviour exactly).
+- **Caution-add-only contract** — circadian + session-state may make
+  warning thresholds fire earlier than the post-state-delta floor,
+  never later. The cap-modifier under #30 is the ONLY layer
+  permitted to relax (loosen) and only via the
+  cap-override-with-confirmation pattern; the cap-loosen direction
+  requires `isHighConfidenceConfirmed == true` (driver-always-drives
+  invariant). Verified by the negative-assertion tests in the four
+  new test files.
+- **Driver-always-drives contract** — the runtime debug-assertion in
+  `forDriverContext` catches any path where `Confidence.high`
+  without confirmation modifies the cap. Verified by the cap-flow
+  test in `test/confidence_provider_test.dart`.
+- **Back-compat** — `forProfile`, `forProfileWithContext`, and
+  `forDriverContext` (without the four new optional parameters)
+  unchanged from 0.9.x.
+
+### Out of scope at 0.10.0
+
+- Live-detection of any of the three inputs (drowsiness from
+  steering entropy, fatigue from heart-rate variability, confidence
+  from gaze-tracker / micro-expression analysis, etc.) is out of
+  scope. All three values are integrator-supplied; this package does
+  not infer them.
+- Per-population-validated magnitude tables (the 0.10.0 magnitudes
+  are placeholders pending the integrator's own fleet-class
+  telemetry; the `LoomFitTelemetry` 0.8.0 stream is the
+  package-boundary surface for that calibration loop).
+- The full trait × state × time × session × confidence five-axis
+  matrix per Regan-Hallett-Gordon T3 + downstream is a v1.0
+  architecture decision; 0.10.0 ships the orthogonal axes and the
+  composition factory only.
+
+---
+
 ## DriverState (state-axis spike, added in 0.6.0) — UNVERIFIED magnitudes
 
 The `DriverState` enum and `DriverContext` trait/state composite were

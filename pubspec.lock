@@ -173,7 +173,7 @@ packages:
       path: "packages/driving_consent"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.1"
   driving_weather:
     dependency: "direct main"
     description:
@@ -474,14 +474,14 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.8.0"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.10.0"
   nested:
     dependency: transitive
     description:

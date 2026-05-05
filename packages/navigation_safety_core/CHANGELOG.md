@@ -1,5 +1,174 @@
 # Changelog
 
+## 0.10.0 — 2026-05-05 — DriverState-axis scaffolding (#28+#29+#30)
+
+Adds three additive opt-in inputs to the existing trait/state
+`DriverContext` architecture (Regan-Hallett-Gordon 2011, PMC4001671)
+as Wave 1 sub-bundle 2 NSC scaffolding for the #23 DriverState
+complete-class graduation: time-of-day circadian-phase classification
+(#28), driving-session-state with consecutive-day + cumulative-fatigue
+classification (#29), and self-assessed-confidence with
+cap-override-with-confirmation pattern (#30). All three compose into
+the existing `forDriverContext` factory as caution-adding adjustments
+applied AFTER the trait baseline AND AFTER the live-context +
+vehicle-class layering AND AFTER the state-delta.
+
+### Added
+
+- **`CircadianPhase`** — enum partitioning the 24-hour clock into six
+  phases (`earlyMorning` 04–07 / `morning` 08–11 / `afternoon` 12–15
+  / `evening` 16–19 / `night` 20–23 / `lateNight` 00–03) with a
+  caution-adding multiplier in `[1.0, 1.5]` exposed via the
+  `CircadianPhaseMultiplier.multiplier` extension. `morning` is the
+  baseline (`1.0`); `lateNight` is the cap (`1.5`,
+  circadian-trough). Helper `circadianPhaseFromHour(int)` maps a
+  24-hour clock hour to the corresponding phase.
+- **`SessionStateProvider`** — abstract interface returning
+  `SessionState? get sessionState`. The integrator owns persistence
+  (consecutive-day counter across trips, day-rollover semantics,
+  opt-in scope) and the privacy-class boundary; the package consumes
+  only the typed value at the factory call-site.
+- **`SessionState`** — immutable value class carrying
+  `consecutiveDrivingDays` (integrator-tracked raw counter) +
+  `cumulativeFatigue` (integrator-derived `CumulativeFatigueClass`).
+- **`CumulativeFatigueClass`** — enum (`rested` 0–2 / `mild` 3–4 /
+  `accumulated` 5–6 / `severe` 7+) determining the
+  threshold-adjustment magnitude.
+- **`ConfidenceProvider`** — abstract interface returning
+  `Confidence? get confidence` AND `bool get
+  isHighConfidenceConfirmed`. The two signals together form the
+  cap-override-with-confirmation pattern.
+- **`Confidence`** — enum (`high` / `medium` / `low`).
+- **`NavigationSafetyConfig.forDriverContext`** — four new optional
+  named parameters: `vehicleOverrides` (re-surfaced from 0.9.0 so
+  `forDriverContext` callers can compose vehicle-class through the
+  state-axis factory), `circadianPhase`, `sessionState`,
+  `confidence`, and `isHighConfidenceConfirmed` (default `false`).
+- Re-exported from `package:navigation_safety_core/navigation_safety_core.dart`.
+
+### Cap-override-with-confirmation pattern (#30; load-bearing)
+
+The `Confidence` signal modulates the alerts-per-minute cap under a
+pattern that preserves the **driver-always-drives invariant**:
+
+- `Confidence.low` → automatically TIGHTENS the cap (caution-add
+  direction; effective cap = `defaultCapFor(profile) × 0.75`, floored
+  at `1.0` alerts/min).
+- `Confidence.medium` → no-op (no cap modification).
+- `Confidence.high` → does NOT auto-loosen the cap. Without explicit
+  integrator-supplied confirmation
+  (`isHighConfidenceConfirmed == false`), `Confidence.high` is
+  treated as `Confidence.medium` (no cap modification). The system
+  never auto-relaxes the safety cap from a high-confidence reading
+  alone; the driver must affirmatively confirm via an
+  integrator-supplied confirmation surface (e.g. an explicit toggle).
+  When `isHighConfidenceConfirmed == true`, the cap loosens by 25%
+  (`defaultCapFor(profile) × 1.25`).
+
+### UNVERIFIED-magnitude flags
+
+All three input magnitudes are **design-default hypotheses** pending
+field-measurement validation, flagged verbatim per the kei-car-cohort
+precedent (CHANGELOG.md 0.9.0 entry):
+
+- **`CircadianPhase` multipliers** (`earlyMorning` 1.2 / `morning`
+  1.0 / `afternoon` 1.1 / `evening` 1.05 / `night` 1.3 / `lateNight`
+  1.5). Phase boundaries follow standard four-hour-block
+  partitioning used in driver-fatigue reporting; multiplier values
+  qualitatively-anchored in chronobiology (sleep inertia post-wake,
+  post-lunch dip, evening fatigue accumulation, circadian-low at
+  night-into-late-night, circadian-trough 00–03) but not yet
+  field-calibrated to a population study mapping
+  hour-of-day → effective-RT-multiplier specifically. See
+  `KNOWN_LIMITATIONS.md` (DriverState-scaffolding section, 0.10.0).
+- **`CumulativeFatigueClass` day-thresholds** (`rested` 0–2 / `mild`
+  3–4 / `accumulated` 5–6 / `severe` 7+) AND per-class visibility
+  lifts (`mild` +25m / `accumulated` +50m / `severe` +100m). Both
+  the day-bucket boundaries and the visibility-lift magnitudes are
+  design-default hypotheses pending fleet-class field measurement.
+- **`Confidence` cap modifiers** (low: -25%; high-confirmed: +25%).
+  The 25% magnitude is engineering judgement; per-population
+  calibration of the optimal cap-tighten ratio for low-confidence
+  drivers is deferred.
+
+### Why this exists
+
+The trait + state separation per Regan-Hallett-Gordon 2011
+(PMC4001671) maps onto a richer state-axis surface than the four
+`DriverState` enum values alone. Three additional state-axis inputs
+were surfaced as Wave 1 sub-bundle 2 scaffolding for the #23
+DriverState complete-class graduation: time-of-day (circadian phase
+shapes baseline alertness regardless of trait or live state), session
+history (cumulative fatigue compounds across days even when the
+driver self-reports as alert today), and self-assessed confidence
+(the driver's own read on their current capability is information
+the integrator has access to that the package does not). All three
+are advisory inputs the integrator wires when the signal is
+available; the per-profile + live-context + vehicle-class baseline
+remains the operational floor.
+
+### Discipline
+
+- **Caution-add-only invariant preserved.** Circadian-phase + session
+  -state adjustments may make warning thresholds fire EARLIER than
+  the per-profile baseline + live-context + state-delta floor;
+  NEVER later. The factory enforces the multiplier `>= 1.0` floor
+  (circadian) and the lift `>= 0` floor (session-state) at runtime
+  via debug-mode assertions in `forDriverContext`. Confidence cap
+  modification is the ONLY exception to the warn-thresholds-only-add
+  -caution rule and applies only to the alerts-per-minute cap; the
+  cap-loosen direction is gated by the confirmation flag.
+  Negative-test coverage in
+  `test/circadian_phase_test.dart`,
+  `test/session_state_provider_test.dart`,
+  `test/confidence_provider_test.dart`, and
+  `test/navigation_safety_config_driver_state_inputs_test.dart`
+  confirms the assertions fire on relaxing inputs.
+- **Severity-not-profile invariant preserved.** All three inputs
+  tune warning TIMING + alert DENSITY only. They do NOT modify the
+  score-floor tiers (`safeScoreFloor` / `infoScoreFloor` /
+  `warningScoreFloor`), the critical thresholds, or the
+  critical-bypass behaviour (`AlertSeverity.critical` always fires
+  regardless of cap).
+- **Driver-always-drives invariant preserved.** All three
+  providers (`SessionStateProvider`, `ConfidenceProvider`) AND the
+  `CircadianPhase` enum are advisory inputs; they do NOT actuate the
+  vehicle, do NOT close any control loop, do NOT modulate alert
+  severity. The cap-override-with-confirmation pattern explicitly
+  encodes this invariant for #30: the system never auto-relaxes the
+  safety cap from a high-confidence reading alone; the driver must
+  affirmatively confirm. Runtime debug-assertion in
+  `forDriverContext` catches any divergence.
+- **Backward compatible.** Existing 0.9.x callers see no behaviour
+  change. `forDriverContext` without the four new optional
+  parameters produces identical output to the 0.9.x signature.
+  No naming collision with sibling-package types (verified via
+  `flutter analyze` from monorepo root); no breaking change to
+  `forProfile` / `forProfileWithContext` / `forDriverContext`
+  signatures (additive named parameters only).
+
+### Tests
+
+- New tests across four files:
+  - `test/circadian_phase_test.dart` — multiplier bounds (every
+    phase `>= 1.0`); `lateNight` = 1.5 cap; baseline `morning` =
+    1.0; `circadianPhaseFromHour` mapping coverage; `RangeError` on
+    out-of-range hour.
+  - `test/session_state_provider_test.dart` — interface contract;
+    null-fallback (provider returns null → no effect); `SessionState`
+    equality + props; exhaustive `CumulativeFatigueClass` lift
+    coverage.
+  - `test/confidence_provider_test.dart` — interface; `.low`
+    tightens cap; `.medium` no-op; `.high` without confirmation =
+    no-op (defaults to `medium`); `.high` WITH confirmation loosens
+    cap; cap floor at `1.0` alerts/min.
+  - `test/navigation_safety_config_driver_state_inputs_test.dart`
+    — cross-feature integration: all three inputs at once +
+    caution-add-only invariant verification + composition with
+    existing `DrivingContext` + `vehicleOverrides`.
+
+Total NSC test count: 253 → 285.
+
 ## 0.9.0 — 2026-05-05 — vehicle-class threshold-override surface
 
 Adds an integrator-supplied vehicle-class signal path through the
