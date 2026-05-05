@@ -28,3 +28,6 @@ library;
 export 'src/consent_record.dart';
 export 'src/consent_service.dart';
 export 'src/in_memory_consent_service.dart';
+export 'src/instrumentation_event.dart';
+export 'src/instrumentation_service.dart';
+export 'src/in_memory_instrumentation_service.dart';

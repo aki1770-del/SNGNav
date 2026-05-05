@@ -23,7 +23,7 @@ data and you need GDPR/CCPA/APPI-ready consent management with a safe default.
 
 ```yaml
 dependencies:
-  driving_consent: ^0.3.0
+  driving_consent: ^0.4.0
 ```
 
 ## Quick Start
@@ -156,6 +156,110 @@ class MyPersistentConsentService implements ConsentService {
 }
 ```
 
+## Instrumentation-class consent (0.4.0)
+
+`driving_consent` 0.4.0 adds four instrumentation-class purposes that gate
+on-device feedback loops. The driver's app keeps a small per-install record
+of how alerts and voice guidance fit her, and the next trip benefits.
+Default scope at v0.4.0 is **on-device**; off-device aggregation requires
+explicit future scope decisions and is not opened by these purposes.
+
+| Purpose | What it gates |
+|---------|---------------|
+| `ConsentPurpose.alertExperienceInstrumentation` | Alert-firing records: alert class, severity, modal duration, dismissal pattern. |
+| `ConsentPurpose.voiceExperienceInstrumentation` | Voice-pace adjustments: previous and new speech rates, reason for the change. |
+| `ConsentPurpose.cohortCalibrationInstrumentation` | Cohort-multiplier observations: which default applied, how well it fit. |
+| `ConsentPurpose.tripContextInstrumentation` | Coarse trip context: vehicle class, passenger presence, time of day, driving-day streak. **Zero GPS, zero destination.** |
+
+Each purpose is independent. The driver grants alert-instrumentation
+without granting voice-instrumentation. The gate stays per-purpose.
+
+### Recording an event behind the gate
+
+```dart
+import 'package:driving_consent/driving_consent.dart';
+
+final consent = InMemoryConsentService();
+final instrumentation = InMemoryInstrumentationService(consent);
+
+// Driver explicitly grants alert-instrumentation
+await consent.grant(
+  ConsentPurpose.alertExperienceInstrumentation,
+  Jurisdiction.appi,
+);
+
+// Record an event — Jidoka throws StateError if consent is not granted.
+await instrumentation.recordEvent(
+  ConsentPurpose.alertExperienceInstrumentation,
+  AlertFired(
+    timestamp: DateTime.now(),
+    driverPseudonym: instrumentation.driverPseudonym,
+    alertClass: 'snow_road_warning',
+    severity: AlertSeverity.warning,
+    modalDuration: const Duration(seconds: 6),
+    dismissalState: AlertDismissalState.ranToCompletion,
+    driverProfile: DriverProfileClass.snowZoneExperienced,
+  ),
+);
+
+// Read back for on-device calibration
+final recent = await instrumentation.readEvents(
+  purpose: ConsentPurpose.alertExperienceInstrumentation,
+  since: DateTime.now().subtract(const Duration(days: 7)),
+);
+```
+
+### `AlertInstrumentationGateway` pattern
+
+Wrap `InstrumentationService` behind a per-feature gateway so feature code
+stays free of consent-checking boilerplate while the gateway concentrates
+the Jidoka discipline at one boundary.
+
+```dart
+class AlertInstrumentationGateway {
+  AlertInstrumentationGateway(this._instrumentation);
+  final InstrumentationService _instrumentation;
+
+  Future<void> onAlertFired({
+    required String alertClass,
+    required AlertSeverity severity,
+    required Duration modalDuration,
+    required AlertDismissalState dismissalState,
+    required DriverProfileClass driverProfile,
+  }) async {
+    try {
+      await _instrumentation.recordEvent(
+        ConsentPurpose.alertExperienceInstrumentation,
+        AlertFired(
+          timestamp: DateTime.now(),
+          driverPseudonym: _instrumentation.driverPseudonym,
+          alertClass: alertClass,
+          severity: severity,
+          modalDuration: modalDuration,
+          dismissalState: dismissalState,
+          driverProfile: driverProfile,
+        ),
+      );
+    } on StateError {
+      // Consent not granted — drop silently. The line stops itself.
+    }
+  }
+
+  Future<List<InstrumentationEvent>> recentAlerts({Duration? window}) {
+    final since =
+        window == null ? null : DateTime.now().subtract(window);
+    return _instrumentation.readEvents(
+      purpose: ConsentPurpose.alertExperienceInstrumentation,
+      since: since,
+    );
+  }
+}
+```
+
+The gateway is the only place that mentions the consent purpose. The
+feature code calls `gateway.onAlertFired(...)` and never reasons about
+consent at all.
+
 ## API Overview
 
 | Type | Purpose |
@@ -166,6 +270,10 @@ class MyPersistentConsentService implements ConsentService {
 | `ConsentPurpose` | Enumerates independently controlled data-sharing purposes. |
 | `ConsentStatus` | Three-state consent gate where `unknown` is treated as denied. |
 | `Jurisdiction` | Captures the policy context for the recorded consent decision. |
+| `InstrumentationService` | Abstract interface for recording, reading, retaining, and deleting instrumentation events. |
+| `InMemoryInstrumentationService` | Ready-to-run in-memory implementation; **not for production**. |
+| `InstrumentationEvent` | Sealed parent for the closed set of event subtypes. |
+| `AlertFired` / `VoicePaceAdjusted` / `CohortMultiplierObserved` / `TripContextCaptured` | The four event subtypes. |
 
 ## Works With
 

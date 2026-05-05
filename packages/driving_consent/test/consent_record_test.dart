@@ -159,14 +159,27 @@ void main() {
   // ===========================================================================
 
   group('ConsentPurpose', () {
-    test('has exactly 3 values', () {
-      expect(ConsentPurpose.values, hasLength(3));
+    test('has exactly 7 values (3 v0.3.0 + 4 v0.4.0 instrumentation-class)',
+        () {
+      expect(ConsentPurpose.values, hasLength(7));
     });
 
-    test('values are fleetLocation, weatherTelemetry, diagnostics', () {
+    test('preserves v0.3.0 values verbatim', () {
       expect(
         ConsentPurpose.values.map((v) => v.name),
         containsAll(['fleetLocation', 'weatherTelemetry', 'diagnostics']),
+      );
+    });
+
+    test('adds v0.4.0 instrumentation-class values', () {
+      expect(
+        ConsentPurpose.values.map((v) => v.name),
+        containsAll([
+          'alertExperienceInstrumentation',
+          'voiceExperienceInstrumentation',
+          'cohortCalibrationInstrumentation',
+          'tripContextInstrumentation',
+        ]),
       );
     });
   });
