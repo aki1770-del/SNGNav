@@ -1,5 +1,138 @@
 # Changelog
 
+## 0.9.0 — 2026-05-05 — vehicle-class threshold-override surface
+
+Adds an integrator-supplied vehicle-class signal path through the
+existing context-aware threshold-config factory. The threshold floor
+for a known under-served cohort (kei-car driven by the over-65
+rural-Japan demographic) can now be sharpened without changing alert
+severity, alert ordering, or the existing per-profile baselines that
+today's integrators already depend on.
+
+### Added
+
+- **`VehicleClassProvider`** — abstract interface with a single
+  getter `String? get vehicleClassToken`. The integrator implements
+  this to surface a stable token (e.g. `'kei-car'`,
+  `'compact-sedan'`, `'4wd'`, `'commercial-light'`). The package
+  does not prescribe a vehicle-class taxonomy at the type system
+  level; the integrator picks the tokens that best describe the
+  vehicle population they serve. Tokens are advisory strings, NOT
+  control inputs.
+- **`VehicleThresholdOverrides`** — value class wrapping a
+  `Map<String, NavigationSafetyConfig Function(NavigationSafetyConfig baseline)>`.
+  The integrator registers caution-adding-only transforms keyed by
+  vehicle-class token. The factory enforces the caution-add-only +
+  severity-not-profile invariants at runtime via debug-mode
+  assertions in `applyOverrideForToken`. A
+  `VehicleThresholdOverrides.withKeiCarDefault()` factory ships the
+  built-in kei-car override.
+- **`DrivingContext.vehicleClassToken`** — new optional field on the
+  existing `DrivingContext` value-object. `null` (the default) means
+  no vehicle-class signal; thresholds fall back to the per-profile
+  baseline. Composes independently with the existing `speedMps` /
+  `humidityRH` / `timeSincePrecipitation` / `ambientTempCelsius`
+  fields.
+- **`NavigationSafetyConfig.forProfileWithContext`** — new optional
+  named parameter `vehicleOverrides`. When supplied AND
+  `context.vehicleClassToken` is non-null AND the token matches a
+  registered key, the registered transform applies AFTER the
+  per-profile baseline AND AFTER the live-context adjustments.
+- Re-exported from `package:navigation_safety_core/navigation_safety_core.dart`.
+
+### Built-in kei-car override
+
+`VehicleThresholdOverrides.withKeiCarDefault()` ships the built-in
+`'kei-car'` token override. The deltas:
+
+- `warningVisibilityMeters` += 50m (kei-car windscreen + headlight
+  cluster smaller than compact-sedan baseline; warn earlier on
+  visibility loss to preserve reaction-margin).
+- `warningTemperatureCelsius` += 1°C (kei-car cabin lower thermal
+  mass + faster glass condensation in winter; warn earlier on
+  cold-temperature transitions).
+
+**UNVERIFIED-magnitude flag**: these deltas are **design-default
+hypotheses** pending field-measurement validation. Kei-car-specific
+visibility and thermal-mass calibration is not yet anchored in
+published literature at the vehicle-class layer specifically; the
+deltas compose qualitatively-known kei-car geometry and thermal mass
+with the existing literature-anchored
+`forProfile(DriverProfile.ageingRural)` reaction-time baseline
+(PubMed 16313881 + downstream). A kei-car-class
+calibration-validation follow-up is queued; integrators running
+fleet-class telemetry are encouraged to surface deviations from the
+design-default through the existing `LoomFitTelemetry` emit-only
+stream.
+
+### Why this exists
+
+The kei-car-driven-by-over-65 cohort composes two known under-served
+dimensions: a smaller-windscreen vehicle class commonly driven in
+Hokkaido and Tohoku rural areas where snow-zone visibility loss is
+the load-bearing safety question, AND an over-65 driver with the
+slower hazard-perception reaction time the existing
+`DriverProfile.ageingRural` calibration already encodes. The
+per-profile baseline alone does not see the vehicle dimension; the
+live-context adjustments (speed / humidity / precipitation) do not
+either. This release adds the third dimension as an opt-in surface
+the integrator wires when they have the signal, with the existing
+caution-add-only invariant preserved as the operational floor.
+
+### Discipline
+
+- **Caution-add-only invariant preserved.** Vehicle-class
+  adjustments may make warning thresholds fire EARLIER than the
+  per-profile baseline + live-context floor; NEVER later. The
+  factory enforces this at runtime via debug-mode assertions in
+  `VehicleThresholdOverrides.applyOverrideForToken`. Negative-test
+  coverage in `test/vehicle_threshold_overrides_test.dart` confirms
+  the assertions fire on relaxing transforms.
+- **Severity-not-profile invariant preserved.** Vehicle-class tunes
+  TIMING (warn-earlier-floors) only; it does NOT modify the
+  score-floor tiers (`safeScoreFloor` / `infoScoreFloor` /
+  `warningScoreFloor`), the critical thresholds, or the
+  alerts-per-minute cap override. Score-floor preservation is
+  asserted at runtime in the same `applyOverrideForToken` enforcer.
+- **Driver-always-drives invariant preserved.** `VehicleClassProvider`
+  returns advisory tokens consumed for threshold tuning. It does NOT
+  actuate the vehicle, NOT close any control loop, NOT modulate
+  alert severity. The driver retains full control authority.
+- **Backward compatible.** Existing 0.8.x callers see no behaviour
+  change. `forProfileWithContext` without `vehicleOverrides`
+  produces identical output. `DrivingContext` with the new
+  `vehicleClassToken: null` default produces identical equality +
+  hash + `toString` output for callers that did not set the field.
+  No naming collision with the existing `VehicleClass` enum in
+  `package:driving_consent/src/instrumentation_event.dart`
+  (driving_consent 0.4.1): `VehicleClassProvider` is a different
+  name and serves a different role (NSC threshold-tuning advisory
+  vs. driving_consent instrumentation-event payload).
+
+### Tests
+
+- 32 new tests across four files:
+  - `test/vehicle_class_provider_test.dart` (4 tests) — interface
+    contract + null-token-falls-back-to-baseline + arbitrary-token
+    no-taxonomy-enforcement.
+  - `test/vehicle_threshold_overrides_test.dart` (12 tests) —
+    registry construction + null/unknown-token fall-back + kei-car
+    default delta-shape + score-floor preservation + critical-tier
+    preservation + caution-add-only assertion negative tests
+    (visibility-relaxing + temperature-relaxing + score-floor-modifying
+    + caution-equal-permitted).
+  - `test/navigation_safety_config_vehicle_class_test.dart` (9 tests)
+    — `forProfileWithContext` composition with `vehicleOverrides` +
+    null-vehicle-overrides + null-token + unknown-token + kei-car
+    composition with humidity-driven temperature lift + score-floor
+    + critical-tier preservation + null-context edge + all-six-profile
+    smoke.
+  - `test/driving_context_vehicle_class_test.dart` (7 tests) — value
+    class equality + props + `toString` + null-as-absent across all
+    five fields.
+
+Total NSC test count: 221 → 253.
+
 ## 0.8.0 — 2026-05-04 — emit-only telemetry stream for alert-firing observations
 
 Adds `LoomFitTelemetry` — a Pure Dart, emit-only broadcast stream of

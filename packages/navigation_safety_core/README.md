@@ -85,9 +85,42 @@ final config = NavigationSafetyConfig.forDriverContext(
 );
 ```
 
+### d. Vehicle-class threshold tuning (0.9.0)
+
+When the app has a vehicle-class signal (e.g. a fleet integrator
+serving kei-cars in rural Hokkaido), implement
+`VehicleClassProvider` and pass the token through `DrivingContext`:
+
+```dart
+class MyVehicleClassProvider implements VehicleClassProvider {
+  @override
+  String? get vehicleClassToken => 'kei-car';
+}
+
+final provider = MyVehicleClassProvider();
+final config = NavigationSafetyConfig.forProfileWithContext(
+  DriverProfile.ageingRural,
+  context: DrivingContext(
+    speedMps: 18.0,
+    vehicleClassToken: provider.vehicleClassToken,
+  ),
+  vehicleOverrides: VehicleThresholdOverrides.withKeiCarDefault(),
+);
+```
+
+The built-in `withKeiCarDefault()` registry adds caution to the
+warning visibility floor (+50m) and warning temperature (+1°C) for
+the `'kei-car'` token; integrators with their own measured
+vehicle-class data should compose their own
+`VehicleThresholdOverrides`. Tokens are advisory strings, NOT
+control inputs: vehicle-class tunes the warning TIMING only, never
+the alert SEVERITY.
+
 Every context input is **conservative-only**: it can make the
 thresholds warn earlier than the per-profile baseline, never later.
-The per-profile baseline is the floor.
+The per-profile baseline is the floor; vehicle-class overrides apply
+AFTER the baseline AND AFTER the live-context adjustments and are
+themselves caution-add-only (asserted at runtime in debug builds).
 
 A runnable end-to-end walkthrough lives in
 [`example/main.dart`](example/main.dart).
@@ -200,11 +233,21 @@ for the full discussion.
 
 - **`NavigationSafetyConfig`** — threshold configuration with three
   factories: `forProfile`, `forProfileWithContext`,
-  `forDriverContext`.
+  `forDriverContext`. As of 0.9.0, `forProfileWithContext` accepts an
+  optional `vehicleOverrides` parameter for vehicle-class
+  threshold tuning.
 - **`DriverProfile`** — six driver-class profiles (trait axis).
 - **`DriverState`** — four live-state values (transient state axis).
 - **`DriverContext`** — trait + state composite.
-- **`DrivingContext`** — live driving-conditions value-object.
+- **`DrivingContext`** — live driving-conditions value-object. As of
+  0.9.0, carries an optional `vehicleClassToken` field.
+- **`VehicleClassProvider`** (0.9.0) — abstract interface returning
+  `String? get vehicleClassToken` for integrator-supplied
+  vehicle-class signals.
+- **`VehicleThresholdOverrides`** (0.9.0) — registry of
+  vehicle-class-token → caution-adding-only threshold-transform
+  mappings; ships a built-in `'kei-car'` default via
+  `VehicleThresholdOverrides.withKeiCarDefault()`.
 - **`AlertDensityThrottle`** — per-profile alerts/min cap with
   critical-bypass invariant.
 - **`AlertExplainer`** — action-coupled per-(condition, profile)

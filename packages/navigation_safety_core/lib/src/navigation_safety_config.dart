@@ -11,6 +11,7 @@ import 'driver_context.dart';
 import 'driver_profile.dart';
 import 'driver_state.dart';
 import 'navigation_safety_context.dart';
+import 'vehicle_threshold_overrides.dart';
 
 class NavigationSafetyConfig extends Equatable {
   final double safeScoreFloor;
@@ -155,14 +156,32 @@ class NavigationSafetyConfig extends Equatable {
   /// The factory respects the per-profile baseline as a floor for
   /// every threshold: context can only add caution, not remove it.
   ///
+  /// **Vehicle-class overrides (0.9.0)**: when [vehicleOverrides] is
+  /// non-null AND `context.vehicleClassToken` is non-null AND the
+  /// token matches a registered key, the registered transform applies
+  /// AFTER the per-profile baseline AND AFTER the live-context
+  /// adjustments. The transform is bound by the caution-add-only
+  /// invariant — it may make warning thresholds fire EARLIER, never
+  /// later, than the post-context baseline. The score-floor tiers and
+  /// the critical thresholds MUST be preserved (severity-not-profile
+  /// invariant). Both invariants are enforced at runtime via debug
+  /// assertions in [VehicleThresholdOverrides.applyOverrideForToken].
+  ///
   /// Citations for each formula are documented in the
   /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
   factory NavigationSafetyConfig.forProfileWithContext(
     DriverProfile profile, {
     DrivingContext? context,
+    VehicleThresholdOverrides? vehicleOverrides,
   }) {
     final base = NavigationSafetyConfig.forProfile(profile);
-    if (context == null) return base;
+    if (context == null) {
+      // No live context; vehicle-class overrides may still apply if the
+      // caller wired a registry but no DrivingContext. Without a
+      // context there is no token, so the override is a no-op; return
+      // the baseline as before.
+      return base;
+    }
 
     var infoVisibility = base.infoVisibilityMeters;
     var warningVisibility = base.warningVisibilityMeters;
@@ -215,7 +234,7 @@ class NavigationSafetyConfig extends Equatable {
       }
     }
 
-    return NavigationSafetyConfig(
+    final postContext = NavigationSafetyConfig(
       safeScoreFloor: base.safeScoreFloor,
       infoScoreFloor: base.infoScoreFloor,
       warningScoreFloor: base.warningScoreFloor,
@@ -226,6 +245,16 @@ class NavigationSafetyConfig extends Equatable {
       warningVisibilityMeters: warningVisibility,
       criticalVisibilityMeters: criticalVisibility,
       alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
+    );
+
+    // Vehicle-class override (0.9.0). Applied AFTER per-profile baseline
+    // AND AFTER live-context adjustment. Caution-add-only +
+    // severity-not-profile invariants asserted in debug builds within
+    // [VehicleThresholdOverrides.applyOverrideForToken].
+    if (vehicleOverrides == null) return postContext;
+    return vehicleOverrides.applyOverrideForToken(
+      context.vehicleClassToken,
+      postContext,
     );
   }
 

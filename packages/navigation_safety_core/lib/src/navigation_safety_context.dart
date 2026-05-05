@@ -23,6 +23,14 @@
 /// - [ambientTempCelsius] — ambient air temperature in Celsius; carried
 ///   here so a single context value-object describes the full coupled
 ///   state when humidity is also present.
+/// - [vehicleClassToken] — stable string token (e.g. `'kei-car'`,
+///   `'compact-sedan'`, `'4wd'`, `'commercial-light'`) sourced from
+///   an integrator-supplied `VehicleClassProvider`. When a matching
+///   override is registered in a `VehicleThresholdOverrides` passed
+///   to the factory, the warning thresholds adjust caution-add-only
+///   AFTER the per-profile baseline AND AFTER the live-context
+///   adjustments. `null` (the default) means no vehicle-class signal
+///   is available; thresholds fall back to the per-profile baseline.
 ///
 /// All adjustments are additive in conservatism: context can only make
 /// the thresholds warn earlier, never later, than the per-profile
@@ -58,6 +66,25 @@ class DrivingContext extends Equatable {
   /// `null` means ambient is unknown.
   final double? ambientTempCelsius;
 
+  /// Stable string token identifying the vehicle-class semantic
+  /// (e.g. `'kei-car'`, `'compact-sedan'`, `'4wd'`,
+  /// `'commercial-light'`) sourced from an integrator-supplied
+  /// `VehicleClassProvider`. Consumed by
+  /// `NavigationSafetyConfig.forProfileWithContext` together with an
+  /// optional `VehicleThresholdOverrides` registry to apply
+  /// caution-adding-only threshold adjustments AFTER the per-profile
+  /// baseline AND AFTER the live-context adjustments.
+  ///
+  /// Tokens are advisory strings, NOT control inputs. They modulate
+  /// threshold TIMING only; they do NOT modify alert SEVERITY (per
+  /// the severity-not-profile invariant) and they do NOT close any
+  /// control loop (per the driver-always-drives invariant).
+  ///
+  /// `null` (the default) means the integrator does not have a
+  /// vehicle-class signal in this trip / session; thresholds fall
+  /// back to the per-profile baseline.
+  final String? vehicleClassToken;
+
   /// Construct a context value. Every field is optional. Pass `null`
   /// for any input you do not have; the factory will fall back to the
   /// per-profile baseline for that dimension.
@@ -66,6 +93,7 @@ class DrivingContext extends Equatable {
     this.humidityRH,
     this.timeSincePrecipitation,
     this.ambientTempCelsius,
+    this.vehicleClassToken,
   });
 
   @override
@@ -74,6 +102,7 @@ class DrivingContext extends Equatable {
         humidityRH,
         timeSincePrecipitation,
         ambientTempCelsius,
+        vehicleClassToken,
       ];
 
   @override

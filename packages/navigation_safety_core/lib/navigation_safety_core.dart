@@ -32,3 +32,5 @@ export 'src/road_surface_condition.dart';
 export 'src/safety_scenario.dart';
 export 'src/safety_score.dart';
 export 'src/ux_differentiation.dart';
+export 'src/vehicle_class_provider.dart';
+export 'src/vehicle_threshold_overrides.dart';

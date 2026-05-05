@@ -1,10 +1,10 @@
 # navigation_safety_core — Safety-Class Boundary Record
 
 **Package**: `navigation_safety_core`
-**Version**: 0.8.0 (DEPLOY)
-**Boundary record version**: 1.1 (0.8.0 addendum: `LoomFitTelemetry` driver-facing-loom field)
+**Version**: 0.9.0 (DEPLOY)
+**Boundary record version**: 1.2 (0.9.0 addendum: vehicle-class threshold-override surface)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-04
+**Date**: 2026-05-05
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 **Related**: README.md §Standards mapping (L153-168) + KNOWN_LIMITATIONS.md §Standards-mapping-current-advisory-framing + LICENSE BSD-3-Clause
 
@@ -103,6 +103,53 @@ under which the loom is permitted to fire.
   loom fit the operator?* not *did the operator fail?* ASIL-QM
   advisory per §2; WP.29 touchpoint at integrator's analytics
   boundary, not at this package.
+
+## 7.2 — Vehicle-class threshold-override surface (0.9.0)
+
+This section addends the safety-class boundary for the vehicle-class
+threshold-override surface added in 0.9.0
+(`VehicleClassProvider` + `VehicleThresholdOverrides` +
+`DrivingContext.vehicleClassToken`).
+
+**Caution-add-only invariant**: vehicle-class adjustments may make
+warning thresholds fire EARLIER than the per-profile baseline + the
+live-context floor; NEVER later. The factory enforces this at runtime
+via debug-mode assertions in
+`VehicleThresholdOverrides.applyOverrideForToken`. Negative-test
+coverage in `test/vehicle_threshold_overrides_test.dart` confirms
+the assertions fire on relaxing transforms (visibility-relaxing,
+temperature-relaxing, score-floor-modifying).
+
+**Severity-not-profile invariant** (load-bearing per §6 above):
+vehicle-class tunes warning TIMING only (warn-earlier-floors). It
+does NOT modify the score-floor tiers (`safeScoreFloor` /
+`infoScoreFloor` / `warningScoreFloor`), the critical thresholds,
+or the alerts-per-minute cap override. Score-floor preservation is
+asserted at runtime in the same `applyOverrideForToken` enforcer,
+preserving the existing severity-driven (not profile-driven, not
+vehicle-class-driven) plane-allocation discipline. The vehicle-class
+dimension lives entirely in the threshold-tuning layer; it does NOT
+enter the visibility / preemption / severity-ordering paths.
+
+**Driver-always-drives invariant** (load-bearing per §7 above):
+`VehicleClassProvider` returns advisory tokens consumed for
+threshold tuning. It does NOT actuate the vehicle, NOT close any
+control loop, NOT modulate alert severity. Tokens are advisory
+strings, NOT control inputs: returning `'kei-car'` does not change
+vehicle behaviour, it only sharpens the threshold-tuning floor for
+the kei-car cohort. The driver retains full control authority.
+
+**Built-in `'kei-car'` default**: ships via
+`VehicleThresholdOverrides.withKeiCarDefault()`. Deltas are
+**design-default hypotheses** pending field-measurement validation;
+see `CHANGELOG.md` 0.9.0 entry for the UNVERIFIED-magnitude flag and
+the kei-car-class calibration-validation follow-up note.
+
+**ASIL-QM advisory** per §2 (no functional-safety claim asserted at
+the package boundary). **WP.29 touchpoint** at integrator's
+analytics boundary, not at this package (per §4; the
+`VehicleClassProvider` interface is consumer-implemented; the
+package consumes only the typed token at this layer).
 
 ## 8 — Driver-facing loom (D-VGC189-1)
 
