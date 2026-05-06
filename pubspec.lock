@@ -403,7 +403,7 @@ packages:
       path: "packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   matcher:
     dependency: transitive
     description:
@@ -474,7 +474,7 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.8.0"
+    version: "0.9.0"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
@@ -512,7 +512,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.5.0"
   package_config:
     dependency: transitive
     description:
@@ -697,7 +697,7 @@ packages:
       path: "packages/snow_rendering"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   source_map_stack_trace:
     dependency: transitive
     description:

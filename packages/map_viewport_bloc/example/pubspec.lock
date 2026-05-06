@@ -129,7 +129,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   matcher:
     dependency: transitive
     description:
@@ -154,6 +154,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
+  navigation_safety_core:
+    dependency: transitive
+    description:
+      name: navigation_safety_core
+      sha256: "7b78d2515306201853e203d5135aad7dbe95c7a1606b41af2c942f202e7843f7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.0"
   nested:
     dependency: transitive
     description:

@@ -321,7 +321,7 @@ packages:
       path: "../packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   matcher:
     dependency: transitive
     description:
@@ -376,7 +376,7 @@ packages:
       path: "../packages/navigation_safety"
       relative: true
     source: path
-    version: "0.8.0"
+    version: "0.9.0"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
@@ -406,7 +406,7 @@ packages:
       path: "../packages/offline_tiles"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.5.0"
   path:
     dependency: transitive
     description:
@@ -632,7 +632,7 @@ packages:
       path: "../packages/voice_guidance"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   web:
     dependency: transitive
     description:
