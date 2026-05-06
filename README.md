@@ -18,10 +18,10 @@ Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in tem
 
 ```
 Status:   v0.6.0 (latest release tag)
-Tests:    ~1625 passing (root + all 15 package suites; count drifts as suite grows)
+Tests:    ~2000 passing (root + all 19 published package suites + 2 publish_to:none; count drifts as suite grows)
 Platform: Linux desktop (Flutter 3.41.4 pinned in CI; SDK constraint ^3.11.0)
 Safety:   ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 15 packages on pub.dev, independent versions (see ROADMAP.md Current State for table)
+Ecosystem: 19 packages on pub.dev (+ 2 publish_to:none = 21 monorepo total), independent versions (see ROADMAP.md Current State for table)
 ```
 
 ## Why "Snow Guard"?
