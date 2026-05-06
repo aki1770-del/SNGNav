@@ -1,11 +1,11 @@
 # voice_guidance — Safety-Class Boundary Record
 
 **Package**: `voice_guidance`
-**Version**: 0.5.0 (DEPLOY)
-**Boundary record version**: 1.1 (0.5.0 addendum: action-coupled hazard rendering driver-facing loom)
+**Version**: 0.6.0 (DEPLOY)
+**Boundary record version**: 1.2 (0.6.0 addendum: BudgetAwarePaceProfile glance-budget-aware pacing)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-04
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+**Date**: 2026-05-06
+**Anchor**: driver-facing-loom-as-default architectural discipline
 
 ---
 
@@ -111,13 +111,45 @@ navigation state stream + alertCondition + driver profile (integrator)
       -> driver in unexpected snow region hears the action-coupled announcement
 ```
 
+## 8.2 — BudgetAwarePaceProfile driver-facing loom (new in 0.6.0)
+
+**Anchor**: NHTSA Phase 2 Driver Distraction Guidelines (NHTSA-2010-0053; widely cited 12-second total off-road glance budget per task; published-anchor consumed via `navigation_safety` 0.9.0 `GlanceBudgetTracker`).
+
+**Operational discipline**: *when the cumulative off-road glance budget is consumed, voice announcements slow down so the driver hears the line at a pace they can act on under elevated cognitive load. The pace adjustment composes with the per-profile baseline rate; it never speeds up speech.*
+
+**Concrete locus**:
+- `lib/src/budget_aware_pace_profile.dart` `BudgetAwarePaceProfile` value class (default `minPace=0.7`, `maxPace=1.0`, `curve=linear`).
+- `lib/src/voice_guidance_config.dart` `VoiceGuidanceConfig.budgetAwarePace` optional field (defaults to null; opt-in).
+- `lib/src/voice_guidance_bloc.dart` `_glanceBudgetSub` subscription on `GlanceBudgetTracker.budgetEvents` + `_effectiveSpeakingRate()` composes baseline `config.speakingRate` with budget-aware multiplier.
+
+**Caution-add-only invariant** (load-bearing): pace ≤ 1.0× baseline. The `BudgetAwarePaceProfile` constructor asserts `minPace > 0.0 && minPace <= maxPace && maxPace <= 1.0`. The composed effective rate in `_effectiveSpeakingRate()` multiplies the per-profile baseline by a value in `[minPace, maxPace] ⊆ (0.0, 1.0]`, so the effective rate is always ≤ baseline. The dynamic adjustment can only SLOW speech relative to the per-profile baseline; never speeds up.
+
+**Severity-not-profile invariant preserved**: pace adjustment does not change severity. The hazard-branch severity gate (`shouldAnnounceAlert` predicate) remains upstream; pace adjustment affects only the rendered audio rate.
+
+**Driver-always-drives invariant preserved**: voice pace is presentation-class only. The bloc modulates the TTS speaking-rate parameter the engine consumes; no actuator authority, no input suppression, no closed control loop.
+
+**Composition with 0.4.0 + 0.5.0**: the 0.4.0 axis tunes per-profile static pace; the 0.5.0 axis tunes per-(condition, profile) content + locale; the 0.6.0 axis tunes pace dynamically against the live glance budget. All three axes are conservative-only and additive: per-profile rate ≤ 1.0 for vulnerable profiles; budget-aware multiplier ≤ 1.0 by construction; action-coupled text never promises an outcome (advisory mood preserved per `AlertExplainer` source discipline).
+
+**Driver-impact chain (≤4 hops)** — preserved with budget-aware pacing:
+```
+glance event source (integrator) -> GlanceBudgetTracker.budgetEvents
+  -> VoiceGuidanceBloc (this package; recomputes effective rate)
+    -> TtsEngine.setSpeechRate -> device audio at slower pace under load
+      -> driver in unexpected snow region hears the announcement at a calmer pace
+```
+
+**Audible-to-edge-developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `glanceBudgetTracker` parameter — defaults to null preserving 0.5.0 back-compat. An integrator that supplies neither the tracker nor a non-null `config.budgetAwarePace` runs the 0.5.0 code path identically. The opt-in is integrator-class.
+
 ## 9 — Cross-references
 
 - `lib/src/voice_guidance_config.dart` (per-profile speakingRate + multiplier table; 0.4.0)
 - `lib/src/voice_guidance_bloc.dart` (`_initializeTts` calls `setSpeechRate`; hazard preempts maneuver)
 - `lib/src/tts_engine.dart` (`setSpeechRate` interface method; 0.4.0)
 - `lib/src/flutter_tts_engine.dart` / `linux_tts_engine.dart` / `noop_tts_engine.dart` (engine implementations of `setSpeechRate`)
-- `pubspec.yaml` `version: 0.4.0` (published-live to pub.dev 2026-05-04 morning JST)
+- `pubspec.yaml` `version: 0.6.0` (DEPLOY)
+- `lib/src/budget_aware_pace_profile.dart` (0.6.0 `BudgetAwarePaceProfile` value class + `InterpolationCurve` enum)
+- `lib/src/voice_guidance_config.dart` `budgetAwarePace` field (0.6.0)
+- `lib/src/voice_guidance_bloc.dart` `_glanceBudgetSub` + `_effectiveSpeakingRate()` (0.6.0)
 - LICENSE: BSD-3-Clause (matches the rest of SNGNav)
 - D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 - D-VGC188-1 / D-VGC188-2 (driver-sovereignty axis + 5-test framework)

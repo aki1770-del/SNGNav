@@ -1,10 +1,10 @@
 # navigation_safety — Safety-Class Boundary Record
 
 **Package**: `navigation_safety`
-**Version**: 0.8.0 (DEPLOY)
-**Boundary record version**: 1.0
+**Version**: 0.9.0 (DEPLOY)
+**Boundary record version**: 1.1 (0.9.0 addendum: GlanceBudgetTracker + AlertExplainerExpandableSheet)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-04
+**Date**: 2026-05-06
 **Related**: `navigation_safety_core` SAFETY_BOUNDARY.md (re-exported core boundary applies through transitive dependency)
 
 ---
@@ -63,11 +63,47 @@
 
 **Audible-to-edge-developer**: integrator reading `NavigationBloc` constructor today sees three optional parameters (`profile`, `throttle`, `telemetry`) — each defaults to null preserving pre-0.8.0 back-compat. The 0.8.0 wiring is opt-in at the integrator's choice; an integrator that supplies no profile sees no behavioural change from 0.7.0.
 
+## 8.1 — GlanceBudgetTracker integrator-side advisory loom (new in 0.9.0)
+
+**Anchor**: NHTSA Phase 2 Driver Distraction Guidelines (NHTSA-2010-0053; widely cited 12-second total off-road glance budget per task; published-anchor).
+
+**Operational discipline**: *the tracker reports cumulative off-road glance consumption against the published budget so an integrator HMI can lighten attention demand before the budget is exhausted; the package supplies the substrate, the integrator owns the surface.*
+
+**Concrete locus**: `lib/src/glance_budget_tracker.dart` `GlanceBudgetTracker.record(GlanceEvent)` consumes integrator-supplied glance events; emits `BudgetWarning` (default 75% consumed) and `BudgetExhausted` (100% consumed) records on a broadcast `budgetEvents` stream. Reset via `reset(BudgetResetReason)` is integrator-explicit only.
+
+**Caution-add-only invariant** (load-bearing): consumed-budget never decreases between `record()` calls within a trip. `record()` only DECREASES (or holds) `remainingBudget`; never INCREASES it. A debug-mode runtime assert verifies the non-decrease invariant; the assert is elided in release builds per Dart `assert` semantics, but a regressing change would fail loudly in tests. Reset is the only operation that resets `remainingBudget`, and it does so by integrator-explicit request — preserving the within-trip caution-add-only invariant while permitting fresh-trip cycles. Auto-relax-on-cooldown is intentionally absent at v1.
+
+**Severity-not-profile invariant preserved**: the tracker is timing-class only. It supplies a substrate the integrator may use to modulate display-density / voice-pace; it does not adjust score floors or severity tiers. Critical alerts in `NavigationBloc` retain their critical-bypass invariant regardless of glance-budget state.
+
+**Driver-always-drives invariant preserved**: the tracker is reporting-only. It mounts no actuator, suppresses no input, locks no driver out. The driver always drives; the tracker only reports.
+
+**What the driver experiences when this package fires (0.9.0)**: when the integrator has wired a `GlanceBudgetTracker`, the integrator's HMI can simplify display / soften voice / extend dwell-times as the budget approaches exhaustion — closing the cognitive-load gap between *alert arrives in time* and *alert arrives at a moment the driver has attention to receive it*.
+
+## 8.2 — AlertExplainerExpandableSheet driver-facing loom (new in 0.9.0)
+
+**Operational discipline**: *the explainer sheet ships a per-cohort default expansion policy at the package boundary so the integrator-developer is not required to invent one. Each driver-class receives the explainer at the verbosity their cohort default expects.*
+
+**Concrete locus**: `lib/src/widgets/alert_explainer_expandable_sheet.dart` `AlertExplainerExpandableSheet` consumes `AlertExplainer.forConditionAndProfile` from `navigation_safety_core` 0.10.0 substrate. Two states: collapsed (source-line provenance + expand affordance) / expanded (action text VERBATIM + verbosity name + locale tag + provenance full-form).
+
+**Per-cohort default expansion** (UNVERIFIED-magnitude design-default-hypothesis):
+- `ageingRural`, `foreignTouristSnowZone`, `noviceUrban` -> default-EXPANDED (cognitive-load support; trust-attribution support; low-experience cognitive support).
+- `agriculturalForestry`, `snowZoneExperienced`, `professional` -> default-COLLAPSED (experienced / terse-expectation cohorts).
+
+Per-instance override via `defaultExpanded` field. Optional `onExpansionChanged` callback for integrator analytics.
+
+**Article 17 (β) verbatim-relay invariant** (load-bearing): the `action` text from `AlertExplainer.forConditionAndProfile` is preserved VERBATIM in BOTH states. The collapsed state HIDES the expanded section but does not paraphrase or truncate the action text. Expanded state renders the action text exactly as the explainer returned it.
+
+**Driver-always-drives invariant preserved**: the widget is presentation-class only. It renders information; it does not actuate the vehicle or modify any driver-control surface. Action verbs in the rendered text remain advisory-mood per `AlertExplainer` source discipline.
+
+**Severity-not-profile invariant preserved**: the widget renders at the same severity-class regardless of expansion state. Severity gating happens upstream in `NavigationBloc`; this widget does not modify severity.
+
 ## 9 — Cross-references
 
 - `lib/src/bloc/navigation_bloc.dart` — `_onSafetyAlert` 0.8.0 throttle + explainer + telemetry integration
 - `lib/src/bloc/navigation_event.dart` — `SafetyAlertReceived` 0.8.0 fields: `condition`, `ambientThreshold`
 - `lib/src/bloc/navigation_state.dart` — `NavigationState.alertCondition` 0.8.0 field
+- `lib/src/glance_budget_tracker.dart` — 0.9.0 `GlanceBudgetTracker` substrate (NHTSA Phase 2 12-second total off-road glance budget; caution-add-only)
+- `lib/src/widgets/alert_explainer_expandable_sheet.dart` — 0.9.0 `AlertExplainerExpandableSheet` widget (per-cohort default expansion; Article 17 (β) verbatim-relay both states)
 - `navigation_safety_core` SAFETY_BOUNDARY.md (re-exported core boundary applies; severity-not-profile invariant inherited verbatim)
 - LICENSE: BSD-3-Clause
 

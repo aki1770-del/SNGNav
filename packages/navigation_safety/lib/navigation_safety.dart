@@ -15,6 +15,8 @@ export 'src/bloc/navigation_bloc.dart';
 export 'src/bloc/navigation_event.dart';
 export 'src/bloc/navigation_state.dart';
 export 'src/widgets/safety_overlay.dart';
+export 'src/widgets/alert_explainer_expandable_sheet.dart';
 
 // Pure-Dart per-profile primitives (advisory; no actuator).
 export 'src/modal_alert_duration.dart';
+export 'src/glance_budget_tracker.dart';

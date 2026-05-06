@@ -1,5 +1,125 @@
 # Changelog
 
+## 0.9.0 — 2026-05-06 — add GlanceBudgetTracker + AlertExplainerExpandableSheet
+
+Adds two integrator-package primitives for advisory cognitive-load
+management and per-cohort alert-explainer rendering. Both are
+opt-in and additive; existing 0.8.0 callers see no behaviour change.
+
+### Added
+
+- **`GlanceBudgetTracker`** in `lib/src/glance_budget_tracker.dart` —
+  stateful tracker for the NHTSA Phase 2 12-second total off-road
+  glance budget per task. The 12-second total is published-anchor
+  (NHTSA-2010-0053 Driver Distraction Guidelines). The tracker
+  consumes integrator-supplied `GlanceEvent` records and emits
+  `BudgetWarning` (75% consumed, default) and `BudgetExhausted`
+  (100% consumed) records on a broadcast `budgetEvents` stream.
+  Reset is integrator-owned via `reset(BudgetResetReason)`; the
+  tracker does not auto-reset. Caution-add-only invariant: the
+  budget can only DECREASE within a trip (debug-mode runtime
+  assert; mirror precedent: `vehicle_threshold_overrides.dart`
+  `applyOverrideForToken`).
+- **`GlanceEventSource`** abstract interface — integrator-supplied
+  source of glance events (mirrors the `VehicleClassProvider`
+  pattern at the integrator-supplies-implementation boundary).
+- **`GlanceModalClass`** enum (`visual` / `cognitive` / `manual`) —
+  modal class informational at v1; per-modal sub-budgets reserved
+  for v2 graduation when field evidence supports differentiation.
+- **`NHTSAGlanceBudgetConfig`** value class — total budget (default
+  12 s; published-anchor) + per-modal-class sub-budget map (default
+  4 s + 4 s + 4 s; UNVERIFIED-magnitude design-default pending field
+  evidence) + warning-ratio (default 0.75).
+- **`BudgetResetReason`** enum (`tripStart` / `tripEnd` / `longPause`
+  / `explicit`) — informational reason carried with reset.
+- **`BudgetWarning`** + **`BudgetExhausted`** sealed event types
+  emitted on `budgetEvents`.
+- **`AlertExplainerExpandableSheet`** widget in
+  `lib/src/widgets/alert_explainer_expandable_sheet.dart` — surfaces
+  `AlertExplainer.forConditionAndProfile` at two levels of detail
+  (collapsed source-line / expanded full attribution). Per-cohort
+  default expansion (UNVERIFIED-magnitude design-default-hypothesis):
+  - `ageingRural` -> default-EXPANDED
+  - `foreignTouristSnowZone` -> default-EXPANDED
+  - `noviceUrban` -> default-EXPANDED
+  - `agriculturalForestry` -> default-COLLAPSED
+  - `snowZoneExperienced` -> default-COLLAPSED
+  - `professional` -> default-COLLAPSED
+  Per-instance override via `defaultExpanded` field. Optional
+  `onExpansionChanged: ValueChanged<bool>?` callback.
+
+### Why this exists
+
+`navigation_safety_core` 0.10.0 ships `AlertExplainer` substrate at
+the core-package boundary. The integrator-package historically
+absorbed the attribution-rendering responsibility silently (the
+core ships the tuple; the integrator decides how to surface it).
+0.9.0 closes that loom: `AlertExplainerExpandableSheet` ships a
+default per-cohort expansion policy at the package boundary so
+the integrator-developer is not required to invent one. The
+`GlanceBudgetTracker` is the substrate for advisory cognitive-load
+management; the 0.6.0 `voice_guidance` companion consumes it for
+budget-aware voice-pace adjustment.
+
+### Discipline
+
+- **Caution-add-only invariant** preserved on `GlanceBudgetTracker`:
+  consumed budget never decreases between `record()` calls; reset
+  is integrator-explicit only (no auto-relax at v1).
+- **Severity-not-profile invariant** preserved: both new primitives
+  are timing- / presentation-class only. They do not adjust score
+  floors or severity tiers. Critical alerts in `NavigationBloc`
+  retain their critical-bypass invariant regardless of glance-
+  budget state.
+- **Driver-always-drives invariant** preserved: the tracker is
+  reporting-only; the widget is presentation-only. Neither modifies
+  any vehicle or driver-control surface.
+- **Article 17 (β) verbatim-relay invariant** preserved on
+  `AlertExplainerExpandableSheet`: the `action` text from
+  `AlertExplainer.forConditionAndProfile` is rendered VERBATIM in
+  the expanded state; the collapsed state HIDES the expanded
+  section but does not paraphrase or truncate.
+- **Back-compat**: all 0.8.0 callers see no behaviour change. New
+  exports are additive. `NavigationBloc` constructor unchanged.
+
+### UNVERIFIED-magnitude flags
+
+- Per-cohort default expansion (3 EXPANDED / 3 COLLAPSED) is a
+  design-default-hypothesis pending field validation that the
+  default-rendering matches each cohort's cognitive-load profile.
+  Integrators may override per-instance.
+- Equal 4-4-4 modal-class sub-budget split (within the published-
+  anchored 12-second NHTSA total) is a design-default-hypothesis
+  pending field evidence on whether visual / cognitive / manual
+  sub-budgets warrant differentiation. The published-anchor 12-
+  second total is NOT UNVERIFIED.
+- Default warning ratio 0.75 (warn at 75% consumed) is a design-
+  default-hypothesis pending field validation across cohorts.
+
+### Tests
+
+- 7 new tests in `test/glance_budget_tracker_test.dart` covering:
+  budget consumption arithmetic; `BudgetWarning` fires once at
+  75% consumed; `BudgetExhausted` fires once at 100% consumed;
+  caution-add-only non-decrease invariant runtime assert;
+  `dispose()` idempotent; `reset()` clears prior fired-flags;
+  remaining budget clamped to zero on overshoot.
+- 5 new tests in `test/widgets/alert_explainer_expandable_sheet_test.dart`
+  covering: widget renders both states; `action` text VERBATIM
+  preserved both states; per-cohort default expansion (6
+  profiles); integrator override via `defaultExpanded` works;
+  `onExpansionChanged` callback fires on toggle.
+
+### Bumped
+
+- `navigation_safety_core` dependency `^0.8.0` -> `^0.10.0`.
+
+### Unchanged (back-compat)
+
+- `NavigationBloc` constructor unchanged.
+- `SafetyOverlay` widget unchanged.
+- `modalAlertDurationFor` API unchanged.
+
 ## 0.8.0 — 2026-05-04 — wire AlertDensityThrottle + AlertExplainer at alert-firing seam
 
 Wires the `navigation_safety_core` 0.8.0 driver-facing looms

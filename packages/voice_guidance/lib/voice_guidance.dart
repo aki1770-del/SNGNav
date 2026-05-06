@@ -11,3 +11,4 @@ export 'src/voice_guidance_bloc.dart';
 export 'src/voice_guidance_event.dart';
 export 'src/voice_guidance_state.dart';
 export 'src/voice_guidance_config.dart';
+export 'src/budget_aware_pace_profile.dart';

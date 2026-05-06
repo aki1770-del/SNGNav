@@ -4,6 +4,8 @@ library;
 import 'package:equatable/equatable.dart';
 import 'package:navigation_safety/navigation_safety.dart' show DriverProfile;
 
+import 'budget_aware_pace_profile.dart';
+
 /// Per-profile speaking-rate multipliers anchored on the Strayer-AAA
 /// auditory-load study (PMC7283540) and the package's published
 /// per-profile threshold differentiation: an older rural driver and
@@ -46,6 +48,7 @@ class VoiceGuidanceConfig extends Equatable {
     this.speakingRate = 1.0,
     this.maneuverLeadDistanceMeters = 120.0,
     this.minAnnouncementIntervalSeconds = 3,
+    this.budgetAwarePace,
   })  : assert(volume >= 0.0 && volume <= 1.0),
         assert(speakingRate > 0.0 && speakingRate <= 2.0),
         assert(maneuverLeadDistanceMeters >= 0),
@@ -63,6 +66,18 @@ class VoiceGuidanceConfig extends Equatable {
 
   final double maneuverLeadDistanceMeters;
   final int minAnnouncementIntervalSeconds;
+
+  /// Optional glance-budget-aware pace adjustment profile (0.6.0).
+  ///
+  /// When non-null, the bloc subscribes to a `GlanceBudgetTracker`
+  /// (supplied by the integrator at bloc construction) and dynamically
+  /// modulates the effective TTS speaking-rate as the off-road glance
+  /// budget is consumed. Disabled by default to preserve back-compat
+  /// with 0.5.0 consumers; opt-in via construction.
+  ///
+  /// Caution-add-only invariant (load-bearing): pace ≤ 1.0× baseline;
+  /// the dynamic adjustment can only SLOW speech, never speed it up.
+  final BudgetAwarePaceProfile? budgetAwarePace;
 
   /// Returns the per-profile speaking-rate computed from the engine's
   /// base rate of `1.0` multiplied by the per-profile multiplier in
@@ -85,6 +100,7 @@ class VoiceGuidanceConfig extends Equatable {
     double? speakingRate,
     double? maneuverLeadDistanceMeters,
     int? minAnnouncementIntervalSeconds,
+    BudgetAwarePaceProfile? budgetAwarePace,
   }) {
     return VoiceGuidanceConfig(
       enabled: enabled ?? this.enabled,
@@ -95,6 +111,7 @@ class VoiceGuidanceConfig extends Equatable {
           maneuverLeadDistanceMeters ?? this.maneuverLeadDistanceMeters,
       minAnnouncementIntervalSeconds:
           minAnnouncementIntervalSeconds ?? this.minAnnouncementIntervalSeconds,
+      budgetAwarePace: budgetAwarePace ?? this.budgetAwarePace,
     );
   }
 
@@ -106,5 +123,6 @@ class VoiceGuidanceConfig extends Equatable {
         speakingRate,
         maneuverLeadDistanceMeters,
         minAnnouncementIntervalSeconds,
+        budgetAwarePace,
       ];
 }

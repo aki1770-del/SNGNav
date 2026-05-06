@@ -19,10 +19,12 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     VoiceGuidanceConfig config = const VoiceGuidanceConfig(),
     ManeuverSpeechFormatter formatter = const ManeuverSpeechFormatter(),
     DriverProfile? profile,
+    GlanceBudgetTracker? glanceBudgetTracker,
   })  : _ttsEngine = ttsEngine,
         _config = config,
         _formatter = formatter,
         _profile = profile,
+        _glanceBudgetTracker = glanceBudgetTracker,
         super(config.enabled
             ? const VoiceGuidanceState.idle()
             : const VoiceGuidanceState(status: VoiceGuidanceStatus.muted)) {
@@ -35,6 +37,20 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     _navigationSub = navigationStateStream.listen((navigationState) {
       add(NavigationStateObserved(navigationState: navigationState));
     });
+
+    // 0.6.0: subscribe to GlanceBudgetTracker.budgetEvents when both
+    // an integrator-supplied tracker and a non-null
+    // `config.budgetAwarePace` are provided. On each budget event,
+    // recompute the effective TTS rate and apply it. The subscription
+    // is opt-in: a null tracker or null `budgetAwarePace` preserves
+    // pre-0.6.0 back-compat (no extra subscription, no extra rate
+    // changes beyond the per-profile baseline applied at init).
+    if (_glanceBudgetTracker != null && _config.budgetAwarePace != null) {
+      _glanceBudgetSub =
+          _glanceBudgetTracker.budgetEvents.listen((_) {
+        unawaited(_applyBudgetAwareRate());
+      });
+    }
 
     if (_config.enabled) {
       _initializeTts();
@@ -55,7 +71,16 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   /// to the raw alertMessage.
   final DriverProfile? _profile;
 
+  /// Optional integrator-supplied off-road glance budget tracker
+  /// (0.6.0). When supplied alongside a non-null
+  /// `config.budgetAwarePace`, the bloc subscribes to budget events
+  /// and modulates the effective TTS speaking-rate as the budget is
+  /// consumed. Caution-add-only: the modulation can only SLOW speech
+  /// (pace ≤ 1.0× baseline); never speeds up.
+  final GlanceBudgetTracker? _glanceBudgetTracker;
+
   StreamSubscription<NavigationState>? _navigationSub;
+  StreamSubscription<GlanceBudgetEvent>? _glanceBudgetSub;
 
   int? _lastManeuverIndex;
   NavigationStatus? _lastNavigationStatus;
@@ -67,7 +92,38 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   Future<void> _initializeTts() async {
     await _ttsEngine.setLanguage(_config.languageTag);
     await _ttsEngine.setVolume(_config.volume);
-    await _ttsEngine.setSpeechRate(_config.speakingRate);
+    await _ttsEngine.setSpeechRate(_effectiveSpeakingRate());
+  }
+
+  /// Compute the effective TTS speaking-rate, composing the per-profile
+  /// baseline (`config.speakingRate`) with the budget-aware multiplier
+  /// when 0.6.0 budget-aware pace is active.
+  ///
+  /// Caution-add-only: the budget-aware multiplier is bounded above by
+  /// `BudgetAwarePaceProfile.maxPace` (≤ 1.0) by construction asserts
+  /// in the profile; the composed effective rate is therefore always
+  /// ≤ baseline `config.speakingRate`. The modulation only SLOWS;
+  /// never speeds up.
+  double _effectiveSpeakingRate() {
+    final budgetProfile = _config.budgetAwarePace;
+    final tracker = _glanceBudgetTracker;
+    if (budgetProfile == null || tracker == null) {
+      return _config.speakingRate;
+    }
+    final totalMicros = tracker.totalBudget.inMicroseconds;
+    if (totalMicros <= 0) return _config.speakingRate;
+    final remainingRatio =
+        tracker.remainingBudget.inMicroseconds / totalMicros;
+    final budgetMultiplier =
+        budgetProfile.paceForRemainingRatio(remainingRatio);
+    return _config.speakingRate * budgetMultiplier;
+  }
+
+  /// Apply the budget-aware effective rate to the TTS engine. Called
+  /// from the budget-events subscription when the budget changes.
+  Future<void> _applyBudgetAwareRate() async {
+    if (!_voiceEnabled) return;
+    await _ttsEngine.setSpeechRate(_effectiveSpeakingRate());
   }
 
   Future<void> _onVoiceEnabled(
@@ -228,6 +284,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   @override
   Future<void> close() async {
     await _navigationSub?.cancel();
+    await _glanceBudgetSub?.cancel();
     await _ttsEngine.dispose();
     return super.close();
   }
