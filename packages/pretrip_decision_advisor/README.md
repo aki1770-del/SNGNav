@@ -1,20 +1,36 @@
 # pretrip_decision_advisor
 
-> **Explore-phase. Interface only. NOT for production use. NOT published to pub.dev.**
+> **Deploy-phase 0.1.0. Interface-only contract.**
 >
 > This package ships an abstract contract and data shapes only. There is no
-> concrete advisor implementation in this package, and the API may change
-> without notice while the package remains in explore-phase.
+> concrete advisor implementation in this package; reference implementations
+> compose this contract with their own weather data source, route data, and
+> driver-profile bridge.
 
 ## Aspiration
 
 The pre-trip departure-timing decision is often a larger pain point than
 in-drive alerts. A driver asking "should I leave now or wait an hour?"
 has to combine a forecast, a commute shape, and personal context, and the
-answer changes whether the trip happens at all. This package defines the
-shape of an advisor that could help with that question, so other packages
-and applications can experiment against a common interface before any
-concrete advisor is built.
+answer changes whether the trip happens at all. Apps focused on alerts
+during driving address a smaller window than apps that address departure
+timing. This package defines the shape of an advisor that could help with
+that question, so other packages and applications can experiment against
+a common interface.
+
+## Cohorts served
+
+The interface-only contract serves several distinct downstream cohorts:
+
+- **Integrator developers** building parallel navigation products on top
+  of common interfaces.
+- **Open-source consumers** depending on shared safety-domain vocabulary.
+- **Configuration consumers** inheriting predictable defaults.
+- **Drivers** (indirectly, via integrator products) who benefit from the
+  pre-trip decision layer addressing a prevention scenario before the
+  in-drive compound-failure scenario.
+- **Parallel-product builders** publishing their own concrete advisors
+  against this contract without forking it.
 
 ## What is in the package
 
@@ -42,7 +58,28 @@ concrete advisor is built.
 - No concrete advisor implementation.
 - No weather data fetching.
 - No route engine integration.
-- No published artifact on pub.dev.
+
+## Quick start
+
+```sh
+dart pub add pretrip_decision_advisor
+```
+
+```dart
+import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+
+String describeStrength(RecommendationStrength s) => switch (s) {
+      RecommendationStrength.advisoryWeak => 'advisory (weak)',
+      RecommendationStrength.advisoryStrong => 'advisory (strong)',
+      RecommendationStrength.honestyMode => 'honesty (driver decides)',
+    };
+
+String describeFlexibility(CommuteFlexibility f) => switch (f) {
+      CommuteFlexibility.required => 'required commute',
+      CommuteFlexibility.discretionary => 'discretionary commute',
+      CommuteFlexibility.unknown => 'unknown flexibility',
+    };
+```
 
 ## Honesty
 
@@ -54,5 +91,5 @@ because the cost of doing so is borne by the driver, not the advisor.
 
 ## Status
 
-Explore-phase. Interface stability is not yet promised. See
-`KNOWN_LIMITATIONS.md` for the full list of explore-phase caveats.
+Deploy-phase 0.1.0. Interface stability is committed at this version
+within the bounds described in `KNOWN_LIMITATIONS.md`.

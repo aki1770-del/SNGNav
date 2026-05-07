@@ -1,14 +1,21 @@
 name: pretrip_decision_advisor
 description: >-
-  Pre-trip departure-timing decision advisor for snow-zone navigation.
-  Explore-phase interface; no published implementation. Defines the
-  abstract advisor contract, recommendation DTO, commute shape, weather
-  forecast inputs, and a decoupled driver profile spec. Pure Dart;
-  no platform channels; no I/O.
-version: 0.0.1
-publish_to: none
-repository: https://github.com/aki1770-del/sngnav
-issue_tracker: https://github.com/aki1770-del/sngnav/issues
+  Pure Dart pre-trip departure-timing decision advisor contract for
+  snow-zone navigation. Defines abstract PretripAdvisor +
+  PretripRecommendation DTO + CommuteShape + weather forecast inputs +
+  decoupled DriverProfileSpec. Interface-only at 0.1.0; reference
+  implementations compose with this contract. No Flutter dependency;
+  consumable from CLI / server-side / any Pure Dart package.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - driving
+  - weather
 
 environment:
   sdk: ^3.11.0
