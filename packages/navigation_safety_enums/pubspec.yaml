@@ -1,0 +1,27 @@
+name: navigation_safety_enums
+description: >-
+  Pure Dart navigation-safety domain enums (AlertSeverity / CircadianPhase
+  / DriverState / DriverProfile) extracted from navigation_safety_core
+  for cohort-2 (open-source-consumers) and cohort-5 (parallel-product-
+  builders). No Flutter dependency; no transitive dependencies; safe
+  to consume from CLI tools, server-side logic, test fixtures, and
+  any other Pure Dart package that needs the safety vocabulary
+  without paying for the navigation_safety_core surface.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - enums
+
+environment:
+  sdk: ^3.11.0
+
+dependencies: {}
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
