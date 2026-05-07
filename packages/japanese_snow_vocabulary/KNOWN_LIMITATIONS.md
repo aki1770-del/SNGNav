@@ -1,7 +1,7 @@
 # Known limitations
 
 This document lists known limitations of the JP-domestic snow
-vocabulary primitives shipped in `japanese_snow_vocabulary` 0.1.0,
+vocabulary primitives shipped in `japanese_snow_vocabulary` 0.2.0,
 with citations to the public sources used at extraction time, so
 that consumers can integrate with eyes open and contribute
 corrections from informed positions.
@@ -11,54 +11,79 @@ rather than letting silent gaps reach drivers.
 
 ---
 
-## Authoritative-source coverage at 0.1.0
+## Authoritative-source coverage at 0.2.0
 
-### What is verified at 0.1.0
+### What is verified at 0.2.0
 
-The three fully-populated entries — アイスバーン / ブラックアイスバーン
-/ 雪道 — carry `safeDrivingResponseJa` text byte-identical to the JAF
-(Japan Automobile Federation) source page
-<https://jaf.or.jp/common/attention/snow> as captured on 2026-05-07.
-The `verbatim_citation_test.dart` test file regression-guards the
-literal strings; any future edit that drifts from the JAF source
-will fail the test.
+All six entries carry `safeDrivingResponseJa` text byte-identical to
+the JAF (Japan Automobile Federation) source pages captured on
+2026-05-07. The three 0.1.0 entries (アイスバーン /
+ブラックアイスバーン / 雪道) draw from
+<https://jaf.or.jp/common/attention/snow>. The three 0.2.0 data-fill
+entries draw from JAF Training columns + JAF FAQ148:
+
+- 圧雪 (compactedSnow) — primary source JAF Training snow-drive
+  <https://jaf-training.jp/column/snow-drive/>; corroborated by JAF
+  FAQ148
+  <https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-snow/faq148>
+  + MLIT Mie regional bureau
+  <https://www.cbr.mlit.go.jp/mie/snow/sp/point.html> (3-source
+  coverage).
+- シャーベット (slush) — single source JAF Training snow-drive
+  <https://jaf-training.jp/column/snow-drive/> (1-source coverage;
+  see honest-class caveat below).
+- 凍結 (surfaceFrozen) — primary source JAF FAQ148; corroborated by
+  JAF Training winter-frozen-road
+  <https://jaf-training.jp/column/winter-frozen-road/> + MLIT Mie
+  regional bureau
+  <https://www.cbr.mlit.go.jp/mie/snow/sp/caution.html> (3-source
+  coverage).
+
+The `verbatim_citation_test.dart` test file regression-guards every
+literal at byte-identical granularity; any future edit that drifts
+from the JAF source will fail the test.
 
 The taxonomic surface of all six entries (term + romaji + English
 label) is verified against the founding cohort-research that
 authored the JP vocabulary scope.
 
-### What is UNVERIFIED at 0.1.0
+### Honest-class disclosure at 0.2.0
 
-- **Three entries have authoritative fields `null` at 0.1.0.** The
-  `compactedSnow` (圧雪), `slush` (シャーベット), and `surfaceFrozen`
-  (凍結 / 路面凍結) entries each carry only the taxonomic surface
-  (term + romaji + English label). The five authoritative fields
-  (`authoritativeSource`, `sourceUrl`, `safeDrivingResponseJa`,
-  `safeDrivingResponseEn`, `regionFrequency`) are `null`.
-- **The English-equivalent labels are best-effort.** `aisubaan` →
+- **シャーベット single-publisher coverage.** The slush entry is
+  cited from JAF Training snow-drive only. At extraction time the
+  term was absent from JAF FAQ148, MLIT Mie regional bureau pages,
+  and NEXCO Central drive-plaza. This is a common-vernacular-class
+  naming-frequency observation rather than a safety-advisory-class
+  lacuna — the term itself is in active use in JAF safety material
+  but the cross-publisher cohort treats it less consistently than
+  圧雪 / 凍結. The single-source verbatim citation is sufficient
+  under the verbatim-relay binding because the publisher is
+  authoritative-class; deeper cross-publisher cohort coverage is a
+  0.3.0 cadence candidate.
+- **English-equivalent labels remain best-effort.** `aisubaan` →
   `icy hardpack` and the other English fields in this package are
   engineering best-effort; they are not intended as a final UX
   surface and they should not be treated as locale-correct
   translations of the JAF advisory text. Consumers building
   user-facing surfaces should plumb their own translation pipeline.
-- **Single-publisher coverage.** Where authoritative data is
-  populated, it is currently single-source (JAF). Cross-publisher
-  reconciliation across JARTIC / NEXCO / Hokkaido regional bureau /
-  prefectural police is deferred to a later release.
 - **Region / frequency anchors are qualitative.** The
   `regionFrequency` field carries short prose rather than a
   structured taxonomy of regions or weather-type frequencies. A
   future release may introduce a structured form once the dimension
   has stabilised.
 
-### When NOT to use the 0.1.0 data unmodified
+### What was UNVERIFIED at 0.1.0 — RESOLVED at 0.2.0
 
-- **Safety-critical UI surfaces that need all six classes covered.**
-  Three of six classes carry no authoritative advisory text at 0.1.0.
-  Surfacing the JA-only taxonomic label without an advisory string
-  may be acceptable for glossary-class consumers but is not
-  sufficient for a surface that promises drivers an authoritative
-  safe-driving response per class.
+- **0.1.0 deferred-entry gap (3-of-6 partial disclosure) — RESOLVED
+  at 0.2.0.** The 0.1.0 release shipped 圧雪 / シャーベット / 凍結
+  with all five authoritative fields (`authoritativeSource`,
+  `sourceUrl`, `safeDrivingResponseJa`, `safeDrivingResponseEn`,
+  `regionFrequency`) `null`. At 0.2.0 each of the three entries
+  carries verbatim authoritative-source citations as documented in
+  the section above.
+
+### When NOT to use the 0.2.0 data unmodified
+
 - **Dynamic surface-detection inference.** None of this package
   infers surface class from sensors. Consumers wanting live
   detection should compose this package with their own
@@ -74,7 +99,7 @@ authored the JP vocabulary scope.
 
 ---
 
-## Out-of-scope at 0.1.0
+## Out-of-scope at 0.2.0
 
 This package contains **no live-detection logic, no rendering, no
 audio surface, and no telemetry pipeline**. It is a Pure Dart data
@@ -87,18 +112,34 @@ import any of its types.
 
 ---
 
-## Path to 0.2.0
+## Path to 0.3.0 (improvement candidates)
 
-The 0.2.0 release populates the three null-deferred entries
-(`compactedSnow` / `slush` / `surfaceFrozen`) with authoritative
-citations from a deeper review of Hokkaido regional bureau / NEXCO /
-JARTIC / prefectural police sources. The enum shape will not change;
-the change is additive on the data map only. Downstream exhaustive
-`switch` written against 0.1.0 will continue to work without code
-change.
+The 0.3.0 release is a candidate for the following improvements;
+none are committed and none will land without integrator-developer
+demand evidence:
 
-The forward path is documented in `CHANGELOG.md` under the
-`Forward — 0.2.0 (planned)` heading.
+- **Deeper シャーベット cross-publisher coverage** — survey
+  prefectural-police winter-driving guides (Hokkaido / Aomori /
+  Akita) + NEXCO PDF substrate (`s08.pdf` references
+  「シャーベット状の積雪」 in chain-regulation context) to lift the
+  entry from single-publisher to multi-publisher coverage.
+- **Regional-vocabulary additions** — Hokkaido-specific terms such
+  as ガリ雪 (gari-yuki, granular ice) that did not surface in the
+  founding JAF + MLIT cohort but are in active driver-vernacular use
+  in north-Japan regions.
+- **Deeper Hokkaido regional bureau substrate** — the substrate-prep
+  pass over-credited Hokkaido bureau yukinavi
+  (`hrr.mlit.go.jp/hokugi/yukinavi/`) as canonical-glossary-class
+  authority; deeper review surfaced that yukinavi is real-time
+  information portal, not vocabulary glossary. A targeted 0.3.0
+  bureau-substrate review may surface additional canonical-class
+  pages.
+- **User-facing example app** — a small example surfacing the
+  vocabulary in a driver-facing context, useful as integrator
+  reference but explicitly not a UX recommendation.
+
+The enum shape may extend additively at 0.3.0 (new cases); existing
+fully-populated entries will remain forward-compatible.
 
 ---
 
@@ -110,7 +151,8 @@ If you have:
   text in an existing entry,
 - a citation from another authoritative JP-domestic publisher
   (Hokkaido regional bureau / NEXCO / JARTIC / prefectural police)
-  that fills the 圧雪 / シャーベット / 凍結 advisory gap, or
+  that thickens the cross-publisher cohort for any of the six
+  entries (especially シャーベット), or
 - a population-validated translation of the safe-driving-response
   text that improves the best-effort English field,
 

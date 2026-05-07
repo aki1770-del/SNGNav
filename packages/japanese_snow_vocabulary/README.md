@@ -10,14 +10,14 @@ paired with verbatim safe-driving-response text from the Japan
 Automobile Federation (JAF) where authoritative-source data has been
 captured.
 
-| Term | Romaji | English-equivalent | Authoritative data at 0.1.0 |
+| Term | Romaji | English-equivalent | Authoritative data at 0.2.0 |
 |---|---|---|---|
 | アイスバーン | aisubaan | icy hardpack | JAF — fully populated |
 | ブラックアイスバーン | burakku-aisubaan | black ice | JAF — fully populated |
 | 雪道 | yuki-michi | snow road | JAF — fully populated |
-| 圧雪 | assetsu | compacted snow | _deferred to 0.2.0_ |
-| シャーベット | shabetto | slush | _deferred to 0.2.0_ |
-| 凍結 | kettou | frozen surface | _deferred to 0.2.0_ |
+| 圧雪 | assetsu | compacted snow | JAF — fully populated |
+| シャーベット | shabetto | slush | JAF — fully populated (single-publisher; see `KNOWN_LIMITATIONS.md`) |
+| 凍結 | kettou | frozen surface | JAF — fully populated |
 
 The package serves a population gap: VSS `RoadSurfaceCondition`
 (English-language) collapses these distinctions into broader buckets,
@@ -54,7 +54,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  japanese_snow_vocabulary: ^0.1.0
+  japanese_snow_vocabulary: ^0.2.0
 ```
 
 Then import the barrel:
@@ -69,48 +69,41 @@ import 'package:japanese_snow_vocabulary/japanese_snow_vocabulary.dart';
 import 'package:japanese_snow_vocabulary/japanese_snow_vocabulary.dart';
 
 void main() {
-  // Iterate every case — exhaustive switch is forward-compatible
-  // across the 0.1.0 -> 0.2.0 boundary because the enum has all six
-  // cases today even though only three carry authoritative data.
+  // Iterate every case — all six entries carry verbatim JAF
+  // authoritative-source data at 0.2.0; exhaustive switch is
+  // forward-compatible.
   for (final surface in JapaneseSnowSurfaceClass.values) {
     final entry = jafAuthoritativeData[surface]!;
     print('${entry.termJa} (${entry.termRomaji}) — ${entry.labelEn}');
-
-    if (entry.isFullyPopulated) {
-      print('  source: ${entry.authoritativeSource}');
-      print('  ${entry.safeDrivingResponseJa}');
-    } else {
-      print('  (authoritative safe-driving-response deferred to 0.2.0)');
-    }
+    print('  source: ${entry.authoritativeSource}');
+    print('  ${entry.safeDrivingResponseJa}');
   }
 }
 ```
 
 ## What is "verbatim" here?
 
-Each fully-populated entry's `safeDrivingResponseJa` field is
-byte-identical to the corresponding text on the JAF source page at
-<https://jaf.or.jp/common/attention/snow> as of 2026-05-07. The
+Each entry's `safeDrivingResponseJa` field is byte-identical to its
+JAF source page at extraction time (2026-05-07). Three entries
+(アイスバーン / ブラックアイスバーン / 雪道) draw from the JAF
+snow-attention page <https://jaf.or.jp/common/attention/snow>. Three
+entries draw from JAF Training columns + JAF FAQ148 — see
+`KNOWN_LIMITATIONS.md` for the full per-entry source matrix. The
 package's `verbatim_citation_test.dart` regression-guards the literal
 strings; paraphrasing the JAF advisory text inside this package is
-not permitted. If JAF revises the source page, the change should be
+not permitted. If JAF revises a source page, the change should be
 relayed through a new package version with a CHANGELOG entry.
 
-## Honest disclosure — 3 of 6 entries
+## Honest disclosure — single-publisher caveat for シャーベット
 
-Three of the six enum cases (圧雪 / シャーベット / 凍結) carry only
-the taxonomic surface (term + romaji + English label) at 0.1.0. The
-five authoritative fields (`authoritativeSource`, `sourceUrl`,
-`safeDrivingResponseJa`, `safeDrivingResponseEn`, `regionFrequency`)
-are `null` for those entries. Populating them requires deeper review
-of additional sources (Hokkaido regional bureau / NEXCO / JARTIC /
-prefectural police), which lands at 0.2.0.
-
-The enum exposes all six cases today so that downstream exhaustive
-`switch` is forward-compatible across the 0.1.0 → 0.2.0 boundary —
-0.2.0 will not break existing consumers.
-
-See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for the full
+All six entries carry full authoritative-source data at 0.2.0. Five
+of the six entries are corroborated by multiple independent
+authoritative-source pages; the シャーベット (slush) entry is cited
+from a single JAF Training column at this release. The single-source
+verbatim citation is sufficient under the verbatim-relay binding
+because the publisher is authoritative-class; deeper cross-publisher
+cohort coverage is a 0.3.0 cadence candidate. See
+[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for the full
 honest-disclosure scope.
 
 ## License

@@ -9,6 +9,11 @@ import 'package:test/test.dart';
 /// If a future edit paraphrases or re-orders the authoritative
 /// citation, these tests will fail. Do not loosen the literal
 /// comparison: the binding is preserved at byte-identical granularity.
+///
+/// At 0.2.0 the regression-guard covers all six entries; the three
+/// 0.2.0 data-fill entries (圧雪 / シャーベット / 凍結) draw from JAF
+/// Training columns + JAF FAQ148 (additional URLs beyond the 0.1.0
+/// JAF snow-attention page).
 void main() {
   group('verbatim_citation_test — JAF byte-identical regression-guard', () {
     test('アイスバーン safeDrivingResponseJa is byte-identical', () {
@@ -47,8 +52,39 @@ void main() {
       expect(entry.safeDrivingResponseJa, expected);
     });
 
-    test('JAF source URL is byte-identical across all populated entries',
-        () {
+    test('圧雪 safeDrivingResponseJa is byte-identical', () {
+      const expected =
+          'この状態は、車の走行跡（わだち）があり、新雪と比べて走りやすい路面ですが、'
+          '交差点などの車の往来が多い場所では圧雪が磨かれてアイスバーンになりやすいので、'
+          '急のつく操作は避けましょう。';
+      final entry =
+          jafAuthoritativeData[JapaneseSnowSurfaceClass.compactedSnow]!;
+      expect(entry.safeDrivingResponseJa, expected);
+    });
+
+    test('シャーベット safeDrivingResponseJa is byte-identical', () {
+      const expected =
+          '新雪や圧雪と違い、雪ならではのリスクは低くなりますが、'
+          '場所によってはシャーベットの下が凍結している可能性があるので、油断は禁物です。';
+      final entry = jafAuthoritativeData[JapaneseSnowSurfaceClass.slush]!;
+      expect(entry.safeDrivingResponseJa, expected);
+    });
+
+    test('凍結 safeDrivingResponseJa is byte-identical', () {
+      const expected =
+          '雪が溶けて再び凍った路面。とても滑りやすく、慎重に運転を。'
+          '日なたでは、解けた氷が水膜となって浮かぶと、さらに滑りやすくなっています。'
+          '　'
+          '事故の起こりやすい場所として、もっとも危険なのが、'
+          '風通しのよい橋の上や陸橋、そしてトンネルの出入り口付近です。'
+          '他よりも気温が低いため、路面が凍結しやすく、大変危険です。'
+          'そのような場所では、手前で十分にスピードを落とし、慎重に走行する必要があります。';
+      final entry =
+          jafAuthoritativeData[JapaneseSnowSurfaceClass.surfaceFrozen]!;
+      expect(entry.safeDrivingResponseJa, expected);
+    });
+
+    test('JAF source URL for 0.1.0 entries is byte-identical', () {
       const expected = 'https://jaf.or.jp/common/attention/snow';
       for (final c in const [
         JapaneseSnowSurfaceClass.iceBahn,
@@ -59,13 +95,31 @@ void main() {
       }
     });
 
-    test('authoritativeSource label is the literal "JAF" for all populated',
+    test('JAF Training snow-drive URL is byte-identical for 圧雪 + シャーベット',
         () {
+      const expected = 'https://jaf-training.jp/column/snow-drive/';
       for (final c in const [
-        JapaneseSnowSurfaceClass.iceBahn,
-        JapaneseSnowSurfaceClass.blackIceBahn,
-        JapaneseSnowSurfaceClass.snowyRoad,
+        JapaneseSnowSurfaceClass.compactedSnow,
+        JapaneseSnowSurfaceClass.slush,
       ]) {
+        expect(jafAuthoritativeData[c]!.sourceUrl, expected);
+      }
+    });
+
+    test('JAF FAQ148 URL is byte-identical for 凍結', () {
+      const expected =
+          'https://jaf.or.jp/common/kuruma-qa/category-natural/'
+          'subcategory-snow/faq148';
+      expect(
+        jafAuthoritativeData[JapaneseSnowSurfaceClass.surfaceFrozen]!
+            .sourceUrl,
+        expected,
+      );
+    });
+
+    test('authoritativeSource label is the literal "JAF" for all entries',
+        () {
+      for (final c in JapaneseSnowSurfaceClass.values) {
         expect(jafAuthoritativeData[c]!.authoritativeSource, 'JAF');
       }
     });

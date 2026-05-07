@@ -1,3 +1,45 @@
+## 0.2.0 — 2026-05-07 — Data-fill: 3 deferred entries populated (圧雪 / シャーベット / 凍結)
+
+Verbatim authoritative-source citations added for the three entries
+that carried only a taxonomic surface at 0.1.0:
+
+- `JapaneseSnowSurfaceClass.compactedSnow` — 圧雪 (compacted snow);
+  primary source JAF Training snow-drive column
+  <https://jaf-training.jp/column/snow-drive/>; corroborated by JAF
+  FAQ148 + MLIT Mie regional bureau (3-source coverage).
+- `JapaneseSnowSurfaceClass.slush` — シャーベット (slush); single
+  source JAF Training snow-drive column
+  <https://jaf-training.jp/column/snow-drive/>. Single-publisher
+  coverage; honest-class disclosure preserved in `KNOWN_LIMITATIONS.md`.
+- `JapaneseSnowSurfaceClass.surfaceFrozen` — 凍結 (frozen surface);
+  primary source JAF FAQ148
+  <https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-snow/faq148>;
+  corroborated by JAF Training winter-frozen-road + MLIT Mie regional
+  bureau (3-source coverage).
+
+All `safeDrivingResponseJa` strings are byte-identical to their JAF
+source pages at extraction time (2026-05-07). The
+`verbatim_citation_test.dart` test file regression-guards each new
+literal at the same byte-identical granularity used at 0.1.0.
+
+All six of six enum cases now carry full authoritative-source data.
+The `data_completeness_test.dart` test file is updated to assert
+6-of-6 populated; the 0.1.0 assertion of 3-of-6 populated +
+3-of-6 deferred is replaced.
+
+Forward-compatibility: this is an additive non-breaking release. The
+enum shape is unchanged from 0.1.0; the three previously-null fields
+on the deferred entries are now populated. Existing 0.1.0 consumers
+relying on `JapaneseSnowVocabularyEntry.isFullyPopulated` to gate
+authoritative-data access will transparently pick up the new data
+without code change.
+
+`KNOWN_LIMITATIONS.md` is updated: the 3-of-6 partial-disclosure
+section is marked RESOLVED at 0.2.0, with the シャーベット
+single-publisher caveat preserved as honest-class disclosure and
+future-cadence improvement candidates noted (regional-vocabulary
+additions, deeper Hokkaido bureau substrate, user-facing example app).
+
 ## 0.1.0 — 2026-05-07
 
 Initial release. Six enum cases of JP-domestic snow / ice /
@@ -36,13 +78,12 @@ No Flutter dependency. No transitive dependencies beyond `test` +
 the 3-of-6 fully-populated scope, the bounded source coverage at
 0.1.0, and the path to 0.2.0.
 
-## Forward — 0.2.0 (planned)
+## Forward — 0.3.0 (planned)
 
-The 0.2.0 release will populate the three null-deferred entries
-(圧雪 / シャーベット / 凍結) with authoritative-source citations
-from a deeper review of JP-domestic safety publishers (Hokkaido
-regional bureau / NEXCO / JARTIC / prefectural police). The enum
-shape will not change; the change is additive on the data map only.
-Existing 0.1.0 consumers using exhaustive `switch` over
-`JapaneseSnowSurfaceClass.values` will not need code changes to
-benefit from the deeper data.
+A 0.3.0 release will deepen authoritative-source coverage for the
+single-publisher entry (シャーベット) and consider regional-vocabulary
+additions (e.g. Hokkaido-specific terms such as ガリ雪) from
+prefectural-police + Hokkaido regional bureau substrates. The enum
+shape will be extended additively; consumers using exhaustive
+`switch` over `JapaneseSnowSurfaceClass.values` should plan for new
+cases at the 0.3.0 boundary.
