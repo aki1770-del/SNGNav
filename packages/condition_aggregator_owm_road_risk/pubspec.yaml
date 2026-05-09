@@ -1,0 +1,29 @@
+name: condition_aggregator_owm_road_risk
+description: >-
+  OpenWeatherMap Road Risk adapter for the condition_aggregator
+  interface. Maps OWM Road Risk alerts to the source-neutral Advisory
+  typed event so integrators consume one shape across publishers
+  (NWS / JMA / OWM Road Risk / etc.). Pure Dart, no Flutter dependency.
+version: 0.1.0
+
+# Default publish target = https://pub.dev (no `publish_to:` line).
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - aggregator
+  - advisory
+  - openweathermap
+  - winter-driving
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  condition_aggregator: ^0.0.3
+  equatable: ^2.0.7
+  http: ^1.0.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
