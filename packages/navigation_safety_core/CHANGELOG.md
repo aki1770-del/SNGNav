@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1 — 2026-05-10 — Vehicle-CAN composition example (j1939)
+
+Adds an illustrative `example/can_bus_integration.dart` showing how
+`navigation_safety_core` composes with the [`j1939`](https://pub.dev/packages/j1939)
+package to translate SAE J1939 vehicle-bus events into a
+`DrivingContext` and an `AlertExplainer` advisory action. Documents
+two J1939/71 PGNs (CCVS1 0xFEF1 wheel-based vehicle speed; ET1 0xFEEE
+engine coolant temperature) as composition anchors. Adds a
+"Vehicle Data Integration" section to the README naming the j1939
++ NMEA 2000 cohorts as integrator-developer surfaces. No SDK source
+changes; example-only release.
+
 ## 0.10.0 — 2026-05-05 — DriverState-axis scaffolding (#28+#29+#30)
 
 Adds three additive opt-in inputs to the existing trait/state

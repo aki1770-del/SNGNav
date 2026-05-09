@@ -200,6 +200,26 @@ Full standards-mapping detail and the per-formula UNVERIFIED-magnitude
 flags live in
 [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md#standards-mapping-current-advisory-framing).
 
+## Vehicle Data Integration
+
+Real driving conditions can come from sensors the host app already
+has access to. For embedded Linux IVI integrations that read vehicle
+CAN traffic, [`j1939`](https://pub.dev/packages/j1939) and the wider
+[`can_dart`](https://github.com/jwinarske/can_dart) family (including
+`nmea2000`, `nmea2000_bus`, `rvc`, `rvc_bus`) ship the bus-level
+plumbing — address claiming, multi-packet transport, DM1 diagnostics
+— as Pure-Dart packages on pub.dev. `navigation_safety_core`
+composes downstream of those bus events: an integrator decodes the
+PGN payloads they care about (vehicle speed, engine coolant, ambient
+air temperature, ABS / TCS engagement, wiper status), maps them into
+a `DrivingContext`, and the safety vocabulary handles the rest.
+
+`example/can_bus_integration.dart` walks through the pattern end to
+end with two J1939/71 PGNs (CCVS1 0xFEF1 wheel-based vehicle speed;
+ET1 0xFEEE engine coolant temperature) as illustrative anchors. The
+composition seam is the load-bearing part — the same shape applies
+to other vehicle-bus signal sources.
+
 ## What this is NOT
 
 - **Not an L2+ automation or handover-class supervision package.** Any
