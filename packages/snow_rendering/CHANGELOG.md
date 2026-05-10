@@ -1,3 +1,9 @@
+## 0.2.1 — 2026-05-10 — Refresh cascade-stale dependency constraint
+
+- `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
+  driving_weather 0.4.0 release earlier the same day).
+- No source changes; pubspec dep-constraint refresh only.
+
 ## 0.2.0
 
 - Add `DataBudget` — stateful data-fetch budget tracker for snow-

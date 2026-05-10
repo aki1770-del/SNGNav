@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1 — 2026-05-10 — Refresh cascade-stale dependency constraints
+
+- `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
+  driving_weather 0.4.0 release earlier the same day).
+- `fleet_hazard: ^0.3.0` → `^0.4.0`.
+- No source changes; pubspec dep-constraint refresh only.
+
 ## 0.5.0
 
 - **Dep modernization** (republish cascade): bump `navigation_safety_core: ^0.1.0 → ^0.10.0` (closes 9-version stale dep) + `snow_rendering: ^0.1.0 → ^0.2.0` (closes 1-version stale dep). NSC dep update consumes additive surface only (no breaking changes per NSC CHANGELOG 0.2.0–0.10.0). Closes 2-month publish-debt (pub.dev last at 0.3.0 from 2026-03-15).

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 — 2026-05-10 — Refresh cascade-stale dependency constraint
+
+- `routing_engine: ^0.3.0` → `^0.4.0` (consumer-side refresh after
+  routing_engine 0.4.0 release earlier the same day).
+- No source changes; pubspec dep-constraint refresh only.
+
 ## 0.6.0 — 2026-05-06 — add BudgetAwarePaceProfile (glance-budget-aware speech pacing)
 
 Adds an opt-in, glance-budget-aware voice-pace adjustment. When an
