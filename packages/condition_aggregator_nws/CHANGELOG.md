@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3 — 2026-05-10 — Refresh stale dependency constraints
+
+- `condition_aggregator: ^0.0.1` → `^0.0.3` (pre-existing 7-day-stale).
+- `noaa_nws_adapter: ^0.0.1` → `^0.0.3` (pre-existing 7-day-stale).
+- No source changes; pubspec dep-constraint refresh only.
+
 ## 0.0.2 — 2026-05-03
 
 - Switch `condition_aggregator` and `noaa_nws_adapter` from path
