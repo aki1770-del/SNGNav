@@ -4,9 +4,7 @@ import 'package:test/test.dart';
 void main() {
   group('VehicleThresholdOverrides — registry construction + lookup', () {
     test('default constructor stores the supplied map', () {
-      final reg = VehicleThresholdOverrides({
-        'foo': (b) => b,
-      });
+      final reg = VehicleThresholdOverrides({'foo': (b) => b});
       expect(reg.overrides.keys, contains('foo'));
     });
 
@@ -24,10 +22,7 @@ void main() {
         DriverProfile.snowZoneExperienced,
       );
       final reg = VehicleThresholdOverrides.withKeiCarDefault();
-      final result = reg.applyOverrideForToken(
-        'commercial-light',
-        baseline,
-      );
+      final result = reg.applyOverrideForToken('commercial-light', baseline);
       expect(result, equals(baseline));
     });
   });
@@ -57,17 +52,19 @@ void main() {
       );
     });
 
-    test('kei-car override preserves score-floor tiers (severity-not-profile)',
-        () {
-      final baseline = NavigationSafetyConfig.forProfile(
-        DriverProfile.ageingRural,
-      );
-      final reg = VehicleThresholdOverrides.withKeiCarDefault();
-      final result = reg.applyOverrideForToken('kei-car', baseline);
-      expect(result.safeScoreFloor, baseline.safeScoreFloor);
-      expect(result.infoScoreFloor, baseline.infoScoreFloor);
-      expect(result.warningScoreFloor, baseline.warningScoreFloor);
-    });
+    test(
+      'kei-car override preserves score-floor tiers (severity-not-profile)',
+      () {
+        final baseline = NavigationSafetyConfig.forProfile(
+          DriverProfile.ageingRural,
+        );
+        final reg = VehicleThresholdOverrides.withKeiCarDefault();
+        final result = reg.applyOverrideForToken('kei-car', baseline);
+        expect(result.safeScoreFloor, baseline.safeScoreFloor);
+        expect(result.infoScoreFloor, baseline.infoScoreFloor);
+        expect(result.warningScoreFloor, baseline.warningScoreFloor);
+      },
+    );
 
     test('kei-car override preserves critical thresholds + cap-override', () {
       final baseline = NavigationSafetyConfig.forProfile(
@@ -75,10 +72,18 @@ void main() {
       );
       final reg = VehicleThresholdOverrides.withKeiCarDefault();
       final result = reg.applyOverrideForToken('kei-car', baseline);
-      expect(result.criticalVisibilityMeters, baseline.criticalVisibilityMeters);
-      expect(result.criticalTemperatureCelsius, baseline.criticalTemperatureCelsius);
-      expect(result.alertsPerMinuteCapOverride,
-          baseline.alertsPerMinuteCapOverride);
+      expect(
+        result.criticalVisibilityMeters,
+        baseline.criticalVisibilityMeters,
+      );
+      expect(
+        result.criticalTemperatureCelsius,
+        baseline.criticalTemperatureCelsius,
+      );
+      expect(
+        result.alertsPerMinuteCapOverride,
+        baseline.alertsPerMinuteCapOverride,
+      );
     });
 
     test('kei-car override preserves info thresholds (warning-tier only)', () {
@@ -92,62 +97,65 @@ void main() {
     });
   });
 
-  group('VehicleThresholdOverrides — caution-add-only invariant (negative)', () {
-    test('relaxing warningVisibilityMeters trips the debug assertion', () {
-      final baseline = NavigationSafetyConfig.forProfile(
-        DriverProfile.snowZoneExperienced,
-      );
-      final reg = VehicleThresholdOverrides({
-        'relaxing-vis': (b) => NavigationSafetyConfig(
-              safeScoreFloor: b.safeScoreFloor,
-              infoScoreFloor: b.infoScoreFloor,
-              warningScoreFloor: b.warningScoreFloor,
-              infoTemperatureCelsius: b.infoTemperatureCelsius,
-              warningTemperatureCelsius: b.warningTemperatureCelsius,
-              criticalTemperatureCelsius: b.criticalTemperatureCelsius,
-              infoVisibilityMeters: b.infoVisibilityMeters,
-              warningVisibilityMeters: b.warningVisibilityMeters - 50,
-              criticalVisibilityMeters: b.criticalVisibilityMeters,
-              alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
-            ),
+  group(
+    'VehicleThresholdOverrides — caution-add-only invariant (negative)',
+    () {
+      test('relaxing warningVisibilityMeters trips the debug assertion', () {
+        final baseline = NavigationSafetyConfig.forProfile(
+          DriverProfile.snowZoneExperienced,
+        );
+        final reg = VehicleThresholdOverrides({
+          'relaxing-vis': (b) => NavigationSafetyConfig(
+            safeScoreFloor: b.safeScoreFloor,
+            infoScoreFloor: b.infoScoreFloor,
+            warningScoreFloor: b.warningScoreFloor,
+            infoTemperatureCelsius: b.infoTemperatureCelsius,
+            warningTemperatureCelsius: b.warningTemperatureCelsius,
+            criticalTemperatureCelsius: b.criticalTemperatureCelsius,
+            infoVisibilityMeters: b.infoVisibilityMeters,
+            warningVisibilityMeters: b.warningVisibilityMeters - 50,
+            criticalVisibilityMeters: b.criticalVisibilityMeters,
+            alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
+          ),
+        });
+        expect(
+          () => reg.applyOverrideForToken('relaxing-vis', baseline),
+          throwsA(isA<AssertionError>()),
+        );
       });
-      expect(
-        () => reg.applyOverrideForToken('relaxing-vis', baseline),
-        throwsA(isA<AssertionError>()),
-      );
-    });
 
-    test('relaxing warningTemperatureCelsius trips the debug assertion', () {
-      final baseline = NavigationSafetyConfig.forProfile(
-        DriverProfile.snowZoneExperienced,
-      );
-      final reg = VehicleThresholdOverrides({
-        'relaxing-temp': (b) => NavigationSafetyConfig(
-              safeScoreFloor: b.safeScoreFloor,
-              infoScoreFloor: b.infoScoreFloor,
-              warningScoreFloor: b.warningScoreFloor,
-              infoTemperatureCelsius: b.infoTemperatureCelsius,
-              warningTemperatureCelsius: b.warningTemperatureCelsius - 1,
-              criticalTemperatureCelsius: b.criticalTemperatureCelsius,
-              infoVisibilityMeters: b.infoVisibilityMeters,
-              warningVisibilityMeters: b.warningVisibilityMeters,
-              criticalVisibilityMeters: b.criticalVisibilityMeters,
-              alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
-            ),
+      test('relaxing warningTemperatureCelsius trips the debug assertion', () {
+        final baseline = NavigationSafetyConfig.forProfile(
+          DriverProfile.snowZoneExperienced,
+        );
+        final reg = VehicleThresholdOverrides({
+          'relaxing-temp': (b) => NavigationSafetyConfig(
+            safeScoreFloor: b.safeScoreFloor,
+            infoScoreFloor: b.infoScoreFloor,
+            warningScoreFloor: b.warningScoreFloor,
+            infoTemperatureCelsius: b.infoTemperatureCelsius,
+            warningTemperatureCelsius: b.warningTemperatureCelsius - 1,
+            criticalTemperatureCelsius: b.criticalTemperatureCelsius,
+            infoVisibilityMeters: b.infoVisibilityMeters,
+            warningVisibilityMeters: b.warningVisibilityMeters,
+            criticalVisibilityMeters: b.criticalVisibilityMeters,
+            alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
+          ),
+        });
+        expect(
+          () => reg.applyOverrideForToken('relaxing-temp', baseline),
+          throwsA(isA<AssertionError>()),
+        );
       });
-      expect(
-        () => reg.applyOverrideForToken('relaxing-temp', baseline),
-        throwsA(isA<AssertionError>()),
-      );
-    });
 
-    test('modifying safeScoreFloor trips the severity-not-profile assertion',
+      test(
+        'modifying safeScoreFloor trips the severity-not-profile assertion',
         () {
-      final baseline = NavigationSafetyConfig.forProfile(
-        DriverProfile.snowZoneExperienced,
-      );
-      final reg = VehicleThresholdOverrides({
-        'severity-modifying': (b) => NavigationSafetyConfig(
+          final baseline = NavigationSafetyConfig.forProfile(
+            DriverProfile.snowZoneExperienced,
+          );
+          final reg = VehicleThresholdOverrides({
+            'severity-modifying': (b) => NavigationSafetyConfig(
               safeScoreFloor: 0.95, // changed
               infoScoreFloor: b.infoScoreFloor,
               warningScoreFloor: b.warningScoreFloor,
@@ -159,24 +167,24 @@ void main() {
               criticalVisibilityMeters: b.criticalVisibilityMeters,
               alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
             ),
-      });
-      expect(
-        () => reg.applyOverrideForToken('severity-modifying', baseline),
-        throwsA(isA<AssertionError>()),
+          });
+          expect(
+            () => reg.applyOverrideForToken('severity-modifying', baseline),
+            throwsA(isA<AssertionError>()),
+          );
+        },
       );
-    });
 
-    test('caution-equal (no change) override is permitted', () {
-      // The invariant is caution-add-only, so equal values must pass
-      // (override may legitimately be a no-op).
-      final baseline = NavigationSafetyConfig.forProfile(
-        DriverProfile.snowZoneExperienced,
-      );
-      final reg = VehicleThresholdOverrides({
-        'identity': (b) => b,
+      test('caution-equal (no change) override is permitted', () {
+        // The invariant is caution-add-only, so equal values must pass
+        // (override may legitimately be a no-op).
+        final baseline = NavigationSafetyConfig.forProfile(
+          DriverProfile.snowZoneExperienced,
+        );
+        final reg = VehicleThresholdOverrides({'identity': (b) => b});
+        final result = reg.applyOverrideForToken('identity', baseline);
+        expect(result, equals(baseline));
       });
-      final result = reg.applyOverrideForToken('identity', baseline);
-      expect(result, equals(baseline));
-    });
-  });
+    },
+  );
 }

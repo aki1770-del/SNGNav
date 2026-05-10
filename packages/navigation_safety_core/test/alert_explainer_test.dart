@@ -10,12 +10,21 @@ void main() {
       for (final profile in DriverProfile.values) {
         for (final condition in RoadSurfaceCondition.values) {
           final e = AlertExplainer.forConditionAndProfile(condition, profile);
-          expect(e.action, isNotEmpty,
-              reason: 'action for ($profile, $condition) must be non-empty');
-          expect(e.condition, condition,
-              reason: 'condition field must match input ($profile, $condition)');
-          expect(e.localeTag, isNotEmpty,
-              reason: 'localeTag for ($profile, $condition) must be non-empty');
+          expect(
+            e.action,
+            isNotEmpty,
+            reason: 'action for ($profile, $condition) must be non-empty',
+          );
+          expect(
+            e.condition,
+            condition,
+            reason: 'condition field must match input ($profile, $condition)',
+          );
+          expect(
+            e.localeTag,
+            isNotEmpty,
+            reason: 'localeTag for ($profile, $condition) must be non-empty',
+          );
         }
       }
     });
@@ -78,18 +87,25 @@ void main() {
           condition,
           DriverProfile.foreignTouristSnowZone,
         );
-        expect(e.localeTag, 'en',
-            reason: 'foreignTouristSnowZone must use en for $condition');
+        expect(
+          e.localeTag,
+          'en',
+          reason: 'foreignTouristSnowZone must use en for $condition',
+        );
       }
     });
 
     test('non-foreign-tourist profiles → ja, every condition', () {
-      for (final profile in DriverProfile.values
-          .where((p) => p != DriverProfile.foreignTouristSnowZone)) {
+      for (final profile in DriverProfile.values.where(
+        (p) => p != DriverProfile.foreignTouristSnowZone,
+      )) {
         for (final condition in RoadSurfaceCondition.values) {
           final e = AlertExplainer.forConditionAndProfile(condition, profile);
-          expect(e.localeTag, 'ja',
-              reason: '$profile must use ja for $condition');
+          expect(
+            e.localeTag,
+            'ja',
+            reason: '$profile must use ja for $condition',
+          );
         }
       }
     });
@@ -113,9 +129,13 @@ void main() {
           final e = AlertExplainer.forConditionAndProfile(condition, profile);
           final lower = e.action.toLowerCase();
           for (final token in banned) {
-            expect(lower.contains(token), isFalse,
-                reason: 'action for ($profile, $condition) must not contain '
-                    '"$token" — found in: ${e.action}');
+            expect(
+              lower.contains(token),
+              isFalse,
+              reason:
+                  'action for ($profile, $condition) must not contain '
+                  '"$token" — found in: ${e.action}',
+            );
           }
         }
       }
@@ -166,8 +186,11 @@ void main() {
         RoadSurfaceCondition.wetIce,
         DriverProfile.professional,
       );
-      expect(e.action.length, lessThanOrEqualTo(25),
-          reason: 'professional WET_ICE expected terse, got: ${e.action}');
+      expect(
+        e.action.length,
+        lessThanOrEqualTo(25),
+        reason: 'professional WET_ICE expected terse, got: ${e.action}',
+      );
       expect(e.action, contains('アイスバーン'));
       expect(e.action, contains('20km/h'));
     });
@@ -214,15 +237,19 @@ void main() {
 
       // All other profiles share JA content for UNKNOWN.
       String? jaUnknown;
-      for (final p in DriverProfile.values
-          .where((p) => p != DriverProfile.foreignTouristSnowZone)) {
+      for (final p in DriverProfile.values.where(
+        (p) => p != DriverProfile.foreignTouristSnowZone,
+      )) {
         final e = AlertExplainer.forConditionAndProfile(
           RoadSurfaceCondition.unknown,
           p,
         );
         jaUnknown ??= e.action;
-        expect(e.action, jaUnknown,
-            reason: 'UNKNOWN should be profile-flat for non-tourist profiles');
+        expect(
+          e.action,
+          jaUnknown,
+          reason: 'UNKNOWN should be profile-flat for non-tourist profiles',
+        );
         expect(e.localeTag, 'ja');
       }
     });
@@ -236,15 +263,19 @@ void main() {
       expect(tourist.action.toLowerCase(), contains('dry'));
 
       String? jaDry;
-      for (final p in DriverProfile.values
-          .where((p) => p != DriverProfile.foreignTouristSnowZone)) {
+      for (final p in DriverProfile.values.where(
+        (p) => p != DriverProfile.foreignTouristSnowZone,
+      )) {
         final e = AlertExplainer.forConditionAndProfile(
           RoadSurfaceCondition.dry,
           p,
         );
         jaDry ??= e.action;
-        expect(e.action, jaDry,
-            reason: 'DRY should be profile-flat for non-tourist profiles');
+        expect(
+          e.action,
+          jaDry,
+          reason: 'DRY should be profile-flat for non-tourist profiles',
+        );
       }
     });
   });

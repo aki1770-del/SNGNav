@@ -6,15 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:navigation_safety/navigation_safety.dart';
 
 Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: Center(child: child)));
+  return MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 }
 
 void main() {
   group('AlertExplainerExpandableSheet', () {
-    testWidgets(
-        'default-EXPANDED for ageingRural / foreignTouristSnowZone / '
-        'noviceUrban; default-COLLAPSED for the other three profiles',
-        (tester) async {
+    testWidgets('default-EXPANDED for ageingRural / foreignTouristSnowZone / '
+        'noviceUrban; default-COLLAPSED for the other three profiles', (
+      tester,
+    ) async {
       const expandedProfiles = <DriverProfile>[
         DriverProfile.ageingRural,
         DriverProfile.foreignTouristSnowZone,
@@ -42,40 +44,46 @@ void main() {
       }
     });
 
-    testWidgets(
-        'expanded state renders action text VERBATIM '
-        '(Article 17 (β) verbatim-relay)',
-        (tester) async {
+    testWidgets('expanded state renders action text VERBATIM '
+        '(Article 17 (β) verbatim-relay)', (tester) async {
       const condition = RoadSurfaceCondition.ice;
       const profile = DriverProfile.ageingRural;
-      final expectedAction =
-          AlertExplainer.forConditionAndProfile(condition, profile).action;
+      final expectedAction = AlertExplainer.forConditionAndProfile(
+        condition,
+        profile,
+      ).action;
 
-      await tester.pumpWidget(_wrap(
-        const AlertExplainerExpandableSheet(
-          condition: condition,
-          profile: profile,
+      await tester.pumpWidget(
+        _wrap(
+          const AlertExplainerExpandableSheet(
+            condition: condition,
+            profile: profile,
+          ),
         ),
-      ));
+      );
       // ageingRural defaults to EXPANDED; the verbatim action text
       // should be present in the rendered tree.
       expect(find.text(expectedAction), findsOneWidget);
     });
 
-    testWidgets(
-        'collapsed state HIDES action text but does not paraphrase',
-        (tester) async {
+    testWidgets('collapsed state HIDES action text but does not paraphrase', (
+      tester,
+    ) async {
       const condition = RoadSurfaceCondition.ice;
       const profile = DriverProfile.professional;
-      final expectedAction =
-          AlertExplainer.forConditionAndProfile(condition, profile).action;
+      final expectedAction = AlertExplainer.forConditionAndProfile(
+        condition,
+        profile,
+      ).action;
 
-      await tester.pumpWidget(_wrap(
-        const AlertExplainerExpandableSheet(
-          condition: condition,
-          profile: profile,
+      await tester.pumpWidget(
+        _wrap(
+          const AlertExplainerExpandableSheet(
+            condition: condition,
+            profile: profile,
+          ),
         ),
-      ));
+      );
       // professional defaults to COLLAPSED; action text not rendered.
       expect(find.text(expectedAction), findsNothing);
       // Tapping toggles to expanded; verbatim text now visible.
@@ -84,21 +92,24 @@ void main() {
       expect(find.text(expectedAction), findsOneWidget);
     });
 
-    testWidgets(
-        'integrator override via defaultExpanded forces collapsed for '
+    testWidgets('integrator override via defaultExpanded forces collapsed for '
         'ageingRural', (tester) async {
       const condition = RoadSurfaceCondition.snow;
       const profile = DriverProfile.ageingRural;
-      final expectedAction =
-          AlertExplainer.forConditionAndProfile(condition, profile).action;
+      final expectedAction = AlertExplainer.forConditionAndProfile(
+        condition,
+        profile,
+      ).action;
 
-      await tester.pumpWidget(_wrap(
-        const AlertExplainerExpandableSheet(
-          condition: condition,
-          profile: profile,
-          defaultExpanded: false,
+      await tester.pumpWidget(
+        _wrap(
+          const AlertExplainerExpandableSheet(
+            condition: condition,
+            profile: profile,
+            defaultExpanded: false,
+          ),
         ),
-      ));
+      );
       expect(find.text(expectedAction), findsNothing);
     });
 
@@ -107,13 +118,15 @@ void main() {
       const profile = DriverProfile.snowZoneExperienced;
       final calls = <bool>[];
 
-      await tester.pumpWidget(_wrap(
-        AlertExplainerExpandableSheet(
-          condition: condition,
-          profile: profile,
-          onExpansionChanged: calls.add,
+      await tester.pumpWidget(
+        _wrap(
+          AlertExplainerExpandableSheet(
+            condition: condition,
+            profile: profile,
+            onExpansionChanged: calls.add,
+          ),
         ),
-      ));
+      );
       await tester.tap(find.byType(InkWell));
       await tester.pump();
       expect(calls, [true]);

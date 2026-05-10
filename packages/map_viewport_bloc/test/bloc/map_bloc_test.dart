@@ -113,11 +113,8 @@ void main() {
     blocTest<MapBloc, MapState>(
       'CameraModeChanged follows route to overview',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
-      ),
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
       act: (bloc) => bloc.add(const CameraModeChanged(CameraMode.overview)),
       expect: () => [
         isA<MapState>().having(
@@ -131,18 +128,17 @@ void main() {
     blocTest<MapBloc, MapState>(
       'FitToBounds stores bounds and enters overview',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
-      ),
-      act: (bloc) => bloc.add(const FitToBounds(
-        southWest: _routeSw,
-        northEast: _routeNe,
-      )),
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) =>
+          bloc.add(const FitToBounds(southWest: _routeSw, northEast: _routeNe)),
       expect: () => [
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.overview)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.overview,
+            )
             .having((state) => state.fitBoundsSw, 'fitBoundsSw', _routeSw)
             .having((state) => state.fitBoundsNe, 'fitBoundsNe', _routeNe),
       ],
@@ -162,7 +158,11 @@ void main() {
       act: (bloc) => bloc.add(const CameraModeChanged(CameraMode.follow)),
       expect: () => [
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.follow)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.follow,
+            )
             .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
       ],
     );
@@ -170,11 +170,8 @@ void main() {
     blocTest<MapBloc, MapState>(
       'CenterChanged updates center',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
-      ),
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
       act: (bloc) => bloc.add(const CenterChanged(_toyota)),
       expect: () => [
         isA<MapState>().having((state) => state.center, 'center', _toyota),
@@ -184,11 +181,8 @@ void main() {
     blocTest<MapBloc, MapState>(
       'ZoomChanged updates zoom',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
-      ),
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
       act: (bloc) => bloc.add(const ZoomChanged(12.5)),
       expect: () => [
         isA<MapState>().having((state) => state.zoom, 'zoom', 12.5),
@@ -198,15 +192,11 @@ void main() {
     blocTest<MapBloc, MapState>(
       'LayerToggled hides route layer',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.route, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.route,
-        visible: false,
-      )),
       expect: () => [
         isA<MapState>().having(
           (state) => state.isLayerVisible(MapLayerType.route),
@@ -219,15 +209,11 @@ void main() {
     blocTest<MapBloc, MapState>(
       'LayerToggled hides fleet layer',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.fleet, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.fleet,
-        visible: false,
-      )),
       expect: () => [
         isA<MapState>().having(
           (state) => state.isLayerVisible(MapLayerType.fleet),
@@ -240,15 +226,11 @@ void main() {
     blocTest<MapBloc, MapState>(
       'LayerToggled hides hazard layer',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.hazard, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.hazard,
-        visible: false,
-      )),
       expect: () => [
         isA<MapState>().having(
           (state) => state.isLayerVisible(MapLayerType.hazard),
@@ -261,15 +243,11 @@ void main() {
     blocTest<MapBloc, MapState>(
       'LayerToggled hides weather layer',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.weather, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.weather,
-        visible: false,
-      )),
       expect: () => [
         isA<MapState>().having(
           (state) => state.isLayerVisible(MapLayerType.weather),
@@ -282,45 +260,33 @@ void main() {
     blocTest<MapBloc, MapState>(
       'LayerToggled ignores safety layer changes',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.safety, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.safety,
-        visible: false,
-      )),
       expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
       'LayerToggled ignores base tile changes',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.baseTile, visible: false),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.baseTile,
-        visible: false,
-      )),
       expect: () => <MapState>[],
     );
 
     blocTest<MapBloc, MapState>(
       'LayerToggled is idempotent when route already visible',
       build: MapBloc.new,
-      seed: () => const MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15,
+      seed: () =>
+          const MapState(status: MapStatus.ready, center: _nagoya, zoom: 15),
+      act: (bloc) => bloc.add(
+        const LayerToggled(layer: MapLayerType.route, visible: true),
       ),
-      act: (bloc) => bloc.add(const LayerToggled(
-        layer: MapLayerType.route,
-        visible: true,
-      )),
       expect: () => <MapState>[],
     );
 
@@ -357,7 +323,11 @@ void main() {
       act: (bloc) => bloc.add(const UserPanDetected()),
       expect: () => [
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.freeLook)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.freeLook,
+            )
             .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
       ],
     );
@@ -439,23 +409,32 @@ void main() {
         cameraMode: CameraMode.follow,
       ),
       act: (bloc) async {
-        bloc.add(const FitToBounds(
-          southWest: _routeSw,
-          northEast: _routeNe,
-        ));
+        bloc.add(const FitToBounds(southWest: _routeSw, northEast: _routeNe));
         await Future<void>.delayed(const Duration(milliseconds: 5));
         bloc.add(const UserPanDetected());
       },
       wait: const Duration(milliseconds: 60),
       expect: () => [
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.overview)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.overview,
+            )
             .having((state) => state.hasFitBounds, 'hasFitBounds', isTrue),
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.freeLook)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.freeLook,
+            )
             .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
         isA<MapState>()
-            .having((state) => state.cameraMode, 'cameraMode', CameraMode.follow)
+            .having(
+              (state) => state.cameraMode,
+              'cameraMode',
+              CameraMode.follow,
+            )
             .having((state) => state.hasFitBounds, 'hasFitBounds', isFalse),
       ],
     );
@@ -504,10 +483,7 @@ void main() {
       build: () => MapBloc(
         initialCenter: _toyota,
         initialZoom: 13,
-        initialVisibleLayers: const {
-          MapLayerType.baseTile,
-          MapLayerType.route,
-        },
+        initialVisibleLayers: const {MapLayerType.baseTile, MapLayerType.route},
       ),
       verify: (bloc) {
         expect(bloc.state.center, _toyota);

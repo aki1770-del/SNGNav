@@ -122,10 +122,7 @@ void main() {
     test('caution-add-only invariant across full chain: every combination '
         'yields warningVisibilityMeters >= profile baseline', () {
       final profileBase = NavigationSafetyConfig.forProfile(dc.profile);
-      for (final phase in [
-        CircadianPhase.morning,
-        CircadianPhase.lateNight,
-      ]) {
+      for (final phase in [CircadianPhase.morning, CircadianPhase.lateNight]) {
         for (final fatigue in CumulativeFatigueClass.values) {
           for (final c in [Confidence.low, Confidence.medium]) {
             final config = NavigationSafetyConfig.forDriverContext(

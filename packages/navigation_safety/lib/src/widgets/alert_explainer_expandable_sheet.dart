@@ -116,7 +116,8 @@ class _AlertExplainerExpandableSheetState
   @override
   void initState() {
     super.initState();
-    _expanded = widget.defaultExpanded ??
+    _expanded =
+        widget.defaultExpanded ??
         AlertExplainerExpandableSheet.defaultExpansionForProfile(
           widget.profile,
         );
@@ -151,15 +152,10 @@ class _AlertExplainerExpandableSheetState
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      widget.sourceLine,
-                      style: textTheme.bodySmall,
-                    ),
+                    child: Text(widget.sourceLine, style: textTheme.bodySmall),
                   ),
                   Icon(
-                    _expanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
+                    _expanded ? Icons.expand_less : Icons.expand_more,
                     size: 20,
                   ),
                 ],
@@ -185,10 +181,7 @@ class _AlertExplainerExpandableSheetState
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  widget.sourceLine,
-                  style: textTheme.bodySmall,
-                ),
+                Text(widget.sourceLine, style: textTheme.bodySmall),
               ],
             ],
           ),

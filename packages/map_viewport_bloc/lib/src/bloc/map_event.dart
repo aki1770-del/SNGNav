@@ -14,10 +14,7 @@ sealed class MapEvent extends Equatable {
 }
 
 class MapInitialized extends MapEvent {
-  const MapInitialized({
-    required this.center,
-    required this.zoom,
-  });
+  const MapInitialized({required this.center, required this.zoom});
 
   final LatLng center;
   final double zoom;
@@ -54,10 +51,7 @@ class ZoomChanged extends MapEvent {
 }
 
 class FitToBounds extends MapEvent {
-  const FitToBounds({
-    required this.southWest,
-    required this.northEast,
-  });
+  const FitToBounds({required this.southWest, required this.northEast});
 
   final LatLng southWest;
   final LatLng northEast;
@@ -67,10 +61,7 @@ class FitToBounds extends MapEvent {
 }
 
 class LayerToggled extends MapEvent {
-  const LayerToggled({
-    required this.layer,
-    required this.visible,
-  });
+  const LayerToggled({required this.layer, required this.visible});
 
   final MapLayerType layer;
   final bool visible;

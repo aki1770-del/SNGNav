@@ -48,13 +48,13 @@ class NavigationManeuver extends Equatable {
 
   @override
   List<Object?> get props => [
-        index,
-        instruction,
-        type,
-        lengthKm,
-        timeSeconds,
-        position,
-      ];
+    index,
+    instruction,
+    type,
+    lengthKm,
+    timeSeconds,
+    position,
+  ];
 }
 
 /// A complete route as presented to the navigation session.
@@ -94,10 +94,10 @@ class NavigationRoute extends Equatable {
 
   @override
   List<Object?> get props => [
-        shape,
-        maneuvers,
-        totalDistanceKm,
-        totalTimeSeconds,
-        summary,
-      ];
+    shape,
+    maneuvers,
+    totalDistanceKm,
+    totalTimeSeconds,
+    summary,
+  ];
 }

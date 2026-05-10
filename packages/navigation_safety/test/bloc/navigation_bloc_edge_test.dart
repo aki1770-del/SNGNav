@@ -93,12 +93,16 @@ void main() {
       seed: () => NavigationState(
         status: NavigationStatus.navigating,
         route: _route,
-        currentManeuverIndex: 1, // nextIndex=2 which equals length-1; still valid
+        currentManeuverIndex:
+            1, // nextIndex=2 which equals length-1; still valid
       ),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
       expect: () => [
-        isA<NavigationState>()
-            .having((s) => s.currentManeuverIndex, 'index', 2),
+        isA<NavigationState>().having(
+          (s) => s.currentManeuverIndex,
+          'index',
+          2,
+        ),
       ],
     );
 
@@ -125,9 +129,7 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'ManeuverAdvanced ignored when route is null',
       build: NavigationBloc.new,
-      seed: () => const NavigationState(
-        status: NavigationStatus.navigating,
-      ),
+      seed: () => const NavigationState(status: NavigationStatus.navigating),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
       expect: () => <NavigationState>[],
     );
@@ -142,10 +144,12 @@ void main() {
         alertMessage: 'Watch for ice',
         alertSeverity: AlertSeverity.info,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Black ice detected!',
-        severity: AlertSeverity.critical,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Black ice detected!',
+          severity: AlertSeverity.critical,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.alertMessage, 'msg', 'Black ice detected!')
@@ -161,10 +165,12 @@ void main() {
         alertMessage: 'Blizzard warning',
         alertSeverity: AlertSeverity.critical,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Light rain ahead',
-        severity: AlertSeverity.info,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Light rain ahead',
+          severity: AlertSeverity.info,
+        ),
+      ),
       expect: () => <NavigationState>[],
     );
 
@@ -176,10 +182,12 @@ void main() {
         alertMessage: 'First warning',
         alertSeverity: AlertSeverity.warning,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Second warning',
-        severity: AlertSeverity.warning,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Second warning',
+          severity: AlertSeverity.warning,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.alertMessage, 'msg', 'Second warning')
@@ -222,10 +230,8 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'double deviation is no-op on second event',
       build: NavigationBloc.new,
-      seed: () => NavigationState(
-        status: NavigationStatus.deviated,
-        route: _route,
-      ),
+      seed: () =>
+          NavigationState(status: NavigationStatus.deviated, route: _route),
       act: (bloc) => bloc.add(const RouteDeviationDetected()),
       expect: () => <NavigationState>[],
     );
@@ -241,12 +247,9 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'reroute ignored when not deviated',
       build: NavigationBloc.new,
-      seed: () => NavigationState(
-        status: NavigationStatus.navigating,
-        route: _route,
-      ),
-      act: (bloc) =>
-          bloc.add(RerouteCompleted(newRoute: _secondRoute)),
+      seed: () =>
+          NavigationState(status: NavigationStatus.navigating, route: _route),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _secondRoute)),
       expect: () => <NavigationState>[],
     );
 
@@ -258,8 +261,7 @@ void main() {
         route: _route,
         currentManeuverIndex: 2,
       ),
-      act: (bloc) =>
-          bloc.add(RerouteCompleted(newRoute: _secondRoute)),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _secondRoute)),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)
@@ -386,7 +388,8 @@ void main() {
       act: (bloc) => bloc.add(RerouteCompleted(newRoute: _route)),
       expect: () => [
         predicate<NavigationState>(
-          (s) => s.status == NavigationStatus.navigating && s.alertMessage == null,
+          (s) =>
+              s.status == NavigationStatus.navigating && s.alertMessage == null,
           'navigating with no alert',
         ),
       ],

@@ -14,7 +14,8 @@ import '../models/tile_source_type.dart';
 import '../providers/offline_tile_provider.dart';
 import '../resolvers/runtime_tile_resolver.dart';
 
-typedef TileFetchCallback = Future<Uint8List?> Function(TileCoordinates coordinates);
+typedef TileFetchCallback =
+    Future<Uint8List?> Function(TileCoordinates coordinates);
 
 class CachedCoverageRegion {
   const CachedCoverageRegion({
@@ -124,13 +125,13 @@ class OfflineTileManager {
     final maxZoom = cacheConfig.maxZoomFor(tier);
 
     CachedCoverageRegion buildRegion() => CachedCoverageRegion(
-          tier: tier,
-          bounds: bounds,
-          minZoom: minZoom,
-          maxZoom: maxZoom,
-          cachedAt: now,
-          expiresAt: now.add(cacheConfig.expiryFor(tier)),
-        );
+      tier: tier,
+      bounds: bounds,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+      cachedAt: now,
+      expiresAt: now.add(cacheConfig.expiryFor(tier)),
+    );
 
     if (tileFetcher == null) {
       _cachedRegions.add(buildRegion());
@@ -153,12 +154,7 @@ class OfflineTileManager {
           final coordinates = TileCoordinates(x, y, zoom);
           final bytes = await tileFetcher(coordinates);
           if (bytes == null) continue;
-          archive.putTile(
-            z: zoom,
-            x: x,
-            y: _toTmsY(y, zoom),
-            bytes: bytes,
-          );
+          archive.putTile(z: zoom, x: x, y: _toTmsY(y, zoom), bytes: bytes);
           _resolver.seedMemoryCache(coordinates, bytes);
           storedTileCount++;
         }
@@ -204,7 +200,9 @@ class OfflineTileManager {
     }
     final path = mbtilesPath;
     if (path == null) {
-      throw StateError('cacheRegion requires an mbtilesPath when tiles are written');
+      throw StateError(
+        'cacheRegion requires an mbtilesPath when tiles are written',
+      );
     }
 
     final file = File(path);
@@ -245,8 +243,12 @@ class OfflineTileManager {
   LatLngBounds _expandBoundsByKilometers(LatLngBounds bounds, double bufferKm) {
     final averageLatitude = (bounds.north + bounds.south) / 2;
     final latitudeBuffer = bufferKm / 111.0;
-    final longitudeBuffer = bufferKm /
-        math.max(1.0, 111.320 * math.cos(averageLatitude * math.pi / 180).abs());
+    final longitudeBuffer =
+        bufferKm /
+        math.max(
+          1.0,
+          111.320 * math.cos(averageLatitude * math.pi / 180).abs(),
+        );
 
     return LatLngBounds.unsafe(
       north: math.min(LatLngBounds.maxLatitude, bounds.north + latitudeBuffer),
@@ -278,7 +280,8 @@ class OfflineTileManager {
   int _latitudeToTileY(double latitude, int zoom) {
     final radians = latitude * math.pi / 180.0;
     final tileCount = 1 << zoom;
-    final mercator = (1 - math.log(math.tan(radians) + 1 / math.cos(radians)) / math.pi) / 2;
+    final mercator =
+        (1 - math.log(math.tan(radians) + 1 / math.cos(radians)) / math.pi) / 2;
     final value = (mercator * tileCount).floor();
     return value.clamp(0, tileCount - 1);
   }

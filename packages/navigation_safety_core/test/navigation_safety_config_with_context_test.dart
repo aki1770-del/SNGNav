@@ -19,7 +19,10 @@ void main() {
       );
       // Novice 3.58s × 50 = 179m + 50²/11 ≈ 113.6 → 292.6m, less than
       // 320 baseline → stays at baseline. Try faster.
-      expect(adj.warningVisibilityMeters, greaterThanOrEqualTo(base.warningVisibilityMeters));
+      expect(
+        adj.warningVisibilityMeters,
+        greaterThanOrEqualTo(base.warningVisibilityMeters),
+      );
     });
 
     test('very high speed forces visibility floor above baseline', () {
@@ -29,22 +32,25 @@ void main() {
         context: const DrivingContext(speedMps: 60.0),
       );
       // 3.58 * 60 = 214.8 + 60²/11 ≈ 327.3 → 542.1, well above 320.
-      expect(adj.warningVisibilityMeters, greaterThan(base.warningVisibilityMeters));
+      expect(
+        adj.warningVisibilityMeters,
+        greaterThan(base.warningVisibilityMeters),
+      );
     });
 
     test('humidity + ambient context can raise warning temperature', () {
-      final base =
-          NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
+      final base = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
       final adj = NavigationSafetyConfig.forProfileWithContext(
         DriverProfile.snowZoneExperienced,
-        context: const DrivingContext(
-          humidityRH: 0.4,
-          ambientTempCelsius: 1.0,
-        ),
+        context: const DrivingContext(humidityRH: 0.4, ambientTempCelsius: 1.0),
       );
       // Effective at 40% RH and 1C ambient drops below freezing → lift expected.
-      expect(adj.warningTemperatureCelsius,
-          greaterThanOrEqualTo(base.warningTemperatureCelsius));
+      expect(
+        adj.warningTemperatureCelsius,
+        greaterThanOrEqualTo(base.warningTemperatureCelsius),
+      );
     });
 
     test('precipitation context can raise warning visibility', () {
@@ -56,8 +62,10 @@ void main() {
           ambientTempCelsius: 5.0,
         ),
       );
-      expect(adj.warningVisibilityMeters,
-          greaterThan(base.warningVisibilityMeters));
+      expect(
+        adj.warningVisibilityMeters,
+        greaterThan(base.warningVisibilityMeters),
+      );
     });
 
     test('combined context applies all dimensions simultaneously', () {
@@ -74,7 +82,8 @@ void main() {
         DriverProfile.foreignTouristSnowZone,
       );
       // At least one dimension must move (visibility or temperature).
-      final visMoved = adj.warningVisibilityMeters > base.warningVisibilityMeters;
+      final visMoved =
+          adj.warningVisibilityMeters > base.warningVisibilityMeters;
       final tempMoved =
           adj.warningTemperatureCelsius > base.warningTemperatureCelsius;
       expect(visMoved || tempMoved, isTrue);
@@ -90,10 +99,14 @@ void main() {
 
     test('forProfile() unchanged by adding the context-aware factory', () {
       // Direct invariant check: forProfile() returns historical defaults.
-      final ageing = NavigationSafetyConfig.forProfile(DriverProfile.ageingRural);
+      final ageing = NavigationSafetyConfig.forProfile(
+        DriverProfile.ageingRural,
+      );
       expect(ageing.warningTemperatureCelsius, 2);
       expect(ageing.warningVisibilityMeters, 300);
-      final novice = NavigationSafetyConfig.forProfile(DriverProfile.noviceUrban);
+      final novice = NavigationSafetyConfig.forProfile(
+        DriverProfile.noviceUrban,
+      );
       expect(novice.warningVisibilityMeters, 320);
     });
   });

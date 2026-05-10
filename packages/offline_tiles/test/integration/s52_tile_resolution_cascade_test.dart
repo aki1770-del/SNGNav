@@ -14,9 +14,7 @@ final Uint8List _pngTileBytes = base64Decode(
 void main() {
   group('S52 tile resolution cascade gaps', () {
     test('resolver returns RAM cache hit before consulting MBTiles', () {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-      );
+      final manager = OfflineTileManager(tileSource: TileSourceType.mbtiles);
       addTearDown(manager.dispose);
 
       const coordinates = TileCoordinates(3, 4, 5);
@@ -30,19 +28,22 @@ void main() {
       expect(result.bytes, isNotNull);
     });
 
-    test('resolver returns placeholder when local sources miss and online fallback is disabled', () {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        allowOnlineFallback: false,
-      );
-      addTearDown(manager.dispose);
+    test(
+      'resolver returns placeholder when local sources miss and online fallback is disabled',
+      () {
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          allowOnlineFallback: false,
+        );
+        addTearDown(manager.dispose);
 
-      const coordinates = TileCoordinates(0, 0, 0);
-      final result = manager.resolver.resolve(coordinates);
+        const coordinates = TileCoordinates(0, 0, 0);
+        final result = manager.resolver.resolve(coordinates);
 
-      expect(result.source, RuntimeTileSource.placeholder);
-      expect(result.requestedCoordinates, coordinates);
-      expect(result.bytes, isNull);
-    });
+        expect(result.source, RuntimeTileSource.placeholder);
+        expect(result.requestedCoordinates, coordinates);
+        expect(result.bytes, isNull);
+      },
+    );
   });
 }

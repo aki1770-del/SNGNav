@@ -61,27 +61,33 @@ void main() {
       final sub = t.records.listen((r) => received.add(r.outcome));
 
       final base = DateTime(2026, 5, 4, 12);
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.noviceUrban,
-        ambientThreshold: null,
-        alertSequence: <DateTime>[base],
-        responseLatency: null,
-        outcome: LoomFitOutcome.coldStart,
-      ));
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.noviceUrban,
-        ambientThreshold: null,
-        alertSequence: <DateTime>[base, base.add(const Duration(seconds: 5))],
-        responseLatency: null,
-        outcome: LoomFitOutcome.fired,
-      ));
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.noviceUrban,
-        ambientThreshold: null,
-        alertSequence: <DateTime>[base, base.add(const Duration(seconds: 5))],
-        responseLatency: null,
-        outcome: LoomFitOutcome.droppedByThrottle,
-      ));
+      t.record(
+        LoomFitTelemetryRecord(
+          profileClass: DriverProfile.noviceUrban,
+          ambientThreshold: null,
+          alertSequence: <DateTime>[base],
+          responseLatency: null,
+          outcome: LoomFitOutcome.coldStart,
+        ),
+      );
+      t.record(
+        LoomFitTelemetryRecord(
+          profileClass: DriverProfile.noviceUrban,
+          ambientThreshold: null,
+          alertSequence: <DateTime>[base, base.add(const Duration(seconds: 5))],
+          responseLatency: null,
+          outcome: LoomFitOutcome.fired,
+        ),
+      );
+      t.record(
+        LoomFitTelemetryRecord(
+          profileClass: DriverProfile.noviceUrban,
+          ambientThreshold: null,
+          alertSequence: <DateTime>[base, base.add(const Duration(seconds: 5))],
+          responseLatency: null,
+          outcome: LoomFitOutcome.droppedByThrottle,
+        ),
+      );
 
       // Drain microtasks so broadcast deliveries land.
       await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -102,13 +108,15 @@ void main() {
       final aSub = t.records.listen((r) => aOutcomes.add(r.outcome));
       final bSub = t.records.listen((r) => bOutcomes.add(r.outcome));
 
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.professional,
-        ambientThreshold: 'visibility_floor_320m',
-        alertSequence: const <DateTime>[],
-        responseLatency: null,
-        outcome: LoomFitOutcome.criticalBypass,
-      ));
+      t.record(
+        LoomFitTelemetryRecord(
+          profileClass: DriverProfile.professional,
+          ambientThreshold: 'visibility_floor_320m',
+          alertSequence: const <DateTime>[],
+          responseLatency: null,
+          outcome: LoomFitOutcome.criticalBypass,
+        ),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 30));
       expect(aOutcomes, <LoomFitOutcome>[LoomFitOutcome.criticalBypass]);
@@ -125,13 +133,15 @@ void main() {
       final sub = t.records.listen((r) => received.add(r.outcome));
 
       for (final outcome in LoomFitOutcome.values) {
-        t.record(LoomFitTelemetryRecord(
-          profileClass: DriverProfile.foreignTouristSnowZone,
-          ambientThreshold: null,
-          alertSequence: const <DateTime>[],
-          responseLatency: null,
-          outcome: outcome,
-        ));
+        t.record(
+          LoomFitTelemetryRecord(
+            profileClass: DriverProfile.foreignTouristSnowZone,
+            ambientThreshold: null,
+            alertSequence: const <DateTime>[],
+            responseLatency: null,
+            outcome: outcome,
+          ),
+        );
       }
 
       await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -144,10 +154,7 @@ void main() {
     test('dispose closes the stream', () async {
       final t = LoomFitTelemetry();
       final doneCompleter = Completer<void>();
-      final sub = t.records.listen(
-        (_) {},
-        onDone: doneCompleter.complete,
-      );
+      final sub = t.records.listen((_) {}, onDone: doneCompleter.complete);
 
       await t.dispose();
       await doneCompleter.future.timeout(const Duration(seconds: 1));
@@ -159,13 +166,15 @@ void main() {
       await t.dispose();
       // No throw — the package boundary swallows post-dispose calls so
       // a late integrator emit cannot crash the consuming app.
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.agriculturalForestry,
-        ambientThreshold: null,
-        alertSequence: const <DateTime>[],
-        responseLatency: null,
-        outcome: LoomFitOutcome.fired,
-      ));
+      t.record(
+        LoomFitTelemetryRecord(
+          profileClass: DriverProfile.agriculturalForestry,
+          ambientThreshold: null,
+          alertSequence: const <DateTime>[],
+          responseLatency: null,
+          outcome: LoomFitOutcome.fired,
+        ),
+      );
     });
 
     test('dispose is idempotent', () async {
@@ -175,28 +184,32 @@ void main() {
       await t.dispose();
     });
 
-    test('record with null ambientThreshold + null responseLatency works',
-        () async {
-      final t = LoomFitTelemetry();
-      final completer = Completer<LoomFitTelemetryRecord>();
-      final sub = t.records.listen(completer.complete);
+    test(
+      'record with null ambientThreshold + null responseLatency works',
+      () async {
+        final t = LoomFitTelemetry();
+        final completer = Completer<LoomFitTelemetryRecord>();
+        final sub = t.records.listen(completer.complete);
 
-      t.record(LoomFitTelemetryRecord(
-        profileClass: DriverProfile.snowZoneExperienced,
-        ambientThreshold: null,
-        alertSequence: const <DateTime>[],
-        responseLatency: null,
-        outcome: LoomFitOutcome.coldStart,
-      ));
+        t.record(
+          LoomFitTelemetryRecord(
+            profileClass: DriverProfile.snowZoneExperienced,
+            ambientThreshold: null,
+            alertSequence: const <DateTime>[],
+            responseLatency: null,
+            outcome: LoomFitOutcome.coldStart,
+          ),
+        );
 
-      final got = await completer.future.timeout(const Duration(seconds: 1));
-      expect(got.ambientThreshold, isNull);
-      expect(got.responseLatency, isNull);
-      expect(got.alertSequence, isEmpty);
-      expect(got.outcome, LoomFitOutcome.coldStart);
+        final got = await completer.future.timeout(const Duration(seconds: 1));
+        expect(got.ambientThreshold, isNull);
+        expect(got.responseLatency, isNull);
+        expect(got.alertSequence, isEmpty);
+        expect(got.outcome, LoomFitOutcome.coldStart);
 
-      await sub.cancel();
-      await t.dispose();
-    });
+        await sub.cancel();
+        await t.dispose();
+      },
+    );
   });
 }

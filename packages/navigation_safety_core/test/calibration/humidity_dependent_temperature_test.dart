@@ -24,13 +24,16 @@ void main() {
       expect(dry, lessThan(humid));
     });
 
-    test('typical winter morning (-5C, 80% RH) yields effective below ambient', () {
-      final t = computeEffectiveTemperatureCelsius(
-        ambientCelsius: -5.0,
-        humidityRH: 0.8,
-      );
-      expect(t, lessThan(-5.0));
-    });
+    test(
+      'typical winter morning (-5C, 80% RH) yields effective below ambient',
+      () {
+        final t = computeEffectiveTemperatureCelsius(
+          ambientCelsius: -5.0,
+          humidityRH: 0.8,
+        );
+        expect(t, lessThan(-5.0));
+      },
+    );
 
     test('black-ice scenario (2C, 95% RH) drops effective near 0C', () {
       final t = computeEffectiveTemperatureCelsius(

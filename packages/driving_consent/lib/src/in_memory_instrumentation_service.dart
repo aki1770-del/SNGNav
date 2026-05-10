@@ -34,8 +34,9 @@ class InMemoryInstrumentationService implements InstrumentationService {
   /// (indefinite). Callers compare against this constant to detect the
   /// indefinite case. Persistent implementations may surface a richer
   /// API; the in-memory one keeps the surface narrow.
-  static const Duration indefiniteRetention =
-      Duration(microseconds: 9223372036854775807);
+  static const Duration indefiniteRetention = Duration(
+    microseconds: 9223372036854775807,
+  );
 
   String? _driverPseudonym;
 

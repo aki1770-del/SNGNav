@@ -5,14 +5,7 @@ import 'package:equatable/equatable.dart';
 
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 
-
-
-enum NavigationStatus {
-  idle,
-  navigating,
-  deviated,
-  arrived,
-}
+enum NavigationStatus { idle, navigating, deviated, arrived }
 
 class NavigationState extends Equatable {
   final NavigationStatus status;
@@ -50,15 +43,15 @@ class NavigationState extends Equatable {
   });
 
   const NavigationState.idle()
-      : status = NavigationStatus.idle,
-        route = null,
-        currentManeuverIndex = 0,
-        destinationLabel = null,
-        alertMessage = null,
-        alertSeverity = null,
-        alertDismissible = true,
-        alertScenario = null,
-        alertCondition = null;
+    : status = NavigationStatus.idle,
+      route = null,
+      currentManeuverIndex = 0,
+      destinationLabel = null,
+      alertMessage = null,
+      alertSeverity = null,
+      alertDismissible = true,
+      alertScenario = null,
+      alertCondition = null;
 
   bool get isNavigating => status == NavigationStatus.navigating;
 
@@ -68,7 +61,10 @@ class NavigationState extends Equatable {
 
   NavigationManeuver? get currentManeuver {
     if (route == null) return null;
-    if (currentManeuverIndex < 0 || currentManeuverIndex >= route!.maneuvers.length) return null;
+    if (currentManeuverIndex < 0 ||
+        currentManeuverIndex >= route!.maneuvers.length) {
+      return null;
+    }
     return route!.maneuvers[currentManeuverIndex];
   }
 
@@ -101,33 +97,34 @@ class NavigationState extends Equatable {
     return NavigationState(
       status: status ?? this.status,
       route: route ?? this.route,
-      currentManeuverIndex:
-          currentManeuverIndex ?? this.currentManeuverIndex,
+      currentManeuverIndex: currentManeuverIndex ?? this.currentManeuverIndex,
       destinationLabel: clearDestinationLabel
           ? null
           : (destinationLabel ?? this.destinationLabel),
       alertMessage: clearAlert ? null : (alertMessage ?? this.alertMessage),
       alertSeverity: clearAlert ? null : (alertSeverity ?? this.alertSeverity),
-      alertDismissible:
-          clearAlert ? true : (alertDismissible ?? this.alertDismissible),
+      alertDismissible: clearAlert
+          ? true
+          : (alertDismissible ?? this.alertDismissible),
       alertScenario: clearAlert ? null : (alertScenario ?? this.alertScenario),
-      alertCondition:
-          clearAlert ? null : (alertCondition ?? this.alertCondition),
+      alertCondition: clearAlert
+          ? null
+          : (alertCondition ?? this.alertCondition),
     );
   }
 
   @override
   List<Object?> get props => [
-        status,
-        route,
-        currentManeuverIndex,
-        destinationLabel,
-        alertMessage,
-        alertSeverity,
-        alertDismissible,
-        alertScenario,
-        alertCondition,
-      ];
+    status,
+    route,
+    currentManeuverIndex,
+    destinationLabel,
+    alertMessage,
+    alertSeverity,
+    alertDismissible,
+    alertScenario,
+    alertCondition,
+  ];
 
   @override
   String toString() =>

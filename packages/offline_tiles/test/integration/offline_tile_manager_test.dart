@@ -46,57 +46,63 @@ void main() {
       expect(result.bytes, isNotNull);
     });
 
-    test('resolves lower-zoom fallback when exact zoom tile is missing', () async {
-      final path = await _createFixtureMbtiles(
-        tempDir,
-        writeTile: (archive) {
-          archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
-        },
-      );
+    test(
+      'resolves lower-zoom fallback when exact zoom tile is missing',
+      () async {
+        final path = await _createFixtureMbtiles(
+          tempDir,
+          writeTile: (archive) {
+            archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
+          },
+        );
 
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: path,
-      );
-      addTearDown(manager.dispose);
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: path,
+        );
+        addTearDown(manager.dispose);
 
-      final result = manager.resolver.resolve(const TileCoordinates(1, 1, 1));
-      expect(result.source, RuntimeTileSource.lowerZoomFallback);
-      expect(result.resolvedCoordinates, const TileCoordinates(0, 0, 0));
-      expect(result.scaleFactor, 2);
-      expect(result.bytes, isNotNull);
-    });
+        final result = manager.resolver.resolve(const TileCoordinates(1, 1, 1));
+        expect(result.source, RuntimeTileSource.lowerZoomFallback);
+        expect(result.resolvedCoordinates, const TileCoordinates(0, 0, 0));
+        expect(result.scaleFactor, 2);
+        expect(result.bytes, isNotNull);
+      },
+    );
 
-    test('reports local coverage for points with exact and fallback tiles', () async {
-      final path = await _createFixtureMbtiles(
-        tempDir,
-        writeTile: (archive) {
-          archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
-        },
-      );
+    test(
+      'reports local coverage for points with exact and fallback tiles',
+      () async {
+        final path = await _createFixtureMbtiles(
+          tempDir,
+          writeTile: (archive) {
+            archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
+          },
+        );
 
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: path,
-      );
-      addTearDown(manager.dispose);
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: path,
+        );
+        addTearDown(manager.dispose);
 
-      expect(
-        manager.hasLocalCoverageForPoint(const LatLng(0, 0), zoom: 0),
-        isTrue,
-      );
-      expect(
-        manager.hasLocalCoverageForPoint(const LatLng(45, 45), zoom: 1),
-        isTrue,
-      );
-      expect(
-        manager.hasLocalCoverageForPoints(
-          const [LatLng(0, 0), LatLng(45, 45)],
-          zoom: 1,
-        ),
-        isTrue,
-      );
-    });
+        expect(
+          manager.hasLocalCoverageForPoint(const LatLng(0, 0), zoom: 0),
+          isTrue,
+        );
+        expect(
+          manager.hasLocalCoverageForPoint(const LatLng(45, 45), zoom: 1),
+          isTrue,
+        );
+        expect(
+          manager.hasLocalCoverageForPoints(const [
+            LatLng(0, 0),
+            LatLng(45, 45),
+          ], zoom: 1),
+          isTrue,
+        );
+      },
+    );
 
     test('route coverage returns false when any waypoint is missing', () async {
       final path = await _createFixtureMbtiles(
@@ -113,133 +119,144 @@ void main() {
       addTearDown(manager.dispose);
 
       expect(
-        manager.hasLocalCoverageForPoints(
-          const [LatLng(0, 0), LatLng(-70, -170)],
-          zoom: 1,
-        ),
+        manager.hasLocalCoverageForPoints(const [
+          LatLng(0, 0),
+          LatLng(-70, -170),
+        ], zoom: 1),
         isFalse,
       );
     });
 
-    test('uncoveredPoints returns the missing waypoints along a route shape', () async {
-      final path = await _createFixtureMbtiles(
-        tempDir,
-        writeTile: (archive) {
-          archive.putTile(z: 1, x: 1, y: 0, bytes: _pngTileBytes);
-        },
-      );
+    test(
+      'uncoveredPoints returns the missing waypoints along a route shape',
+      () async {
+        final path = await _createFixtureMbtiles(
+          tempDir,
+          writeTile: (archive) {
+            archive.putTile(z: 1, x: 1, y: 0, bytes: _pngTileBytes);
+          },
+        );
 
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: path,
-      );
-      addTearDown(manager.dispose);
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: path,
+        );
+        addTearDown(manager.dispose);
 
-      final uncovered = manager.uncoveredPoints(
-        const [LatLng(0, 0), LatLng(-70, -170)],
-        zoom: 1,
-      );
+        final uncovered = manager.uncoveredPoints(const [
+          LatLng(0, 0),
+          LatLng(-70, -170),
+        ], zoom: 1);
 
-      expect(uncovered, hasLength(1));
-      expect(uncovered.single, const LatLng(-70, -170));
-    });
+        expect(uncovered, hasLength(1));
+        expect(uncovered.single, const LatLng(-70, -170));
+      },
+    );
 
-    test('route coverage returns true when all waypoints are locally covered', () async {
-      final path = await _createFixtureMbtiles(
-        tempDir,
-        writeTile: (archive) {
-          archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
-        },
-      );
+    test(
+      'route coverage returns true when all waypoints are locally covered',
+      () async {
+        final path = await _createFixtureMbtiles(
+          tempDir,
+          writeTile: (archive) {
+            archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
+          },
+        );
 
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: path,
-      );
-      addTearDown(manager.dispose);
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: path,
+        );
+        addTearDown(manager.dispose);
 
-      expect(
-        manager.hasLocalCoverageForPoints(
-          const [LatLng(0, 0), LatLng(45, 45)],
-          zoom: 1,
-        ),
-        isTrue,
-      );
-    });
+        expect(
+          manager.hasLocalCoverageForPoints(const [
+            LatLng(0, 0),
+            LatLng(45, 45),
+          ], zoom: 1),
+          isTrue,
+        );
+      },
+    );
 
-    test('uncoveredPoints is empty when a route shape is fully covered', () async {
-      final path = await _createFixtureMbtiles(
-        tempDir,
-        writeTile: (archive) {
-          archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
-        },
-      );
+    test(
+      'uncoveredPoints is empty when a route shape is fully covered',
+      () async {
+        final path = await _createFixtureMbtiles(
+          tempDir,
+          writeTile: (archive) {
+            archive.putTile(z: 0, x: 0, y: 0, bytes: _pngTileBytes);
+          },
+        );
 
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: path,
-      );
-      addTearDown(manager.dispose);
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: path,
+        );
+        addTearDown(manager.dispose);
 
-      expect(
-        manager.uncoveredPoints(
-          const [LatLng(0, 0), LatLng(45, 45)],
-          zoom: 1,
-        ),
-        isEmpty,
-      );
-    });
+        expect(
+          manager.uncoveredPoints(const [
+            LatLng(0, 0),
+            LatLng(45, 45),
+          ], zoom: 1),
+          isEmpty,
+        );
+      },
+    );
 
-    test('online tile source reports no local coverage for route waypoints', () {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.online,
-      );
-      addTearDown(manager.dispose);
+    test(
+      'online tile source reports no local coverage for route waypoints',
+      () {
+        final manager = OfflineTileManager(tileSource: TileSourceType.online);
+        addTearDown(manager.dispose);
 
-      expect(
-        manager.hasLocalCoverageForPoints(
-          const [LatLng(35.1709, 136.9066), LatLng(34.9554, 137.1791)],
-          zoom: 12,
-        ),
-        isFalse,
-      );
-    });
+        expect(
+          manager.hasLocalCoverageForPoints(const [
+            LatLng(35.1709, 136.9066),
+            LatLng(34.9554, 137.1791),
+          ], zoom: 12),
+          isFalse,
+        );
+      },
+    );
 
     test('online tile source reports all route waypoints as uncovered', () {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.online,
-      );
+      final manager = OfflineTileManager(tileSource: TileSourceType.online);
       addTearDown(manager.dispose);
 
       expect(
-        manager.uncoveredPoints(
-          const [LatLng(35.1709, 136.9066), LatLng(34.9554, 137.1791)],
-          zoom: 12,
-        ),
+        manager.uncoveredPoints(const [
+          LatLng(35.1709, 136.9066),
+          LatLng(34.9554, 137.1791),
+        ], zoom: 12),
         hasLength(2),
       );
     });
 
-    test('cacheRoute with tileFetcher makes route points locally coverable', () async {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        mbtilesPath: '${tempDir.path}/route_cover.mbtiles',
-      );
-      addTearDown(manager.dispose);
+    test(
+      'cacheRoute with tileFetcher makes route points locally coverable',
+      () async {
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          mbtilesPath: '${tempDir.path}/route_cover.mbtiles',
+        );
+        addTearDown(manager.dispose);
 
-      const routeShape = <LatLng>[
-        LatLng(35.1709, 136.9066),
-        LatLng(34.9554, 137.1791),
-      ];
+        const routeShape = <LatLng>[
+          LatLng(35.1709, 136.9066),
+          LatLng(34.9554, 137.1791),
+        ];
 
-      final stored = await manager.cacheRoute(
-        routeShape: routeShape,
-        tileFetcher: (coordinates) async => _pngTileBytes,
-      );
+        final stored = await manager.cacheRoute(
+          routeShape: routeShape,
+          tileFetcher: (coordinates) async => _pngTileBytes,
+        );
 
-      expect(stored, greaterThan(0));
-      expect(manager.hasLocalCoverageForPoints(routeShape), isTrue);
-    });
+        expect(stored, greaterThan(0));
+        expect(manager.hasLocalCoverageForPoints(routeShape), isTrue);
+      },
+    );
 
     test('degrades to online when MBTiles archive is missing', () {
       final manager = OfflineTileManager(
@@ -316,9 +333,7 @@ void main() {
       final manager = OfflineTileManager(
         tileSource: TileSourceType.mbtiles,
         mbtilesPath: '${tempDir.path}/cleanup.mbtiles',
-        cacheConfig: const TileCacheConfig(
-          regionalExpiry: Duration.zero,
-        ),
+        cacheConfig: const TileCacheConfig(regionalExpiry: Duration.zero),
       );
       addTearDown(manager.dispose);
 
@@ -373,38 +388,39 @@ void main() {
     });
 
     // F3 regression: coverage must not be recorded when archive validation fails.
-    test('cacheRegion does not record phantom coverage on write failure', () async {
-      final manager = OfflineTileManager(
-        tileSource: TileSourceType.mbtiles,
-        // No mbtilesPath — write path will throw.
-      );
-      addTearDown(manager.dispose);
+    test(
+      'cacheRegion does not record phantom coverage on write failure',
+      () async {
+        final manager = OfflineTileManager(
+          tileSource: TileSourceType.mbtiles,
+          // No mbtilesPath — write path will throw.
+        );
+        addTearDown(manager.dispose);
 
-      expect(
-        () => manager.cacheRegion(
-          bounds: LatLngBounds.unsafe(
-            north: 35.17,
-            south: 35.16,
-            east: 136.92,
-            west: 136.91,
+        expect(
+          () => manager.cacheRegion(
+            bounds: LatLngBounds.unsafe(
+              north: 35.17,
+              south: 35.16,
+              east: 136.92,
+              west: 136.91,
+            ),
+            tier: CoverageTier.t2Metro,
+            tileFetcher: (coordinates) async => _pngTileBytes,
           ),
-          tier: CoverageTier.t2Metro,
-          tileFetcher: (coordinates) async => _pngTileBytes,
-        ),
-        throwsStateError,
-      );
+          throwsStateError,
+        );
 
-      expect(manager.cachedRegions, isEmpty);
-    });
+        expect(manager.cachedRegions, isEmpty);
+      },
+    );
 
     // F2 regression: expired tiles must not be served from RAM cache.
     test('expired region tiles are not served from RAM cache', () async {
       final manager = OfflineTileManager(
         tileSource: TileSourceType.mbtiles,
         mbtilesPath: '${tempDir.path}/expiry_ram.mbtiles',
-        cacheConfig: const TileCacheConfig(
-          regionalExpiry: Duration.zero,
-        ),
+        cacheConfig: const TileCacheConfig(regionalExpiry: Duration.zero),
       );
       addTearDown(manager.dispose);
 

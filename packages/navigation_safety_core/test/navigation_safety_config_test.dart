@@ -60,20 +60,15 @@ void main() {
 
     test('throws ArgumentError when info floor is below warning floor', () {
       expect(
-        () => NavigationSafetyConfig(
-          infoScoreFloor: 0.2,
-          warningScoreFloor: 0.3,
-        ),
+        () =>
+            NavigationSafetyConfig(infoScoreFloor: 0.2, warningScoreFloor: 0.3),
         throwsA(isA<ArgumentError>()),
       );
     });
 
     test('throws ArgumentError when safe floor is below info floor', () {
       expect(
-        () => NavigationSafetyConfig(
-          safeScoreFloor: 0.4,
-          infoScoreFloor: 0.5,
-        ),
+        () => NavigationSafetyConfig(safeScoreFloor: 0.4, infoScoreFloor: 0.5),
         throwsA(isA<ArgumentError>()),
       );
     });

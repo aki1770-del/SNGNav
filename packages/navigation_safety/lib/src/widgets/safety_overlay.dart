@@ -51,9 +51,9 @@ class SafetyOverlay extends StatelessWidget {
                     message: state.alertMessage!,
                     severity: state.alertSeverity!,
                     dismissible: state.alertDismissible,
-                    onDismiss: () => context
-                        .read<NavigationBloc>()
-                        .add(const SafetyAlertDismissed()),
+                    onDismiss: () => context.read<NavigationBloc>().add(
+                      const SafetyAlertDismissed(),
+                    ),
                   ),
                 ),
               ],
@@ -105,17 +105,14 @@ class _AlertBanner extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               message,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             if (dismissible) ...[
               const SizedBox(height: 12),
-              TextButton(
-                onPressed: onDismiss,
-                child: const Text('Dismiss'),
-              ),
+              TextButton(onPressed: onDismiss, child: const Text('Dismiss')),
             ],
           ],
         ),

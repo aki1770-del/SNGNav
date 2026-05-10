@@ -26,8 +26,7 @@ void main() {
       expect(config.floor, RenderFidelityFloor.low);
     });
 
-    test(
-        'forProfile: experienced cohorts get LOW floor; visual-cognitive-'
+    test('forProfile: experienced cohorts get LOW floor; visual-cognitive-'
         'margin cohorts get MEDIUM floor', () {
       for (final p in [
         DriverProfile.professional,
@@ -35,8 +34,11 @@ void main() {
         DriverProfile.agriculturalForestry,
       ]) {
         final config = ViewportRenderConfig.forProfile(p);
-        expect(config.floor, RenderFidelityFloor.low,
-            reason: 'cohort $p should get LOW floor');
+        expect(
+          config.floor,
+          RenderFidelityFloor.low,
+          reason: 'cohort $p should get LOW floor',
+        );
       }
       for (final p in [
         DriverProfile.noviceUrban,
@@ -44,8 +46,11 @@ void main() {
         DriverProfile.foreignTouristSnowZone,
       ]) {
         final config = ViewportRenderConfig.forProfile(p);
-        expect(config.floor, RenderFidelityFloor.medium,
-            reason: 'cohort $p should get MEDIUM floor');
+        expect(
+          config.floor,
+          RenderFidelityFloor.medium,
+          reason: 'cohort $p should get MEDIUM floor',
+        );
       }
     });
   });
@@ -78,17 +83,17 @@ void main() {
     });
 
     test(
-        'PerformanceBudget Exhausted → LOW fidelity (LOW floor cohort)',
-        () async {
-      final bloc = ViewportRenderBudgetBloc(); // LOW floor default
-      bloc.add(const ViewportPerformanceBudgetExhausted());
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(bloc.state.fidelity, RenderFidelity.low);
-      await bloc.close();
-    });
+      'PerformanceBudget Exhausted → LOW fidelity (LOW floor cohort)',
+      () async {
+        final bloc = ViewportRenderBudgetBloc(); // LOW floor default
+        bloc.add(const ViewportPerformanceBudgetExhausted());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(bloc.state.fidelity, RenderFidelity.low);
+        await bloc.close();
+      },
+    );
 
-    test(
-        'caution-add-direction-wins: PerformanceBudget Exhausted + '
+    test('caution-add-direction-wins: PerformanceBudget Exhausted + '
         'DataBudget Warning → LOW (Exhausted wins)', () async {
       final bloc = ViewportRenderBudgetBloc();
       bloc.add(const ViewportDataBudgetWarning());
@@ -98,8 +103,7 @@ void main() {
       await bloc.close();
     });
 
-    test(
-        'per-cohort floor: ageingRural cohort never drops to LOW even when '
+    test('per-cohort floor: ageingRural cohort never drops to LOW even when '
         'both budgets exhaust', () async {
       final bloc = ViewportRenderBudgetBloc(
         config: ViewportRenderConfig.forProfile(DriverProfile.ageingRural),
@@ -127,23 +131,25 @@ void main() {
       await bloc.close();
     });
 
-    test('attachPerformanceBudgetStream: dispatches on upstream events',
-        () async {
-      final bloc = ViewportRenderBudgetBloc();
-      final controller = StreamController<Object>.broadcast();
-      bloc.attachPerformanceBudgetStream(controller.stream);
+    test(
+      'attachPerformanceBudgetStream: dispatches on upstream events',
+      () async {
+        final bloc = ViewportRenderBudgetBloc();
+        final controller = StreamController<Object>.broadcast();
+        bloc.attachPerformanceBudgetStream(controller.stream);
 
-      controller.add(const BudgetWarning());
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(bloc.state.fidelity, RenderFidelity.medium);
+        controller.add(const BudgetWarning());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(bloc.state.fidelity, RenderFidelity.medium);
 
-      controller.add(const BudgetExhausted());
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(bloc.state.fidelity, RenderFidelity.low);
+        controller.add(const BudgetExhausted());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(bloc.state.fidelity, RenderFidelity.low);
 
-      await controller.close();
-      await bloc.close();
-    });
+        await controller.close();
+        await bloc.close();
+      },
+    );
 
     test('attachDataBudgetStream: dispatches on upstream events', () async {
       final bloc = ViewportRenderBudgetBloc();
@@ -159,8 +165,7 @@ void main() {
       await bloc.close();
     });
 
-    test(
-        'auto-relax-forbidden: bloc never raises fidelity in response to '
+    test('auto-relax-forbidden: bloc never raises fidelity in response to '
         'a stream event (only reset does)', () async {
       final bloc = ViewportRenderBudgetBloc();
       bloc.add(const ViewportDataBudgetExhausted());
@@ -172,8 +177,11 @@ void main() {
       // raise fidelity.
       bloc.add(const ViewportPerformanceBudgetWarning());
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(bloc.state.fidelity, RenderFidelity.low,
-          reason: 'auto-relax forbidden: Exhausted-state persists');
+      expect(
+        bloc.state.fidelity,
+        RenderFidelity.low,
+        reason: 'auto-relax forbidden: Exhausted-state persists',
+      );
       await bloc.close();
     });
   });

@@ -28,7 +28,9 @@ void main() {
         1.2,
       );
       expect(
-        AlertDensityThrottle.defaultCapFor(DriverProfile.foreignTouristSnowZone),
+        AlertDensityThrottle.defaultCapFor(
+          DriverProfile.foreignTouristSnowZone,
+        ),
         1.0,
       );
     });
@@ -42,8 +44,11 @@ void main() {
           reason: 'forProfile($profile) cap must match defaultCapFor',
         );
         expect(t.window, const Duration(seconds: 60));
-        expect(t.bypassForCritical, isTrue,
-            reason: 'critical-bypass invariant must default to true');
+        expect(
+          t.bypassForCritical,
+          isTrue,
+          reason: 'critical-bypass invariant must default to true',
+        );
       }
     });
   });
@@ -103,12 +108,16 @@ void main() {
       // CRITICAL still fires.
       expect(
         t.shouldFire(
-            t0.add(const Duration(seconds: 3)), AlertSeverity.critical),
+          t0.add(const Duration(seconds: 3)),
+          AlertSeverity.critical,
+        ),
         isTrue,
       );
       expect(
         t.shouldFire(
-            t0.add(const Duration(seconds: 4)), AlertSeverity.critical),
+          t0.add(const Duration(seconds: 4)),
+          AlertSeverity.critical,
+        ),
         isTrue,
       );
     });
@@ -121,13 +130,19 @@ void main() {
       final t0 = DateTime(2026, 4, 28, 9, 0, 0);
 
       expect(t.shouldFire(t0, AlertSeverity.info), isTrue); // 1 (cold-start)
-      expect(t.shouldFire(t0.add(const Duration(seconds: 1)),
-          AlertSeverity.warning), isTrue); // 2
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 1)), AlertSeverity.warning),
+        isTrue,
+      ); // 2
       // Cap of 2 reached; next non-critical drops.
-      expect(t.shouldFire(t0.add(const Duration(seconds: 2)),
-          AlertSeverity.info), isFalse);
-      expect(t.shouldFire(t0.add(const Duration(seconds: 3)),
-          AlertSeverity.warning), isFalse);
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 2)), AlertSeverity.info),
+        isFalse,
+      );
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 3)), AlertSeverity.warning),
+        isFalse,
+      );
     });
 
     test('bypassForCritical=false makes CRITICAL subject to throttle', () {
@@ -144,7 +159,9 @@ void main() {
       expect(t.shouldFire(t0, AlertSeverity.warning), isTrue);
       expect(
         t.shouldFire(
-            t0.add(const Duration(seconds: 1)), AlertSeverity.critical),
+          t0.add(const Duration(seconds: 1)),
+          AlertSeverity.critical,
+        ),
         isFalse,
       );
     });
@@ -162,17 +179,29 @@ void main() {
 
       // 2 alerts at t=0..1 fill the cap.
       expect(t.shouldFire(t0, AlertSeverity.warning), isTrue);
-      expect(t.shouldFire(t0.add(const Duration(seconds: 1)),
-          AlertSeverity.warning), isTrue);
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 1)), AlertSeverity.warning),
+        isTrue,
+      );
 
       // At t=58s, both are still in window — drop.
-      expect(t.shouldFire(t0.add(const Duration(seconds: 58)),
-          AlertSeverity.warning), isFalse);
+      expect(
+        t.shouldFire(
+          t0.add(const Duration(seconds: 58)),
+          AlertSeverity.warning,
+        ),
+        isFalse,
+      );
 
       // At t=61s, the t=0 alert ages out (61s > 60s window). Window
       // count = 1. New alert fires.
-      expect(t.shouldFire(t0.add(const Duration(seconds: 61)),
-          AlertSeverity.warning), isTrue);
+      expect(
+        t.shouldFire(
+          t0.add(const Duration(seconds: 61)),
+          AlertSeverity.warning,
+        ),
+        isTrue,
+      );
 
       // The t=1 alert is still inside (61 - 1 = 60s, on the boundary
       // and counted as expired by isAtSameMomentAs(cutoff) rule).
@@ -215,16 +244,24 @@ void main() {
       final t0 = DateTime(2026, 4, 28, 9, 0, 0);
 
       expect(t.shouldFire(t0, AlertSeverity.warning), isTrue);
-      expect(t.shouldFire(t0.add(const Duration(seconds: 1)),
-          AlertSeverity.warning), isTrue);
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 1)), AlertSeverity.warning),
+        isTrue,
+      );
 
       // Burst — three rapid drops; none should fire (none queued).
-      expect(t.shouldFire(t0.add(const Duration(seconds: 2)),
-          AlertSeverity.warning), isFalse);
-      expect(t.shouldFire(t0.add(const Duration(seconds: 3)),
-          AlertSeverity.warning), isFalse);
-      expect(t.shouldFire(t0.add(const Duration(seconds: 4)),
-          AlertSeverity.warning), isFalse);
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 2)), AlertSeverity.warning),
+        isFalse,
+      );
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 3)), AlertSeverity.warning),
+        isFalse,
+      );
+      expect(
+        t.shouldFire(t0.add(const Duration(seconds: 4)), AlertSeverity.warning),
+        isFalse,
+      );
 
       // Window count stays at 2 (drops did not record).
       expect(t.currentWindowCount(t0.add(const Duration(seconds: 5))), 2);
@@ -239,8 +276,11 @@ void main() {
       for (final profile in DriverProfile.values) {
         final t = AlertDensityThrottle.forProfile(profile);
         final t0 = DateTime(2026, 4, 28, 9, 0, 0);
-        expect(t.shouldFire(t0, AlertSeverity.info), isTrue,
-            reason: 'cold-start fire expected for profile $profile');
+        expect(
+          t.shouldFire(t0, AlertSeverity.info),
+          isTrue,
+          reason: 'cold-start fire expected for profile $profile',
+        );
       }
     });
   });
@@ -266,7 +306,9 @@ void main() {
       // First alert under the new profile fires (cold-start on new instance).
       expect(
         tB.shouldFire(
-            t0.add(const Duration(seconds: 5)), AlertSeverity.warning),
+          t0.add(const Duration(seconds: 5)),
+          AlertSeverity.warning,
+        ),
         isTrue,
       );
     });
@@ -287,8 +329,11 @@ void main() {
     test('explicit override applies regardless of profile', () {
       final c = NavigationSafetyConfig(alertsPerMinuteCapOverride: 0.5);
       for (final profile in DriverProfile.values) {
-        expect(c.effectiveAlertsPerMinuteCap(profile), 0.5,
-            reason: 'override should override $profile default');
+        expect(
+          c.effectiveAlertsPerMinuteCap(profile),
+          0.5,
+          reason: 'override should override $profile default',
+        );
       }
     });
 
@@ -297,8 +342,11 @@ void main() {
       // override null — integrating apps own that decision separately.
       for (final profile in DriverProfile.values) {
         final c = NavigationSafetyConfig.forProfile(profile);
-        expect(c.alertsPerMinuteCapOverride, isNull,
-            reason: 'forProfile should not auto-populate override for $profile');
+        expect(
+          c.alertsPerMinuteCapOverride,
+          isNull,
+          reason: 'forProfile should not auto-populate override for $profile',
+        );
         expect(
           c.effectiveAlertsPerMinuteCap(profile),
           AlertDensityThrottle.defaultCapFor(profile),

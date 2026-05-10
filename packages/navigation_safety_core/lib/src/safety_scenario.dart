@@ -104,19 +104,28 @@ abstract final class WellKnownScenarios {
     id: 'sngnav.signal.vss.road_surface.ice.v1',
     namespace: 'sngnav.signal.vss',
     version: 1,
-    parameters: {'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition', 'vss_value': 'ICE'},
+    parameters: {
+      'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition',
+      'vss_value': 'ICE',
+    },
   );
   static const vssRoadSurfaceSnow = SafetyScenario(
     id: 'sngnav.signal.vss.road_surface.snow.v1',
     namespace: 'sngnav.signal.vss',
     version: 1,
-    parameters: {'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition', 'vss_value': 'SNOW'},
+    parameters: {
+      'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition',
+      'vss_value': 'SNOW',
+    },
   );
   static const vssRoadSurfaceWetIce = SafetyScenario(
     id: 'sngnav.signal.vss.road_surface.wet_ice.v1',
     namespace: 'sngnav.signal.vss',
     version: 1,
-    parameters: {'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition', 'vss_value': 'WET_ICE'},
+    parameters: {
+      'vss_signal': 'Vehicle.Exterior.RoadSurfaceCondition',
+      'vss_value': 'WET_ICE',
+    },
   );
   static const kuksaSubscriptionLost = SafetyScenario(
     id: 'sngnav.signal.kuksa.subscription_lost.v1',

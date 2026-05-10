@@ -7,12 +7,15 @@ void main() {
   group('CoverageTier', () {
     test('contains the four ratified tiers', () {
       expect(CoverageTier.values, hasLength(4));
-      expect(CoverageTier.values, containsAll(<CoverageTier>[
-        CoverageTier.t1Corridor,
-        CoverageTier.t2Metro,
-        CoverageTier.t3Prefecture,
-        CoverageTier.t4National,
-      ]));
+      expect(
+        CoverageTier.values,
+        containsAll(<CoverageTier>[
+          CoverageTier.t1Corridor,
+          CoverageTier.t2Metro,
+          CoverageTier.t3Prefecture,
+          CoverageTier.t4National,
+        ]),
+      );
     });
 
     test('t1 is auto-cache with 30 day default expiry', () {
@@ -41,7 +44,10 @@ void main() {
 
     test('returns correct expiry durations', () {
       const config = TileCacheConfig();
-      expect(config.expiryFor(CoverageTier.t1Corridor), const Duration(days: 30));
+      expect(
+        config.expiryFor(CoverageTier.t1Corridor),
+        const Duration(days: 30),
+      );
       expect(config.expiryFor(CoverageTier.t2Metro), const Duration(days: 90));
     });
   });
@@ -49,10 +55,13 @@ void main() {
   group('TileSourceType', () {
     test('contains online and mbtiles', () {
       expect(TileSourceType.values, hasLength(2));
-      expect(TileSourceType.values, containsAll(<TileSourceType>[
-        TileSourceType.online,
-        TileSourceType.mbtiles,
-      ]));
+      expect(
+        TileSourceType.values,
+        containsAll(<TileSourceType>[
+          TileSourceType.online,
+          TileSourceType.mbtiles,
+        ]),
+      );
     });
   });
 }

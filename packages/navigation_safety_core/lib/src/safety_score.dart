@@ -23,14 +23,12 @@ class SafetyScore extends Equatable {
     required double gripScore,
     required double visibilityScore,
     required double fleetConfidenceScore,
-  })  : overall = _clamp01(overall),
-        gripScore = _clamp01(gripScore),
-        visibilityScore = _clamp01(visibilityScore),
-        fleetConfidenceScore = _clamp01(fleetConfidenceScore);
+  }) : overall = _clamp01(overall),
+       gripScore = _clamp01(gripScore),
+       visibilityScore = _clamp01(visibilityScore),
+       fleetConfidenceScore = _clamp01(fleetConfidenceScore);
 
-  AlertSeverity? toAlertSeverity(
-    NavigationSafetyConfig config,
-  ) {
+  AlertSeverity? toAlertSeverity(NavigationSafetyConfig config) {
     if (overall < config.warningScoreFloor) {
       return AlertSeverity.critical;
     }
@@ -45,9 +43,9 @@ class SafetyScore extends Equatable {
 
   @override
   List<Object?> get props => [
-        overall,
-        gripScore,
-        visibilityScore,
-        fleetConfidenceScore,
-      ];
+    overall,
+    gripScore,
+    visibilityScore,
+    fleetConfidenceScore,
+  ];
 }

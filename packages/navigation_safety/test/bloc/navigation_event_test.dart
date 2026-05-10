@@ -41,10 +41,9 @@ void main() {
 
     test('route deviation exposes optional reason', () {
       expect(const RouteDeviationDetected().props, [null]);
-      expect(
-        const RouteDeviationDetected(reason: 'off-route').props,
-        ['off-route'],
-      );
+      expect(const RouteDeviationDetected(reason: 'off-route').props, [
+        'off-route',
+      ]);
     });
 
     test('reroute and safety alert expose their payload props', () {

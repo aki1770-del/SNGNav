@@ -1,9 +1,9 @@
 name: navigation_safety
 description: >-
-  Show drivers what matters before it's too late. Safety alert overlay
-  that stays on top of your navigation UI. Navigation session state machine
-  with configurable severity thresholds. Display-only, never controlling.
-version: 0.9.0
+  Flutter safety-alert overlay + navigation session state machine
+  with configurable severity thresholds. Display-only, never
+  controlling.
+version: 0.9.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

@@ -28,8 +28,11 @@ void main() {
     test('getConsent returns unknown for every purpose initially', () async {
       for (final purpose in ConsentPurpose.values) {
         final record = await service.getConsent(purpose);
-        expect(record.status, ConsentStatus.unknown,
-            reason: '${purpose.name} should be unknown initially');
+        expect(
+          record.status,
+          ConsentStatus.unknown,
+          reason: '${purpose.name} should be unknown initially',
+        );
       }
     });
 
@@ -93,8 +96,14 @@ void main() {
       );
       final after = DateTime.now();
 
-      expect(record.updatedAt.isAfter(before.subtract(const Duration(seconds: 1))), true);
-      expect(record.updatedAt.isBefore(after.add(const Duration(seconds: 1))), true);
+      expect(
+        record.updatedAt.isAfter(before.subtract(const Duration(seconds: 1))),
+        true,
+      );
+      expect(
+        record.updatedAt.isBefore(after.add(const Duration(seconds: 1))),
+        true,
+      );
     });
 
     test('grant with each jurisdiction type', () async {

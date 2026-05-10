@@ -95,7 +95,8 @@ double computeSpeedAdjustedVisibilityMeters({
   }
 
   final reactionDistance = driverReactionTimeSeconds * speedMps;
-  final brakingDistance = (speedMps * speedMps) / (2.0 * brakingDecelerationMps2);
+  final brakingDistance =
+      (speedMps * speedMps) / (2.0 * brakingDecelerationMps2);
   final required = reactionDistance + brakingDistance;
 
   return math.max(profileBaseMeters, required);

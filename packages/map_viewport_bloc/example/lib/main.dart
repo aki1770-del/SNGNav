@@ -18,10 +18,9 @@ class MapViewportExampleApp extends StatelessWidget {
     return MaterialApp(
       home: BlocProvider(
         create: (_) => MapBloc()
-          ..add(const MapInitialized(
-            center: LatLng(35.1709, 136.8815),
-            zoom: 15,
-          )),
+          ..add(
+            const MapInitialized(center: LatLng(35.1709, 136.8815), zoom: 15),
+          ),
         child: const _MapViewportExampleScreen(),
       ),
     );
@@ -65,24 +64,23 @@ class _MapViewportExampleScreen extends StatelessWidget {
                   runSpacing: 12,
                   children: [
                     FilledButton(
-                      onPressed: () => context
-                          .read<MapBloc>()
-                          .add(const CameraModeChanged(CameraMode.follow)),
+                      onPressed: () => context.read<MapBloc>().add(
+                        const CameraModeChanged(CameraMode.follow),
+                      ),
                       child: const Text('Follow'),
                     ),
                     FilledButton(
-                      onPressed: () => context
-                          .read<MapBloc>()
-                          .add(const UserPanDetected()),
+                      onPressed: () =>
+                          context.read<MapBloc>().add(const UserPanDetected()),
                       child: const Text('Free Look'),
                     ),
                     FilledButton(
                       onPressed: () => context.read<MapBloc>().add(
-                            const FitToBounds(
-                              southWest: _routeSw,
-                              northEast: _routeNe,
-                            ),
-                          ),
+                        const FitToBounds(
+                          southWest: _routeSw,
+                          northEast: _routeNe,
+                        ),
+                      ),
                       child: const Text('Overview'),
                     ),
                   ],
@@ -99,8 +97,8 @@ class _MapViewportExampleScreen extends StatelessWidget {
                         label: Text('${layer.name} (Z${layer.zIndex})'),
                         selected: state.isLayerVisible(layer),
                         onSelected: (selected) => context.read<MapBloc>().add(
-                              LayerToggled(layer: layer, visible: selected),
-                            ),
+                          LayerToggled(layer: layer, visible: selected),
+                        ),
                       ),
                   ],
                 ),

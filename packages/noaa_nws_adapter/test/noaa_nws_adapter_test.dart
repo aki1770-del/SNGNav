@@ -123,14 +123,8 @@ void main() {
 
   group('NoaaNwsClient construction', () {
     test('throws ArgumentError when userAgent is empty', () {
-      expect(
-        () => NoaaNwsClient(userAgent: ''),
-        throwsArgumentError,
-      );
-      expect(
-        () => NoaaNwsClient(userAgent: '   '),
-        throwsArgumentError,
-      );
+      expect(() => NoaaNwsClient(userAgent: ''), throwsArgumentError);
+      expect(() => NoaaNwsClient(userAgent: '   '), throwsArgumentError);
     });
 
     test('accepts a well-formed userAgent', () {
@@ -316,10 +310,7 @@ void main() {
       expect(capturedRequest.method, 'GET');
       expect(capturedRequest.url.host, 'api.weather.gov');
       expect(capturedRequest.url.path, '/alerts/active');
-      expect(
-        capturedRequest.url.query,
-        contains('point=47.9253,-97.0329'),
-      );
+      expect(capturedRequest.url.query, contains('point=47.9253,-97.0329'));
       expect(
         capturedRequest.headers['User-Agent'],
         '(sngnav.example, contact@sngnav.example)',
@@ -329,27 +320,29 @@ void main() {
     });
 
     test('returns winter alerts only from a mixed FeatureCollection', () async {
-      final mock = MockClient((_) async => http.Response(
-            jsonEncode(<String, dynamic>{
-              'type': 'FeatureCollection',
-              'features': <Map<String, dynamic>>[
-                <String, dynamic>{
-                  'properties': <String, dynamic>{
-                    'event': 'Red Flag Warning',
-                    'status': 'Actual',
-                  },
+      final mock = MockClient(
+        (_) async => http.Response(
+          jsonEncode(<String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'properties': <String, dynamic>{
+                  'event': 'Red Flag Warning',
+                  'status': 'Actual',
                 },
-                <String, dynamic>{
-                  'properties': <String, dynamic>{
-                    'event': 'Blizzard Warning',
-                    'severity': 'Extreme',
-                    'status': 'Actual',
-                  },
+              },
+              <String, dynamic>{
+                'properties': <String, dynamic>{
+                  'event': 'Blizzard Warning',
+                  'severity': 'Extreme',
+                  'status': 'Actual',
                 },
-              ],
-            }),
-            200,
-          ));
+              },
+            ],
+          }),
+          200,
+        ),
+      );
       final c = NoaaNwsClient(
         userAgent: '(sngnav.example, contact@sngnav.example)',
         client: mock,
@@ -371,11 +364,13 @@ void main() {
       );
       await expectLater(
         c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
-        throwsA(isA<NoaaNwsHttpException>().having(
-          (e) => e.statusCode,
-          'statusCode',
-          429,
-        )),
+        throwsA(
+          isA<NoaaNwsHttpException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            429,
+          ),
+        ),
       );
       c.close();
     });
@@ -509,56 +504,64 @@ void _retryGroup() {
       c.close();
     });
 
-    test('retry-exhaust: 4 consecutive 503 surfaces last 503 as 503 exception',
-        () async {
-      int callCount = 0;
-      final mock = MockClient((req) async {
-        callCount += 1;
-        return http.Response('upstream still busy', 503);
-      });
-      final c = NoaaNwsClient(
-        userAgent: '(sngnav.example, contact@sngnav.example)',
-        client: mock,
-        retryPolicy: const NoaaNwsRetryPolicy(),
-        sleep: noWait,
-      );
-      await expectLater(
-        c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
-        throwsA(isA<NoaaNwsHttpException>().having(
-          (e) => e.statusCode,
-          'statusCode',
-          503,
-        )),
-      );
-      // 1 initial + 3 retries = 4 total calls.
-      expect(callCount, 4);
-      c.close();
-    });
+    test(
+      'retry-exhaust: 4 consecutive 503 surfaces last 503 as 503 exception',
+      () async {
+        int callCount = 0;
+        final mock = MockClient((req) async {
+          callCount += 1;
+          return http.Response('upstream still busy', 503);
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+          retryPolicy: const NoaaNwsRetryPolicy(),
+          sleep: noWait,
+        );
+        await expectLater(
+          c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
+          throwsA(
+            isA<NoaaNwsHttpException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              503,
+            ),
+          ),
+        );
+        // 1 initial + 3 retries = 4 total calls.
+        expect(callCount, 4);
+        c.close();
+      },
+    );
 
-    test('4xx-no-retry: a single 404 throws immediately without retries',
-        () async {
-      int callCount = 0;
-      final mock = MockClient((req) async {
-        callCount += 1;
-        return http.Response('not found', 404);
-      });
-      final c = NoaaNwsClient(
-        userAgent: '(sngnav.example, contact@sngnav.example)',
-        client: mock,
-        retryPolicy: const NoaaNwsRetryPolicy(),
-        sleep: noWait,
-      );
-      await expectLater(
-        c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
-        throwsA(isA<NoaaNwsHttpException>().having(
-          (e) => e.statusCode,
-          'statusCode',
-          404,
-        )),
-      );
-      expect(callCount, 1, reason: '4xx must not retry');
-      c.close();
-    });
+    test(
+      '4xx-no-retry: a single 404 throws immediately without retries',
+      () async {
+        int callCount = 0;
+        final mock = MockClient((req) async {
+          callCount += 1;
+          return http.Response('not found', 404);
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+          retryPolicy: const NoaaNwsRetryPolicy(),
+          sleep: noWait,
+        );
+        await expectLater(
+          c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
+          throwsA(
+            isA<NoaaNwsHttpException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              404,
+            ),
+          ),
+        );
+        expect(callCount, 1, reason: '4xx must not retry');
+        c.close();
+      },
+    );
 
     test('retry-on-429: 429 then 200 yields a result with 2 calls', () async {
       int callCount = 0;
@@ -590,53 +593,57 @@ void _retryGroup() {
       c.close();
     });
 
-    test('retry exponential delays: observed sleep durations are 1s, 2s, 4s',
-        () async {
-      final mock = MockClient((req) async {
-        return http.Response('still busy', 503);
-      });
-      final observedSleeps = <Duration>[];
-      Future<void> recordingSleep(Duration d) async {
-        observedSleeps.add(d);
-      }
+    test(
+      'retry exponential delays: observed sleep durations are 1s, 2s, 4s',
+      () async {
+        final mock = MockClient((req) async {
+          return http.Response('still busy', 503);
+        });
+        final observedSleeps = <Duration>[];
+        Future<void> recordingSleep(Duration d) async {
+          observedSleeps.add(d);
+        }
 
-      final c = NoaaNwsClient(
-        userAgent: '(sngnav.example, contact@sngnav.example)',
-        client: mock,
-        retryPolicy: const NoaaNwsRetryPolicy(),
-        sleep: recordingSleep,
-      );
-      await expectLater(
-        c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
-        throwsA(isA<NoaaNwsHttpException>()),
-      );
-      expect(observedSleeps, <Duration>[
-        const Duration(seconds: 1),
-        const Duration(seconds: 2),
-        const Duration(seconds: 4),
-      ]);
-      c.close();
-    });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+          retryPolicy: const NoaaNwsRetryPolicy(),
+          sleep: recordingSleep,
+        );
+        await expectLater(
+          c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
+          throwsA(isA<NoaaNwsHttpException>()),
+        );
+        expect(observedSleeps, <Duration>[
+          const Duration(seconds: 1),
+          const Duration(seconds: 2),
+          const Duration(seconds: 4),
+        ]);
+        c.close();
+      },
+    );
 
-    test('default retryPolicy is none: 503 throws after 1 call (back-compat)',
-        () async {
-      int callCount = 0;
-      final mock = MockClient((req) async {
-        callCount += 1;
-        return http.Response('upstream busy', 503);
-      });
-      final c = NoaaNwsClient(
-        userAgent: '(sngnav.example, contact@sngnav.example)',
-        client: mock,
-        sleep: noWait,
-      );
-      await expectLater(
-        c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
-        throwsA(isA<NoaaNwsHttpException>()),
-      );
-      expect(callCount, 1, reason: '0.0.1 back-compat: no retry by default');
-      c.close();
-    });
+    test(
+      'default retryPolicy is none: 503 throws after 1 call (back-compat)',
+      () async {
+        int callCount = 0;
+        final mock = MockClient((req) async {
+          callCount += 1;
+          return http.Response('upstream busy', 503);
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+          sleep: noWait,
+        );
+        await expectLater(
+          c.fetchActiveWinterAlerts(latitude: 47.9, longitude: -97.0),
+          throwsA(isA<NoaaNwsHttpException>()),
+        );
+        expect(callCount, 1, reason: '0.0.1 back-compat: no retry by default');
+        c.close();
+      },
+    );
   });
 
   group('WinterAlert typed area (0.0.3)', () {
@@ -708,28 +715,25 @@ void _retryGroup() {
       expect(area.polygon.first.longitude, equals(1.0));
     });
 
-    test(
-      'parseArea skips malformed vertices in a polygon ring',
-      () {
-        final geometry = <String, dynamic>{
-          'type': 'Polygon',
-          'coordinates': <dynamic>[
-            <dynamic>[
-              <dynamic>[1.0, 2.0],
-              <dynamic>['not', 'numeric'],
-              <dynamic>[3.0],
-              <dynamic>[5.0, 6.0],
-              <dynamic>[1.0, 2.0],
-            ],
+    test('parseArea skips malformed vertices in a polygon ring', () {
+      final geometry = <String, dynamic>{
+        'type': 'Polygon',
+        'coordinates': <dynamic>[
+          <dynamic>[
+            <dynamic>[1.0, 2.0],
+            <dynamic>['not', 'numeric'],
+            <dynamic>[3.0],
+            <dynamic>[5.0, 6.0],
+            <dynamic>[1.0, 2.0],
           ],
-        };
-        final area = WinterAlert.parseArea(geometry, null);
-        expect(area, isNotNull);
-        // The two clearly-valid vertices (1.0/2.0 and 5.0/6.0) plus the
-        // closing 1.0/2.0 must come through; malformed entries skip.
-        expect(area!.polygon.length, greaterThanOrEqualTo(3));
-      },
-    );
+        ],
+      };
+      final area = WinterAlert.parseArea(geometry, null);
+      expect(area, isNotNull);
+      // The two clearly-valid vertices (1.0/2.0 and 5.0/6.0) plus the
+      // closing 1.0/2.0 must come through; malformed entries skip.
+      expect(area!.polygon.length, greaterThanOrEqualTo(3));
+    });
 
     test('parseArea rejects negative radius circle', () {
       final parameters = <String, dynamic>{

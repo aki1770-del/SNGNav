@@ -53,9 +53,15 @@ void main() {
       expect(indices.toSet().length, equals(indices.length));
     });
 
-    test('index comparison matches semantic intent (info < warning < critical)', () {
-      expect(AlertSeverity.info.index, lessThan(AlertSeverity.warning.index));
-      expect(AlertSeverity.warning.index, lessThan(AlertSeverity.critical.index));
-    });
+    test(
+      'index comparison matches semantic intent (info < warning < critical)',
+      () {
+        expect(AlertSeverity.info.index, lessThan(AlertSeverity.warning.index));
+        expect(
+          AlertSeverity.warning.index,
+          lessThan(AlertSeverity.critical.index),
+        );
+      },
+    );
   });
 }

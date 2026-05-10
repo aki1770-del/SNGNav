@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.2 — 2026-05-10 — Pana score recovery (Theme α P4)
+
+- Trim pubspec `description` to within the pana 60–180 character target.
+- Apply `dart format` to clear any formatter findings.
+- No SDK source changes; metadata + format pass only.
+
+
 ## 0.10.1 — 2026-05-10 — Vehicle-CAN composition example (j1939)
 
 Adds an illustrative `example/can_bus_integration.dart` showing how

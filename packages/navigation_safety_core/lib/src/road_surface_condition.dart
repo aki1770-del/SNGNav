@@ -477,8 +477,7 @@ class RoadSurfaceConditionGlossary {
               jaName: 'アイスバーン（濡れた凍結）',
               enName: 'Wet ice (ice with water film)',
               jaSpeakString: 'ぬれた凍結路面、最も滑ります',
-              enSpeakString:
-                  'Wet ice, very slippery, drive very slowly',
+              enSpeakString: 'Wet ice, very slippery, drive very slowly',
             );
           case RoadSurfaceCondition.slush:
             // Simplified vocabulary; explicit slip-class warning.

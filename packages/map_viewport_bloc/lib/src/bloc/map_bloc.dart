@@ -16,14 +16,16 @@ class MapBloc extends Bloc<MapEvent, MapState> {
     this.initialCenter = kDefaultMapCenter,
     this.initialZoom = kDefaultFollowZoom,
     Set<MapLayerType> initialVisibleLayers = kDefaultVisibleLayers,
-  })  : initialVisibleLayers = Set<MapLayerType>.unmodifiable(initialVisibleLayers),
-        super(
-          MapState.loading(
-            center: initialCenter,
-            zoom: initialZoom,
-            visibleLayers: initialVisibleLayers,
-          ),
-        ) {
+  }) : initialVisibleLayers = Set<MapLayerType>.unmodifiable(
+         initialVisibleLayers,
+       ),
+       super(
+         MapState.loading(
+           center: initialCenter,
+           zoom: initialZoom,
+           visibleLayers: initialVisibleLayers,
+         ),
+       ) {
     on<MapInitialized>(_onInitialized);
     on<CameraModeChanged>(_onCameraModeChanged);
     on<CenterChanged>(_onCenterChanged);
@@ -51,10 +53,7 @@ class MapBloc extends Bloc<MapEvent, MapState> {
     );
   }
 
-  void _onCameraModeChanged(
-    CameraModeChanged event,
-    Emitter<MapState> emit,
-  ) {
+  void _onCameraModeChanged(CameraModeChanged event, Emitter<MapState> emit) {
     if (event.mode == CameraMode.freeLook) {
       _scheduleFreeLookTimeout();
     } else {
@@ -117,12 +116,7 @@ class MapBloc extends Bloc<MapEvent, MapState> {
       return;
     }
 
-    emit(
-      state.copyWith(
-        cameraMode: CameraMode.freeLook,
-        clearFitBounds: true,
-      ),
-    );
+    emit(state.copyWith(cameraMode: CameraMode.freeLook, clearFitBounds: true));
   }
 
   void _onFreeLookTimeoutElapsed(
@@ -134,12 +128,7 @@ class MapBloc extends Bloc<MapEvent, MapState> {
     }
 
     _cancelFreeLookTimeout();
-    emit(
-      state.copyWith(
-        cameraMode: CameraMode.follow,
-        clearFitBounds: true,
-      ),
-    );
+    emit(state.copyWith(cameraMode: CameraMode.follow, clearFitBounds: true));
   }
 
   void _scheduleFreeLookTimeout() {

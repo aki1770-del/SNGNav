@@ -65,8 +65,7 @@ void main() {
       'returned Duration scales linearly with engine-base (sanity check)',
       () {
         // multiplier 1.5 = 1.5x engine-base
-        final ageingRural =
-            modalAlertDurationFor(DriverProfile.ageingRural);
+        final ageingRural = modalAlertDurationFor(DriverProfile.ageingRural);
         expect(
           ageingRural.inMicroseconds,
           (kModalAlertDurationBase.inMicroseconds * 1.5).round(),
@@ -74,18 +73,15 @@ void main() {
       },
     );
 
-    test(
-      'severity-not-profile invariant preserved at primitive boundary',
-      () {
-        // Sanity: this primitive consumes ONLY DriverProfile, not
-        // AlertSeverity. If a future change adds severity to the API,
-        // it would couple presentation-class state to severity-class
-        // gating, which the per-package SAFETY_BOUNDARY.md §6 invariant
-        // forbids. This test exists as a documentation-class lock.
-        // The function signature is single-arg DriverProfile.
-        final d = modalAlertDurationFor(DriverProfile.ageingRural);
-        expect(d, isA<Duration>());
-      },
-    );
+    test('severity-not-profile invariant preserved at primitive boundary', () {
+      // Sanity: this primitive consumes ONLY DriverProfile, not
+      // AlertSeverity. If a future change adds severity to the API,
+      // it would couple presentation-class state to severity-class
+      // gating, which the per-package SAFETY_BOUNDARY.md §6 invariant
+      // forbids. This test exists as a documentation-class lock.
+      // The function signature is single-arg DriverProfile.
+      final d = modalAlertDurationFor(DriverProfile.ageingRural);
+      expect(d, isA<Duration>());
+    });
   });
 }

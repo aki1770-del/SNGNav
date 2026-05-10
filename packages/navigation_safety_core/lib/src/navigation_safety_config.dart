@@ -230,9 +230,10 @@ class NavigationSafetyConfig extends Equatable {
       // alert fires on ambient-temperature inputs that would today
       // pass the baseline check.
       if (effective <= base.warningTemperatureCelsius.toDouble()) {
-        final lift = (base.warningTemperatureCelsius -
-                effective.floor())
-            .clamp(0, 10);
+        final lift = (base.warningTemperatureCelsius - effective.floor()).clamp(
+          0,
+          10,
+        );
         warningTemperature = base.warningTemperatureCelsius + lift;
       }
     }
@@ -370,9 +371,9 @@ class NavigationSafetyConfig extends Equatable {
       // When we have a live speed sample, translate the reaction-time
       // penalty into additional visibility headroom on the same kinematic
       // basis used by the 0.5.0 speed-dependent visibility calibration.
-      final extraMeters = environmentalContext!.speedMps! * reactionPenaltySeconds;
-      final candidate =
-          base.warningVisibilityMeters + extraMeters.ceil();
+      final extraMeters =
+          environmentalContext!.speedMps! * reactionPenaltySeconds;
+      final candidate = base.warningVisibilityMeters + extraMeters.ceil();
       if (candidate > warningVisibility) {
         warningVisibility = candidate;
       }
@@ -538,13 +539,9 @@ class NavigationSafetyConfig extends Equatable {
           warningTempLiftCelsius: 1,
         );
       case DriverState.distracted:
-        return const _StateDelta(
-          reactionTimePenaltySeconds: 1.0,
-        );
+        return const _StateDelta(reactionTimePenaltySeconds: 1.0);
       case DriverState.impairedVisibility:
-        return const _StateDelta(
-          visibilityScale: 1.25,
-        );
+        return const _StateDelta(visibilityScale: 1.25);
     }
   }
 
@@ -591,17 +588,17 @@ class NavigationSafetyConfig extends Equatable {
 
   @override
   List<Object?> get props => [
-        safeScoreFloor,
-        infoScoreFloor,
-        warningScoreFloor,
-        infoTemperatureCelsius,
-        warningTemperatureCelsius,
-        criticalTemperatureCelsius,
-        infoVisibilityMeters,
-        warningVisibilityMeters,
-        criticalVisibilityMeters,
-        alertsPerMinuteCapOverride,
-      ];
+    safeScoreFloor,
+    infoScoreFloor,
+    warningScoreFloor,
+    infoTemperatureCelsius,
+    warningTemperatureCelsius,
+    criticalTemperatureCelsius,
+    infoVisibilityMeters,
+    warningVisibilityMeters,
+    criticalVisibilityMeters,
+    alertsPerMinuteCapOverride,
+  ];
 }
 
 /// Internal-only descriptor of the per-state delta applied by

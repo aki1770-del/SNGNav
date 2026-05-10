@@ -1,6 +1,3 @@
 library;
 
-enum TileSourceType {
-  online,
-  mbtiles,
-}
+enum TileSourceType { online, mbtiles }

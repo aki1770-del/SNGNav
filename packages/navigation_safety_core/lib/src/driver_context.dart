@@ -37,10 +37,7 @@ class DriverContext extends Equatable {
   final DriverState state;
 
   /// Construct a context value from explicit trait + state.
-  const DriverContext({
-    required this.profile,
-    required this.state,
-  });
+  const DriverContext({required this.profile, required this.state});
 
   /// Combine a [profile] with a [state] into a [DriverContext]. Equivalent
   /// to the default constructor; expressed as a named factory so call-sites
@@ -49,8 +46,7 @@ class DriverContext extends Equatable {
   factory DriverContext.combineWith({
     required DriverProfile profile,
     required DriverState state,
-  }) =>
-      DriverContext(profile: profile, state: state);
+  }) => DriverContext(profile: profile, state: state);
 
   /// Return a new [DriverContext] with the same [profile] and a different
   /// [state]. Useful when the live state changes mid-trip but the trait

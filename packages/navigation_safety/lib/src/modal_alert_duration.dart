@@ -61,13 +61,13 @@ const Duration kModalAlertDurationBase = Duration(seconds: 5);
 ///   never trained for.
 const Map<DriverProfile, double> kModalAlertDurationMultiplierByProfile =
     <DriverProfile, double>{
-  DriverProfile.snowZoneExperienced: 1.0,
-  DriverProfile.professional: 1.0,
-  DriverProfile.agriculturalForestry: 1.2,
-  DriverProfile.noviceUrban: 1.3,
-  DriverProfile.ageingRural: 1.5,
-  DriverProfile.foreignTouristSnowZone: 1.5,
-};
+      DriverProfile.snowZoneExperienced: 1.0,
+      DriverProfile.professional: 1.0,
+      DriverProfile.agriculturalForestry: 1.2,
+      DriverProfile.noviceUrban: 1.3,
+      DriverProfile.ageingRural: 1.5,
+      DriverProfile.foreignTouristSnowZone: 1.5,
+    };
 
 /// Modal-alert display duration for [profile].
 ///
@@ -103,7 +103,7 @@ Duration modalAlertDurationFor(DriverProfile profile) {
     // entry should not crash the consuming app.
     return kModalAlertDurationBase;
   }
-  final scaledMicros =
-      (kModalAlertDurationBase.inMicroseconds * multiplier).round();
+  final scaledMicros = (kModalAlertDurationBase.inMicroseconds * multiplier)
+      .round();
   return Duration(microseconds: scaledMicros);
 }

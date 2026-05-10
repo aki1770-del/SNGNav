@@ -70,10 +70,7 @@ void main() {
         'voice_guidance:speakingRate',
       );
       final view = registeredUxDifferentiators(DriverProfile.professional);
-      expect(
-        () => view.add('mutation-attempt'),
-        throwsUnsupportedError,
-      );
+      expect(() => view.add('mutation-attempt'), throwsUnsupportedError);
     });
   });
 
@@ -81,30 +78,35 @@ void main() {
     setUp(debugClearUxDifferentiatorRegistry);
 
     test(
-        'debug build: throws AssertionError when no differentiator is registered',
-        () {
-      expect(
-        () => assertUxDifferentiated(DriverProfile.foreignTouristSnowZone),
-        throwsA(isA<AssertionError>().having(
-          (e) => e.message.toString(),
-          'message',
-          allOf(
-            contains('foreignTouristSnowZone'),
-            contains('registerUxDifferentiator'),
+      'debug build: throws AssertionError when no differentiator is registered',
+      () {
+        expect(
+          () => assertUxDifferentiated(DriverProfile.foreignTouristSnowZone),
+          throwsA(
+            isA<AssertionError>().having(
+              (e) => e.message.toString(),
+              'message',
+              allOf(
+                contains('foreignTouristSnowZone'),
+                contains('registerUxDifferentiator'),
+              ),
+            ),
           ),
-        )),
-      );
-    });
+        );
+      },
+    );
 
-    test('debug build: returns normally when at least one tag is registered',
-        () {
-      registerUxDifferentiator(
-        DriverProfile.foreignTouristSnowZone,
-        'voice_guidance:speakingRate',
-      );
-      // No throw expected.
-      assertUxDifferentiated(DriverProfile.foreignTouristSnowZone);
-    });
+    test(
+      'debug build: returns normally when at least one tag is registered',
+      () {
+        registerUxDifferentiator(
+          DriverProfile.foreignTouristSnowZone,
+          'voice_guidance:speakingRate',
+        );
+        // No throw expected.
+        assertUxDifferentiated(DriverProfile.foreignTouristSnowZone);
+      },
+    );
 
     test('passes for one profile, fails for another in the same registry', () {
       registerUxDifferentiator(

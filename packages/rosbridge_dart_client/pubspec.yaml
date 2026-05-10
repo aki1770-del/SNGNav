@@ -1,0 +1,28 @@
+name: rosbridge_dart_client
+description: >-
+  Subscribe-only Dart client for rosbridge_suite — ROS 2 topic JSON
+  streams over WebSocket. Pure Dart, no transport-layer lock-in.
+version: 0.1.0
+
+# Default publish target = https://pub.dev (no `publish_to:` line).
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - ros2
+  - rosbridge
+  - websocket
+  - nav2
+  - automotive
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  web_socket_channel: ^3.0.0
+  equatable: ^2.0.7
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
+  stream_channel: ^2.1.4

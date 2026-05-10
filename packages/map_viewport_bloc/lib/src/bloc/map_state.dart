@@ -17,11 +17,7 @@ const Set<MapLayerType> kDefaultVisibleLayers = {
   MapLayerType.safety,
 };
 
-enum MapStatus {
-  loading,
-  ready,
-  error,
-}
+enum MapStatus { loading, ready, error }
 
 class MapState extends Equatable {
   const MapState({
@@ -88,15 +84,15 @@ class MapState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        center,
-        zoom,
-        cameraMode,
-        fitBoundsSw,
-        fitBoundsNe,
-        visibleLayers,
-        errorMessage,
-      ];
+    status,
+    center,
+    zoom,
+    cameraMode,
+    fitBoundsSw,
+    fitBoundsNe,
+    visibleLayers,
+    errorMessage,
+  ];
 
   @override
   String toString() {

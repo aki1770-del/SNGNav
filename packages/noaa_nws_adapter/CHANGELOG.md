@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.4 — 2026-05-10 — Pana score recovery (Theme α P4)
+
+- Add minimal `example/main.dart` for pana documentation scoring.
+- Apply `dart format` to clear any formatter findings.
+- No SDK source changes; metadata + format pass only.
+
+
 ## 0.0.3 — 2026-05-06 — Typed alert area (polygon + circle)
 
 Adds a typed geographic-area record so consumers can present a precise

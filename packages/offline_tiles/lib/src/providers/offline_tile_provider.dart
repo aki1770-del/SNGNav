@@ -14,7 +14,8 @@ class OfflineTileProvider extends TileProvider {
     required this.resolver,
     NetworkTileProvider? onlineProvider,
     super.headers,
-  }) : _onlineProvider = onlineProvider ?? NetworkTileProvider(headers: headers);
+  }) : _onlineProvider =
+           onlineProvider ?? NetworkTileProvider(headers: headers);
 
   final RuntimeTileResolver resolver;
   final NetworkTileProvider _onlineProvider;
@@ -35,7 +36,12 @@ class OfflineTileProvider extends TileProvider {
     Future<void> cancelLoading,
   ) {
     final resolution = resolver.resolve(coordinates);
-    return _providerForResolution(resolution, coordinates, options, cancelLoading);
+    return _providerForResolution(
+      resolution,
+      coordinates,
+      options,
+      cancelLoading,
+    );
   }
 
   ImageProvider _providerForResolution(
@@ -70,13 +76,16 @@ class OfflineTileProvider extends TileProvider {
   }
 }
 
-class _ResolvedTileImageProvider extends ImageProvider<_ResolvedTileImageProvider> {
+class _ResolvedTileImageProvider
+    extends ImageProvider<_ResolvedTileImageProvider> {
   const _ResolvedTileImageProvider(this.resolution);
 
   final RuntimeTileResolution resolution;
 
   @override
-  Future<_ResolvedTileImageProvider> obtainKey(ImageConfiguration configuration) {
+  Future<_ResolvedTileImageProvider> obtainKey(
+    ImageConfiguration configuration,
+  ) {
     return SynchronousFuture<_ResolvedTileImageProvider>(this);
   }
 
@@ -92,7 +101,9 @@ class _ResolvedTileImageProvider extends ImageProvider<_ResolvedTileImageProvide
       chunkEvents: chunkEvents.stream,
       scale: 1,
       debugLabel: resolution.requestedCoordinates.toString(),
-      informationCollector: () => [DiagnosticsProperty('Current provider', key)],
+      informationCollector: () => [
+        DiagnosticsProperty('Current provider', key),
+      ],
     );
   }
 
@@ -141,7 +152,9 @@ class _ResolvedTileImageProvider extends ImageProvider<_ResolvedTileImageProvide
     image.dispose(); // release source image GPU memory
     final picture = recorder.endRecording();
     final croppedImage = await picture.toImage(imageWidth, imageHeight);
-    final byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await croppedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     croppedImage.dispose(); // release cropped image GPU memory
     return byteData!.buffer.asUint8List();
   }

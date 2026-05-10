@@ -133,11 +133,7 @@ class AlertDensityThrottle {
       );
     }
     if (window <= Duration.zero) {
-      throw ArgumentError.value(
-        window,
-        'window',
-        'must be > Duration.zero',
-      );
+      throw ArgumentError.value(window, 'window', 'must be > Duration.zero');
     }
   }
 
@@ -146,9 +142,7 @@ class AlertDensityThrottle {
   ///
   /// See [defaultCapFor] for the cap-table and per-cell citations.
   factory AlertDensityThrottle.forProfile(DriverProfile profile) {
-    return AlertDensityThrottle(
-      alertsPerMinuteCap: defaultCapFor(profile),
-    );
+    return AlertDensityThrottle(alertsPerMinuteCap: defaultCapFor(profile));
   }
 
   /// Per-profile literature-anchored default alerts/min cap.
@@ -215,7 +209,9 @@ class AlertDensityThrottle {
   bool shouldFire(DateTime now, AlertSeverity severity) {
     // Purge entries older than `now - window` before any evaluation.
     final cutoff = now.subtract(window);
-    _firedAt.removeWhere((t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff));
+    _firedAt.removeWhere(
+      (t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff),
+    );
 
     // Cold-start: first alert in session bypasses window check.
     if (_firedAt.isEmpty) {
@@ -248,7 +244,9 @@ class AlertDensityThrottle {
   /// side-effect of evaluation.
   int currentWindowCount(DateTime now) {
     final cutoff = now.subtract(window);
-    _firedAt.removeWhere((t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff));
+    _firedAt.removeWhere(
+      (t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff),
+    );
     return _firedAt.length;
   }
 }

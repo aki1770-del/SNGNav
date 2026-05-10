@@ -4,8 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navigation_safety/navigation_safety.dart';
 
-GlanceEvent _ev(int millis,
-    {GlanceModalClass cls = GlanceModalClass.visual}) {
+GlanceEvent _ev(int millis, {GlanceModalClass cls = GlanceModalClass.visual}) {
   return GlanceEvent(
     timestamp: DateTime.fromMillisecondsSinceEpoch(0),
     duration: Duration(milliseconds: millis),
@@ -31,8 +30,7 @@ void main() {
       tracker.dispose();
     });
 
-    test('BudgetWarning fires once at 75% consumed (default ratio)',
-        () async {
+    test('BudgetWarning fires once at 75% consumed (default ratio)', () async {
       final tracker = GlanceBudgetTracker();
       final events = <GlanceBudgetEvent>[];
       tracker.budgetEvents.listen(events.add);
@@ -67,8 +65,7 @@ void main() {
       await tracker.dispose();
     });
 
-    test(
-        'remainingBudget clamps to zero on overshoot; '
+    test('remainingBudget clamps to zero on overshoot; '
         'BudgetExhausted overshoot is positive', () async {
       final tracker = GlanceBudgetTracker();
       final events = <GlanceBudgetEvent>[];
@@ -83,8 +80,7 @@ void main() {
       await tracker.dispose();
     });
 
-    test('reset() clears consumption and warning/exhausted flags',
-        () async {
+    test('reset() clears consumption and warning/exhausted flags', () async {
       final tracker = GlanceBudgetTracker();
       final events = <GlanceBudgetEvent>[];
       tracker.budgetEvents.listen(events.add);
@@ -113,23 +109,23 @@ void main() {
       tracker.record(_ev(1000));
     });
 
-    test(
-        'caution-add-only: negative-duration GlanceEvent fails assert '
+    test('caution-add-only: negative-duration GlanceEvent fails assert '
         '(debug-mode)', () {
       final tracker = GlanceBudgetTracker();
       expect(
-        () => tracker.record(GlanceEvent(
-          timestamp: DateTime.fromMillisecondsSinceEpoch(0),
-          duration: const Duration(milliseconds: -1),
-          modalClass: GlanceModalClass.visual,
-        )),
+        () => tracker.record(
+          GlanceEvent(
+            timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+            duration: const Duration(milliseconds: -1),
+            modalClass: GlanceModalClass.visual,
+          ),
+        ),
         throwsA(isA<AssertionError>()),
       );
       tracker.dispose();
     });
 
-    test('NHTSAGlanceBudgetConfig.warningRatio out of range fails assert',
-        () {
+    test('NHTSAGlanceBudgetConfig.warningRatio out of range fails assert', () {
       expect(
         () => NHTSAGlanceBudgetConfig(warningRatio: 0.0),
         throwsA(isA<AssertionError>()),

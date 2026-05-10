@@ -139,8 +139,10 @@ class NHTSAGlanceBudgetConfig extends Equatable {
       GlanceModalClass.manual: Duration(seconds: 4),
     },
     this.warningRatio = 0.75,
-  })  : assert(warningRatio > 0.0 && warningRatio < 1.0,
-            'warningRatio must be in (0.0, 1.0)');
+  }) : assert(
+         warningRatio > 0.0 && warningRatio < 1.0,
+         'warningRatio must be in (0.0, 1.0)',
+       );
 
   @override
   List<Object?> get props => [totalBudget, perModalBudget, warningRatio];
@@ -223,10 +225,10 @@ abstract class GlanceEventSource {
 class GlanceBudgetTracker {
   GlanceBudgetTracker({
     NHTSAGlanceBudgetConfig config = const NHTSAGlanceBudgetConfig(),
-  })  : _config = config,
-        _consumed = Duration.zero,
-        _warningFired = false,
-        _exhaustedFired = false;
+  }) : _config = config,
+       _consumed = Duration.zero,
+       _warningFired = false,
+       _exhaustedFired = false;
 
   final NHTSAGlanceBudgetConfig _config;
   final StreamController<GlanceBudgetEvent> _controller =
@@ -293,20 +295,21 @@ class GlanceBudgetTracker {
 
     if (!_warningFired && consumedRatio >= _config.warningRatio) {
       _warningFired = true;
-      _controller.add(BudgetWarning(
-        consumed: _consumed,
-        remaining: remainingBudget,
-      ));
+      _controller.add(
+        BudgetWarning(consumed: _consumed, remaining: remainingBudget),
+      );
     }
 
     if (!_exhaustedFired && consumedRatio >= 1.0) {
       _exhaustedFired = true;
       final overshootMicros =
           _consumed.inMicroseconds - _config.totalBudget.inMicroseconds;
-      _controller.add(BudgetExhausted(
-        consumed: _consumed,
-        overshoot: Duration(microseconds: overshootMicros),
-      ));
+      _controller.add(
+        BudgetExhausted(
+          consumed: _consumed,
+          overshoot: Duration(microseconds: overshootMicros),
+        ),
+      );
     }
   }
 

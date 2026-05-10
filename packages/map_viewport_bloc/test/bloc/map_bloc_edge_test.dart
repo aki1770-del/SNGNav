@@ -15,11 +15,8 @@ void main() {
     blocTest<MapBloc, MapState>(
       'toggling baseTile (non-toggleable) is silently ignored',
       build: MapBloc.new,
-      seed: () => MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15.0,
-      ),
+      seed: () =>
+          MapState(status: MapStatus.ready, center: _nagoya, zoom: 15.0),
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.baseTile, visible: false),
       ),
@@ -29,11 +26,8 @@ void main() {
     blocTest<MapBloc, MapState>(
       'toggling safety (non-toggleable) is silently ignored',
       build: MapBloc.new,
-      seed: () => MapState(
-        status: MapStatus.ready,
-        center: _nagoya,
-        zoom: 15.0,
-      ),
+      seed: () =>
+          MapState(status: MapStatus.ready, center: _nagoya, zoom: 15.0),
       act: (bloc) => bloc.add(
         const LayerToggled(layer: MapLayerType.safety, visible: false),
       ),
@@ -112,8 +106,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const CameraModeChanged(CameraMode.overview)),
       expect: () => [
-        isA<MapState>()
-            .having((s) => s.cameraMode, 'mode', CameraMode.overview),
+        isA<MapState>().having(
+          (s) => s.cameraMode,
+          'mode',
+          CameraMode.overview,
+        ),
       ],
     );
 
@@ -176,10 +173,8 @@ void main() {
         zoom: 15.0,
         cameraMode: CameraMode.follow,
       ),
-      act: (bloc) => bloc.add(const FitToBounds(
-        southWest: _nagoya,
-        northEast: _toyota,
-      )),
+      act: (bloc) =>
+          bloc.add(const FitToBounds(southWest: _nagoya, northEast: _toyota)),
       expect: () => [
         isA<MapState>()
             .having((s) => s.cameraMode, 'mode', CameraMode.overview)

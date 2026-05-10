@@ -15,7 +15,10 @@ void main() {
 
     test('value-equality differentiates by vehicleClassToken', () {
       const a = DrivingContext(speedMps: 10.0, vehicleClassToken: 'kei-car');
-      const b = DrivingContext(speedMps: 10.0, vehicleClassToken: 'compact-sedan');
+      const b = DrivingContext(
+        speedMps: 10.0,
+        vehicleClassToken: 'compact-sedan',
+      );
       expect(a, isNot(equals(b)));
     });
 

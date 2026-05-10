@@ -72,7 +72,8 @@ double computeSurfaceMoistureFraction({
     );
   }
 
-  final minutes = timeSincePrecipitation.inMicroseconds / Duration.microsecondsPerMinute;
+  final minutes =
+      timeSincePrecipitation.inMicroseconds / Duration.microsecondsPerMinute;
   final fraction = math.exp(-math.ln2 * minutes / evaporationHalfLifeMinutes);
 
   if (fraction.isNaN) return 0.0;

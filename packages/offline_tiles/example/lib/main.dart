@@ -28,10 +28,12 @@ class _OfflineTilesExampleScreen extends StatefulWidget {
   const _OfflineTilesExampleScreen();
 
   @override
-  State<_OfflineTilesExampleScreen> createState() => _OfflineTilesExampleScreenState();
+  State<_OfflineTilesExampleScreen> createState() =>
+      _OfflineTilesExampleScreenState();
 }
 
-class _OfflineTilesExampleScreenState extends State<_OfflineTilesExampleScreen> {
+class _OfflineTilesExampleScreenState
+    extends State<_OfflineTilesExampleScreen> {
   late final OfflineTileManager _onlineManager;
   late final OfflineTileManager _offlineManager;
   bool _preferOffline = true;
@@ -72,7 +74,8 @@ class _OfflineTilesExampleScreenState extends State<_OfflineTilesExampleScreen> 
       tier: CoverageTier.t2Metro,
     );
     setState(() {
-      _status = 'Viewport cache planned: ${_offlineManager.cachedRegions.length} region(s), $planned tiles written';
+      _status =
+          'Viewport cache planned: ${_offlineManager.cachedRegions.length} region(s), $planned tiles written';
     });
   }
 

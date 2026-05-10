@@ -17,17 +17,16 @@ void main() {
     });
 
     AlertFired makeAlert(DateTime t) => AlertFired(
-          timestamp: t,
-          driverPseudonym: instr.driverPseudonym,
-          alertClass: 'snow_road_warning',
-          severity: AlertSeverityClass.warning,
-          modalDuration: const Duration(seconds: 6),
-          dismissalState: AlertDismissalState.ranToCompletion,
-          driverProfile: DriverProfileClass.snowZoneExperienced,
-        );
+      timestamp: t,
+      driverPseudonym: instr.driverPseudonym,
+      alertClass: 'snow_road_warning',
+      severity: AlertSeverityClass.warning,
+      modalDuration: const Duration(seconds: 6),
+      dismissalState: AlertDismissalState.ranToCompletion,
+      driverProfile: DriverProfileClass.snowZoneExperienced,
+    );
 
-    test(
-        'Sakichi-tag: recordEvent throws when consent is UNKNOWN '
+    test('Sakichi-tag: recordEvent throws when consent is UNKNOWN '
         '(UNKNOWN = DENIED)', () async {
       // No grant has been issued for the purpose; default is UNKNOWN.
       await expectLater(
@@ -72,32 +71,34 @@ void main() {
       expect(events, hasLength(1));
     });
 
-    test('readEvents filters by time window (Sakichi-tag: since/until)',
-        () async {
-      await consent.grant(
-        ConsentPurpose.alertExperienceInstrumentation,
-        Jurisdiction.gdpr,
-      );
-
-      final t0 = DateTime(2026, 5, 5, 9);
-      final t1 = DateTime(2026, 5, 5, 10);
-      final t2 = DateTime(2026, 5, 5, 11);
-
-      for (final t in [t0, t1, t2]) {
-        await instr.recordEvent(
+    test(
+      'readEvents filters by time window (Sakichi-tag: since/until)',
+      () async {
+        await consent.grant(
           ConsentPurpose.alertExperienceInstrumentation,
-          makeAlert(t),
+          Jurisdiction.gdpr,
         );
-      }
 
-      final inside = await instr.readEvents(
-        purpose: ConsentPurpose.alertExperienceInstrumentation,
-        since: DateTime(2026, 5, 5, 9, 30),
-        until: DateTime(2026, 5, 5, 10, 30),
-      );
-      expect(inside, hasLength(1));
-      expect(inside.first.timestamp, t1);
-    });
+        final t0 = DateTime(2026, 5, 5, 9);
+        final t1 = DateTime(2026, 5, 5, 10);
+        final t2 = DateTime(2026, 5, 5, 11);
+
+        for (final t in [t0, t1, t2]) {
+          await instr.recordEvent(
+            ConsentPurpose.alertExperienceInstrumentation,
+            makeAlert(t),
+          );
+        }
+
+        final inside = await instr.readEvents(
+          purpose: ConsentPurpose.alertExperienceInstrumentation,
+          since: DateTime(2026, 5, 5, 9, 30),
+          until: DateTime(2026, 5, 5, 10, 30),
+        );
+        expect(inside, hasLength(1));
+        expect(inside.first.timestamp, t1);
+      },
+    );
 
     test('readEvents returns chronological order', () async {
       await consent.grant(
@@ -123,8 +124,7 @@ void main() {
       expect(events.map((e) => e.timestamp).toList(), [t0, t1, t2]);
     });
 
-    test('setRetention persists per-purpose; getRetention reads it',
-        () async {
+    test('setRetention persists per-purpose; getRetention reads it', () async {
       // Default is 30 days for any purpose.
       final defaultRetention = await instr.getRetention(
         ConsentPurpose.alertExperienceInstrumentation,
@@ -147,40 +147,42 @@ void main() {
       );
     });
 
-    test('deleteAllEvents removes events but preserves consent state',
-        () async {
-      await consent.grant(
-        ConsentPurpose.alertExperienceInstrumentation,
-        Jurisdiction.appi,
-      );
-      await instr.recordEvent(
-        ConsentPurpose.alertExperienceInstrumentation,
-        makeAlert(DateTime.now()),
-      );
+    test(
+      'deleteAllEvents removes events but preserves consent state',
+      () async {
+        await consent.grant(
+          ConsentPurpose.alertExperienceInstrumentation,
+          Jurisdiction.appi,
+        );
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(DateTime.now()),
+        );
 
-      expect(
-        (await instr.readEvents(
-                purpose: ConsentPurpose.alertExperienceInstrumentation))
-            .length,
-        1,
-      );
+        expect(
+          (await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          )).length,
+          1,
+        );
 
-      await instr.deleteAllEvents(
-        ConsentPurpose.alertExperienceInstrumentation,
-      );
+        await instr.deleteAllEvents(
+          ConsentPurpose.alertExperienceInstrumentation,
+        );
 
-      expect(
-        await instr.readEvents(
-          purpose: ConsentPurpose.alertExperienceInstrumentation,
-        ),
-        isEmpty,
-      );
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          isEmpty,
+        );
 
-      // Consent state is preserved.
-      final consentRecord = await consent.getConsent(
-        ConsentPurpose.alertExperienceInstrumentation,
-      );
-      expect(consentRecord.status, ConsentStatus.granted);
-    });
+        // Consent state is preserved.
+        final consentRecord = await consent.getConsent(
+          ConsentPurpose.alertExperienceInstrumentation,
+        );
+        expect(consentRecord.status, ConsentStatus.granted);
+      },
+    );
   });
 }

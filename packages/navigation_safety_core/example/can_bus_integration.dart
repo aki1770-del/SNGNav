@@ -143,16 +143,20 @@ class _MockEcu implements _J1939EcuLike {
   _MockEcu() {
     Future<void>.microtask(() async {
       _controller
-        ..add(_FrameReceivedLike(
-          pgn: 0xFEF1,
-          source: 0x00,
-          data: Uint8List.fromList([0, 0x00, 0x50, 0, 0, 0, 0, 0]),
-        ))
-        ..add(_FrameReceivedLike(
-          pgn: 0xFEEE,
-          source: 0x00,
-          data: Uint8List.fromList([35, 0, 0, 0, 0, 0, 0, 0]),
-        ));
+        ..add(
+          _FrameReceivedLike(
+            pgn: 0xFEF1,
+            source: 0x00,
+            data: Uint8List.fromList([0, 0x00, 0x50, 0, 0, 0, 0, 0]),
+          ),
+        )
+        ..add(
+          _FrameReceivedLike(
+            pgn: 0xFEEE,
+            source: 0x00,
+            data: Uint8List.fromList([35, 0, 0, 0, 0, 0, 0, 0]),
+          ),
+        );
       await _controller.close();
     });
   }

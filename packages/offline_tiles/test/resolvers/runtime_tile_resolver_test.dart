@@ -21,8 +21,10 @@ void main() {
 
     test('hasLocalCoverage false without mbtiles archive', () {
       final resolver = RuntimeTileResolver(tileSource: TileSourceType.mbtiles);
-      expect(resolver.hasLocalCoverage(const TileCoordinates(10, 20, 14)),
-          isFalse);
+      expect(
+        resolver.hasLocalCoverage(const TileCoordinates(10, 20, 14)),
+        isFalse,
+      );
     });
   });
 

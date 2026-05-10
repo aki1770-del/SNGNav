@@ -74,8 +74,7 @@ class GeoPoint extends Equatable {
   List<Object?> get props => <Object?>[latitude, longitude];
 
   @override
-  String toString() =>
-      'GeoPoint($latitude, $longitude)';
+  String toString() => 'GeoPoint($latitude, $longitude)';
 }
 
 /// One circle as expressed in the CAP `area/circle` element:
@@ -93,10 +92,7 @@ class WinterAlertCircle extends Equatable {
   /// always non-negative.
   final double radiusKm;
 
-  const WinterAlertCircle({
-    required this.center,
-    required this.radiusKm,
-  });
+  const WinterAlertCircle({required this.center, required this.radiusKm});
 
   @override
   List<Object?> get props => <Object?>[center, radiusKm];
@@ -129,10 +125,7 @@ class WinterAlertArea extends Equatable {
   /// shape; null when the publisher did not declare a circle.
   final WinterAlertCircle? circle;
 
-  const WinterAlertArea({
-    this.polygon = const <GeoPoint>[],
-    this.circle,
-  });
+  const WinterAlertArea({this.polygon = const <GeoPoint>[], this.circle});
 
   /// True when the publisher declared neither polygon nor circle. The
   /// caller can fall back to [WinterAlert.areaDesc] for free-form
@@ -244,21 +237,21 @@ class WinterAlert extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-        event,
-        severity,
-        certainty,
-        urgency,
-        areaDesc,
-        effective,
-        expires,
-        headline,
-        description,
-        instruction,
-        status,
-        messageType,
-        senderName,
-        area,
-      ];
+    event,
+    severity,
+    certainty,
+    urgency,
+    areaDesc,
+    effective,
+    expires,
+    headline,
+    description,
+    instruction,
+    status,
+    messageType,
+    senderName,
+    area,
+  ];
 
   @override
   String toString() =>
@@ -357,10 +350,7 @@ class WinterAlert extends Equatable {
   /// publisher declared neither a parseable geometry nor a CAP circle.
   ///
   /// Visible for direct testing.
-  static WinterAlertArea? parseArea(
-    Object? geometry,
-    Object? parameters,
-  ) {
+  static WinterAlertArea? parseArea(Object? geometry, Object? parameters) {
     final polygonVertices = _parseGeometryPolygon(geometry);
     final circle = _parseCircleFromParameters(parameters);
     if (polygonVertices.isEmpty && circle == null) {
@@ -554,4 +544,3 @@ AlertStatus _parseStatus(Object? v) {
       return AlertStatus.unknown;
   }
 }
-

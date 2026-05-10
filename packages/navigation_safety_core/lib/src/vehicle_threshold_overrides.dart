@@ -79,8 +79,11 @@ class VehicleThresholdOverrides {
   /// `warningVisibilityMeters` and `warningTemperatureCelsius` are
   /// both `>=` the baseline. Score-floor tiers and the critical
   /// thresholds MUST be preserved.
-  final Map<String, NavigationSafetyConfig Function(NavigationSafetyConfig baseline)>
-      overrides;
+  final Map<
+    String,
+    NavigationSafetyConfig Function(NavigationSafetyConfig baseline)
+  >
+  overrides;
 
   const VehicleThresholdOverrides(this.overrides);
 
@@ -103,9 +106,7 @@ class VehicleThresholdOverrides {
   /// To compose with additional integrator-defined overrides, build
   /// the registry directly via the default constructor and merge.
   factory VehicleThresholdOverrides.withKeiCarDefault() {
-    return VehicleThresholdOverrides({
-      'kei-car': _keiCarOverride,
-    });
+    return VehicleThresholdOverrides({'kei-car': _keiCarOverride});
   }
 
   /// Apply the override registered for [token] to [baseline], or

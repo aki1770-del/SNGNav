@@ -98,12 +98,12 @@ class DrivingContext extends Equatable {
 
   @override
   List<Object?> get props => [
-        speedMps,
-        humidityRH,
-        timeSincePrecipitation,
-        ambientTempCelsius,
-        vehicleClassToken,
-      ];
+    speedMps,
+    humidityRH,
+    timeSincePrecipitation,
+    ambientTempCelsius,
+    vehicleClassToken,
+  ];
 
   @override
   bool get stringify => true;

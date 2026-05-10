@@ -40,7 +40,9 @@ void main() {
       // The package does NOT prescribe a vehicle-class taxonomy at the
       // type system level. Any string is a valid token; the registry
       // determines whether an override applies.
-      const provider = _StaticVehicleClassProvider('integrator-defined-token-xyz');
+      const provider = _StaticVehicleClassProvider(
+        'integrator-defined-token-xyz',
+      );
       expect(provider.vehicleClassToken, 'integrator-defined-token-xyz');
     });
   });

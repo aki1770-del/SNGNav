@@ -115,8 +115,8 @@ class ConsentRecord extends Equatable {
   ConsentRecord.unknown({
     required this.purpose,
     this.jurisdiction = Jurisdiction.gdpr,
-  })  : status = ConsentStatus.unknown,
-        updatedAt = DateTime.fromMillisecondsSinceEpoch(0);
+  }) : status = ConsentStatus.unknown,
+       updatedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// True only when the driver has explicitly granted consent.
   ///

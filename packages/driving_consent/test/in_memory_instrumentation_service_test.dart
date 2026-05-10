@@ -21,43 +21,44 @@ void main() {
     });
 
     AlertFired makeAlert(DateTime t) => AlertFired(
-          timestamp: t,
-          driverPseudonym: instr.driverPseudonym,
-          alertClass: 'alert_x',
-          severity: AlertSeverityClass.info,
-          modalDuration: const Duration(seconds: 4),
-          dismissalState: AlertDismissalState.ranToCompletion,
-          driverProfile: DriverProfileClass.defaultProfile,
-        );
+      timestamp: t,
+      driverPseudonym: instr.driverPseudonym,
+      alertClass: 'alert_x',
+      severity: AlertSeverityClass.info,
+      modalDuration: const Duration(seconds: 4),
+      dismissalState: AlertDismissalState.ranToCompletion,
+      driverProfile: DriverProfileClass.defaultProfile,
+    );
 
     test(
-        'Sakichi-tag: auto-prune drops events older than per-purpose retention',
-        () async {
-      // Set retention to 1 hour for the purpose.
-      await instr.setRetention(
-        ConsentPurpose.alertExperienceInstrumentation,
-        const Duration(hours: 1),
-      );
+      'Sakichi-tag: auto-prune drops events older than per-purpose retention',
+      () async {
+        // Set retention to 1 hour for the purpose.
+        await instr.setRetention(
+          ConsentPurpose.alertExperienceInstrumentation,
+          const Duration(hours: 1),
+        );
 
-      final tooOld = DateTime.now().subtract(const Duration(hours: 2));
-      final fresh = DateTime.now();
+        final tooOld = DateTime.now().subtract(const Duration(hours: 2));
+        final fresh = DateTime.now();
 
-      // Record an old event first; auto-prune removes it on the next record.
-      await instr.recordEvent(
-        ConsentPurpose.alertExperienceInstrumentation,
-        makeAlert(tooOld),
-      );
-      await instr.recordEvent(
-        ConsentPurpose.alertExperienceInstrumentation,
-        makeAlert(fresh),
-      );
+        // Record an old event first; auto-prune removes it on the next record.
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(tooOld),
+        );
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(fresh),
+        );
 
-      final events = await instr.readEvents(
-        purpose: ConsentPurpose.alertExperienceInstrumentation,
-      );
-      expect(events, hasLength(1));
-      expect(events.first.timestamp, fresh);
-    });
+        final events = await instr.readEvents(
+          purpose: ConsentPurpose.alertExperienceInstrumentation,
+        );
+        expect(events, hasLength(1));
+        expect(events.first.timestamp, fresh);
+      },
+    );
 
     test('pruneExpired returns the count of pruned events', () async {
       await instr.setRetention(
@@ -106,8 +107,7 @@ void main() {
       expect(remaining.first.timestamp, fresh);
     });
 
-    test(
-        'Sakichi-tag: driverPseudonym is stable across events for one '
+    test('Sakichi-tag: driverPseudonym is stable across events for one '
         'install', () async {
       final p1 = instr.driverPseudonym;
       await instr.recordEvent(
@@ -125,8 +125,7 @@ void main() {
       expect(p2, equals(p3));
     });
 
-    test(
-        'Sakichi-tag: driverPseudonym does not link across installs '
+    test('Sakichi-tag: driverPseudonym does not link across installs '
         '(distinct service instances yield distinct pseudonyms)', () async {
       final consent2 = InMemoryConsentService();
       final instr2 = InMemoryInstrumentationService(consent2);
@@ -134,8 +133,11 @@ void main() {
         // Force pseudonym generation on both instances.
         final p1 = instr.driverPseudonym;
         final p2 = instr2.driverPseudonym;
-        expect(p1, isNot(equals(p2)),
-            reason: 'distinct installs must not share a pseudonym');
+        expect(
+          p1,
+          isNot(equals(p2)),
+          reason: 'distinct installs must not share a pseudonym',
+        );
       } finally {
         await instr2.dispose();
         await consent2.dispose();

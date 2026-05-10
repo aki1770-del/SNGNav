@@ -28,7 +28,9 @@ void main() {
 
   group('NavigationSafetyConfig.forProfile', () {
     test('snowZoneExperienced returns historical defaults', () {
-      final c = NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
+      final c = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
       final standard = NavigationSafetyConfig();
       expect(c, equals(standard));
     });
@@ -37,19 +39,32 @@ void main() {
       // Professional drivers' minimum-distraction optimization lives in
       // the Flutter UX layer; thresholds today match the standard profile.
       final pro = NavigationSafetyConfig.forProfile(DriverProfile.professional);
-      final standard = NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
+      final standard = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
       expect(pro, equals(standard));
     });
 
-    test('agriculturalForestry matches snowZoneExperienced thresholds in v1', () {
-      final ag = NavigationSafetyConfig.forProfile(DriverProfile.agriculturalForestry);
-      final standard = NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
-      expect(ag, equals(standard));
-    });
+    test(
+      'agriculturalForestry matches snowZoneExperienced thresholds in v1',
+      () {
+        final ag = NavigationSafetyConfig.forProfile(
+          DriverProfile.agriculturalForestry,
+        );
+        final standard = NavigationSafetyConfig.forProfile(
+          DriverProfile.snowZoneExperienced,
+        );
+        expect(ag, equals(standard));
+      },
+    );
 
     test('ageingRural is more conservative than standard on every dimension', () {
-      final ageing = NavigationSafetyConfig.forProfile(DriverProfile.ageingRural);
-      final standard = NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
+      final ageing = NavigationSafetyConfig.forProfile(
+        DriverProfile.ageingRural,
+      );
+      final standard = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
 
       // Higher score floors → harder to be classified "safe", warns earlier
       expect(ageing.safeScoreFloor, greaterThan(standard.safeScoreFloor));
@@ -57,24 +72,55 @@ void main() {
       expect(ageing.warningScoreFloor, greaterThan(standard.warningScoreFloor));
 
       // Higher temperature thresholds → warns at warmer temps (earlier in cooling)
-      expect(ageing.infoTemperatureCelsius, greaterThan(standard.infoTemperatureCelsius));
-      expect(ageing.warningTemperatureCelsius, greaterThan(standard.warningTemperatureCelsius));
-      expect(ageing.criticalTemperatureCelsius, greaterThan(standard.criticalTemperatureCelsius));
+      expect(
+        ageing.infoTemperatureCelsius,
+        greaterThan(standard.infoTemperatureCelsius),
+      );
+      expect(
+        ageing.warningTemperatureCelsius,
+        greaterThan(standard.warningTemperatureCelsius),
+      );
+      expect(
+        ageing.criticalTemperatureCelsius,
+        greaterThan(standard.criticalTemperatureCelsius),
+      );
 
       // Higher visibility thresholds → warns at better visibility (earlier in degradation)
-      expect(ageing.infoVisibilityMeters, greaterThan(standard.infoVisibilityMeters));
-      expect(ageing.warningVisibilityMeters, greaterThan(standard.warningVisibilityMeters));
-      expect(ageing.criticalVisibilityMeters, greaterThan(standard.criticalVisibilityMeters));
+      expect(
+        ageing.infoVisibilityMeters,
+        greaterThan(standard.infoVisibilityMeters),
+      );
+      expect(
+        ageing.warningVisibilityMeters,
+        greaterThan(standard.warningVisibilityMeters),
+      );
+      expect(
+        ageing.criticalVisibilityMeters,
+        greaterThan(standard.criticalVisibilityMeters),
+      );
     });
 
     test('noviceUrban has elevated visibility-warning thresholds', () {
-      final novice = NavigationSafetyConfig.forProfile(DriverProfile.noviceUrban);
-      final standard = NavigationSafetyConfig.forProfile(DriverProfile.snowZoneExperienced);
+      final novice = NavigationSafetyConfig.forProfile(
+        DriverProfile.noviceUrban,
+      );
+      final standard = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
 
       // Novice drivers warned earlier on visibility (less low-vis experience)
-      expect(novice.infoVisibilityMeters, greaterThan(standard.infoVisibilityMeters));
-      expect(novice.warningVisibilityMeters, greaterThan(standard.warningVisibilityMeters));
-      expect(novice.criticalVisibilityMeters, greaterThan(standard.criticalVisibilityMeters));
+      expect(
+        novice.infoVisibilityMeters,
+        greaterThan(standard.infoVisibilityMeters),
+      );
+      expect(
+        novice.warningVisibilityMeters,
+        greaterThan(standard.warningVisibilityMeters),
+      );
+      expect(
+        novice.criticalVisibilityMeters,
+        greaterThan(standard.criticalVisibilityMeters),
+      );
 
       // Higher safe-score floor (need more comfort margin to be "safe")
       expect(novice.safeScoreFloor, greaterThan(standard.safeScoreFloor));
@@ -88,7 +134,9 @@ void main() {
       // - warningTemperatureCelsius: 1°C → 2°C (margin above black-ice
       //   formation envelope at road-surface ≤0°C; 1°C left no margin)
       // See KNOWN_LIMITATIONS.md "Threshold magnitudes".
-      final ageing = NavigationSafetyConfig.forProfile(DriverProfile.ageingRural);
+      final ageing = NavigationSafetyConfig.forProfile(
+        DriverProfile.ageingRural,
+      );
       expect(ageing.infoTemperatureCelsius, 4);
       expect(ageing.warningTemperatureCelsius, 2);
     });
@@ -101,7 +149,9 @@ void main() {
       //   over standard) left no braking margin. 320m gives RT-margin +
       //   braking margin per Konstantopoulos PubMed 22664714.
       // See KNOWN_LIMITATIONS.md "Threshold magnitudes".
-      final novice = NavigationSafetyConfig.forProfile(DriverProfile.noviceUrban);
+      final novice = NavigationSafetyConfig.forProfile(
+        DriverProfile.noviceUrban,
+      );
       expect(novice.warningVisibilityMeters, 320);
     });
 
@@ -111,34 +161,71 @@ void main() {
       // the local conditions + likely non-winterised rental vehicle +
       // language-localization gaps in road signage. The loom shifts caution
       // further than any other profile.
-      final tourist = NavigationSafetyConfig.forProfile(DriverProfile.foreignTouristSnowZone);
+      final tourist = NavigationSafetyConfig.forProfile(
+        DriverProfile.foreignTouristSnowZone,
+      );
 
-      for (final other in DriverProfile.values.where((p) => p != DriverProfile.foreignTouristSnowZone)) {
+      for (final other in DriverProfile.values.where(
+        (p) => p != DriverProfile.foreignTouristSnowZone,
+      )) {
         final c = NavigationSafetyConfig.forProfile(other);
 
         // Score floors: highest (hardest to be classified "safe").
-        expect(tourist.safeScoreFloor, greaterThanOrEqualTo(c.safeScoreFloor),
-            reason: 'foreignTouristSnowZone safeScoreFloor must be >= $other');
-        expect(tourist.infoScoreFloor, greaterThanOrEqualTo(c.infoScoreFloor),
-            reason: 'foreignTouristSnowZone infoScoreFloor must be >= $other');
-        expect(tourist.warningScoreFloor, greaterThanOrEqualTo(c.warningScoreFloor),
-            reason: 'foreignTouristSnowZone warningScoreFloor must be >= $other');
+        expect(
+          tourist.safeScoreFloor,
+          greaterThanOrEqualTo(c.safeScoreFloor),
+          reason: 'foreignTouristSnowZone safeScoreFloor must be >= $other',
+        );
+        expect(
+          tourist.infoScoreFloor,
+          greaterThanOrEqualTo(c.infoScoreFloor),
+          reason: 'foreignTouristSnowZone infoScoreFloor must be >= $other',
+        );
+        expect(
+          tourist.warningScoreFloor,
+          greaterThanOrEqualTo(c.warningScoreFloor),
+          reason: 'foreignTouristSnowZone warningScoreFloor must be >= $other',
+        );
 
         // Temperature thresholds: warns at warmer temps (earliest in cooling).
-        expect(tourist.infoTemperatureCelsius, greaterThanOrEqualTo(c.infoTemperatureCelsius),
-            reason: 'foreignTouristSnowZone infoTemperatureCelsius must be >= $other');
-        expect(tourist.warningTemperatureCelsius, greaterThanOrEqualTo(c.warningTemperatureCelsius),
-            reason: 'foreignTouristSnowZone warningTemperatureCelsius must be >= $other');
-        expect(tourist.criticalTemperatureCelsius, greaterThanOrEqualTo(c.criticalTemperatureCelsius),
-            reason: 'foreignTouristSnowZone criticalTemperatureCelsius must be >= $other');
+        expect(
+          tourist.infoTemperatureCelsius,
+          greaterThanOrEqualTo(c.infoTemperatureCelsius),
+          reason:
+              'foreignTouristSnowZone infoTemperatureCelsius must be >= $other',
+        );
+        expect(
+          tourist.warningTemperatureCelsius,
+          greaterThanOrEqualTo(c.warningTemperatureCelsius),
+          reason:
+              'foreignTouristSnowZone warningTemperatureCelsius must be >= $other',
+        );
+        expect(
+          tourist.criticalTemperatureCelsius,
+          greaterThanOrEqualTo(c.criticalTemperatureCelsius),
+          reason:
+              'foreignTouristSnowZone criticalTemperatureCelsius must be >= $other',
+        );
 
         // Visibility thresholds: warns at better visibility (earliest in degradation).
-        expect(tourist.infoVisibilityMeters, greaterThanOrEqualTo(c.infoVisibilityMeters),
-            reason: 'foreignTouristSnowZone infoVisibilityMeters must be >= $other');
-        expect(tourist.warningVisibilityMeters, greaterThanOrEqualTo(c.warningVisibilityMeters),
-            reason: 'foreignTouristSnowZone warningVisibilityMeters must be >= $other');
-        expect(tourist.criticalVisibilityMeters, greaterThanOrEqualTo(c.criticalVisibilityMeters),
-            reason: 'foreignTouristSnowZone criticalVisibilityMeters must be >= $other');
+        expect(
+          tourist.infoVisibilityMeters,
+          greaterThanOrEqualTo(c.infoVisibilityMeters),
+          reason:
+              'foreignTouristSnowZone infoVisibilityMeters must be >= $other',
+        );
+        expect(
+          tourist.warningVisibilityMeters,
+          greaterThanOrEqualTo(c.warningVisibilityMeters),
+          reason:
+              'foreignTouristSnowZone warningVisibilityMeters must be >= $other',
+        );
+        expect(
+          tourist.criticalVisibilityMeters,
+          greaterThanOrEqualTo(c.criticalVisibilityMeters),
+          reason:
+              'foreignTouristSnowZone criticalVisibilityMeters must be >= $other',
+        );
       }
     });
 

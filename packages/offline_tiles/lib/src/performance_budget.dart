@@ -128,10 +128,11 @@ class PerformanceBudgetConfig extends Equatable {
     this.frameBudget = baselineFrameBudget,
     this.warningRatio = 0.75,
     this.sustainedFrames = 5,
-  })  : assert(warningRatio > 0.0 && warningRatio < 1.0,
-            'warningRatio must be in (0.0, 1.0)'),
-        assert(sustainedFrames >= 1,
-            'sustainedFrames must be >= 1');
+  }) : assert(
+         warningRatio > 0.0 && warningRatio < 1.0,
+         'warningRatio must be in (0.0, 1.0)',
+       ),
+       assert(sustainedFrames >= 1, 'sustainedFrames must be >= 1');
 
   /// Per-cohort lenient-direction defaults.
   ///
@@ -150,8 +151,9 @@ class PerformanceBudgetConfig extends Equatable {
       DriverProfile.agriculturalForestry => baselineFrameBudget,
       DriverProfile.noviceUrban => const Duration(microseconds: 18000),
       DriverProfile.ageingRural => const Duration(microseconds: 22000),
-      DriverProfile.foreignTouristSnowZone =>
-        const Duration(microseconds: 22000),
+      DriverProfile.foreignTouristSnowZone => const Duration(
+        microseconds: 22000,
+      ),
     };
 
     // Caution-add-only invariant: per-cohort budget MUST be >= baseline
@@ -226,10 +228,10 @@ class BudgetExhausted extends PerformanceBudgetEvent {
 class PerformanceBudget {
   PerformanceBudget({
     PerformanceBudgetConfig config = const PerformanceBudgetConfig(),
-  })  : _config = config,
-        _consecutiveOverBudget = 0,
-        _warningFired = false,
-        _exhaustedFired = false;
+  }) : _config = config,
+       _consecutiveOverBudget = 0,
+       _warningFired = false,
+       _exhaustedFired = false;
 
   final PerformanceBudgetConfig _config;
   final StreamController<PerformanceBudgetEvent> _controller =
@@ -250,8 +252,8 @@ class PerformanceBudget {
   /// Snapshot of current consumption + remaining budget against the
   /// most-recent frame. Useful for integrator logging / dashboards.
   ({Duration consumed, Duration remaining}) get budgetSnapshot {
-    final remainingMicros = _config.frameBudget.inMicroseconds -
-        _lastFrameTotal.inMicroseconds;
+    final remainingMicros =
+        _config.frameBudget.inMicroseconds - _lastFrameTotal.inMicroseconds;
     final remaining = remainingMicros < 0
         ? Duration.zero
         : Duration(microseconds: remainingMicros);
@@ -289,10 +291,9 @@ class PerformanceBudget {
 
     if (!_warningFired && consumedRatio >= _config.warningRatio) {
       _warningFired = true;
-      _controller.add(BudgetWarning(
-        consumed: total,
-        remaining: budgetSnapshot.remaining,
-      ));
+      _controller.add(
+        BudgetWarning(consumed: total, remaining: budgetSnapshot.remaining),
+      );
     }
 
     if (consumedRatio >= 1.0) {
@@ -302,12 +303,14 @@ class PerformanceBudget {
         _exhaustedFired = true;
         final overshootMicros =
             total.inMicroseconds - _config.frameBudget.inMicroseconds;
-        _controller.add(BudgetExhausted(
-          consumed: total,
-          overshoot: Duration(
-            microseconds: overshootMicros < 0 ? 0 : overshootMicros,
+        _controller.add(
+          BudgetExhausted(
+            consumed: total,
+            overshoot: Duration(
+              microseconds: overshootMicros < 0 ? 0 : overshootMicros,
+            ),
           ),
-        ));
+        );
       }
     } else {
       _consecutiveOverBudget = 0;

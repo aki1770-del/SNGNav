@@ -33,13 +33,19 @@ void _showProfileBaseline() {
     DriverProfile.foreignTouristSnowZone,
   );
 
-  print('  noviceUrban warning visibility:           '
-      '${novice.warningVisibilityMeters} m');
-  print('  foreignTouristSnowZone warning visibility: '
-      '${tourist.warningVisibilityMeters} m   '
-      '(more conservative)');
-  print('  noviceUrban warning temperature:           '
-      '${novice.warningTemperatureCelsius} C');
+  print(
+    '  noviceUrban warning visibility:           '
+    '${novice.warningVisibilityMeters} m',
+  );
+  print(
+    '  foreignTouristSnowZone warning visibility: '
+    '${tourist.warningVisibilityMeters} m   '
+    '(more conservative)',
+  );
+  print(
+    '  noviceUrban warning temperature:           '
+    '${novice.warningTemperatureCelsius} C',
+  );
   print('');
 }
 
@@ -66,16 +72,24 @@ void _showProfileWithContext() {
     context: conditions,
   );
 
-  print('  baseline warning visibility:    '
-      '${base.warningVisibilityMeters} m');
-  print('  context-tuned warning visibility: '
-      '${tuned.warningVisibilityMeters} m   '
-      '(speed + recent-rain margin)');
-  print('  baseline warning temperature:     '
-      '${base.warningTemperatureCelsius} C');
-  print('  context-tuned warning temperature: '
-      '${tuned.warningTemperatureCelsius} C   '
-      '(humidity-aware black-ice margin)');
+  print(
+    '  baseline warning visibility:    '
+    '${base.warningVisibilityMeters} m',
+  );
+  print(
+    '  context-tuned warning visibility: '
+    '${tuned.warningVisibilityMeters} m   '
+    '(speed + recent-rain margin)',
+  );
+  print(
+    '  baseline warning temperature:     '
+    '${base.warningTemperatureCelsius} C',
+  );
+  print(
+    '  context-tuned warning temperature: '
+    '${tuned.warningTemperatureCelsius} C   '
+    '(humidity-aware black-ice margin)',
+  );
   print('');
 }
 
@@ -100,16 +114,24 @@ void _showProfileWithDriverState() {
     environmentalContext: const DrivingContext(speedMps: 22.2),
   );
 
-  print('  alert state warning visibility:    '
-      '${alert.warningVisibilityMeters} m');
-  print('  fatigued state warning visibility: '
-      '${fatigued.warningVisibilityMeters} m   '
-      '(reaction-time penalty applied)');
-  print('  alert state warning temperature:    '
-      '${alert.warningTemperatureCelsius} C');
-  print('  fatigued state warning temperature: '
-      '${fatigued.warningTemperatureCelsius} C   '
-      '(small additive lift)');
+  print(
+    '  alert state warning visibility:    '
+    '${alert.warningVisibilityMeters} m',
+  );
+  print(
+    '  fatigued state warning visibility: '
+    '${fatigued.warningVisibilityMeters} m   '
+    '(reaction-time penalty applied)',
+  );
+  print(
+    '  alert state warning temperature:    '
+    '${alert.warningTemperatureCelsius} C',
+  );
+  print(
+    '  fatigued state warning temperature: '
+    '${fatigued.warningTemperatureCelsius} C   '
+    '(small additive lift)',
+  );
   print('');
 }
 
@@ -121,9 +143,7 @@ void _showProfileWithDriverState() {
 void _showAlertDensityThrottle() {
   print('[4] AlertDensityThrottle — per-profile alerts/min cap');
 
-  final throttle = AlertDensityThrottle.forProfile(
-    DriverProfile.noviceUrban,
-  );
+  final throttle = AlertDensityThrottle.forProfile(DriverProfile.noviceUrban);
   print('  noviceUrban cap:   ${throttle.alertsPerMinuteCap} / min');
 
   final base = DateTime(2026, 1, 1, 8, 0, 0);
@@ -165,8 +185,10 @@ void _showAlertExplainer() {
       RoadSurfaceCondition.ice,
       profile,
     );
-    print('  ${profile.name.padRight(24)} '
-        '(${explainer.localeTag} / ${explainer.verbosity.name})');
+    print(
+      '  ${profile.name.padRight(24)} '
+      '(${explainer.localeTag} / ${explainer.verbosity.name})',
+    );
     print('    -> ${explainer.action}');
   }
   print('');
@@ -183,7 +205,9 @@ void _showSeverityIsLoadBearing() {
   print('  info.index     = ${AlertSeverity.info.index}');
   print('  warning.index  = ${AlertSeverity.warning.index}');
   print('  critical.index = ${AlertSeverity.critical.index}');
-  print('  monotonic upgrade rule: '
-      'never replace higher with lower (compare .index).');
+  print(
+    '  monotonic upgrade rule: '
+    'never replace higher with lower (compare .index).',
+  );
   print('');
 }

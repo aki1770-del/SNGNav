@@ -106,9 +106,7 @@ class ViewportRenderConfig extends Equatable {
   /// Lowest fidelity the bloc will recommend for the active cohort.
   final RenderFidelityFloor floor;
 
-  const ViewportRenderConfig({
-    this.floor = RenderFidelityFloor.low,
-  });
+  const ViewportRenderConfig({this.floor = RenderFidelityFloor.low});
 
   /// Per-cohort floor defaults (UNVERIFIED-magnitude design-default-
   /// hypothesis; see library doc).
@@ -196,11 +194,11 @@ class ViewportRenderState extends Equatable {
 
   /// Initial state: high fidelity, no warnings observed.
   const ViewportRenderState.initial()
-      : fidelity = RenderFidelity.high,
-        performanceWarningSeen = false,
-        performanceExhaustedSeen = false,
-        dataWarningSeen = false,
-        dataExhaustedSeen = false;
+    : fidelity = RenderFidelity.high,
+      performanceWarningSeen = false,
+      performanceExhaustedSeen = false,
+      dataWarningSeen = false,
+      dataExhaustedSeen = false;
 
   ViewportRenderState copyWith({
     RenderFidelity? fidelity,
@@ -222,12 +220,12 @@ class ViewportRenderState extends Equatable {
 
   @override
   List<Object?> get props => [
-        fidelity,
-        performanceWarningSeen,
-        performanceExhaustedSeen,
-        dataWarningSeen,
-        dataExhaustedSeen,
-      ];
+    fidelity,
+    performanceWarningSeen,
+    performanceExhaustedSeen,
+    dataWarningSeen,
+    dataExhaustedSeen,
+  ];
 }
 
 /// Bloc composing PerformanceBudget + DataBudget streams into a
@@ -239,8 +237,8 @@ class ViewportRenderBudgetBloc
     extends Bloc<ViewportRenderBudgetEvent, ViewportRenderState> {
   ViewportRenderBudgetBloc({
     ViewportRenderConfig config = const ViewportRenderConfig(),
-  })  : _config = config,
-        super(const ViewportRenderState.initial()) {
+  }) : _config = config,
+       super(const ViewportRenderState.initial()) {
     on<ViewportPerformanceBudgetWarning>(_onPerfWarning);
     on<ViewportPerformanceBudgetExhausted>(_onPerfExhausted);
     on<ViewportDataBudgetWarning>(_onDataWarning);
@@ -265,31 +263,35 @@ class ViewportRenderBudgetBloc
   /// `BudgetWarning` / `BudgetExhausted`; using `Object` here keeps
   /// this bloc compatible with both without re-importing).
   void attachPerformanceBudgetStream(Stream<Object> stream) {
-    _subscriptions.add(stream.listen((event) {
-      final name = event.runtimeType.toString();
-      if (name == 'BudgetWarning') {
-        add(const ViewportPerformanceBudgetWarning());
-      } else if (name == 'BudgetExhausted') {
-        add(const ViewportPerformanceBudgetExhausted());
-      }
-    }));
+    _subscriptions.add(
+      stream.listen((event) {
+        final name = event.runtimeType.toString();
+        if (name == 'BudgetWarning') {
+          add(const ViewportPerformanceBudgetWarning());
+        } else if (name == 'BudgetExhausted') {
+          add(const ViewportPerformanceBudgetExhausted());
+        }
+      }),
+    );
   }
 
   /// Subscribe to a `DataBudget.budgetEvents` stream. See
   /// [attachPerformanceBudgetStream] for the runtime-type inspection
   /// rationale.
   void attachDataBudgetStream(Stream<Object> stream) {
-    _subscriptions.add(stream.listen((event) {
-      final name = event.runtimeType.toString();
-      if (name == 'BudgetWarning') {
-        add(const ViewportDataBudgetWarning());
-      } else if (name == 'BudgetExhausted') {
-        add(const ViewportDataBudgetExhausted());
-      }
-      // RenderFidelityDrop is a snow_rendering-specific event and is
-      // already covered by the BudgetExhausted lock-step emit; no
-      // additional handling needed here.
-    }));
+    _subscriptions.add(
+      stream.listen((event) {
+        final name = event.runtimeType.toString();
+        if (name == 'BudgetWarning') {
+          add(const ViewportDataBudgetWarning());
+        } else if (name == 'BudgetExhausted') {
+          add(const ViewportDataBudgetExhausted());
+        }
+        // RenderFidelityDrop is a snow_rendering-specific event and is
+        // already covered by the BudgetExhausted lock-step emit; no
+        // additional handling needed here.
+      }),
+    );
   }
 
   /// Compute the recommended fidelity from the new state, applying the
@@ -378,10 +380,7 @@ class ViewportRenderBudgetBloc
     emit(next.copyWith(fidelity: _resolveFidelityWithFloor(proposed)));
   }
 
-  void _onReset(
-    ViewportBudgetReset event,
-    Emitter<ViewportRenderState> emit,
-  ) {
+  void _onReset(ViewportBudgetReset event, Emitter<ViewportRenderState> emit) {
     emit(const ViewportRenderState.initial());
   }
 

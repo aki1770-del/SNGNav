@@ -57,8 +57,7 @@ class NoaaNwsRetryPolicy {
 
   /// No-retry policy: zero retries; preserves the historical 0.0.1
   /// behavior where the caller decides backoff.
-  static const NoaaNwsRetryPolicy none =
-      NoaaNwsRetryPolicy(maxRetries: 0);
+  static const NoaaNwsRetryPolicy none = NoaaNwsRetryPolicy(maxRetries: 0);
 
   /// Computes the delay before retry attempt [retryIndex] (0-indexed).
   /// 0 -> baseDelay; 1 -> baseDelay × 2; 2 -> baseDelay × 4.
@@ -147,8 +146,8 @@ class NoaaNwsClient {
     this.acceptHeader = kDefaultAcceptHeader,
     this.retryPolicy = NoaaNwsRetryPolicy.none,
     Future<void> Function(Duration)? sleep,
-  })  : _http = client ?? http.Client(),
-        _sleep = sleep ?? Future<void>.delayed {
+  }) : _http = client ?? http.Client(),
+       _sleep = sleep ?? Future<void>.delayed {
     if (userAgent.trim().isEmpty) {
       throw ArgumentError.value(
         userAgent,
@@ -187,9 +186,7 @@ class NoaaNwsClient {
     required double longitude,
     bool actualOnly = true,
   }) async {
-    final uri = Uri.parse(
-      '$apiBase/alerts/active?point=$latitude,$longitude',
-    );
+    final uri = Uri.parse('$apiBase/alerts/active?point=$latitude,$longitude');
     final response = await _fetchWithRetry(uri);
     final Object? decoded;
     try {

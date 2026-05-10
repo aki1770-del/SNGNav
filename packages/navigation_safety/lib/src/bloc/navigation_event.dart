@@ -5,8 +5,6 @@ import 'package:equatable/equatable.dart';
 
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 
-
-
 sealed class NavigationEvent extends Equatable {
   const NavigationEvent();
 
@@ -18,10 +16,7 @@ class NavigationStarted extends NavigationEvent {
   final NavigationRoute route;
   final String? destinationLabel;
 
-  const NavigationStarted({
-    required this.route,
-    this.destinationLabel,
-  });
+  const NavigationStarted({required this.route, this.destinationLabel});
 
   @override
   List<Object?> get props => [route, destinationLabel];
@@ -97,8 +92,14 @@ class SafetyAlertReceived extends NavigationEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [message, severity, dismissible, scenario, condition, ambientThreshold];
+  List<Object?> get props => [
+    message,
+    severity,
+    dismissible,
+    scenario,
+    condition,
+    ambientThreshold,
+  ];
 }
 
 class SafetyAlertDismissed extends NavigationEvent {

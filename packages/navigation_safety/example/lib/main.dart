@@ -10,21 +10,23 @@ import 'package:routing_engine/routing_engine.dart';
 /// package, so examples carry their own identical copy.
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
-        shape: shape,
-        maneuvers: maneuvers
-            .map((m) => NavigationManeuver(
-                  index: m.index,
-                  instruction: m.instruction,
-                  type: m.type,
-                  lengthKm: m.lengthKm,
-                  timeSeconds: m.timeSeconds,
-                  position: m.position,
-                ))
-            .toList(),
-        totalDistanceKm: totalDistanceKm,
-        totalTimeSeconds: totalTimeSeconds,
-        summary: summary,
-      );
+    shape: shape,
+    maneuvers: maneuvers
+        .map(
+          (m) => NavigationManeuver(
+            index: m.index,
+            instruction: m.instruction,
+            type: m.type,
+            lengthKm: m.lengthKm,
+            timeSeconds: m.timeSeconds,
+            position: m.position,
+          ),
+        )
+        .toList(),
+    totalDistanceKm: totalDistanceKm,
+    totalTimeSeconds: totalTimeSeconds,
+    summary: summary,
+  );
 }
 
 final _exampleRoute = RouteResult(
@@ -84,9 +86,7 @@ class _ExampleScreen extends StatelessWidget {
           Positioned.fill(
             child: ColoredBox(
               color: Colors.blueGrey.shade50,
-              child: const Center(
-                child: Text('Map layer placeholder'),
-              ),
+              child: const Center(child: Text('Map layer placeholder')),
             ),
           ),
           Align(
@@ -100,36 +100,36 @@ class _ExampleScreen extends StatelessWidget {
                 children: [
                   FilledButton(
                     onPressed: () => context.read<NavigationBloc>().add(
-                          const SafetyAlertReceived(
-                            message: 'Snow expected in 30 minutes',
-                            severity: AlertSeverity.info,
-                          ),
-                        ),
+                      const SafetyAlertReceived(
+                        message: 'Snow expected in 30 minutes',
+                        severity: AlertSeverity.info,
+                      ),
+                    ),
                     child: const Text('Info'),
                   ),
                   FilledButton(
                     onPressed: () => context.read<NavigationBloc>().add(
-                          const SafetyAlertReceived(
-                            message: 'Icy road conditions ahead',
-                            severity: AlertSeverity.warning,
-                          ),
-                        ),
+                      const SafetyAlertReceived(
+                        message: 'Icy road conditions ahead',
+                        severity: AlertSeverity.warning,
+                      ),
+                    ),
                     child: const Text('Warning'),
                   ),
                   FilledButton(
                     onPressed: () => context.read<NavigationBloc>().add(
-                          const SafetyAlertReceived(
-                            message: 'Visibility zero - pull over immediately',
-                            severity: AlertSeverity.critical,
-                            dismissible: false,
-                          ),
-                        ),
+                      const SafetyAlertReceived(
+                        message: 'Visibility zero - pull over immediately',
+                        severity: AlertSeverity.critical,
+                        dismissible: false,
+                      ),
+                    ),
                     child: const Text('Critical'),
                   ),
                   OutlinedButton(
-                    onPressed: () => context
-                        .read<NavigationBloc>()
-                        .add(const SafetyAlertDismissed()),
+                    onPressed: () => context.read<NavigationBloc>().add(
+                      const SafetyAlertDismissed(),
+                    ),
                     child: const Text('Dismiss'),
                   ),
                 ],

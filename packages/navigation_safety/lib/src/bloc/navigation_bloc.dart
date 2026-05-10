@@ -25,10 +25,10 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     DriverProfile? profile,
     AlertDensityThrottle? throttle,
     LoomFitTelemetry? telemetry,
-  })  : _profile = profile,
-        _throttle = throttle,
-        _telemetry = telemetry,
-        super(const NavigationState.idle()) {
+  }) : _profile = profile,
+       _throttle = throttle,
+       _telemetry = telemetry,
+       super(const NavigationState.idle()) {
     on<NavigationStarted>(_onStarted);
     on<NavigationStopped>(_onStopped);
     on<ManeuverAdvanced>(_onManeuverAdvanced);
@@ -52,10 +52,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   /// (no records emitted).
   final LoomFitTelemetry? _telemetry;
 
-  void _onStarted(
-    NavigationStarted event,
-    Emitter<NavigationState> emit,
-  ) {
+  void _onStarted(NavigationStarted event, Emitter<NavigationState> emit) {
     // Only allow starting from idle or arrived.
     // Deviated routes must complete via RerouteCompleted, not NavigationStarted.
     if (state.status != NavigationStatus.idle &&
@@ -66,29 +63,30 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       );
       return;
     }
-    emit(NavigationState(
-      status: NavigationStatus.navigating,
-      route: event.route,
-      currentManeuverIndex: 0,
-      destinationLabel: event.destinationLabel,
-      alertMessage: state.alertMessage,
-      alertSeverity: state.alertSeverity,
-      alertDismissible: state.alertDismissible,
-      alertScenario: state.alertScenario,
-    ));
+    emit(
+      NavigationState(
+        status: NavigationStatus.navigating,
+        route: event.route,
+        currentManeuverIndex: 0,
+        destinationLabel: event.destinationLabel,
+        alertMessage: state.alertMessage,
+        alertSeverity: state.alertSeverity,
+        alertDismissible: state.alertDismissible,
+        alertScenario: state.alertScenario,
+      ),
+    );
   }
 
-  void _onStopped(
-    NavigationStopped event,
-    Emitter<NavigationState> emit,
-  ) {
-    emit(NavigationState(
-      status: NavigationStatus.idle,
-      alertMessage: state.alertMessage,
-      alertSeverity: state.alertSeverity,
-      alertDismissible: state.alertDismissible,
-      alertScenario: state.alertScenario,
-    ));
+  void _onStopped(NavigationStopped event, Emitter<NavigationState> emit) {
+    emit(
+      NavigationState(
+        status: NavigationStatus.idle,
+        alertMessage: state.alertMessage,
+        alertSeverity: state.alertSeverity,
+        alertDismissible: state.alertDismissible,
+        alertScenario: state.alertScenario,
+      ),
+    );
   }
 
   void _onManeuverAdvanced(
@@ -102,10 +100,12 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     final totalManeuvers = state.route!.maneuvers.length;
 
     if (totalManeuvers == 0 || nextIndex >= totalManeuvers) {
-      emit(state.copyWith(
-        status: NavigationStatus.arrived,
-        currentManeuverIndex: totalManeuvers > 0 ? totalManeuvers - 1 : 0,
-      ));
+      emit(
+        state.copyWith(
+          status: NavigationStatus.arrived,
+          currentManeuverIndex: totalManeuvers > 0 ? totalManeuvers - 1 : 0,
+        ),
+      );
     } else {
       emit(state.copyWith(currentManeuverIndex: nextIndex));
     }
@@ -126,14 +126,16 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   ) {
     if (state.status != NavigationStatus.deviated) return;
 
-    emit(state.copyWith(
-      status: NavigationStatus.navigating,
-      route: event.newRoute,
-      currentManeuverIndex: 0,
-      // Only clear dismissible alerts — non-dismissible safety alerts persist
-      // through reroutes (e.g. "ice road ahead" must not be silenced by reroute).
-      clearAlert: state.alertDismissible,
-    ));
+    emit(
+      state.copyWith(
+        status: NavigationStatus.navigating,
+        route: event.newRoute,
+        currentManeuverIndex: 0,
+        // Only clear dismissible alerts — non-dismissible safety alerts persist
+        // through reroutes (e.g. "ice road ahead" must not be silenced by reroute).
+        clearAlert: state.alertDismissible,
+      ),
+    );
   }
 
   void _onSafetyAlert(
@@ -184,17 +186,21 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     // free-form message. Otherwise the free-form message is used
     // verbatim (back-compat).
     final message = (event.condition != null && _profile != null)
-        ? AlertExplainer.forConditionAndProfile(event.condition!, _profile)
-            .action
+        ? AlertExplainer.forConditionAndProfile(
+            event.condition!,
+            _profile,
+          ).action
         : event.message;
 
-    emit(state.copyWith(
-      alertMessage: message,
-      alertSeverity: event.severity,
-      alertDismissible: event.dismissible,
-      alertScenario: event.scenario,
-      alertCondition: event.condition,
-    ));
+    emit(
+      state.copyWith(
+        alertMessage: message,
+        alertSeverity: event.severity,
+        alertDismissible: event.dismissible,
+        alertScenario: event.scenario,
+        alertCondition: event.condition,
+      ),
+    );
 
     assert(() {
       sw?.stop();
@@ -221,13 +227,15 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     final telemetry = _telemetry;
     if (telemetry == null) return;
     if (_profile == null) return;
-    telemetry.record(LoomFitTelemetryRecord(
-      profileClass: _profile,
-      ambientThreshold: event.ambientThreshold,
-      alertSequence: <DateTime>[now],
-      responseLatency: null,
-      outcome: outcome,
-    ));
+    telemetry.record(
+      LoomFitTelemetryRecord(
+        profileClass: _profile,
+        ambientThreshold: event.ambientThreshold,
+        alertSequence: <DateTime>[now],
+        responseLatency: null,
+        outcome: outcome,
+      ),
+    );
   }
 
   void _onAlertDismissed(

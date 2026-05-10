@@ -5,12 +5,15 @@ void main() {
   group('DriverState enum exhaustivity', () {
     test('has the four documented values', () {
       expect(DriverState.values, hasLength(4));
-      expect(DriverState.values, containsAll([
-        DriverState.alert,
-        DriverState.fatigued,
-        DriverState.distracted,
-        DriverState.impairedVisibility,
-      ]));
+      expect(
+        DriverState.values,
+        containsAll([
+          DriverState.alert,
+          DriverState.fatigued,
+          DriverState.distracted,
+          DriverState.impairedVisibility,
+        ]),
+      );
     });
   });
 
@@ -84,21 +87,23 @@ void main() {
     });
   });
 
-  group('forDriverContext — alert state == forProfile (back-compat invariant)',
-      () {
-    for (final profile in DriverProfile.values) {
-      test('${profile.name}: alert state matches forProfile baseline', () {
-        final base = NavigationSafetyConfig.forProfile(profile);
-        final ctx = NavigationSafetyConfig.forDriverContext(
-          DriverContext(profile: profile, state: DriverState.alert),
-        );
-        expect(ctx.warningTemperatureCelsius, base.warningTemperatureCelsius);
-        expect(ctx.warningVisibilityMeters, base.warningVisibilityMeters);
-        expect(ctx.infoVisibilityMeters, base.infoVisibilityMeters);
-        expect(ctx.criticalVisibilityMeters, base.criticalVisibilityMeters);
-      });
-    }
-  });
+  group(
+    'forDriverContext — alert state == forProfile (back-compat invariant)',
+    () {
+      for (final profile in DriverProfile.values) {
+        test('${profile.name}: alert state matches forProfile baseline', () {
+          final base = NavigationSafetyConfig.forProfile(profile);
+          final ctx = NavigationSafetyConfig.forDriverContext(
+            DriverContext(profile: profile, state: DriverState.alert),
+          );
+          expect(ctx.warningTemperatureCelsius, base.warningTemperatureCelsius);
+          expect(ctx.warningVisibilityMeters, base.warningVisibilityMeters);
+          expect(ctx.infoVisibilityMeters, base.infoVisibilityMeters);
+          expect(ctx.criticalVisibilityMeters, base.criticalVisibilityMeters);
+        });
+      }
+    },
+  );
 
   group('forDriverContext — conservative-only contract', () {
     for (final profile in DriverProfile.values) {
@@ -113,17 +118,19 @@ void main() {
             greaterThanOrEqualTo(base.warningTemperatureCelsius),
           );
         });
-        test('${profile.name} × ${state.name}: warningVisibility >= baseline',
-            () {
-          final base = NavigationSafetyConfig.forProfile(profile);
-          final tuned = NavigationSafetyConfig.forDriverContext(
-            DriverContext(profile: profile, state: state),
-          );
-          expect(
-            tuned.warningVisibilityMeters,
-            greaterThanOrEqualTo(base.warningVisibilityMeters),
-          );
-        });
+        test(
+          '${profile.name} × ${state.name}: warningVisibility >= baseline',
+          () {
+            final base = NavigationSafetyConfig.forProfile(profile);
+            final tuned = NavigationSafetyConfig.forDriverContext(
+              DriverContext(profile: profile, state: state),
+            );
+            expect(
+              tuned.warningVisibilityMeters,
+              greaterThanOrEqualTo(base.warningVisibilityMeters),
+            );
+          },
+        );
       }
     }
   });
@@ -165,24 +172,26 @@ void main() {
       );
     });
 
-    test('distracted with speed in DrivingContext expands warning visibility',
-        () {
-      final base = NavigationSafetyConfig.forProfileWithContext(
-        DriverProfile.snowZoneExperienced,
-        context: const DrivingContext(speedMps: 25.0),
-      );
-      final tuned = NavigationSafetyConfig.forDriverContext(
-        const DriverContext(
-          profile: DriverProfile.snowZoneExperienced,
-          state: DriverState.distracted,
-        ),
-        environmentalContext: const DrivingContext(speedMps: 25.0),
-      );
-      expect(
-        tuned.warningVisibilityMeters,
-        greaterThan(base.warningVisibilityMeters),
-      );
-    });
+    test(
+      'distracted with speed in DrivingContext expands warning visibility',
+      () {
+        final base = NavigationSafetyConfig.forProfileWithContext(
+          DriverProfile.snowZoneExperienced,
+          context: const DrivingContext(speedMps: 25.0),
+        );
+        final tuned = NavigationSafetyConfig.forDriverContext(
+          const DriverContext(
+            profile: DriverProfile.snowZoneExperienced,
+            state: DriverState.distracted,
+          ),
+          environmentalContext: const DrivingContext(speedMps: 25.0),
+        );
+        expect(
+          tuned.warningVisibilityMeters,
+          greaterThan(base.warningVisibilityMeters),
+        );
+      },
+    );
 
     test('distracted without speed leaves visibility unchanged', () {
       final base = NavigationSafetyConfig.forProfile(
@@ -194,10 +203,7 @@ void main() {
           state: DriverState.distracted,
         ),
       );
-      expect(
-        tuned.warningVisibilityMeters,
-        base.warningVisibilityMeters,
-      );
+      expect(tuned.warningVisibilityMeters, base.warningVisibilityMeters);
     });
   });
 
@@ -214,10 +220,7 @@ void main() {
         ),
         environmentalContext: const DrivingContext(speedMps: 20.0),
       );
-      expect(
-        composed.warningVisibilityMeters,
-        envOnly.warningVisibilityMeters,
-      );
+      expect(composed.warningVisibilityMeters, envOnly.warningVisibilityMeters);
     });
 
     test('null environmentalContext == bare forDriverContext', () {
@@ -252,10 +255,7 @@ void main() {
         DriverProfile.snowZoneExperienced,
         context: const DrivingContext(speedMps: 30.0),
       );
-      expect(
-        cfg.warningVisibilityMeters,
-        greaterThanOrEqualTo(200),
-      );
+      expect(cfg.warningVisibilityMeters, greaterThanOrEqualTo(200));
     });
   });
 }

@@ -159,10 +159,12 @@ void main() {
   // ===========================================================================
 
   group('ConsentPurpose', () {
-    test('has exactly 7 values (3 v0.3.0 + 4 v0.4.0 instrumentation-class)',
-        () {
-      expect(ConsentPurpose.values, hasLength(7));
-    });
+    test(
+      'has exactly 7 values (3 v0.3.0 + 4 v0.4.0 instrumentation-class)',
+      () {
+        expect(ConsentPurpose.values, hasLength(7));
+      },
+    );
 
     test('preserves v0.3.0 values verbatim', () {
       expect(

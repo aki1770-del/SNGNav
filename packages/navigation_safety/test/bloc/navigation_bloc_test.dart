@@ -199,13 +199,16 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'idle to navigating on start',
       build: NavigationBloc.new,
-      act: (bloc) => bloc.add(NavigationStarted(
-        route: _testRoute,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        NavigationStarted(route: _testRoute, destinationLabel: 'Toyota HQ'),
+      ),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.status, 'status', NavigationStatus.navigating)
+            .having(
+              (state) => state.status,
+              'status',
+              NavigationStatus.navigating,
+            )
             .having((state) => state.route, 'route', _testRoute)
             .having((state) => state.destinationLabel, 'label', 'Toyota HQ'),
       ],
@@ -236,9 +239,21 @@ void main() {
         bloc.add(const ManeuverAdvanced());
       },
       expect: () => [
-        isA<NavigationState>().having((state) => state.currentManeuverIndex, 'index', 1),
-        isA<NavigationState>().having((state) => state.currentManeuverIndex, 'index', 2),
-        isA<NavigationState>().having((state) => state.status, 'status', NavigationStatus.arrived),
+        isA<NavigationState>().having(
+          (state) => state.currentManeuverIndex,
+          'index',
+          1,
+        ),
+        isA<NavigationState>().having(
+          (state) => state.currentManeuverIndex,
+          'index',
+          2,
+        ),
+        isA<NavigationState>().having(
+          (state) => state.status,
+          'status',
+          NavigationStatus.arrived,
+        ),
       ],
     );
 
@@ -251,7 +266,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
       expect: () => [
-        isA<NavigationState>().having((state) => state.status, 'status', NavigationStatus.arrived),
+        isA<NavigationState>().having(
+          (state) => state.status,
+          'status',
+          NavigationStatus.arrived,
+        ),
       ],
     );
 
@@ -263,10 +282,15 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 1,
       ),
-      act: (bloc) => bloc.add(const RouteDeviationDetected(reason: 'off-route')),
+      act: (bloc) =>
+          bloc.add(const RouteDeviationDetected(reason: 'off-route')),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.status, 'status', NavigationStatus.deviated)
+            .having(
+              (state) => state.status,
+              'status',
+              NavigationStatus.deviated,
+            )
             .having((state) => state.currentManeuverIndex, 'index', 1),
       ],
     );
@@ -283,7 +307,11 @@ void main() {
       act: (bloc) => bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.status, 'status', NavigationStatus.navigating)
+            .having(
+              (state) => state.status,
+              'status',
+              NavigationStatus.navigating,
+            )
             .having((state) => state.route, 'route', _rerouteResult)
             .having((state) => state.currentManeuverIndex, 'index', 0)
             .having((state) => state.destinationLabel, 'label', 'Toyota HQ'),
@@ -298,15 +326,29 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 1,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Icy road conditions ahead',
-        severity: AlertSeverity.warning,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Icy road conditions ahead',
+          severity: AlertSeverity.warning,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.status, 'status', NavigationStatus.navigating)
-            .having((state) => state.alertMessage, 'message', 'Icy road conditions ahead')
-            .having((state) => state.alertSeverity, 'severity', AlertSeverity.warning),
+            .having(
+              (state) => state.status,
+              'status',
+              NavigationStatus.navigating,
+            )
+            .having(
+              (state) => state.alertMessage,
+              'message',
+              'Icy road conditions ahead',
+            )
+            .having(
+              (state) => state.alertSeverity,
+              'severity',
+              AlertSeverity.warning,
+            ),
       ],
     );
 
@@ -317,14 +359,20 @@ void main() {
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Visibility zero - pull over immediately',
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Visibility zero - pull over immediately',
+          severity: AlertSeverity.critical,
+          dismissible: false,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.alertSeverity, 'severity', AlertSeverity.critical)
+            .having(
+              (state) => state.alertSeverity,
+              'severity',
+              AlertSeverity.critical,
+            )
             .having((state) => state.alertDismissible, 'dismissible', isFalse),
       ],
     );
@@ -339,14 +387,19 @@ void main() {
         alertSeverity: AlertSeverity.critical,
         alertDismissible: false,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Heavy snow - reduced traction and visibility',
-        severity: AlertSeverity.warning,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Heavy snow - reduced traction and visibility',
+          severity: AlertSeverity.warning,
+        ),
+      ),
       expect: () => <NavigationState>[],
       verify: (bloc) {
         expect(bloc.state.alertSeverity, AlertSeverity.critical);
-        expect(bloc.state.alertMessage, 'Fleet reports: icy road conditions detected');
+        expect(
+          bloc.state.alertMessage,
+          'Fleet reports: icy road conditions detected',
+        );
         expect(bloc.state.alertDismissible, isFalse);
       },
     );
@@ -360,15 +413,25 @@ void main() {
         alertMessage: 'Heavy snow - reduced traction and visibility',
         alertSeverity: AlertSeverity.warning,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Fleet reports: icy road conditions detected',
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Fleet reports: icy road conditions detected',
+          severity: AlertSeverity.critical,
+          dismissible: false,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.alertSeverity, 'severity', AlertSeverity.critical)
-            .having((state) => state.alertMessage, 'message', 'Fleet reports: icy road conditions detected')
+            .having(
+              (state) => state.alertSeverity,
+              'severity',
+              AlertSeverity.critical,
+            )
+            .having(
+              (state) => state.alertMessage,
+              'message',
+              'Fleet reports: icy road conditions detected',
+            )
             .having((state) => state.alertDismissible, 'dismissible', isFalse),
       ],
     );
@@ -385,7 +448,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const SafetyAlertDismissed()),
       expect: () => [
-        isA<NavigationState>().having((state) => state.hasSafetyAlert, 'hasSafetyAlert', isFalse),
+        isA<NavigationState>().having(
+          (state) => state.hasSafetyAlert,
+          'hasSafetyAlert',
+          isFalse,
+        ),
       ],
     );
 
@@ -399,7 +466,8 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'ignores route deviation while idle',
       build: NavigationBloc.new,
-      act: (bloc) => bloc.add(const RouteDeviationDetected(reason: 'off-route')),
+      act: (bloc) =>
+          bloc.add(const RouteDeviationDetected(reason: 'off-route')),
       expect: () => <NavigationState>[],
     );
 
@@ -436,14 +504,21 @@ void main() {
         alertMessage: 'Snow warning active',
         alertSeverity: AlertSeverity.warning,
       ),
-      act: (bloc) => bloc.add(NavigationStarted(
-        route: _testRoute,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        NavigationStarted(route: _testRoute, destinationLabel: 'Toyota HQ'),
+      ),
       expect: () => [
         isA<NavigationState>()
-            .having((state) => state.status, 'status', NavigationStatus.navigating)
-            .having((state) => state.alertMessage, 'message', 'Snow warning active'),
+            .having(
+              (state) => state.status,
+              'status',
+              NavigationStatus.navigating,
+            )
+            .having(
+              (state) => state.alertMessage,
+              'message',
+              'Snow warning active',
+            ),
       ],
     );
 
@@ -456,15 +531,17 @@ void main() {
         alertSeverity: AlertSeverity.critical,
         alertDismissible: false,
       ),
-      act: (bloc) => bloc.add(NavigationStarted(
-        route: _testRoute,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        NavigationStarted(route: _testRoute, destinationLabel: 'Toyota HQ'),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)
-            .having((s) => s.alertMessage, 'message',
-                'Black ice — reduce speed immediately')
+            .having(
+              (s) => s.alertMessage,
+              'message',
+              'Black ice — reduce speed immediately',
+            )
             .having((s) => s.alertSeverity, 'severity', AlertSeverity.critical)
             .having((s) => s.alertDismissible, 'dismissible', isFalse),
       ],
@@ -489,7 +566,11 @@ void main() {
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.idle)
-            .having((s) => s.alertMessage, 'message', 'Fog — visibility < 100 m')
+            .having(
+              (s) => s.alertMessage,
+              'message',
+              'Fog — visibility < 100 m',
+            )
             .having((s) => s.alertSeverity, 'severity', AlertSeverity.warning)
             .having((s) => s.alertDismissible, 'dismissible', isTrue),
       ],
@@ -522,17 +603,17 @@ void main() {
   group('NavigationBloc — per-profile throttle + explainer (0.8.0)', () {
     blocTest<NavigationBloc, NavigationState>(
       'emits state when throttle returns true (under cap)',
-      build: () => NavigationBloc(
-        profile: DriverProfile.snowZoneExperienced,
-      ),
+      build: () => NavigationBloc(profile: DriverProfile.snowZoneExperienced),
       seed: () => NavigationState(
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Icy patch ahead',
-        severity: AlertSeverity.warning,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Icy patch ahead',
+          severity: AlertSeverity.warning,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.alertMessage, 'message', 'Icy patch ahead')
@@ -540,8 +621,7 @@ void main() {
       ],
     );
 
-    test('drops alert + emits telemetry when throttle returns false',
-        () async {
+    test('drops alert + emits telemetry when throttle returns false', () async {
       final telemetry = LoomFitTelemetry();
       final received = <LoomFitOutcome>[];
       final sub = telemetry.records.listen((r) => received.add(r.outcome));
@@ -553,15 +633,19 @@ void main() {
         telemetry: telemetry,
       );
 
-      bloc.add(const SafetyAlertReceived(
-        message: 'First',
-        severity: AlertSeverity.warning,
-      ));
+      bloc.add(
+        const SafetyAlertReceived(
+          message: 'First',
+          severity: AlertSeverity.warning,
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 30));
-      bloc.add(const SafetyAlertReceived(
-        message: 'Second',
-        severity: AlertSeverity.warning,
-      ));
+      bloc.add(
+        const SafetyAlertReceived(
+          message: 'Second',
+          severity: AlertSeverity.warning,
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 30));
 
       // First emits state (cold-start outcome); second is dropped.
@@ -575,52 +659,59 @@ void main() {
       await bloc.close();
     });
 
-    test('critical bypass fires regardless of throttle in-window count',
-        () async {
-      final telemetry = LoomFitTelemetry();
-      final received = <LoomFitOutcome>[];
-      final sub = telemetry.records.listen((r) => received.add(r.outcome));
+    test(
+      'critical bypass fires regardless of throttle in-window count',
+      () async {
+        final telemetry = LoomFitTelemetry();
+        final received = <LoomFitOutcome>[];
+        final sub = telemetry.records.listen((r) => received.add(r.outcome));
 
-      final bloc = NavigationBloc(
-        profile: DriverProfile.foreignTouristSnowZone,
-        telemetry: telemetry,
-      );
+        final bloc = NavigationBloc(
+          profile: DriverProfile.foreignTouristSnowZone,
+          telemetry: telemetry,
+        );
 
-      // Fill the cap with a non-critical, then fire a critical.
-      bloc.add(const SafetyAlertReceived(
-        message: 'First info',
-        severity: AlertSeverity.warning,
-      ));
-      await Future<void>.delayed(const Duration(milliseconds: 30));
-      bloc.add(const SafetyAlertReceived(
-        message: 'Critical hazard',
-        severity: AlertSeverity.critical,
-      ));
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+        // Fill the cap with a non-critical, then fire a critical.
+        bloc.add(
+          const SafetyAlertReceived(
+            message: 'First info',
+            severity: AlertSeverity.warning,
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        bloc.add(
+          const SafetyAlertReceived(
+            message: 'Critical hazard',
+            severity: AlertSeverity.critical,
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 30));
 
-      expect(received, contains(LoomFitOutcome.criticalBypass));
-      expect(bloc.state.alertSeverity, AlertSeverity.critical);
-      expect(bloc.state.alertMessage, 'Critical hazard');
+        expect(received, contains(LoomFitOutcome.criticalBypass));
+        expect(bloc.state.alertSeverity, AlertSeverity.critical);
+        expect(bloc.state.alertMessage, 'Critical hazard');
 
-      await sub.cancel();
-      await telemetry.dispose();
-      await bloc.close();
-    });
+        await sub.cancel();
+        await telemetry.dispose();
+        await bloc.close();
+      },
+    );
 
     blocTest<NavigationBloc, NavigationState>(
       'condition + profile -> explainer text used as alert message',
-      build: () => NavigationBloc(
-        profile: DriverProfile.foreignTouristSnowZone,
-      ),
+      build: () =>
+          NavigationBloc(profile: DriverProfile.foreignTouristSnowZone),
       seed: () => NavigationState(
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'fallback if explainer not used',
-        severity: AlertSeverity.warning,
-        condition: RoadSurfaceCondition.ice,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'fallback if explainer not used',
+          severity: AlertSeverity.warning,
+          condition: RoadSurfaceCondition.ice,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>().having(
           (s) => s.alertMessage,
@@ -637,14 +728,19 @@ void main() {
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Free-form fallback',
-        severity: AlertSeverity.warning,
-        condition: RoadSurfaceCondition.ice,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Free-form fallback',
+          severity: AlertSeverity.warning,
+          condition: RoadSurfaceCondition.ice,
+        ),
+      ),
       expect: () => [
-        isA<NavigationState>()
-            .having((s) => s.alertMessage, 'message', 'Free-form fallback'),
+        isA<NavigationState>().having(
+          (s) => s.alertMessage,
+          'message',
+          'Free-form fallback',
+        ),
       ],
     );
   });

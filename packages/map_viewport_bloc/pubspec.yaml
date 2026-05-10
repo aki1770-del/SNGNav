@@ -1,9 +1,8 @@
 name: map_viewport_bloc
 description: >-
-  Camera follow, free look, route overview — without reinventing viewport
-  logic. Declarative state machine for navigation map cameras and six-layer
-  composition. Bring your own renderer.
-version: 0.4.0
+  Declarative camera state machine (follow / free look / route
+  overview) for navigation maps with six-layer composition.
+version: 0.4.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

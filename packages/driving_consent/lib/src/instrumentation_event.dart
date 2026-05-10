@@ -242,14 +242,14 @@ final class AlertFired extends InstrumentationEvent {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        driverPseudonym,
-        alertClass,
-        severity,
-        modalDuration,
-        dismissalState,
-        driverProfile,
-      ];
+    timestamp,
+    driverPseudonym,
+    alertClass,
+    severity,
+    modalDuration,
+    dismissalState,
+    driverProfile,
+  ];
 
   @override
   String toString() =>
@@ -282,13 +282,13 @@ final class VoicePaceAdjusted extends InstrumentationEvent {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        driverPseudonym,
-        previousRate,
-        newRate,
-        adjustmentReason,
-        driverProfile,
-      ];
+    timestamp,
+    driverPseudonym,
+    previousRate,
+    newRate,
+    adjustmentReason,
+    driverProfile,
+  ];
 
   @override
   String toString() =>
@@ -321,13 +321,13 @@ final class CohortMultiplierObserved extends InstrumentationEvent {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        driverPseudonym,
-        driverProfile,
-        cohortMultiplierClass,
-        appliedMultiplier,
-        observedFitClass,
-      ];
+    timestamp,
+    driverPseudonym,
+    driverProfile,
+    cohortMultiplierClass,
+    appliedMultiplier,
+    observedFitClass,
+  ];
 
   @override
   String toString() =>
@@ -367,14 +367,14 @@ final class TripContextCaptured extends InstrumentationEvent {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        driverPseudonym,
-        vehicleClass,
-        passengerPresenceClass,
-        timeOfDayClass,
-        consecutiveDrivingDayClass,
-        driverProfile,
-      ];
+    timestamp,
+    driverPseudonym,
+    vehicleClass,
+    passengerPresenceClass,
+    timeOfDayClass,
+    consecutiveDrivingDayClass,
+    driverProfile,
+  ];
 
   @override
   String toString() =>

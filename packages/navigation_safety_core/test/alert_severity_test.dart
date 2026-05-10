@@ -22,7 +22,10 @@ void main() {
     });
 
     test('warning index < critical index', () {
-      expect(AlertSeverity.warning.index, lessThan(AlertSeverity.critical.index));
+      expect(
+        AlertSeverity.warning.index,
+        lessThan(AlertSeverity.critical.index),
+      );
     });
   });
 }
