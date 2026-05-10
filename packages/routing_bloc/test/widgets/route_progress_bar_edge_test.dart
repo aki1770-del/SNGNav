@@ -53,25 +53,22 @@ final _emptyManeuverRoute = NavigationRoute(
 );
 
 Widget _wrap(Widget child) {
-  return MaterialApp(
-    home: Scaffold(body: child),
-  );
+  return MaterialApp(home: Scaffold(body: child));
 }
 
 void main() {
   group('RouteProgressBar — edge cases', () {
     testWidgets('active with null route renders nothing', (tester) async {
       await tester.pumpWidget(
-        _wrap(
-          const RouteProgressBar(status: RouteProgressStatus.active),
-        ),
+        _wrap(const RouteProgressBar(status: RouteProgressStatus.active)),
       );
 
       expect(find.byType(Card), findsNothing);
     });
 
-    testWidgets('active with empty maneuvers shows navigating fallback',
-        (tester) async {
+    testWidgets('active with empty maneuvers shows navigating fallback', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           RouteProgressBar(
@@ -86,8 +83,9 @@ void main() {
       expect(find.text('Navigating...'), findsOneWidget);
     });
 
-    testWidgets('negative maneuver index shows navigating fallback',
-        (tester) async {
+    testWidgets('negative maneuver index shows navigating fallback', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           RouteProgressBar(
@@ -101,8 +99,9 @@ void main() {
       expect(find.text('Navigating...'), findsOneWidget);
     });
 
-    testWidgets('out-of-bounds maneuver index shows navigating fallback',
-        (tester) async {
+    testWidgets('out-of-bounds maneuver index shows navigating fallback', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           RouteProgressBar(
@@ -116,12 +115,11 @@ void main() {
       expect(find.text('Navigating...'), findsOneWidget);
     });
 
-    testWidgets('arrived without label shows generic arrived text',
-        (tester) async {
+    testWidgets('arrived without label shows generic arrived text', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          const RouteProgressBar(status: RouteProgressStatus.arrived),
-        ),
+        _wrap(const RouteProgressBar(status: RouteProgressStatus.arrived)),
       );
 
       expect(find.text('Arrived'), findsOneWidget);
@@ -178,12 +176,11 @@ void main() {
       expect(find.byIcon(Icons.sports_score), findsOneWidget);
     });
 
-    testWidgets('deviated shows amber border and wrong_location icon',
-        (tester) async {
+    testWidgets('deviated shows amber border and wrong_location icon', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          const RouteProgressBar(status: RouteProgressStatus.deviated),
-        ),
+        _wrap(const RouteProgressBar(status: RouteProgressStatus.deviated)),
       );
 
       expect(find.byIcon(Icons.wrong_location), findsOneWidget);

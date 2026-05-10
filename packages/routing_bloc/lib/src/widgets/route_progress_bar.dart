@@ -25,7 +25,8 @@ class RouteProgressBar extends StatelessWidget {
 
   NavigationManeuver? get _currentManeuver {
     if (route == null) return null;
-    if (currentManeuverIndex < 0 || currentManeuverIndex >= route!.maneuvers.length) {
+    if (currentManeuverIndex < 0 ||
+        currentManeuverIndex >= route!.maneuvers.length) {
       return null;
     }
     return route!.maneuvers[currentManeuverIndex];
@@ -94,8 +95,8 @@ class RouteProgressBar extends StatelessWidget {
                     Text(
                       '${route!.eta.inMinutes} min',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       '${route!.totalDistanceKm.toStringAsFixed(1)} km',
@@ -124,18 +125,14 @@ class RouteProgressBar extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Icon(
-              Icons.wrong_location,
-              size: 32,
-              color: Colors.amber.shade700,
-            ),
+            Icon(Icons.wrong_location, size: 32, color: Colors.amber.shade700),
             const SizedBox(width: 12),
             Text(
               'Rerouting...',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.amber.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: Colors.amber.shade700,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -161,9 +158,9 @@ class RouteProgressBar extends StatelessWidget {
                 destinationLabel != null
                     ? 'Arrived at $destinationLabel'
                     : 'Arrived',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
           ],

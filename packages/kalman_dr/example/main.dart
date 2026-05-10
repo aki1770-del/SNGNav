@@ -22,9 +22,11 @@ void main() {
     timestamp: timestamp.add(const Duration(seconds: 2)),
   );
 
-  print('predicted lat/lon: '
-      '${predicted.lat.toStringAsFixed(6)}, '
-      '${predicted.lon.toStringAsFixed(6)}');
+  print(
+    'predicted lat/lon: '
+    '${predicted.lat.toStringAsFixed(6)}, '
+    '${predicted.lon.toStringAsFixed(6)}',
+  );
   print('predicted accuracy: ${predicted.accuracy.toStringAsFixed(1)}m');
   print('updated accuracy: ${filter.accuracyMetres.toStringAsFixed(1)}m');
   print('safety cap exceeded: ${filter.isAccuracyExceeded}');

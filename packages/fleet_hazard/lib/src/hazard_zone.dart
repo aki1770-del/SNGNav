@@ -29,7 +29,8 @@ class HazardZone extends Equatable {
   final HazardSeverity severity;
 
   /// Number of unique vehicles contributing to this zone.
-  int get vehicleCount => reports.map((report) => report.vehicleId).toSet().length;
+  int get vehicleCount =>
+      reports.map((report) => report.vehicleId).toSet().length;
 
   /// Average confidence across all reports in the zone.
   double get averageConfidence {

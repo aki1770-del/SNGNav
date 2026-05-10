@@ -33,7 +33,8 @@ MockClient valhallaClient({
           'legs': [
             {
               'shape': shape,
-              'maneuvers': maneuvers ??
+              'maneuvers':
+                  maneuvers ??
                   [
                     {
                       'instruction': 'Drive east.',
@@ -132,15 +133,17 @@ void main() {
     Future<String> typeFor(int typeCode) async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
-        client: valhallaClient(maneuvers: [
-          {
-            'instruction': 'Test',
-            'type': typeCode,
-            'length': 1.0,
-            'time': 60,
-            'begin_shape_index': 0,
-          },
-        ]),
+        client: valhallaClient(
+          maneuvers: [
+            {
+              'instruction': 'Test',
+              'type': typeCode,
+              'length': 1.0,
+              'time': 60,
+              'begin_shape_index': 0,
+            },
+          ],
+        ),
       );
       final result = await engine.calculateRoute(_request);
       await engine.dispose();
@@ -244,9 +247,7 @@ void main() {
     test('decodes polyline6 to non-empty shape', () async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
-        client: valhallaClient(
-          shape: 'o}@o}@o}@o}@',
-        ),
+        client: valhallaClient(shape: 'o}@o}@o}@o}@'),
       );
 
       final result = await engine.calculateRoute(_request);
@@ -284,19 +285,21 @@ void main() {
       await engine.dispose();
     });
 
-    test('polyline6 and polyline5 produce different coordinates for same bytes',
-        () async {
-      // The same encoded string should yield different coordinates at
-      // precision 5 (1e5) vs precision 6 (1e6). Valhalla uses 6.
-      final valhallaEngine = ValhallaRoutingEngine(
-        baseUrl: 'http://test',
-        client: valhallaClient(shape: '_p~iF~ps|U'),
-      );
-      final valhallaResult = await valhallaEngine.calculateRoute(_request);
+    test(
+      'polyline6 and polyline5 produce different coordinates for same bytes',
+      () async {
+        // The same encoded string should yield different coordinates at
+        // precision 5 (1e5) vs precision 6 (1e6). Valhalla uses 6.
+        final valhallaEngine = ValhallaRoutingEngine(
+          baseUrl: 'http://test',
+          client: valhallaClient(shape: '_p~iF~ps|U'),
+        );
+        final valhallaResult = await valhallaEngine.calculateRoute(_request);
 
-      final osrmEngine = OsrmRoutingEngine(
-        baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
+        final osrmEngine = OsrmRoutingEngine(
+          baseUrl: 'http://test',
+          client: MockClient(
+            (_) async => http.Response(
               jsonEncode({
                 'code': 'Ok',
                 'routes': [
@@ -323,21 +326,23 @@ void main() {
                 ],
               }),
               200,
-            )),
-      );
-      final osrmResult = await osrmEngine.calculateRoute(_request);
+            ),
+          ),
+        );
+        final osrmResult = await osrmEngine.calculateRoute(_request);
 
-      // Both decode one point, but coordinates differ by factor of 10.
-      expect(valhallaResult.shape, isNotEmpty);
-      expect(osrmResult.shape, isNotEmpty);
-      expect(
-        valhallaResult.shape[0].latitude,
-        isNot(closeTo(osrmResult.shape[0].latitude, 0.001)),
-      );
+        // Both decode one point, but coordinates differ by factor of 10.
+        expect(valhallaResult.shape, isNotEmpty);
+        expect(osrmResult.shape, isNotEmpty);
+        expect(
+          valhallaResult.shape[0].latitude,
+          isNot(closeTo(osrmResult.shape[0].latitude, 0.001)),
+        );
 
-      await valhallaEngine.dispose();
-      await osrmEngine.dispose();
-    });
+        await valhallaEngine.dispose();
+        await osrmEngine.dispose();
+      },
+    );
   });
 
   group('ValhallaRoutingEngine — request body', () {
@@ -392,10 +397,10 @@ void main() {
     test('JSON error body extracts error field', () async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
-              jsonEncode({'error': 'No route found'}),
-              400,
-            )),
+        client: MockClient(
+          (_) async =>
+              http.Response(jsonEncode({'error': 'No route found'}), 400),
+        ),
       );
 
       expect(
@@ -435,15 +440,17 @@ void main() {
     test('empty legs throws RoutingException', () async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
-              jsonEncode({
-                'trip': {
-                  'summary': {'length': 0, 'time': 0},
-                  'legs': <dynamic>[],
-                },
-              }),
-              200,
-            )),
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'trip': {
+                'summary': {'length': 0, 'time': 0},
+                'legs': <dynamic>[],
+              },
+            }),
+            200,
+          ),
+        ),
       );
 
       expect(
@@ -457,8 +464,9 @@ void main() {
     test('network error throws RoutingException', () async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
-        client:
-            MockClient((_) async => throw http.ClientException('conn refused')),
+        client: MockClient(
+          (_) async => throw http.ClientException('conn refused'),
+        ),
       );
 
       expect(
@@ -469,29 +477,31 @@ void main() {
       await engine.dispose();
     });
 
-    test('begin_shape_index beyond decoded points defaults to (0, 0)',
-        () async {
-      final engine = ValhallaRoutingEngine(
-        baseUrl: 'http://test',
-        client: valhallaClient(
-          shape: 'o}@o}@',
-          maneuvers: [
-            {
-              'instruction': 'Test',
-              'type': 1,
-              'length': 1.0,
-              'time': 60,
-              'begin_shape_index': 999,
-            },
-          ],
-        ),
-      );
+    test(
+      'begin_shape_index beyond decoded points defaults to (0, 0)',
+      () async {
+        final engine = ValhallaRoutingEngine(
+          baseUrl: 'http://test',
+          client: valhallaClient(
+            shape: 'o}@o}@',
+            maneuvers: [
+              {
+                'instruction': 'Test',
+                'type': 1,
+                'length': 1.0,
+                'time': 60,
+                'begin_shape_index': 999,
+              },
+            ],
+          ),
+        );
 
-      final result = await engine.calculateRoute(_request);
-      expect(result.maneuvers.first.position, const LatLng(0, 0));
+        final result = await engine.calculateRoute(_request);
+        expect(result.maneuvers.first.position, const LatLng(0, 0));
 
-      await engine.dispose();
-    });
+        await engine.dispose();
+      },
+    );
   });
 
   group('ValhallaRoutingEngine — summary and distance', () {

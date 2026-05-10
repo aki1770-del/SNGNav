@@ -22,10 +22,10 @@ void main() async {
 class ExampleRoutingEngine implements RoutingEngine {
   @override
   EngineInfo get info => const EngineInfo(
-        name: 'example-engine',
-        version: '0.1.0',
-        queryLatency: Duration(milliseconds: 6),
-      );
+    name: 'example-engine',
+    version: '0.1.0',
+    queryLatency: Duration(milliseconds: 6),
+  );
 
   @override
   Future<RouteResult> calculateRoute(RouteRequest request) async {

@@ -11,21 +11,23 @@ import 'package:routing_engine/routing_engine.dart';
 /// examples sit at that boundary and convert here.
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
-        shape: shape,
-        maneuvers: maneuvers
-            .map((m) => NavigationManeuver(
-                  index: m.index,
-                  instruction: m.instruction,
-                  type: m.type,
-                  lengthKm: m.lengthKm,
-                  timeSeconds: m.timeSeconds,
-                  position: m.position,
-                ))
-            .toList(),
-        totalDistanceKm: totalDistanceKm,
-        totalTimeSeconds: totalTimeSeconds,
-        summary: summary,
-      );
+    shape: shape,
+    maneuvers: maneuvers
+        .map(
+          (m) => NavigationManeuver(
+            index: m.index,
+            instruction: m.instruction,
+            type: m.type,
+            lengthKm: m.lengthKm,
+            timeSeconds: m.timeSeconds,
+            position: m.position,
+          ),
+        )
+        .toList(),
+    totalDistanceKm: totalDistanceKm,
+    totalTimeSeconds: totalTimeSeconds,
+    summary: summary,
+  );
 }
 
 const _nagoya = LatLng(35.1709, 136.8815);
@@ -47,8 +49,9 @@ class RoutingBlocExampleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: BlocProvider(
-        create: (_) => RoutingBloc(engine: _MockRoutingEngine())
-          ..add(const RoutingEngineCheckRequested()),
+        create: (_) =>
+            RoutingBloc(engine: _MockRoutingEngine())
+              ..add(const RoutingEngineCheckRequested()),
         child: const _ExampleScreen(),
       ),
     );
@@ -77,8 +80,8 @@ class _ExampleScreen extends StatelessWidget {
                 child: switch (state.status) {
                   RoutingStatus.idle => _DestinationList(state: state),
                   RoutingStatus.loading => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: CircularProgressIndicator(),
+                  ),
                   RoutingStatus.routeActive => _RouteDetails(state: state),
                   RoutingStatus.error => _ErrorView(state: state),
                 },
@@ -101,9 +104,7 @@ class _DestinationList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'Engine: ${state.engineAvailable ? 'available' : 'checking...'}',
-        ),
+        Text('Engine: ${state.engineAvailable ? 'available' : 'checking...'}'),
         const SizedBox(height: 16),
         for (final dest in _destinations)
           Card(
@@ -111,11 +112,13 @@ class _DestinationList extends StatelessWidget {
               title: Text(dest.label),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                context.read<RoutingBloc>().add(RouteRequested(
-                      origin: _nagoya,
-                      destination: dest.point,
-                      destinationLabel: dest.label,
-                    ));
+                context.read<RoutingBloc>().add(
+                  RouteRequested(
+                    origin: _nagoya,
+                    destination: dest.point,
+                    destinationLabel: dest.label,
+                  ),
+                );
               },
             ),
           ),

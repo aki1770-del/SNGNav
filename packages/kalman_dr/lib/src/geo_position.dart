@@ -53,14 +53,14 @@ class GeoPosition extends Equatable {
 
   @override
   List<Object?> get props => [
-        latitude,
-        longitude,
-        accuracy,
-        altitude,
-        speed,
-        heading,
-        timestamp,
-      ];
+    latitude,
+    longitude,
+    accuracy,
+    altitude,
+    speed,
+    heading,
+    timestamp,
+  ];
 
   @override
   String toString() =>

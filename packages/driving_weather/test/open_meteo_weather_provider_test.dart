@@ -39,7 +39,10 @@ Map<String, dynamic> _buildResponse({
   List<double>? visibility,
 }) {
   // Generate 24 hourly entries.
-  final hours = List.generate(24, (i) => '2026-02-27T${i.toString().padLeft(2, '0')}:00');
+  final hours = List.generate(
+    24,
+    (i) => '2026-02-27T${i.toString().padLeft(2, '0')}:00',
+  );
   return {
     'current': {
       'temperature_2m': temperature,
@@ -61,13 +64,15 @@ String _jsonResponse({
   List<double>? snowfall,
   List<double>? visibility,
 }) {
-  return jsonEncode(_buildResponse(
-    temperature: temperature,
-    weatherCode: weatherCode,
-    windSpeed: windSpeed,
-    snowfall: snowfall,
-    visibility: visibility,
-  ));
+  return jsonEncode(
+    _buildResponse(
+      temperature: temperature,
+      weatherCode: weatherCode,
+      windSpeed: windSpeed,
+      snowfall: snowfall,
+      visibility: visibility,
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -221,10 +226,7 @@ void main() {
 
         final provider = OpenMeteoWeatherProvider(client: mockClient);
 
-        expect(
-          () => provider.fetchWeather(),
-          throwsA(isA<HttpException>()),
-        );
+        expect(() => provider.fetchWeather(), throwsA(isA<HttpException>()));
 
         provider.dispose();
       });
@@ -285,45 +287,47 @@ void main() {
         provider.dispose();
       });
 
-      test('offline fallback: re-emits last condition on HTTP failure',
-          () async {
-        int callCount = 0;
-        final mockClient = MockClient((_) async {
-          callCount++;
-          if (callCount == 1) {
-            // First call succeeds.
-            return http.Response(
-              _jsonResponse(weatherCode: 71, temperature: -2.0),
-              200,
-            );
+      test(
+        'offline fallback: re-emits last condition on HTTP failure',
+        () async {
+          int callCount = 0;
+          final mockClient = MockClient((_) async {
+            callCount++;
+            if (callCount == 1) {
+              // First call succeeds.
+              return http.Response(
+                _jsonResponse(weatherCode: 71, temperature: -2.0),
+                200,
+              );
+            }
+            // Subsequent calls fail.
+            return http.Response('Server Error', 500);
+          });
+
+          final provider = OpenMeteoWeatherProvider(
+            client: mockClient,
+            pollInterval: const Duration(milliseconds: 50),
+          );
+
+          final emissions = <WeatherCondition>[];
+          final sub = provider.conditions.listen(emissions.add);
+          await provider.startMonitoring();
+
+          // Wait for initial success + at least one failed poll.
+          await Future<void>.delayed(const Duration(milliseconds: 150));
+
+          // Should have at least 2 emissions (first real, then fallback).
+          expect(emissions.length, greaterThanOrEqualTo(2));
+          // All emissions should be the same condition (fallback).
+          for (final e in emissions) {
+            expect(e.precipType, PrecipitationType.snow);
+            expect(e.temperatureCelsius, -2.0);
           }
-          // Subsequent calls fail.
-          return http.Response('Server Error', 500);
-        });
 
-        final provider = OpenMeteoWeatherProvider(
-          client: mockClient,
-          pollInterval: const Duration(milliseconds: 50),
-        );
-
-        final emissions = <WeatherCondition>[];
-        final sub = provider.conditions.listen(emissions.add);
-        await provider.startMonitoring();
-
-        // Wait for initial success + at least one failed poll.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-
-        // Should have at least 2 emissions (first real, then fallback).
-        expect(emissions.length, greaterThanOrEqualTo(2));
-        // All emissions should be the same condition (fallback).
-        for (final e in emissions) {
-          expect(e.precipType, PrecipitationType.snow);
-          expect(e.temperatureCelsius, -2.0);
-        }
-
-        await sub.cancel();
-        provider.dispose();
-      });
+          await sub.cancel();
+          provider.dispose();
+        },
+      );
 
       test('offline fallback: no emission when no prior condition', () async {
         final mockClient = MockClient((_) async {
@@ -398,10 +402,7 @@ void main() {
         provider.dispose();
 
         // Stream should be done after dispose.
-        expect(
-          () => provider.conditions,
-          returnsNormally,
-        );
+        expect(() => provider.conditions, returnsNormally);
       });
     });
 

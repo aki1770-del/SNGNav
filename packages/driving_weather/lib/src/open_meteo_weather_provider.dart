@@ -156,10 +156,8 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     if (snowfallList.isNotEmpty && visibilityList.isNotEmpty) {
       // Find the current hour index (use first entry as approximation).
       final now = DateTime.now();
-      final currentHourIndex =
-          now.hour.clamp(0, snowfallList.length - 1);
-      snowfall =
-          (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
+      final currentHourIndex = now.hour.clamp(0, snowfallList.length - 1);
+      snowfall = (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
       visibility =
           (visibilityList[currentHourIndex] as num?)?.toDouble() ?? 10000;
     }
@@ -168,8 +166,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     final (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall);
 
     // Ice risk: sub-zero temperature + any precipitation.
-    final iceRisk =
-        temperature <= 0 && precipType != PrecipitationType.none;
+    final iceRisk = temperature <= 0 && precipType != PrecipitationType.none;
 
     return WeatherCondition(
       precipType: precipType,

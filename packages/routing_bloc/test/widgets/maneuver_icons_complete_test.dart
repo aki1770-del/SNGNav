@@ -44,10 +44,8 @@ void main() {
     });
 
     test('roundabout variants map to roundabout_left', () {
-      expect(
-          ManeuverIcons.forType('roundabout_enter'), Icons.roundabout_left);
-      expect(
-          ManeuverIcons.forType('roundabout_exit'), Icons.roundabout_left);
+      expect(ManeuverIcons.forType('roundabout_enter'), Icons.roundabout_left);
+      expect(ManeuverIcons.forType('roundabout_exit'), Icons.roundabout_left);
     });
 
     test('merge variants map to merge', () {

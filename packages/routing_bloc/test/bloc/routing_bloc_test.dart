@@ -205,11 +205,13 @@ void main() {
     blocTest<RoutingBloc, RoutingState>(
       'idle -> loading -> routeActive on successful route request',
       build: () => RoutingBloc(engine: engine),
-      act: (bloc) => bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _toyota,
+          destinationLabel: 'Toyota HQ',
+        ),
+      ),
       expect: () => [
         isA<RoutingState>()
             .having((s) => s.status, 'status', RoutingStatus.loading)
@@ -233,13 +235,14 @@ void main() {
         engine.throwMessage = 'Connection refused';
         return RoutingBloc(engine: engine);
       },
-      act: (bloc) => bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-      )),
+      act: (bloc) =>
+          bloc.add(const RouteRequested(origin: _nagoya, destination: _toyota)),
       expect: () => [
-        isA<RoutingState>()
-            .having((s) => s.status, 'status', RoutingStatus.loading),
+        isA<RoutingState>().having(
+          (s) => s.status,
+          'status',
+          RoutingStatus.loading,
+        ),
         isA<RoutingState>()
             .having((s) => s.status, 'status', RoutingStatus.error)
             .having(
@@ -275,11 +278,13 @@ void main() {
         destinationLabel: 'Toyota',
         engineAvailable: true,
       ),
-      act: (bloc) => bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _inuyama,
-        destinationLabel: 'Inuyama Castle',
-      )),
+      act: (bloc) => bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _inuyama,
+          destinationLabel: 'Inuyama Castle',
+        ),
+      ),
       expect: () => [
         isA<RoutingState>()
             .having((s) => s.status, 'status', RoutingStatus.loading)
@@ -297,26 +302,32 @@ void main() {
         status: RoutingStatus.error,
         errorMessage: 'previous error',
       ),
-      act: (bloc) => bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-      )),
+      act: (bloc) =>
+          bloc.add(const RouteRequested(origin: _nagoya, destination: _toyota)),
       expect: () => [
-        isA<RoutingState>()
-            .having((s) => s.status, 'status', RoutingStatus.loading),
-        isA<RoutingState>()
-            .having((s) => s.status, 'status', RoutingStatus.routeActive),
+        isA<RoutingState>().having(
+          (s) => s.status,
+          'status',
+          RoutingStatus.loading,
+        ),
+        isA<RoutingState>().having(
+          (s) => s.status,
+          'status',
+          RoutingStatus.routeActive,
+        ),
       ],
     );
 
     blocTest<RoutingBloc, RoutingState>(
       'passes costing through to engine',
       build: () => RoutingBloc(engine: engine),
-      act: (bloc) => bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        costing: 'bicycle',
-      )),
+      act: (bloc) => bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _toyota,
+          costing: 'bicycle',
+        ),
+      ),
       verify: (_) {
         expect(engine.lastRequest!.costing, equals('bicycle'));
       },
@@ -338,8 +349,11 @@ void main() {
       },
       act: (bloc) => bloc.add(const RoutingEngineCheckRequested()),
       expect: () => [
-        isA<RoutingState>()
-            .having((s) => s.engineAvailable, 'available', isTrue),
+        isA<RoutingState>().having(
+          (s) => s.engineAvailable,
+          'available',
+          isTrue,
+        ),
       ],
     );
 
@@ -351,8 +365,11 @@ void main() {
       },
       act: (bloc) => bloc.add(const RoutingEngineCheckRequested()),
       expect: () => [
-        isA<RoutingState>()
-            .having((s) => s.engineAvailable, 'available', isFalse),
+        isA<RoutingState>().having(
+          (s) => s.engineAvailable,
+          'available',
+          isFalse,
+        ),
       ],
     );
 
@@ -405,21 +422,25 @@ void main() {
       final bloc = RoutingBloc(engine: slowEngine);
 
       // Fire first request (will block on firstCompleter).
-      bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        destinationLabel: 'First',
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _toyota,
+          destinationLabel: 'First',
+        ),
+      );
 
       // Yield to let the first request reach calculateRoute.
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Fire second request before first response arrives.
-      bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _inuyama,
-        destinationLabel: 'Second',
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _inuyama,
+          destinationLabel: 'Second',
+        ),
+      );
 
       // Let second request reach calculateRoute.
       await Future<void>.delayed(const Duration(milliseconds: 10));

@@ -27,8 +27,8 @@ class ValhallaRoutingEngine implements RoutingEngine {
     this.availabilityTimeout = const Duration(seconds: 3),
     this.routeTimeout = const Duration(seconds: 15),
     http.Client? client,
-  })  : baseUrl = baseUrl ?? _defaultValhallaUrl,
-        _client = client ?? http.Client();
+  }) : baseUrl = baseUrl ?? _defaultValhallaUrl,
+       _client = client ?? http.Client();
 
   ValhallaRoutingEngine.local({
     String host = 'localhost',
@@ -75,10 +75,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
         'units': 'kilometers',
       },
       'costing_options': {
-        request.costing: {
-          'use_highways': 0.8,
-          'use_tolls': 0.5,
-        },
+        request.costing: {'use_highways': 0.8, 'use_tolls': 0.5},
       },
     });
 
@@ -112,10 +109,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
     }
   }
 
-  RouteResult _parseRouteResponse(
-    Map<String, dynamic> json,
-    Duration latency,
-  ) {
+  RouteResult _parseRouteResponse(Map<String, dynamic> json, Duration latency) {
     final trip = json['trip'] as Map<String, dynamic>?;
     if (trip == null) {
       throw RoutingException('Invalid response: missing "trip" field');
@@ -146,16 +140,18 @@ class ValhallaRoutingEngine implements RoutingEngine {
       for (final m in maneuvers) {
         final mMap = m as Map<String, dynamic>;
         final shapeIdx = mMap['begin_shape_index'] as int? ?? 0;
-        allManeuvers.add(RouteManeuver(
-          index: maneuverIndex++,
-          instruction: mMap['instruction'] as String? ?? '',
-          type: _maneuverTypeString(mMap['type'] as int? ?? 0),
-          lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
-          timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
-          position: shapeIdx < allPoints.length
-              ? allPoints[shapeIdx]
-              : const LatLng(0, 0),
-        ));
+        allManeuvers.add(
+          RouteManeuver(
+            index: maneuverIndex++,
+            instruction: mMap['instruction'] as String? ?? '',
+            type: _maneuverTypeString(mMap['type'] as int? ?? 0),
+            lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
+            timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
+            position: shapeIdx < allPoints.length
+                ? allPoints[shapeIdx]
+                : const LatLng(0, 0),
+          ),
+        );
       }
     }
 
@@ -164,12 +160,10 @@ class ValhallaRoutingEngine implements RoutingEngine {
       maneuvers: allManeuvers,
       totalDistanceKm: totalDistanceKm,
       totalTimeSeconds: totalTimeSeconds,
-      summary: '${totalDistanceKm.toStringAsFixed(1)} km, '
+      summary:
+          '${totalDistanceKm.toStringAsFixed(1)} km, '
           '${(totalTimeSeconds / 60).toStringAsFixed(0)} min',
-      engineInfo: EngineInfo(
-        name: 'valhalla',
-        queryLatency: latency,
-      ),
+      engineInfo: EngineInfo(name: 'valhalla', queryLatency: latency),
     );
   }
 

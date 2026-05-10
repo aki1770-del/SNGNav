@@ -1,9 +1,8 @@
 name: driving_weather
 description: >-
-  Know when road conditions turn dangerous. Real-time weather monitoring
-  with snow, ice, and visibility hazard detection. Open-Meteo integration
-  (free, no API key) with offline fallback. Pure Dart, no Flutter dependency.
-version: 0.3.0
+  Real-time weather monitoring with snow, ice, and visibility hazard
+  detection. Open-Meteo integration (free, no API key). Pure Dart.
+version: 0.4.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

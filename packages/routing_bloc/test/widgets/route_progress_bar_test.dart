@@ -35,30 +35,25 @@ final _route = NavigationRoute(
 );
 
 Widget _wrap(Widget child) {
-  return MaterialApp(
-    home: Scaffold(body: child),
-  );
+  return MaterialApp(home: Scaffold(body: child));
 }
 
 void main() {
   testWidgets('idle renders nothing', (tester) async {
     await tester.pumpWidget(
-      _wrap(
-        const RouteProgressBar(status: RouteProgressStatus.idle),
-      ),
+      _wrap(const RouteProgressBar(status: RouteProgressStatus.idle)),
     );
 
     expect(find.byType(Card), findsNothing);
     expect(find.text('Rerouting...'), findsNothing);
   });
 
-  testWidgets('active route renders instruction eta and distance', (tester) async {
+  testWidgets('active route renders instruction eta and distance', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(
-        RouteProgressBar(
-          status: RouteProgressStatus.active,
-          route: _route,
-        ),
+        RouteProgressBar(status: RouteProgressStatus.active, route: _route),
       ),
     );
 
@@ -70,9 +65,7 @@ void main() {
 
   testWidgets('deviated renders rerouting card', (tester) async {
     await tester.pumpWidget(
-      _wrap(
-        const RouteProgressBar(status: RouteProgressStatus.deviated),
-      ),
+      _wrap(const RouteProgressBar(status: RouteProgressStatus.deviated)),
     );
 
     expect(find.text('Rerouting...'), findsOneWidget);
@@ -95,17 +88,16 @@ void main() {
   testWidgets('active route uses maneuver icon mapping', (tester) async {
     await tester.pumpWidget(
       _wrap(
-        RouteProgressBar(
-          status: RouteProgressStatus.active,
-          route: _route,
-        ),
+        RouteProgressBar(status: RouteProgressStatus.active, route: _route),
       ),
     );
 
     expect(find.byIcon(Icons.flag), findsOneWidget);
   });
 
-  testWidgets('arrived sets progress indicator complete when active replaced', (tester) async {
+  testWidgets('arrived sets progress indicator complete when active replaced', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(
         RouteProgressBar(

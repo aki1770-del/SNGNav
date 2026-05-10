@@ -61,11 +61,17 @@ class HazardAggregator {
 
   static HazardZone _buildZone(List<FleetReport> cluster) {
     final avgLat =
-        cluster.fold<double>(0, (sum, report) => sum + report.position.latitude) /
-            cluster.length;
+        cluster.fold<double>(
+          0,
+          (sum, report) => sum + report.position.latitude,
+        ) /
+        cluster.length;
     final avgLon =
-        cluster.fold<double>(0, (sum, report) => sum + report.position.longitude) /
-            cluster.length;
+        cluster.fold<double>(
+          0,
+          (sum, report) => sum + report.position.longitude,
+        ) /
+        cluster.length;
     final center = LatLng(avgLat, avgLon);
 
     var maxDist = 0.0;
@@ -75,7 +81,9 @@ class HazardAggregator {
     }
 
     final radius = (maxDist * 1.5).clamp(minZoneRadius, maxZoneRadius);
-    final hasIcy = cluster.any((report) => report.condition == RoadCondition.icy);
+    final hasIcy = cluster.any(
+      (report) => report.condition == RoadCondition.icy,
+    );
 
     return HazardZone(
       center: center,
@@ -91,7 +99,8 @@ class HazardAggregator {
     final dLon = _toRadians(b.longitude - a.longitude);
     final sinDLat = math.sin(dLat / 2);
     final sinDLon = math.sin(dLon / 2);
-    final h = sinDLat * sinDLat +
+    final h =
+        sinDLat * sinDLat +
         math.cos(_toRadians(a.latitude)) *
             math.cos(_toRadians(b.latitude)) *
             sinDLon *

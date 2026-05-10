@@ -41,8 +41,7 @@ class DeadReckoningAccuracyExceededException implements Exception {
   ]);
 
   @override
-  String toString() =>
-      'DeadReckoningAccuracyExceededException: $message';
+  String toString() => 'DeadReckoningAccuracyExceededException: $message';
 }
 
 /// Dead reckoning mode selection.
@@ -132,10 +131,7 @@ class DeadReckoningProvider implements LocationProvider {
 
     await _inner.start();
 
-    _innerSub = _inner.positions.listen(
-      _onGpsPosition,
-      onError: _onGpsError,
-    );
+    _innerSub = _inner.positions.listen(_onGpsPosition, onError: _onGpsError);
   }
 
   @override
@@ -232,14 +228,16 @@ class DeadReckoningProvider implements LocationProvider {
 
       // Emit filtered position (smoother than raw GPS).
       final s = kf.state;
-      _controller!.add(GeoPosition(
-        latitude: s.lat,
-        longitude: s.lon,
-        accuracy: kf.accuracyMetres,
-        speed: s.speed,
-        heading: s.heading,
-        timestamp: pos.timestamp,
-      ));
+      _controller!.add(
+        GeoPosition(
+          latitude: s.lat,
+          longitude: s.lon,
+          accuracy: kf.accuracyMetres,
+          speed: s.speed,
+          heading: s.heading,
+          timestamp: pos.timestamp,
+        ),
+      );
     } else {
       // No speed/heading — forward raw GPS, don't update filter.
       _controller!.add(pos);
@@ -359,14 +357,16 @@ class DeadReckoningProvider implements LocationProvider {
       return;
     }
 
-    _controller!.add(GeoPosition(
-      latitude: result.lat,
-      longitude: result.lon,
-      accuracy: result.accuracy,
-      speed: result.speed,
-      heading: result.heading,
-      timestamp: DateTime.now(),
-    ));
+    _controller!.add(
+      GeoPosition(
+        latitude: result.lat,
+        longitude: result.lon,
+        accuracy: result.accuracy,
+        speed: result.speed,
+        heading: result.heading,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   void _stopDr() {

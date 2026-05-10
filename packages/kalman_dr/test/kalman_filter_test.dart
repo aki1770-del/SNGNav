@@ -11,6 +11,7 @@
 ///   - reset returns to uninitialised
 ///   - predict before initialisation returns infinity
 library;
+
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:test/test.dart';
 
@@ -124,8 +125,11 @@ void main() {
 
       // Heading should be near 0/360, not 180.
       final h = kf.state.heading;
-      expect(h < 30 || h > 330, isTrue,
-          reason: 'heading=$h should be near 0/360');
+      expect(
+        h < 30 || h > 330,
+        isTrue,
+        reason: 'heading=$h should be near 0/360',
+      );
     });
 
     test('speed never goes negative', () {

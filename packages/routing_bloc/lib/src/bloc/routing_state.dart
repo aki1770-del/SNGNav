@@ -6,12 +6,7 @@ import 'package:routing_engine/routing_engine.dart';
 
 const _noChange = Object();
 
-enum RoutingStatus {
-  idle,
-  loading,
-  routeActive,
-  error,
-}
+enum RoutingStatus { idle, loading, routeActive, error }
 
 class RoutingState extends Equatable {
   final RoutingStatus status;
@@ -29,10 +24,10 @@ class RoutingState extends Equatable {
   });
 
   const RoutingState.idle({this.engineAvailable = false})
-      : status = RoutingStatus.idle,
-        route = null,
-        destinationLabel = null,
-        errorMessage = null;
+    : status = RoutingStatus.idle,
+      route = null,
+      destinationLabel = null,
+      errorMessage = null;
 
   bool get hasRoute => route != null && status == RoutingStatus.routeActive;
 
@@ -47,9 +42,7 @@ class RoutingState extends Equatable {
   }) {
     return RoutingState(
       status: status ?? this.status,
-      route: identical(route, _noChange)
-          ? this.route
-          : route as RouteResult?,
+      route: identical(route, _noChange) ? this.route : route as RouteResult?,
       destinationLabel: identical(destinationLabel, _noChange)
           ? this.destinationLabel
           : destinationLabel as String?,
@@ -61,6 +54,11 @@ class RoutingState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [status, route, destinationLabel, errorMessage, engineAvailable];
+  List<Object?> get props => [
+    status,
+    route,
+    destinationLabel,
+    errorMessage,
+    engineAvailable,
+  ];
 }

@@ -78,13 +78,13 @@ Future<void> main() async {
     'Cold request: ${_formatSample(coldLocal)} (connection reuse: no)',
   );
   stdout.writeln(
-    'Warm request mean: ${_formatSeconds(warmLocal.mean)} ' 
-    '(min ${_formatSeconds(warmLocal.min)}, max ${_formatSeconds(warmLocal.max)}) ' 
+    'Warm request mean: ${_formatSeconds(warmLocal.mean)} '
+    '(min ${_formatSeconds(warmLocal.min)}, max ${_formatSeconds(warmLocal.max)}) '
     '[${warmLocal.samples.length} samples, connection reuse: no]',
   );
   stdout.writeln(
-    'Reused-client series: ${_formatSeries(reusedLocal.samples)} ' 
-    '(mean ${_formatSeconds(reusedLocal.mean)}, min ${_formatSeconds(reusedLocal.min)}, ' 
+    'Reused-client series: ${_formatSeries(reusedLocal.samples)} '
+    '(mean ${_formatSeconds(reusedLocal.mean)}, min ${_formatSeconds(reusedLocal.min)}, '
     'max ${_formatSeconds(reusedLocal.max)}) [connection reuse: yes]',
   );
 
@@ -178,10 +178,7 @@ Future<StatusSnapshot> _fetchStatus(String baseUrl) async {
       return const StatusSnapshot(available: false);
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
-    return StatusSnapshot(
-      available: true,
-      version: json['version'] as String?,
-    );
+    return StatusSnapshot(available: true, version: json['version'] as String?);
   } catch (_) {
     return const StatusSnapshot(available: false);
   } finally {

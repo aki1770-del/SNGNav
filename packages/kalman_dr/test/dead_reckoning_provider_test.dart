@@ -393,94 +393,82 @@ void main() {
       timestamp: _baseTime,
     );
 
-    test(
-      'linear mode emits DeadReckoningAccuracyExceededException via stream '
-      'error when the 500m cap is exceeded',
-      () async {
-        final provider = DeadReckoningProvider(
-          inner: mockGps,
-          gpsTimeout: const Duration(milliseconds: 300),
-          extrapolationInterval: const Duration(milliseconds: 200),
-        );
-        addTearDown(provider.dispose);
+    test('linear mode emits DeadReckoningAccuracyExceededException via stream '
+        'error when the 500m cap is exceeded', () async {
+      final provider = DeadReckoningProvider(
+        inner: mockGps,
+        gpsTimeout: const Duration(milliseconds: 300),
+        extrapolationInterval: const Duration(milliseconds: 200),
+      );
+      addTearDown(provider.dispose);
 
-        await provider.start();
+      await provider.start();
 
-        final errors = <Object>[];
-        final positions = <GeoPosition>[];
-        final sub = provider.positions.listen(
-          positions.add,
-          onError: errors.add,
-        );
+      final errors = <Object>[];
+      final positions = <GeoPosition>[];
+      final sub = provider.positions.listen(positions.add, onError: errors.add);
 
-        mockGps.emitPosition(nearCapFix);
+      mockGps.emitPosition(nearCapFix);
 
-        // 300ms GPS timeout + several 200ms DR ticks → accuracy crosses 500m.
-        await Future<void>.delayed(const Duration(milliseconds: 1500));
+      // 300ms GPS timeout + several 200ms DR ticks → accuracy crosses 500m.
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
 
-        final capErrors = errors
-            .whereType<DeadReckoningAccuracyExceededException>()
-            .toList();
-        expect(
-          capErrors,
-          hasLength(1),
-          reason: 'expected exactly one cap-trip error; got $errors',
-        );
-        expect(capErrors.single.message, contains('Linear'));
-        expect(capErrors.single.message, contains('safety cap'));
-        expect(
-          provider.isDrActive,
-          isFalse,
-          reason: 'DR timer must be stopped after cap trip',
-        );
+      final capErrors = errors
+          .whereType<DeadReckoningAccuracyExceededException>()
+          .toList();
+      expect(
+        capErrors,
+        hasLength(1),
+        reason: 'expected exactly one cap-trip error; got $errors',
+      );
+      expect(capErrors.single.message, contains('Linear'));
+      expect(capErrors.single.message, contains('safety cap'));
+      expect(
+        provider.isDrActive,
+        isFalse,
+        reason: 'DR timer must be stopped after cap trip',
+      );
 
-        await sub.cancel();
-      },
-    );
+      await sub.cancel();
+    });
 
-    test(
-      'kalman mode emits DeadReckoningAccuracyExceededException via stream '
-      'error when the covariance cap is exceeded',
-      () async {
-        final provider = DeadReckoningProvider(
-          inner: mockGps,
-          mode: DeadReckoningMode.kalman,
-          gpsTimeout: const Duration(milliseconds: 300),
-          extrapolationInterval: const Duration(milliseconds: 200),
-        );
-        addTearDown(provider.dispose);
+    test('kalman mode emits DeadReckoningAccuracyExceededException via stream '
+        'error when the covariance cap is exceeded', () async {
+      final provider = DeadReckoningProvider(
+        inner: mockGps,
+        mode: DeadReckoningMode.kalman,
+        gpsTimeout: const Duration(milliseconds: 300),
+        extrapolationInterval: const Duration(milliseconds: 200),
+      );
+      addTearDown(provider.dispose);
 
-        await provider.start();
+      await provider.start();
 
-        final errors = <Object>[];
-        final sub = provider.positions.listen(
-          (_) {},
-          onError: errors.add,
-        );
+      final errors = <Object>[];
+      final sub = provider.positions.listen((_) {}, onError: errors.add);
 
-        mockGps.emitPosition(nearCapFix);
+      mockGps.emitPosition(nearCapFix);
 
-        await Future<void>.delayed(const Duration(milliseconds: 1500));
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
 
-        final capErrors = errors
-            .whereType<DeadReckoningAccuracyExceededException>()
-            .toList();
-        expect(
-          capErrors,
-          hasLength(1),
-          reason: 'expected exactly one cap-trip error; got $errors',
-        );
-        expect(capErrors.single.message, contains('Kalman'));
-        expect(capErrors.single.message, contains('safety cap'));
-        expect(
-          provider.isDrActive,
-          isFalse,
-          reason: 'DR timer must be stopped after cap trip',
-        );
+      final capErrors = errors
+          .whereType<DeadReckoningAccuracyExceededException>()
+          .toList();
+      expect(
+        capErrors,
+        hasLength(1),
+        reason: 'expected exactly one cap-trip error; got $errors',
+      );
+      expect(capErrors.single.message, contains('Kalman'));
+      expect(capErrors.single.message, contains('safety cap'));
+      expect(
+        provider.isDrActive,
+        isFalse,
+        reason: 'DR timer must be stopped after cap trip',
+      );
 
-        await sub.cancel();
-      },
-    );
+      await sub.cancel();
+    });
 
     test(
       'regression: cap trip does NOT fire during normal GPS→DR→GPS cycle',
@@ -497,10 +485,7 @@ void main() {
         await provider.start();
 
         final errors = <Object>[];
-        final sub = provider.positions.listen(
-          (_) {},
-          onError: errors.add,
-        );
+        final sub = provider.positions.listen((_) {}, onError: errors.add);
 
         // Fresh GPS fix with low accuracy (5m) — far from the cap.
         mockGps.emitPosition(_gpsFix);
@@ -510,8 +495,8 @@ void main() {
         mockGps.emitPosition(_gpsFixUpdated);
         await Future<void>.delayed(const Duration(milliseconds: 100));
 
-        final capErrors =
-            errors.whereType<DeadReckoningAccuracyExceededException>();
+        final capErrors = errors
+            .whereType<DeadReckoningAccuracyExceededException>();
         expect(
           capErrors,
           isEmpty,
@@ -544,10 +529,7 @@ void main() {
       await provider.start();
 
       final errors = <Object>[];
-      final sub = provider.positions.listen(
-        (_) {},
-        onError: errors.add,
-      );
+      final sub = provider.positions.listen((_) {}, onError: errors.add);
 
       mockGps.emitError(Exception('D-Bus connection lost'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -562,10 +544,7 @@ void main() {
       await provider.start();
 
       final errors = <Object>[];
-      final sub = provider.positions.listen(
-        (_) {},
-        onError: errors.add,
-      );
+      final sub = provider.positions.listen((_) {}, onError: errors.add);
 
       // Get DR active first.
       mockGps.emitPosition(_gpsFix);
@@ -719,39 +698,50 @@ void main() {
       await sub.cancel();
     });
 
-    test('GPS fix with double.infinity heading does not corrupt filter', () async {
-      await provider.start();
+    test(
+      'GPS fix with double.infinity heading does not corrupt filter',
+      () async {
+        await provider.start();
 
-      final positions = <GeoPosition>[];
-      final sub = provider.positions.listen(positions.add);
+        final positions = <GeoPosition>[];
+        final sub = provider.positions.listen(positions.add);
 
-      // Seed the Kalman filter with a normal fix.
-      mockGps.emitPosition(_gpsFix);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      final headingAfterSeed = provider.kalmanFilter!.state.heading;
+        // Seed the Kalman filter with a normal fix.
+        mockGps.emitPosition(_gpsFix);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        final headingAfterSeed = provider.kalmanFilter!.state.heading;
 
-      // Now feed a GPS fix with infinity heading (sensor-error pattern).
-      mockGps.emitPosition(GeoPosition(
-        latitude: _gpsFix.latitude,
-        longitude: _gpsFix.longitude,
-        speed: _gpsFix.speed,
-        heading: double.infinity,
-        accuracy: _gpsFix.accuracy,
-        timestamp: _gpsFix.timestamp.add(const Duration(seconds: 1)),
-      ));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Now feed a GPS fix with infinity heading (sensor-error pattern).
+        mockGps.emitPosition(
+          GeoPosition(
+            latitude: _gpsFix.latitude,
+            longitude: _gpsFix.longitude,
+            speed: _gpsFix.speed,
+            heading: double.infinity,
+            accuracy: _gpsFix.accuracy,
+            timestamp: _gpsFix.timestamp.add(const Duration(seconds: 1)),
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Filter heading must remain finite (the isFinite guard rejected the
-      // infinity fix and skipped the filter update; previous valid state
-      // preserved).
-      final headingAfterInfinity = provider.kalmanFilter!.state.heading;
-      expect(headingAfterInfinity.isFinite, isTrue,
-          reason: 'Kalman heading state must not absorb double.infinity');
-      expect(headingAfterInfinity, closeTo(headingAfterSeed, 1.0),
-          reason: 'heading should be unchanged when infinity fix is rejected');
+        // Filter heading must remain finite (the isFinite guard rejected the
+        // infinity fix and skipped the filter update; previous valid state
+        // preserved).
+        final headingAfterInfinity = provider.kalmanFilter!.state.heading;
+        expect(
+          headingAfterInfinity.isFinite,
+          isTrue,
+          reason: 'Kalman heading state must not absorb double.infinity',
+        );
+        expect(
+          headingAfterInfinity,
+          closeTo(headingAfterSeed, 1.0),
+          reason: 'heading should be unchanged when infinity fix is rejected',
+        );
 
-      await sub.cancel();
-    });
+        await sub.cancel();
+      },
+    );
   });
 
   group('DeadReckoningProvider — Kalman mode DR', () {
@@ -887,8 +877,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       final postAccuracy = positions.last.accuracy;
 
-      expect(postAccuracy, lessThan(drAccuracy),
-          reason: 'GPS fix should recover accuracy');
+      expect(
+        postAccuracy,
+        lessThan(drAccuracy),
+        reason: 'GPS fix should recover accuracy',
+      );
 
       await sub.cancel();
     });
@@ -900,23 +893,17 @@ void main() {
 
   group('DeadReckoningProvider — constructor defaults', () {
     test('default mode is linear', () {
-      final provider = DeadReckoningProvider(
-        inner: MockLocationProvider(),
-      );
+      final provider = DeadReckoningProvider(inner: MockLocationProvider());
       expect(provider.mode, DeadReckoningMode.linear);
     });
 
     test('default gpsTimeout is 3 seconds', () {
-      final provider = DeadReckoningProvider(
-        inner: MockLocationProvider(),
-      );
+      final provider = DeadReckoningProvider(inner: MockLocationProvider());
       expect(provider.gpsTimeout, const Duration(seconds: 3));
     });
 
     test('default extrapolationInterval is 1 second', () {
-      final provider = DeadReckoningProvider(
-        inner: MockLocationProvider(),
-      );
+      final provider = DeadReckoningProvider(inner: MockLocationProvider());
       expect(provider.extrapolationInterval, const Duration(seconds: 1));
     });
 

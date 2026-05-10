@@ -15,8 +15,7 @@ const _machineERequest = RouteRequest(
 void main() {
   final runLocalValhalla =
       Platform.environment['RUN_LOCAL_VALHALLA_TEST'] == '1';
-  final baseUrl =
-      Platform.environment['VALHALLA_BASE_URL'] ?? _defaultBaseUrl;
+  final baseUrl = Platform.environment['VALHALLA_BASE_URL'] ?? _defaultBaseUrl;
 
   group('Valhalla local integration', () {
     test(

@@ -23,7 +23,10 @@ void main() {
         false,
         timestamp,
       ]);
-      expect(clear.toString(), 'WeatherCondition(none none, 5.0°C, vis=10000m, wind=0km/h)');
+      expect(
+        clear.toString(),
+        'WeatherCondition(none none, 5.0°C, vis=10000m, wind=0km/h)',
+      );
     });
 
     test('snow with none intensity is not snowing', () {
@@ -39,21 +42,24 @@ void main() {
       expect(condition.isSnowing, isFalse);
     });
 
-    test('very low visibility alone is hazardous and freezing is thresholded', () {
-      final condition = WeatherCondition(
-        precipType: PrecipitationType.rain,
-        intensity: PrecipitationIntensity.light,
-        temperatureCelsius: 0,
-        visibilityMeters: 150,
-        windSpeedKmh: 22,
-        timestamp: timestamp,
-      );
+    test(
+      'very low visibility alone is hazardous and freezing is thresholded',
+      () {
+        final condition = WeatherCondition(
+          precipType: PrecipitationType.rain,
+          intensity: PrecipitationIntensity.light,
+          temperatureCelsius: 0,
+          visibilityMeters: 150,
+          windSpeedKmh: 22,
+          timestamp: timestamp,
+        );
 
-      expect(condition.hasReducedVisibility, isTrue);
-      expect(condition.isHazardous, isTrue);
-      expect(condition.isFreezing, isTrue);
-      expect(condition.toString(), contains('vis=150m'));
-    });
+        expect(condition.hasReducedVisibility, isTrue);
+        expect(condition.isHazardous, isTrue);
+        expect(condition.isFreezing, isTrue);
+        expect(condition.toString(), contains('vis=150m'));
+      },
+    );
 
     test('ice risk is reflected in props and toString', () {
       final condition = WeatherCondition(

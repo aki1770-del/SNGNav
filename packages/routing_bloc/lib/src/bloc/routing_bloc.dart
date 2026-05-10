@@ -15,8 +15,8 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
   int _requestId = 0;
 
   RoutingBloc({required RoutingEngine engine})
-      : _engine = engine,
-        super(const RoutingState.idle()) {
+    : _engine = engine,
+      super(const RoutingState.idle()) {
     on<RouteRequested>(_onRouteRequested);
     on<RouteClearRequested>(_onRouteClearRequested);
     on<RoutingEngineCheckRequested>(_onEngineCheck);
@@ -28,36 +28,44 @@ class RoutingBloc extends Bloc<RoutingEvent, RoutingState> {
   ) async {
     final requestId = ++_requestId;
 
-    emit(RoutingState(
-      status: RoutingStatus.loading,
-      destinationLabel: event.destinationLabel,
-      engineAvailable: state.engineAvailable,
-    ));
+    emit(
+      RoutingState(
+        status: RoutingStatus.loading,
+        destinationLabel: event.destinationLabel,
+        engineAvailable: state.engineAvailable,
+      ),
+    );
 
     try {
-      final result = await _engine.calculateRoute(RouteRequest(
-        origin: event.origin,
-        destination: event.destination,
-        costing: event.costing,
-      ));
+      final result = await _engine.calculateRoute(
+        RouteRequest(
+          origin: event.origin,
+          destination: event.destination,
+          costing: event.costing,
+        ),
+      );
 
       // Discard result if a newer request superseded this one.
       if (requestId != _requestId) return;
 
-      emit(RoutingState(
-        status: RoutingStatus.routeActive,
-        route: result,
-        destinationLabel: event.destinationLabel,
-        engineAvailable: true,
-      ));
+      emit(
+        RoutingState(
+          status: RoutingStatus.routeActive,
+          route: result,
+          destinationLabel: event.destinationLabel,
+          engineAvailable: true,
+        ),
+      );
     } catch (error) {
       if (requestId != _requestId) return;
-      emit(RoutingState(
-        status: RoutingStatus.error,
-        errorMessage: error.toString(),
-        destinationLabel: event.destinationLabel,
-        engineAvailable: state.engineAvailable,
-      ));
+      emit(
+        RoutingState(
+          status: RoutingStatus.error,
+          errorMessage: error.toString(),
+          destinationLabel: event.destinationLabel,
+          engineAvailable: state.engineAvailable,
+        ),
+      );
     }
   }
 

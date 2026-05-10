@@ -8,9 +8,11 @@ Future<void> main() async {
   );
 
   final subscription = provider.conditions.take(3).listen((condition) {
-    print('${condition.precipType.name}/${condition.intensity.name} '
-        'visibility=${condition.visibilityMeters.toStringAsFixed(0)}m '
-        'hazardous=${condition.isHazardous}');
+    print(
+      '${condition.precipType.name}/${condition.intensity.name} '
+      'visibility=${condition.visibilityMeters.toStringAsFixed(0)}m '
+      'hazardous=${condition.isHazardous}',
+    );
   });
 
   await provider.startMonitoring();

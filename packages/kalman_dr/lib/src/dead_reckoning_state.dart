@@ -117,9 +117,8 @@ class DeadReckoningState extends Equatable {
     final latRad = latitude * math.pi / 180.0;
     final cosLat = math.cos(latRad);
     final safeCosLat = cosLat.abs() < 0.001 ? 0.001 : cosLat; // pole guard
-    final dLon = distance *
-        math.sin(headingRad) /
-        (_metresPerDegreeLat * safeCosLat);
+    final dLon =
+        distance * math.sin(headingRad) / (_metresPerDegreeLat * safeCosLat);
 
     return DeadReckoningState(
       latitude: latitude + dLat,
@@ -156,14 +155,14 @@ class DeadReckoningState extends Equatable {
 
   @override
   List<Object?> get props => [
-        latitude,
-        longitude,
-        speed,
-        heading,
-        baseAccuracy,
-        lastGpsTime,
-        extrapolationCount,
-      ];
+    latitude,
+    longitude,
+    speed,
+    heading,
+    baseAccuracy,
+    lastGpsTime,
+    extrapolationCount,
+  ];
 
   @override
   String toString() =>

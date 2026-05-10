@@ -26,8 +26,14 @@ class RouteManeuver extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [index, instruction, type, lengthKm, timeSeconds, position];
+  List<Object?> get props => [
+    index,
+    instruction,
+    type,
+    lengthKm,
+    timeSeconds,
+    position,
+  ];
 
   @override
   String toString() =>
@@ -50,7 +56,8 @@ class EngineInfo extends Equatable {
   List<Object?> get props => [name, version, queryLatency];
 
   @override
-  String toString() => 'EngineInfo($name v$version, ${queryLatency.inMilliseconds}ms)';
+  String toString() =>
+      'EngineInfo($name v$version, ${queryLatency.inMilliseconds}ms)';
 }
 
 /// A complete route result — engine-agnostic.
@@ -90,13 +97,13 @@ class RouteResult extends Equatable {
 
   @override
   List<Object?> get props => [
-        shape,
-        maneuvers,
-        totalDistanceKm,
-        totalTimeSeconds,
-        summary,
-        engineInfo,
-      ];
+    shape,
+    maneuvers,
+    totalDistanceKm,
+    totalTimeSeconds,
+    summary,
+    engineInfo,
+  ];
 
   @override
   String toString() =>

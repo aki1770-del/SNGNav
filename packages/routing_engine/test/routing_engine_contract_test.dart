@@ -22,78 +22,78 @@ import 'package:test/test.dart';
 
 /// OSRM response fixture — valid Nagoya → Okazaki route.
 http.Client _osrmSuccessClient() => MockClient((request) async {
-      return http.Response(
-        jsonEncode({
-          'code': 'Ok',
-          'routes': [
+  return http.Response(
+    jsonEncode({
+      'code': 'Ok',
+      'routes': [
+        {
+          'geometry': '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
+          'distance': 25700,
+          'duration': 1800,
+          'legs': [
             {
-              'geometry': '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
-              'distance': 25700,
-              'duration': 1800,
-              'legs': [
+              'steps': [
                 {
-                  'steps': [
-                    {
-                      'name': 'Route 153',
-                      'distance': 25700,
-                      'duration': 1800,
-                      'maneuver': {
-                        'type': 'depart',
-                        'modifier': 'right',
-                        'location': [136.88, 35.17],
-                      },
-                    },
-                    {
-                      'name': '',
-                      'distance': 0,
-                      'duration': 0,
-                      'maneuver': {
-                        'type': 'arrive',
-                        'location': [137.17, 34.97],
-                      },
-                    },
-                  ],
+                  'name': 'Route 153',
+                  'distance': 25700,
+                  'duration': 1800,
+                  'maneuver': {
+                    'type': 'depart',
+                    'modifier': 'right',
+                    'location': [136.88, 35.17],
+                  },
+                },
+                {
+                  'name': '',
+                  'distance': 0,
+                  'duration': 0,
+                  'maneuver': {
+                    'type': 'arrive',
+                    'location': [137.17, 34.97],
+                  },
                 },
               ],
             },
           ],
-        }),
-        200,
-      );
-    });
+        },
+      ],
+    }),
+    200,
+  );
+});
 
 /// Valhalla response fixture — valid Nagoya → Okazaki route.
 http.Client _valhallaSuccessClient() => MockClient((request) async {
-      return http.Response(
-        jsonEncode({
-          'trip': {
-            'summary': {'length': 25.7, 'time': 1800},
-            'legs': [
+  return http.Response(
+    jsonEncode({
+      'trip': {
+        'summary': {'length': 25.7, 'time': 1800},
+        'legs': [
+          {
+            'shape': 'o}@o}@o}@o}@',
+            'maneuvers': [
               {
-                'shape': 'o}@o}@o}@o}@',
-                'maneuvers': [
-                  {
-                    'instruction': 'Drive east.',
-                    'type': 1,
-                    'length': 25.7,
-                    'time': 1800,
-                    'begin_shape_index': 0,
-                  },
-                  {
-                    'instruction': 'You have arrived.',
-                    'type': 2,
-                    'length': 0,
-                    'time': 0,
-                    'begin_shape_index': 1,
-                  },
-                ],
+                'instruction': 'Drive east.',
+                'type': 1,
+                'length': 25.7,
+                'time': 1800,
+                'begin_shape_index': 0,
+              },
+              {
+                'instruction': 'You have arrived.',
+                'type': 2,
+                'length': 0,
+                'time': 0,
+                'begin_shape_index': 1,
               },
             ],
           },
-        }),
-        200,
-      );
-    });
+        ],
+      },
+    }),
+    200,
+  );
+});
 
 const _nagoya = LatLng(35.17, 136.88);
 const _okazaki = LatLng(34.97, 137.17);
@@ -105,10 +105,7 @@ const _okazaki = LatLng(34.97, 137.17);
 ///   2. calculateRoute returns a RouteResult with matching engineInfo
 ///   3. RouteResult contains shape, maneuvers, distance, time
 ///   4. dispose completes without error
-void runContractTests(
-  String engineName,
-  RoutingEngine Function() factory,
-) {
+void runContractTests(String engineName, RoutingEngine Function() factory) {
   group('$engineName — RoutingEngine contract', () {
     late RoutingEngine engine;
 
@@ -125,7 +122,10 @@ void runContractTests(
     });
 
     test('info.name matches engine identity', () {
-      expect(engine.info.name.toLowerCase(), contains(engineName.toLowerCase()));
+      expect(
+        engine.info.name.toLowerCase(),
+        contains(engineName.toLowerCase()),
+      );
     });
 
     test('calculateRoute returns RouteResult', () async {
@@ -192,10 +192,8 @@ void main() {
 
   runContractTests(
     'osrm',
-    () => OsrmRoutingEngine(
-      baseUrl: 'http://test',
-      client: _osrmSuccessClient(),
-    ),
+    () =>
+        OsrmRoutingEngine(baseUrl: 'http://test', client: _osrmSuccessClient()),
   );
 
   runContractTests(

@@ -61,15 +61,14 @@ void main() {
         );
       });
 
-      final engine = OsrmRoutingEngine(
-        baseUrl: 'http://test',
-        client: client,
-      );
+      final engine = OsrmRoutingEngine(baseUrl: 'http://test', client: client);
 
-      final result = await engine.calculateRoute(RouteRequest(
-        origin: const LatLng(35.17, 136.88),
-        destination: const LatLng(34.97, 137.17),
-      ));
+      final result = await engine.calculateRoute(
+        RouteRequest(
+          origin: const LatLng(35.17, 136.88),
+          destination: const LatLng(34.97, 137.17),
+        ),
+      );
 
       expect(result.totalDistanceKm, closeTo(25.7, 0.1));
       expect(result.totalTimeSeconds, 1800);
@@ -83,14 +82,18 @@ void main() {
     });
 
     test('throws on HTTP error', () async {
-      final client = MockClient((_) async => http.Response('Server Error', 500));
+      final client = MockClient(
+        (_) async => http.Response('Server Error', 500),
+      );
       final engine = OsrmRoutingEngine(baseUrl: 'http://test', client: client);
 
       expect(
-        () => engine.calculateRoute(RouteRequest(
-          origin: const LatLng(35.17, 136.88),
-          destination: const LatLng(34.97, 137.17),
-        )),
+        () => engine.calculateRoute(
+          RouteRequest(
+            origin: const LatLng(35.17, 136.88),
+            destination: const LatLng(34.97, 137.17),
+          ),
+        ),
         throwsA(isA<RoutingException>()),
       );
 
@@ -107,10 +110,12 @@ void main() {
       final engine = OsrmRoutingEngine(baseUrl: 'http://test', client: client);
 
       expect(
-        () => engine.calculateRoute(RouteRequest(
-          origin: const LatLng(35.17, 136.88),
-          destination: const LatLng(34.97, 137.17),
-        )),
+        () => engine.calculateRoute(
+          RouteRequest(
+            origin: const LatLng(35.17, 136.88),
+            destination: const LatLng(34.97, 137.17),
+          ),
+        ),
         throwsA(isA<RoutingException>()),
       );
 
@@ -162,10 +167,12 @@ void main() {
         client: client,
       );
 
-      final result = await engine.calculateRoute(RouteRequest(
-        origin: const LatLng(35.17, 136.88),
-        destination: const LatLng(34.97, 137.17),
-      ));
+      final result = await engine.calculateRoute(
+        RouteRequest(
+          origin: const LatLng(35.17, 136.88),
+          destination: const LatLng(34.97, 137.17),
+        ),
+      );
 
       expect(result.totalDistanceKm, closeTo(25.7, 0.1));
       expect(result.totalTimeSeconds, 1800);
@@ -179,18 +186,20 @@ void main() {
 
     test('throws on HTTP error', () async {
       final client = MockClient((_) async {
-        return http.Response(
-          jsonEncode({'error': 'Bad request'}),
-          400,
-        );
+        return http.Response(jsonEncode({'error': 'Bad request'}), 400);
       });
-      final engine = ValhallaRoutingEngine(baseUrl: 'http://test', client: client);
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: client,
+      );
 
       expect(
-        () => engine.calculateRoute(RouteRequest(
-          origin: const LatLng(35.17, 136.88),
-          destination: const LatLng(34.97, 137.17),
-        )),
+        () => engine.calculateRoute(
+          RouteRequest(
+            origin: const LatLng(35.17, 136.88),
+            destination: const LatLng(34.97, 137.17),
+          ),
+        ),
         throwsA(isA<RoutingException>()),
       );
 
@@ -201,13 +210,18 @@ void main() {
       final client = MockClient((_) async {
         return http.Response(jsonEncode({}), 200);
       });
-      final engine = ValhallaRoutingEngine(baseUrl: 'http://test', client: client);
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: client,
+      );
 
       expect(
-        () => engine.calculateRoute(RouteRequest(
-          origin: const LatLng(35.17, 136.88),
-          destination: const LatLng(34.97, 137.17),
-        )),
+        () => engine.calculateRoute(
+          RouteRequest(
+            origin: const LatLng(35.17, 136.88),
+            destination: const LatLng(34.97, 137.17),
+          ),
+        ),
         throwsA(isA<RoutingException>()),
       );
 
@@ -278,14 +292,25 @@ void main() {
         engineInfo: engine,
       );
 
-      expect(
-        maneuver.props,
-        [1, 'Turn right', 'right', 1.2, 90, const LatLng(35.1, 136.9)],
-      );
+      expect(maneuver.props, [
+        1,
+        'Turn right',
+        'right',
+        1.2,
+        90,
+        const LatLng(35.1, 136.9),
+      ]);
       expect(maneuver.toString(), contains('Turn right'));
       expect(engine.props, ['osrm', '1.0', const Duration(milliseconds: 42)]);
       expect(engine.toString(), 'EngineInfo(osrm v1.0, 42ms)');
-      expect(route.props, [route.shape, route.maneuvers, 12.34, 780, 'Nagoya to Toyota', engine]);
+      expect(route.props, [
+        route.shape,
+        route.maneuvers,
+        12.34,
+        780,
+        'Nagoya to Toyota',
+        engine,
+      ]);
       expect(route.toString(), 'RouteResult(12.3km, 13min, 2 pts, osrm)');
     });
   });
@@ -320,15 +345,12 @@ void main() {
         language: 'en-US',
       );
 
-      expect(
-        req.props,
-        [
-          const LatLng(35.17, 136.88),
-          const LatLng(34.97, 137.17),
-          'truck',
-          'en-US',
-        ],
-      );
+      expect(req.props, [
+        const LatLng(35.17, 136.88),
+        const LatLng(34.97, 137.17),
+        'truck',
+        'en-US',
+      ]);
     });
   });
 

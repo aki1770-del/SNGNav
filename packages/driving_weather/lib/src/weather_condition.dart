@@ -75,12 +75,12 @@ class WeatherCondition extends Equatable {
 
   /// Clear weather — no precipitation, good visibility, no ice.
   const WeatherCondition.clear({required this.timestamp})
-      : precipType = PrecipitationType.none,
-        intensity = PrecipitationIntensity.none,
-        temperatureCelsius = 5.0,
-        visibilityMeters = 10000.0,
-        windSpeedKmh = 0.0,
-        iceRisk = false;
+    : precipType = PrecipitationType.none,
+      intensity = PrecipitationIntensity.none,
+      temperatureCelsius = 5.0,
+      visibilityMeters = 10000.0,
+      windSpeedKmh = 0.0,
+      iceRisk = false;
 
   // ---------------------------------------------------------------------------
   // Convenience getters
@@ -106,14 +106,14 @@ class WeatherCondition extends Equatable {
 
   @override
   List<Object?> get props => [
-        precipType,
-        intensity,
-        temperatureCelsius,
-        visibilityMeters,
-        windSpeedKmh,
-        iceRisk,
-        timestamp,
-      ];
+    precipType,
+    intensity,
+    temperatureCelsius,
+    visibilityMeters,
+    windSpeedKmh,
+    iceRisk,
+    timestamp,
+  ];
 
   @override
   String toString() =>

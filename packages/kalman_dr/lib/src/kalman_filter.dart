@@ -97,9 +97,9 @@ class KalmanFilter {
 
   /// Creates a Kalman filter. Uninitialised until first [update] call.
   KalmanFilter()
-      : _x = [0, 0, 0, 0],
-        _p = _identity(1e6), // large initial uncertainty
-        _lastTime = DateTime.fromMillisecondsSinceEpoch(0);
+    : _x = [0, 0, 0, 0],
+      _p = _identity(1e6), // large initial uncertainty
+      _lastTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Creates a Kalman filter initialised to a known state (for testing).
   KalmanFilter.withState({
@@ -109,10 +109,10 @@ class KalmanFilter {
     required double heading,
     required DateTime timestamp,
     double initialAccuracy = 5.0,
-  })  : _x = [latitude, longitude, speed, heading],
-        _p = _diagFromAccuracy(initialAccuracy),
-        _lastTime = timestamp,
-        _initialized = true;
+  }) : _x = [latitude, longitude, speed, heading],
+       _p = _diagFromAccuracy(initialAccuracy),
+       _lastTime = timestamp,
+       _initialized = true;
 
   // -----------------------------------------------------------------------
   // Public API
@@ -122,12 +122,8 @@ class KalmanFilter {
   bool get isInitialized => _initialized;
 
   /// Current state estimate.
-  ({double lat, double lon, double speed, double heading}) get state => (
-        lat: _x[0],
-        lon: _x[1],
-        speed: _x[2],
-        heading: _x[3],
-      );
+  ({double lat, double lon, double speed, double heading}) get state =>
+      (lat: _x[0], lon: _x[1], speed: _x[2], heading: _x[3]);
 
   /// Current estimated accuracy in metres.
   ///
@@ -150,8 +146,7 @@ class KalmanFilter {
   }
 
   /// Whether position uncertainty has exceeded the safety cap (~500m).
-  bool get isAccuracyExceeded =>
-      _p[0][0] + _p[1][1] > maxCovarianceThreshold;
+  bool get isAccuracyExceeded => _p[0][0] + _p[1][1] > maxCovarianceThreshold;
 
   /// Predict the state forward by [dt] without a GPS measurement.
   ///
@@ -160,7 +155,7 @@ class KalmanFilter {
   ///
   /// Returns the predicted state with current accuracy.
   ({double lat, double lon, double speed, double heading, double accuracy})
-      predict(Duration dt) {
+  predict(Duration dt) {
     if (!_initialized) {
       return (lat: 0, lon: 0, speed: 0, heading: 0, accuracy: double.infinity);
     }
@@ -300,9 +295,8 @@ class KalmanFilter {
     final safeCosLat = cosLat.abs() < 0.001 ? 0.001 : cosLat; // pole guard
 
     final dLat = distance * math.cos(headingRad) / _metresPerDegreeLat;
-    final dLon = distance *
-        math.sin(headingRad) /
-        (_metresPerDegreeLat * safeCosLat);
+    final dLon =
+        distance * math.sin(headingRad) / (_metresPerDegreeLat * safeCosLat);
 
     return [lat + dLat, lon + dLon, speed, heading];
   }
@@ -332,7 +326,8 @@ class KalmanFilter {
 
     // ∂lon'/∂lat = speed·sin(heading)·dt·sin(lat) /
     //              (metresPerDegreeLat·cos²(lat)) · (π/180)
-    final dLonDLat = speed *
+    final dLonDLat =
+        speed *
         sinH *
         dt *
         sinLat /
@@ -346,7 +341,12 @@ class KalmanFilter {
     // ∂lon'/∂heading = speed·cos(heading)·dt /
     //                  (metresPerDegreeLat·cos(lat)) · (π/180)
     final dLonDHeading =
-        speed * cosH * dt / (_metresPerDegreeLat * safeCosLat) * math.pi / 180.0;
+        speed *
+        cosH *
+        dt /
+        (_metresPerDegreeLat * safeCosLat) *
+        math.pi /
+        180.0;
 
     return [
       [1, 0, dLatDSpeed, dLatDHeading], // ∂lat'/∂x
@@ -362,11 +362,11 @@ class KalmanFilter {
 
   /// Process noise Q scaled by time step.
   static Mat4 _processNoiseMatrix(double dt) => _diag([
-        _processNoise[0] * dt,
-        _processNoise[1] * dt,
-        _processNoise[2] * dt,
-        _processNoise[3] * dt,
-      ]);
+    _processNoise[0] * dt,
+    _processNoise[1] * dt,
+    _processNoise[2] * dt,
+    _processNoise[3] * dt,
+  ]);
 
   /// Create diagonal covariance from GPS accuracy (metres).
   ///
@@ -409,55 +409,54 @@ class KalmanFilter {
   // -----------------------------------------------------------------------
 
   static Mat4 _identity(double scale) => [
-        [scale, 0, 0, 0],
-        [0, scale, 0, 0],
-        [0, 0, scale, 0],
-        [0, 0, 0, scale],
-      ];
+    [scale, 0, 0, 0],
+    [0, scale, 0, 0],
+    [0, 0, scale, 0],
+    [0, 0, 0, scale],
+  ];
 
   static Mat4 _diag(List<double> d) => [
-        [d[0], 0, 0, 0],
-        [0, d[1], 0, 0],
-        [0, 0, d[2], 0],
-        [0, 0, 0, d[3]],
-      ];
+    [d[0], 0, 0, 0],
+    [0, d[1], 0, 0],
+    [0, 0, d[2], 0],
+    [0, 0, 0, d[3]],
+  ];
 
   static Mat4 _transpose(Mat4 a) => [
-        [a[0][0], a[1][0], a[2][0], a[3][0]],
-        [a[0][1], a[1][1], a[2][1], a[3][1]],
-        [a[0][2], a[1][2], a[2][2], a[3][2]],
-        [a[0][3], a[1][3], a[2][3], a[3][3]],
-      ];
+    [a[0][0], a[1][0], a[2][0], a[3][0]],
+    [a[0][1], a[1][1], a[2][1], a[3][1]],
+    [a[0][2], a[1][2], a[2][2], a[3][2]],
+    [a[0][3], a[1][3], a[2][3], a[3][3]],
+  ];
 
-  static Mat4 _addMat(Mat4 a, Mat4 b) => List.generate(
-      4, (i) => List.generate(4, (j) => a[i][j] + b[i][j]));
+  static Mat4 _addMat(Mat4 a, Mat4 b) =>
+      List.generate(4, (i) => List.generate(4, (j) => a[i][j] + b[i][j]));
 
-  static Mat4 _subMat(Mat4 a, Mat4 b) => List.generate(
-      4, (i) => List.generate(4, (j) => a[i][j] - b[i][j]));
+  static Mat4 _subMat(Mat4 a, Mat4 b) =>
+      List.generate(4, (i) => List.generate(4, (j) => a[i][j] - b[i][j]));
 
   static Mat4 _mulMat(Mat4 a, Mat4 b) => List.generate(
-      4,
-      (i) => List.generate(4, (j) {
-            var sum = 0.0;
-            for (var k = 0; k < 4; k++) {
-              sum += a[i][k] * b[k][j];
-            }
-            return sum;
-          }));
+    4,
+    (i) => List.generate(4, (j) {
+      var sum = 0.0;
+      for (var k = 0; k < 4; k++) {
+        sum += a[i][k] * b[k][j];
+      }
+      return sum;
+    }),
+  );
 
   static Vec4 _mulMatVec(Mat4 a, Vec4 v) => List.generate(4, (i) {
-        var sum = 0.0;
-        for (var k = 0; k < 4; k++) {
-          sum += a[i][k] * v[k];
-        }
-        return sum;
-      });
+    var sum = 0.0;
+    for (var k = 0; k < 4; k++) {
+      sum += a[i][k] * v[k];
+    }
+    return sum;
+  });
 
-  static Vec4 _addVec(Vec4 a, Vec4 b) =>
-      List.generate(4, (i) => a[i] + b[i]);
+  static Vec4 _addVec(Vec4 a, Vec4 b) => List.generate(4, (i) => a[i] + b[i]);
 
-  static Vec4 _subVec(Vec4 a, Vec4 b) =>
-      List.generate(4, (i) => a[i] - b[i]);
+  static Vec4 _subVec(Vec4 a, Vec4 b) => List.generate(4, (i) => a[i] - b[i]);
 
   /// 4×4 matrix inversion using cofactor expansion.
   /// Returns null if the matrix is singular (determinant ≈ 0).

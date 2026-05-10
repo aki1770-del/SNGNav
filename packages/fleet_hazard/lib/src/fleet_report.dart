@@ -58,8 +58,13 @@ class FleetReport extends Equatable {
       DateTime.now().difference(timestamp) < maxAge;
 
   @override
-  List<Object?> get props =>
-      [vehicleId, position, timestamp, condition, confidence];
+  List<Object?> get props => [
+    vehicleId,
+    position,
+    timestamp,
+    condition,
+    confidence,
+  ];
 
   @override
   String toString() =>

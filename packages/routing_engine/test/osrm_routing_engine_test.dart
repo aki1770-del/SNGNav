@@ -117,15 +117,12 @@ void main() {
   });
 
   group('OsrmRoutingEngine — modifier-to-type mapping', () {
-    Future<String> typeFor({
-      String type = 'turn',
-      String modifier = '',
-    }) async {
+    Future<String> typeFor({String type = 'turn', String modifier = ''}) async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client: _osrmClient(steps: [
-          _step(type: type, modifier: modifier),
-        ]),
+        client: _osrmClient(
+          steps: [_step(type: type, modifier: modifier)],
+        ),
       );
       final result = await engine.calculateRoute(_request);
       await engine.dispose();
@@ -161,8 +158,7 @@ void main() {
     });
 
     test('off ramp + right → ramp_right', () async {
-      expect(
-          await typeFor(type: 'off ramp', modifier: 'right'), 'ramp_right');
+      expect(await typeFor(type: 'off ramp', modifier: 'right'), 'ramp_right');
     });
 
     test('modifier left → left', () async {
@@ -199,8 +195,9 @@ void main() {
 
     test('unknown modifier with type → falls back to type', () async {
       expect(
-          await typeFor(type: 'notification', modifier: 'unknown_thing'),
-          'notification');
+        await typeFor(type: 'notification', modifier: 'unknown_thing'),
+        'notification',
+      );
     });
 
     test('empty modifier and empty type → straight', () async {
@@ -216,9 +213,9 @@ void main() {
     }) async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client: _osrmClient(steps: [
-          _step(name: name, type: type, modifier: modifier),
-        ]),
+        client: _osrmClient(
+          steps: [_step(name: name, type: type, modifier: modifier)],
+        ),
       );
       final result = await engine.calculateRoute(_request);
       await engine.dispose();
@@ -237,10 +234,7 @@ void main() {
     });
 
     test('arrive → "Arrive at destination"', () async {
-      expect(
-        await instructionFor(type: 'arrive'),
-        'Arrive at destination',
-      );
+      expect(await instructionFor(type: 'arrive'), 'Arrive at destination');
     });
 
     test('turn with modifier and name', () async {
@@ -269,7 +263,10 @@ void main() {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
         client: _osrmClient(
-          steps: [_step(type: 'depart'), _step(type: 'arrive')],
+          steps: [
+            _step(type: 'depart'),
+            _step(type: 'arrive'),
+          ],
           geometry: '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
         ),
       );
@@ -304,10 +301,12 @@ void main() {
     test('empty routes array throws RoutingException', () async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
-              jsonEncode({'code': 'Ok', 'routes': <dynamic>[]}),
-              200,
-            )),
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({'code': 'Ok', 'routes': <dynamic>[]}),
+            200,
+          ),
+        ),
       );
 
       expect(
@@ -321,10 +320,9 @@ void main() {
     test('null routes field throws RoutingException', () async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
-              jsonEncode({'code': 'Ok'}),
-              200,
-            )),
+        client: MockClient(
+          (_) async => http.Response(jsonEncode({'code': 'Ok'}), 200),
+        ),
       );
 
       expect(
@@ -338,8 +336,9 @@ void main() {
     test('network error throws RoutingException', () async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client:
-            MockClient((_) async => throw http.ClientException('conn refused')),
+        client: MockClient(
+          (_) async => throw http.ClientException('conn refused'),
+        ),
       );
 
       expect(
@@ -353,31 +352,33 @@ void main() {
     test('missing maneuver location defaults to (0, 0)', () async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
-        client: MockClient((_) async => http.Response(
-              jsonEncode({
-                'code': 'Ok',
-                'routes': [
-                  {
-                    'geometry': '_p~iF~ps|U',
-                    'distance': 100,
-                    'duration': 10,
-                    'legs': [
-                      {
-                        'steps': [
-                          {
-                            'name': 'Test',
-                            'distance': 100,
-                            'duration': 10,
-                            'maneuver': {'type': 'depart'},
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              }),
-              200,
-            )),
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'code': 'Ok',
+              'routes': [
+                {
+                  'geometry': '_p~iF~ps|U',
+                  'distance': 100,
+                  'duration': 10,
+                  'legs': [
+                    {
+                      'steps': [
+                        {
+                          'name': 'Test',
+                          'distance': 100,
+                          'duration': 10,
+                          'maneuver': {'type': 'depart'},
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }),
+            200,
+          ),
+        ),
       );
 
       final result = await engine.calculateRoute(_request);

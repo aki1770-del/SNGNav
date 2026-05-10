@@ -24,9 +24,7 @@ class SimulatedWeatherProvider implements WeatherProvider {
   ///
   /// [interval] controls how frequently conditions change. Default is 5
   /// seconds for demo pacing; tests can set a shorter interval.
-  SimulatedWeatherProvider({
-    this.interval = const Duration(seconds: 5),
-  });
+  SimulatedWeatherProvider({this.interval = const Duration(seconds: 5)});
 
   @override
   Stream<WeatherCondition> get conditions {
@@ -86,53 +84,53 @@ class SimulatedWeatherProvider implements WeatherProvider {
 
     // Phase 1: Light snow begins — entering mountain area.
     (ts) => WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 1.0,
-          visibilityMeters: 3000,
-          windSpeedKmh: 15,
-          timestamp: ts,
-        ),
+      precipType: PrecipitationType.snow,
+      intensity: PrecipitationIntensity.light,
+      temperatureCelsius: 1.0,
+      visibilityMeters: 3000,
+      windSpeedKmh: 15,
+      timestamp: ts,
+    ),
 
     // Phase 2: Moderate snow — mountain pass approach.
     (ts) => WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -1.0,
-          visibilityMeters: 800,
-          windSpeedKmh: 30,
-          timestamp: ts,
-        ),
+      precipType: PrecipitationType.snow,
+      intensity: PrecipitationIntensity.moderate,
+      temperatureCelsius: -1.0,
+      visibilityMeters: 800,
+      windSpeedKmh: 30,
+      timestamp: ts,
+    ),
 
     // Phase 3: Heavy snow — pass summit. Hazardous.
     (ts) => WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: -4.0,
-          visibilityMeters: 150,
-          windSpeedKmh: 45,
-          timestamp: ts,
-        ),
+      precipType: PrecipitationType.snow,
+      intensity: PrecipitationIntensity.heavy,
+      temperatureCelsius: -4.0,
+      visibilityMeters: 150,
+      windSpeedKmh: 45,
+      timestamp: ts,
+    ),
 
     // Phase 4: Ice risk — descending pass. Temperature drop + wet road.
     (ts) => WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -3.0,
-          visibilityMeters: 500,
-          windSpeedKmh: 20,
-          iceRisk: true,
-          timestamp: ts,
-        ),
+      precipType: PrecipitationType.snow,
+      intensity: PrecipitationIntensity.moderate,
+      temperatureCelsius: -3.0,
+      visibilityMeters: 500,
+      windSpeedKmh: 20,
+      iceRisk: true,
+      timestamp: ts,
+    ),
 
     // Phase 5: Clearing — descending to valley.
     (ts) => WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 0.0,
-          visibilityMeters: 2000,
-          windSpeedKmh: 10,
-          timestamp: ts,
-        ),
+      precipType: PrecipitationType.snow,
+      intensity: PrecipitationIntensity.light,
+      temperatureCelsius: 0.0,
+      visibilityMeters: 2000,
+      windSpeedKmh: 10,
+      timestamp: ts,
+    ),
   ];
 }

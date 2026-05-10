@@ -20,11 +20,9 @@ class OsrmRoutingEngine implements RoutingEngine {
   final String baseUrl;
   final http.Client _client;
 
-  OsrmRoutingEngine({
-    String? baseUrl,
-    http.Client? client,
-  })  : baseUrl = baseUrl ?? _defaultOsrmUrl,
-        _client = client ?? http.Client();
+  OsrmRoutingEngine({String? baseUrl, http.Client? client})
+    : baseUrl = baseUrl ?? _defaultOsrmUrl,
+      _client = client ?? http.Client();
 
   @override
   EngineInfo get info => const EngineInfo(name: 'osrm');
@@ -33,8 +31,9 @@ class OsrmRoutingEngine implements RoutingEngine {
   Future<bool> isAvailable() async {
     try {
       final uri = Uri.parse('$baseUrl/nearest/v1/driving/136.8815,35.1709');
-      final response =
-          await _client.get(uri).timeout(const Duration(seconds: 3));
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (_) {
       return false;
@@ -84,10 +83,7 @@ class OsrmRoutingEngine implements RoutingEngine {
     }
   }
 
-  RouteResult _parseRouteResponse(
-    Map<String, dynamic> json,
-    Duration latency,
-  ) {
+  RouteResult _parseRouteResponse(Map<String, dynamic> json, Duration latency) {
     final routes = json['routes'] as List<dynamic>?;
     if (routes == null || routes.isEmpty) {
       throw RoutingException('OSRM returned no routes');
@@ -122,14 +118,16 @@ class OsrmRoutingEngine implements RoutingEngine {
         final stepDistanceM = (stepMap['distance'] as num?)?.toDouble() ?? 0;
         final stepDurationS = (stepMap['duration'] as num?)?.toDouble() ?? 0;
 
-        allManeuvers.add(RouteManeuver(
-          index: maneuverIndex++,
-          instruction: _buildInstruction(stepMap, maneuver),
-          type: _mapModifierToType(maneuver),
-          lengthKm: stepDistanceM / 1000,
-          timeSeconds: stepDurationS,
-          position: position,
-        ));
+        allManeuvers.add(
+          RouteManeuver(
+            index: maneuverIndex++,
+            instruction: _buildInstruction(stepMap, maneuver),
+            type: _mapModifierToType(maneuver),
+            lengthKm: stepDistanceM / 1000,
+            timeSeconds: stepDurationS,
+            position: position,
+          ),
+        );
       }
     }
 
@@ -140,12 +138,10 @@ class OsrmRoutingEngine implements RoutingEngine {
       maneuvers: allManeuvers,
       totalDistanceKm: totalDistanceKm,
       totalTimeSeconds: durationSeconds,
-      summary: '${totalDistanceKm.toStringAsFixed(1)} km, '
+      summary:
+          '${totalDistanceKm.toStringAsFixed(1)} km, '
           '${(durationSeconds / 60).toStringAsFixed(0)} min',
-      engineInfo: EngineInfo(
-        name: 'osrm',
-        queryLatency: latency,
-      ),
+      engineInfo: EngineInfo(name: 'osrm', queryLatency: latency),
     );
   }
 

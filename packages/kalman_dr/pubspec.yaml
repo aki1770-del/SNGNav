@@ -1,9 +1,8 @@
 name: kalman_dr
 description: >-
-  Keep your app's position alive when GPS drops out. 4D Extended Kalman
-  Filter for dead reckoning through tunnels, urban canyons, and parking
-  garages. Use alongside geolocator. Pure Dart, no native dependencies.
-version: 0.3.0
+  4D Extended Kalman Filter for dead reckoning through tunnels and
+  urban canyons when GPS drops out. Pure Dart, no native deps.
+version: 0.4.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

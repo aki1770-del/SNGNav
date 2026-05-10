@@ -28,8 +28,10 @@ void main() {
   final zones = HazardAggregator.aggregate(reports);
   print('hazard zones: ${zones.length}');
   for (final zone in zones) {
-    print('${zone.severity.name} zone '
-        'vehicles=${zone.vehicleCount} '
-        'radius=${zone.radiusMeters.toStringAsFixed(0)}m');
+    print(
+      '${zone.severity.name} zone '
+      'vehicles=${zone.vehicleCount} '
+      'radius=${zone.radiusMeters.toStringAsFixed(0)}m',
+    );
   }
 }
