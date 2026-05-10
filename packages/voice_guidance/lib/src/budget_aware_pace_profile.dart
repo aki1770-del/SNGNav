@@ -96,13 +96,16 @@ class BudgetAwarePaceProfile extends Equatable {
     this.minPace = 0.7,
     this.maxPace = 1.0,
     this.curve = InterpolationCurve.linear,
-  })  : assert(minPace > 0.0,
-            'minPace must be greater than 0.0; got $minPace'),
-        assert(minPace <= maxPace,
-            'minPace must be <= maxPace; caution-add-only invariant'),
-        assert(maxPace <= 1.0,
-            'maxPace must be <= 1.0; caution-add-only invariant '
-            '(pace must never exceed engine-base)');
+  }) : assert(minPace > 0.0, 'minPace must be greater than 0.0; got $minPace'),
+       assert(
+         minPace <= maxPace,
+         'minPace must be <= maxPace; caution-add-only invariant',
+       ),
+       assert(
+         maxPace <= 1.0,
+         'maxPace must be <= 1.0; caution-add-only invariant '
+         '(pace must never exceed engine-base)',
+       );
 
   /// Compute the budget-aware pace multiplier given a remaining-budget
   /// ratio in `[0.0, 1.0]`. The integrator multiplies this value by

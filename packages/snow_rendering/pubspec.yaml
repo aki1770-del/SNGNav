@@ -1,10 +1,9 @@
 name: snow_rendering
 description: >-
-  Weather-to-rendering computation for driving safety applications.
-  Road surface classification, precipitation particle parameters, and
-  visibility degradation derived from weather data. Pure Dart — no Flutter
-  dependency. Designed for edge developers building driver-protection apps.
-version: 0.2.1
+  Weather-to-rendering computation for driving safety apps — surface
+  classification, particle parameters, visibility degradation. Pure
+  Dart.
+version: 0.2.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

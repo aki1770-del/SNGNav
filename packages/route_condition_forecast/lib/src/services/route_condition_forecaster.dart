@@ -76,13 +76,15 @@ class RouteConditionForecaster {
 
       final intersecting = _intersectingZones(segment);
 
-      forecasted.add(SegmentConditionForecast(
-        segment: segment,
-        condition: condition,
-        hazardZones: intersecting,
-        etaSeconds: etaSeconds,
-        confidence: _confidence(etaSeconds),
-      ));
+      forecasted.add(
+        SegmentConditionForecast(
+          segment: segment,
+          condition: condition,
+          hazardZones: intersecting,
+          etaSeconds: etaSeconds,
+          confidence: _confidence(etaSeconds),
+        ),
+      );
 
       // Advance elapsed time by this segment's travel time.
       final travelTime = speedKmh > 0
@@ -101,8 +103,10 @@ class RouteConditionForecaster {
   List<RouteSegment> _segment(RouteResult route) {
     return switch (segmentationStrategy) {
       SegmentationStrategy.byManeuver => RouteSegmenter.byManeuver(route),
-      SegmentationStrategy.byDistance =>
-        RouteSegmenter.byDistance(route, maxKm: distanceSegmentKm),
+      SegmentationStrategy.byDistance => RouteSegmenter.byDistance(
+        route,
+        maxKm: distanceSegmentKm,
+      ),
     };
   }
 

@@ -51,9 +51,7 @@ class Nav2SafetyMapper {
   /// list as [Nav2CollisionDetectorState.triggeredPolygons]; surfaced
   /// here for symmetry with the Monitor mapper and for forward
   /// compatibility when richer detector-class advisories are added.
-  static List<String> triggeredPolygonNames(
-    Nav2CollisionDetectorState state,
-  ) {
+  static List<String> triggeredPolygonNames(Nav2CollisionDetectorState state) {
     return state.triggeredPolygons;
   }
 }

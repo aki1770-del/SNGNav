@@ -1,10 +1,9 @@
 name: condition_aggregator_jma
 description: >-
-  Japan Meteorological Agency adapter for the condition_aggregator interface.
-  Maps JMA disaster-info XML feeds to the source-neutral Advisory typed event
-  shape so integrators consume one shape across publishers (NWS / JMA / etc.).
-  Pure Dart, no Flutter dependency.
-version: 0.1.1
+  JMA (気象庁) adapter for the condition_aggregator interface. Maps
+  JMA disaster-info XML feeds to source-neutral Advisory typed events.
+  Pure Dart.
+version: 0.1.2
 
 # 0.1.0 deploys via the direct-Dart-XML-parse path (no jmaxml binding
 # in transit). The jmaxml engagement-shape election (alpha/beta/gamma)
@@ -24,7 +23,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  condition_aggregator: ^0.0.3
+  condition_aggregator: ^0.0.4
   # xml is the canonical Dart XML parser; used for atom-feed +
   # per-prefecture report parsing on the direct-parse path.
   xml: ^6.5.0

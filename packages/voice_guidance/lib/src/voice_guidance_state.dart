@@ -3,11 +3,7 @@ library;
 
 import 'package:equatable/equatable.dart';
 
-enum VoiceGuidanceStatus {
-  idle,
-  speaking,
-  muted,
-}
+enum VoiceGuidanceStatus { idle, speaking, muted }
 
 class VoiceGuidanceState extends Equatable {
   const VoiceGuidanceState({
@@ -18,10 +14,10 @@ class VoiceGuidanceState extends Equatable {
   });
 
   const VoiceGuidanceState.idle()
-      : status = VoiceGuidanceStatus.idle,
-        lastSpokenText = null,
-        lastHazardMessage = null,
-        lastManeuverIndex = null;
+    : status = VoiceGuidanceStatus.idle,
+      lastSpokenText = null,
+      lastHazardMessage = null,
+      lastManeuverIndex = null;
 
   final VoiceGuidanceStatus status;
   final String? lastSpokenText;
@@ -46,9 +42,9 @@ class VoiceGuidanceState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        lastSpokenText,
-        lastHazardMessage,
-        lastManeuverIndex,
-      ];
+    status,
+    lastSpokenText,
+    lastHazardMessage,
+    lastManeuverIndex,
+  ];
 }

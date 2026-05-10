@@ -29,8 +29,10 @@ void main() {
 
     test('.index ordering is monotonic (info < warning < critical)', () {
       expect(AlertSeverity.info.index, lessThan(AlertSeverity.warning.index));
-      expect(AlertSeverity.warning.index,
-          lessThan(AlertSeverity.critical.index));
+      expect(
+        AlertSeverity.warning.index,
+        lessThan(AlertSeverity.critical.index),
+      );
     });
   });
 
@@ -50,15 +52,17 @@ void main() {
       ]);
     });
 
-    test('multipliers respect caution-add-only floor (>= 1.0) and cap (<= 1.5)',
-        () {
-      for (final phase in CircadianPhase.values) {
-        expect(phase.multiplier, greaterThanOrEqualTo(1.0));
-        expect(phase.multiplier, lessThanOrEqualTo(1.5));
-      }
-      expect(CircadianPhase.morning.multiplier, 1.0);
-      expect(CircadianPhase.lateNight.multiplier, 1.5);
-    });
+    test(
+      'multipliers respect caution-add-only floor (>= 1.0) and cap (<= 1.5)',
+      () {
+        for (final phase in CircadianPhase.values) {
+          expect(phase.multiplier, greaterThanOrEqualTo(1.0));
+          expect(phase.multiplier, lessThanOrEqualTo(1.5));
+        }
+        expect(CircadianPhase.morning.multiplier, 1.0);
+        expect(CircadianPhase.lateNight.multiplier, 1.5);
+      },
+    );
 
     test('circadianPhaseFromHour boundary mapping', () {
       expect(circadianPhaseFromHour(0), CircadianPhase.lateNight);
@@ -99,8 +103,10 @@ void main() {
       expect(DriverState.values.byName('alert'), DriverState.alert);
       expect(DriverState.values.byName('fatigued'), DriverState.fatigued);
       expect(DriverState.values.byName('distracted'), DriverState.distracted);
-      expect(DriverState.values.byName('impairedVisibility'),
-          DriverState.impairedVisibility);
+      expect(
+        DriverState.values.byName('impairedVisibility'),
+        DriverState.impairedVisibility,
+      );
     });
   });
 
@@ -128,7 +134,9 @@ void main() {
 
     test('foreignTouristSnowZone is present (added in 0.3.0 of NSC)', () {
       expect(
-        DriverProfile.values.any((p) => p == DriverProfile.foreignTouristSnowZone),
+        DriverProfile.values.any(
+          (p) => p == DriverProfile.foreignTouristSnowZone,
+        ),
         isTrue,
       );
     });

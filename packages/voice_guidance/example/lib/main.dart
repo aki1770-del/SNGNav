@@ -10,21 +10,23 @@ import 'package:voice_guidance/voice_guidance.dart';
 /// the main app and not exported from any package public barrel.
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
-        shape: shape,
-        maneuvers: maneuvers
-            .map((m) => NavigationManeuver(
-                  index: m.index,
-                  instruction: m.instruction,
-                  type: m.type,
-                  lengthKm: m.lengthKm,
-                  timeSeconds: m.timeSeconds,
-                  position: m.position,
-                ))
-            .toList(),
-        totalDistanceKm: totalDistanceKm,
-        totalTimeSeconds: totalTimeSeconds,
-        summary: summary,
-      );
+    shape: shape,
+    maneuvers: maneuvers
+        .map(
+          (m) => NavigationManeuver(
+            index: m.index,
+            instruction: m.instruction,
+            type: m.type,
+            lengthKm: m.lengthKm,
+            timeSeconds: m.timeSeconds,
+            position: m.position,
+          ),
+        )
+        .toList(),
+    totalDistanceKm: totalDistanceKm,
+    totalTimeSeconds: totalTimeSeconds,
+    summary: summary,
+  );
 }
 
 final _exampleRoute = RouteResult(
@@ -76,7 +78,9 @@ class VoiceGuidanceExampleApp extends StatelessWidget {
         providers: [
           BlocProvider(
             create: (_) => NavigationBloc()
-              ..add(NavigationStarted(route: _exampleRoute.toNavigationRoute())),
+              ..add(
+                NavigationStarted(route: _exampleRoute.toNavigationRoute()),
+              ),
           ),
         ],
         child: const _ExampleScreen(),
@@ -102,8 +106,7 @@ class _ExampleScreenState extends State<_ExampleScreen> {
     // Replace with DefaultTtsEngine() on a real device.
     _voiceBloc = VoiceGuidanceBloc(
       ttsEngine: NoOpTtsEngine(),
-      navigationStateStream:
-          context.read<NavigationBloc>().stream,
+      navigationStateStream: context.read<NavigationBloc>().stream,
     );
   }
 
@@ -223,19 +226,17 @@ class _ManeuverAnnounceSection extends StatelessWidget {
           children: [
             FilledButton(
               onPressed: () => context.read<VoiceGuidanceBloc>().add(
-                    const ManeuverAnnounced(
-                      text: 'In 300 metres, turn right',
-                    ),
-                  ),
+                const ManeuverAnnounced(text: 'In 300 metres, turn right'),
+              ),
               child: const Text('Announce maneuver'),
             ),
             FilledButton(
               onPressed: () => context.read<VoiceGuidanceBloc>().add(
-                    const HazardAnnounced(
-                      message: 'Icy road conditions ahead',
-                      severity: AlertSeverity.warning,
-                    ),
-                  ),
+                const HazardAnnounced(
+                  message: 'Icy road conditions ahead',
+                  severity: AlertSeverity.warning,
+                ),
+              ),
               child: const Text('Announce hazard'),
             ),
           ],

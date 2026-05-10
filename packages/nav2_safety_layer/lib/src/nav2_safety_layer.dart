@@ -32,10 +32,7 @@ class Nav2SafetyLayer {
 
   final _advisoryController = StreamController<String>.broadcast();
 
-  Nav2SafetyLayer({
-    required this.profile,
-    required this.throttle,
-  });
+  Nav2SafetyLayer({required this.profile, required this.throttle});
 
   /// Stream of advisory action strings the integrator's HMI can
   /// surface. Strings are pre-throttled and pre-localized for the

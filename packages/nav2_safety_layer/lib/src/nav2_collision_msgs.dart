@@ -77,7 +77,9 @@ class Nav2CollisionMonitorState extends Equatable {
   /// dispatch typically delivers messages as JSON-encoded maps).
   factory Nav2CollisionMonitorState.fromJson(Map<String, dynamic> json) {
     return Nav2CollisionMonitorState(
-      actionType: Nav2CollisionAction.fromInt((json['action_type'] as int?) ?? 0),
+      actionType: Nav2CollisionAction.fromInt(
+        (json['action_type'] as int?) ?? 0,
+      ),
       polygonName: (json['polygon_name'] as String?) ?? '',
     );
   }

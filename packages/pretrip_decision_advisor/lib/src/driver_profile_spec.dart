@@ -34,9 +34,6 @@ class DriverProfileSpec {
   }
 
   @override
-  int get hashCode => Object.hash(
-        profileTag,
-        reactionTimeSeconds,
-        unfamiliarRouteFlag,
-      );
+  int get hashCode =>
+      Object.hash(profileTag, reactionTimeSeconds, unfamiliarRouteFlag);
 }

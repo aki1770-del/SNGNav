@@ -1,3 +1,12 @@
+# Changelog
+
+## 0.2.1 — 2026-05-10 — Pana score recovery (Theme α P3)
+
+- Trim pubspec `description` to within the pana 60–180 character target.
+- Add minimal `example/main.dart` for pana documentation scoring.
+- Apply `dart format` to clear any formatter findings.
+- No SDK source changes; metadata + format pass only.
+
 ## 0.2.0 — 2026-05-07 — Data-fill: 3 deferred entries populated (圧雪 / シャーベット / 凍結)
 
 Verbatim authoritative-source citations added for the three entries

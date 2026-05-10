@@ -15,10 +15,14 @@ void main() {
         end: end,
         distanceKm: 20.0,
       );
-      expect(seg.midpoint.latitude,
-          closeTo((start.latitude + end.latitude) / 2, 1e-9));
-      expect(seg.midpoint.longitude,
-          closeTo((start.longitude + end.longitude) / 2, 1e-9));
+      expect(
+        seg.midpoint.latitude,
+        closeTo((start.latitude + end.latitude) / 2, 1e-9),
+      );
+      expect(
+        seg.midpoint.longitude,
+        closeTo((start.longitude + end.longitude) / 2, 1e-9),
+      );
     });
 
     test('midpoint of coincident points equals the point', () {
@@ -41,8 +45,20 @@ void main() {
         timeSeconds: 1200,
         position: start,
       );
-      final a = RouteSegment(index: 0, start: start, end: end, distanceKm: 20.0, maneuver: m);
-      final b = RouteSegment(index: 0, start: start, end: end, distanceKm: 20.0, maneuver: m);
+      final a = RouteSegment(
+        index: 0,
+        start: start,
+        end: end,
+        distanceKm: 20.0,
+        maneuver: m,
+      );
+      final b = RouteSegment(
+        index: 0,
+        start: start,
+        end: end,
+        distanceKm: 20.0,
+        maneuver: m,
+      );
       expect(a, equals(b));
     });
 
@@ -53,7 +69,12 @@ void main() {
     });
 
     test('toString includes index and distance', () {
-      final seg = RouteSegment(index: 2, start: start, end: end, distanceKm: 7.5);
+      final seg = RouteSegment(
+        index: 2,
+        start: start,
+        end: end,
+        distanceKm: 7.5,
+      );
       expect(seg.toString(), contains('2'));
       expect(seg.toString(), contains('7.50'));
     });

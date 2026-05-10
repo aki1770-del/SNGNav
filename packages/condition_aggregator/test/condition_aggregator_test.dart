@@ -176,99 +176,118 @@ void main() {
 
   group('AdvisoryAggregator fan-out', () {
     test('throws StateError when fetched before init', () async {
-      final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
-        _StubProvider(source: AdvisorySource.nwsUnitedStates),
-      ]);
+      final agg = AdvisoryAggregator(
+        providers: <AdvisoryProvider>[
+          _StubProvider(source: AdvisorySource.nwsUnitedStates),
+        ],
+      );
       expect(
         () => agg.fetchActiveAdvisoriesAtPoint(latitude: 0, longitude: 0),
         throwsStateError,
       );
     });
 
-    test('init then fetch returns merged advisories from all providers',
-        () async {
-      final a1 = Advisory(
-        source: AdvisorySource.nwsUnitedStates,
-        eventClass: 'Winter Storm Warning',
-        severity: AdvisorySeverity.severe,
-        certainty: AdvisoryCertainty.likely,
-        urgency: AdvisoryUrgency.expected,
-        areaDescription: 'Area-A',
-        effective: null,
-        expires: null,
-        headline: 'h1',
-        description: 'd1',
-      );
-      final a2 = Advisory(
-        source: AdvisorySource.jmaJapan,
-        eventClass: 'VPWW54',
-        severity: AdvisorySeverity.severe,
-        certainty: AdvisoryCertainty.observed,
-        urgency: AdvisoryUrgency.immediate,
-        areaDescription: 'Area-B',
-        effective: null,
-        expires: null,
-        headline: 'h2',
-        description: 'd2',
-      );
-      final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
-        _StubProvider(
-            source: AdvisorySource.nwsUnitedStates, advisories: <Advisory>[a1]),
-        _StubProvider(
-            source: AdvisorySource.jmaJapan, advisories: <Advisory>[a2]),
-      ]);
-      await agg.init();
-      final result = await agg.fetchActiveAdvisoriesAtPoint(
-        latitude: 47.9,
-        longitude: -97.0,
-      );
-      expect(result.advisories, containsAll(<Advisory>[a1, a2]));
-      expect(result.providerErrors, isEmpty);
-    });
+    test(
+      'init then fetch returns merged advisories from all providers',
+      () async {
+        final a1 = Advisory(
+          source: AdvisorySource.nwsUnitedStates,
+          eventClass: 'Winter Storm Warning',
+          severity: AdvisorySeverity.severe,
+          certainty: AdvisoryCertainty.likely,
+          urgency: AdvisoryUrgency.expected,
+          areaDescription: 'Area-A',
+          effective: null,
+          expires: null,
+          headline: 'h1',
+          description: 'd1',
+        );
+        final a2 = Advisory(
+          source: AdvisorySource.jmaJapan,
+          eventClass: 'VPWW54',
+          severity: AdvisorySeverity.severe,
+          certainty: AdvisoryCertainty.observed,
+          urgency: AdvisoryUrgency.immediate,
+          areaDescription: 'Area-B',
+          effective: null,
+          expires: null,
+          headline: 'h2',
+          description: 'd2',
+        );
+        final agg = AdvisoryAggregator(
+          providers: <AdvisoryProvider>[
+            _StubProvider(
+              source: AdvisorySource.nwsUnitedStates,
+              advisories: <Advisory>[a1],
+            ),
+            _StubProvider(
+              source: AdvisorySource.jmaJapan,
+              advisories: <Advisory>[a2],
+            ),
+          ],
+        );
+        await agg.init();
+        final result = await agg.fetchActiveAdvisoriesAtPoint(
+          latitude: 47.9,
+          longitude: -97.0,
+        );
+        expect(result.advisories, containsAll(<Advisory>[a1, a2]));
+        expect(result.providerErrors, isEmpty);
+      },
+    );
 
-    test('warn-and-continue: per-provider error captured, others continue',
-        () async {
-      final goodAdvisory = Advisory(
-        source: AdvisorySource.nwsUnitedStates,
-        eventClass: 'Winter Storm Warning',
-        severity: AdvisorySeverity.severe,
-        certainty: AdvisoryCertainty.likely,
-        urgency: AdvisoryUrgency.expected,
-        areaDescription: 'Area-A',
-        effective: null,
-        expires: null,
-        headline: 'h',
-        description: 'd',
-      );
-      final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
-        _StubProvider(
-            source: AdvisorySource.nwsUnitedStates,
-            advisories: <Advisory>[goodAdvisory]),
-        _StubProvider(
-            source: AdvisorySource.jmaJapan, throwOnFetch: 'transport timeout'),
-      ]);
-      await agg.init();
-      final result = await agg.fetchActiveAdvisoriesAtPoint(
-        latitude: 0,
-        longitude: 0,
-      );
-      expect(result.advisories, equals(<Advisory>[goodAdvisory]));
-      expect(result.providerErrors, hasLength(1));
-      expect(result.providerErrors.single.source, AdvisorySource.jmaJapan);
-      expect(result.providerErrors.single.message, contains('transport timeout'));
-    });
+    test(
+      'warn-and-continue: per-provider error captured, others continue',
+      () async {
+        final goodAdvisory = Advisory(
+          source: AdvisorySource.nwsUnitedStates,
+          eventClass: 'Winter Storm Warning',
+          severity: AdvisorySeverity.severe,
+          certainty: AdvisoryCertainty.likely,
+          urgency: AdvisoryUrgency.expected,
+          areaDescription: 'Area-A',
+          effective: null,
+          expires: null,
+          headline: 'h',
+          description: 'd',
+        );
+        final agg = AdvisoryAggregator(
+          providers: <AdvisoryProvider>[
+            _StubProvider(
+              source: AdvisorySource.nwsUnitedStates,
+              advisories: <Advisory>[goodAdvisory],
+            ),
+            _StubProvider(
+              source: AdvisorySource.jmaJapan,
+              throwOnFetch: 'transport timeout',
+            ),
+          ],
+        );
+        await agg.init();
+        final result = await agg.fetchActiveAdvisoriesAtPoint(
+          latitude: 0,
+          longitude: 0,
+        );
+        expect(result.advisories, equals(<Advisory>[goodAdvisory]));
+        expect(result.providerErrors, hasLength(1));
+        expect(result.providerErrors.single.source, AdvisorySource.jmaJapan);
+        expect(
+          result.providerErrors.single.message,
+          contains('transport timeout'),
+        );
+      },
+    );
 
     test('init failure propagates (does not fan-and-swallow)', () async {
-      final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
-        _StubProvider(
-          source: AdvisorySource.jmaJapan,
-          throwOnInit: 'schema-version mismatch',
-        ),
-      ]);
-      expect(
-        () => agg.init(),
-        throwsA(isA<AdvisoryProviderInitException>()),
+      final agg = AdvisoryAggregator(
+        providers: <AdvisoryProvider>[
+          _StubProvider(
+            source: AdvisorySource.jmaJapan,
+            throwOnInit: 'schema-version mismatch',
+          ),
+        ],
       );
+      expect(() => agg.init(), throwsA(isA<AdvisoryProviderInitException>()));
     });
 
     test('init is idempotent: second call after success is no-op', () async {
@@ -301,30 +320,27 @@ void main() {
       expect(reconstructed, equals(canonical));
     });
 
-    test(
-      'toJson encodes null effective / expires as null '
-      '(not omitted; not empty string)',
-      () {
-        final noTimes = Advisory(
-          source: AdvisorySource.nwsUnitedStates,
-          eventClass: 'Freeze Warning',
-          severity: AdvisorySeverity.minor,
-          certainty: AdvisoryCertainty.unknown,
-          urgency: AdvisoryUrgency.unknown,
-          areaDescription: 'Area-X',
-          effective: null,
-          expires: null,
-          headline: 'h',
-          description: 'd',
-        );
-        final json = noTimes.toJson();
-        expect(json['effective'], isNull);
-        expect(json['expires'], isNull);
-        final reconstructed = Advisory.fromJson(json);
-        expect(reconstructed.effective, isNull);
-        expect(reconstructed.expires, isNull);
-      },
-    );
+    test('toJson encodes null effective / expires as null '
+        '(not omitted; not empty string)', () {
+      final noTimes = Advisory(
+        source: AdvisorySource.nwsUnitedStates,
+        eventClass: 'Freeze Warning',
+        severity: AdvisorySeverity.minor,
+        certainty: AdvisoryCertainty.unknown,
+        urgency: AdvisoryUrgency.unknown,
+        areaDescription: 'Area-X',
+        effective: null,
+        expires: null,
+        headline: 'h',
+        description: 'd',
+      );
+      final json = noTimes.toJson();
+      expect(json['effective'], isNull);
+      expect(json['expires'], isNull);
+      final reconstructed = Advisory.fromJson(json);
+      expect(reconstructed.effective, isNull);
+      expect(reconstructed.expires, isNull);
+    });
 
     test('attributionString format per source', () {
       expect(
@@ -335,14 +351,8 @@ void main() {
         AdvisorySource.jmaJapan.attributionString,
         contains('Japan Meteorological Agency'),
       );
-      expect(
-        AdvisorySource.metNorway.attributionString,
-        contains('CC BY 4.0'),
-      );
-      expect(
-        AdvisorySource.other.attributionString,
-        contains('Other'),
-      );
+      expect(AdvisorySource.metNorway.attributionString, contains('CC BY 4.0'));
+      expect(AdvisorySource.other.attributionString, contains('Other'));
     });
 
     test('fromJson throws on missing eventClass', () {
@@ -363,29 +373,26 @@ void main() {
       );
     });
 
-    test(
-      'fromJson maps unknown enum names to fallback variants '
-      '(forward-compat)',
-      () {
-        final json = <String, dynamic>{
-          'source': 'futureUnknownPublisher',
-          'eventClass': 'Some Event',
-          'severity': 'apocalyptic',
-          'certainty': 'mostlyMaybe',
-          'urgency': 'someday',
-          'areaDescription': 'Area-X',
-          'effective': null,
-          'expires': null,
-          'headline': 'h',
-          'description': 'd',
-        };
-        final reconstructed = Advisory.fromJson(json);
-        expect(reconstructed.source, equals(AdvisorySource.other));
-        expect(reconstructed.severity, equals(AdvisorySeverity.unknown));
-        expect(reconstructed.certainty, equals(AdvisoryCertainty.unknown));
-        expect(reconstructed.urgency, equals(AdvisoryUrgency.unknown));
-      },
-    );
+    test('fromJson maps unknown enum names to fallback variants '
+        '(forward-compat)', () {
+      final json = <String, dynamic>{
+        'source': 'futureUnknownPublisher',
+        'eventClass': 'Some Event',
+        'severity': 'apocalyptic',
+        'certainty': 'mostlyMaybe',
+        'urgency': 'someday',
+        'areaDescription': 'Area-X',
+        'effective': null,
+        'expires': null,
+        'headline': 'h',
+        'description': 'd',
+      };
+      final reconstructed = Advisory.fromJson(json);
+      expect(reconstructed.source, equals(AdvisorySource.other));
+      expect(reconstructed.severity, equals(AdvisorySeverity.unknown));
+      expect(reconstructed.certainty, equals(AdvisoryCertainty.unknown));
+      expect(reconstructed.urgency, equals(AdvisoryUrgency.unknown));
+    });
   });
 }
 

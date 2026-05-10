@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.2 — 2026-05-10 — Pana score recovery (Theme α P3)
+
+- Trim pubspec `description` to within the pana 60–180 character target.
+- Add minimal `example/main.dart` for pana documentation scoring.
+- Apply `dart format` to clear any formatter findings.
+- No SDK source changes; metadata + format pass only.
+
+
 ## 0.6.1 — 2026-05-10 — Refresh cascade-stale dependency constraint
 
 - `routing_engine: ^0.3.0` → `^0.4.0` (consumer-side refresh after

@@ -97,15 +97,15 @@ class JapaneseSnowVocabularyEntry {
 
   @override
   int get hashCode => Object.hash(
-        termJa,
-        termRomaji,
-        labelEn,
-        authoritativeSource,
-        sourceUrl,
-        safeDrivingResponseJa,
-        safeDrivingResponseEn,
-        regionFrequency,
-      );
+    termJa,
+    termRomaji,
+    labelEn,
+    authoritativeSource,
+    sourceUrl,
+    safeDrivingResponseJa,
+    safeDrivingResponseEn,
+    regionFrequency,
+  );
 
   @override
   String toString() =>

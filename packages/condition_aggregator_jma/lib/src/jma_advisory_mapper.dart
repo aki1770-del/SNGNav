@@ -47,18 +47,43 @@ const Set<String> kJmaSnowAdvisoryEventNames = <String>{
 /// finer than prefecture is not the JMA-feed's segmentation
 /// granularity at this report family.
 const Map<String, ({double south, double west, double north, double east})>
-    kJmaPrefectureBoundingBoxes = <String,
-        ({double south, double west, double north, double east})>{
-  // Hokkaido — sub-region 010000 covers the prefecture overall at the
-  // VPWW54 family (the per-sub-region breakdowns surface inside the
-  // report XML's `<Information>` blocks).
-  '010000': (south: 41.35, west: 139.33, north: 45.55, east: 148.90),
-  '020000': (south: 40.21, west: 139.49, north: 41.56, east: 141.69), // Aomori
-  '030000': (south: 38.74, west: 140.65, north: 40.45, east: 142.07), // Iwate
-  '050000': (south: 38.87, west: 139.69, north: 40.51, east: 140.99), // Akita
-  '060000': (south: 37.74, west: 139.50, north: 39.20, east: 140.62), // Yamagata
-  '150000': (south: 36.74, west: 137.63, north: 38.55, east: 139.89), // Niigata
-};
+kJmaPrefectureBoundingBoxes =
+    <String, ({double south, double west, double north, double east})>{
+      // Hokkaido — sub-region 010000 covers the prefecture overall at the
+      // VPWW54 family (the per-sub-region breakdowns surface inside the
+      // report XML's `<Information>` blocks).
+      '010000': (south: 41.35, west: 139.33, north: 45.55, east: 148.90),
+      '020000': (
+        south: 40.21,
+        west: 139.49,
+        north: 41.56,
+        east: 141.69,
+      ), // Aomori
+      '030000': (
+        south: 38.74,
+        west: 140.65,
+        north: 40.45,
+        east: 142.07,
+      ), // Iwate
+      '050000': (
+        south: 38.87,
+        west: 139.69,
+        north: 40.51,
+        east: 140.99,
+      ), // Akita
+      '060000': (
+        south: 37.74,
+        west: 139.50,
+        north: 39.20,
+        east: 140.62,
+      ), // Yamagata
+      '150000': (
+        south: 36.74,
+        west: 137.63,
+        north: 38.55,
+        east: 139.89,
+      ), // Niigata
+    };
 
 /// Resolves a WGS84 lat/lon to a JMA prefecture code in the 0.1.0
 /// catalog. Returns null if the point falls outside every catalogued
@@ -116,14 +141,19 @@ List<JmaAtomEntry> parseJmaAtomFeed(String body) {
   final feed = doc.rootElement;
   final out = <JmaAtomEntry>[];
   for (final entry in feed.findElements('entry', namespace: '*')) {
-    final title =
-        entry.findElements('title', namespace: '*').firstOrNull?.innerText;
-    final updated =
-        entry.findElements('updated', namespace: '*').firstOrNull?.innerText;
-    final authorEl =
-        entry.findElements('author', namespace: '*').firstOrNull;
-    final author =
-        authorEl?.findElements('name', namespace: '*').firstOrNull?.innerText;
+    final title = entry
+        .findElements('title', namespace: '*')
+        .firstOrNull
+        ?.innerText;
+    final updated = entry
+        .findElements('updated', namespace: '*')
+        .firstOrNull
+        ?.innerText;
+    final authorEl = entry.findElements('author', namespace: '*').firstOrNull;
+    final author = authorEl
+        ?.findElements('name', namespace: '*')
+        .firstOrNull
+        ?.innerText;
     String? reportUrl;
     for (final link in entry.findElements('link', namespace: '*')) {
       final type = link.getAttribute('type');
@@ -138,12 +168,14 @@ List<JmaAtomEntry> parseJmaAtomFeed(String body) {
         reportUrl == null) {
       continue;
     }
-    out.add(JmaAtomEntry(
-      title: title,
-      updated: updated,
-      author: author,
-      reportUrl: reportUrl,
-    ));
+    out.add(
+      JmaAtomEntry(
+        title: title,
+        updated: updated,
+        author: author,
+        reportUrl: reportUrl,
+      ),
+    );
   }
   return out;
 }
@@ -233,8 +265,10 @@ List<JmaForecastRecord> parseJmaReportXml(String body) {
   }
 
   // Pick the most-granular Information block present.
-  final informationEls =
-      _findAllByLocalName(headEl ?? report, 'Information').toList();
+  final informationEls = _findAllByLocalName(
+    headEl ?? report,
+    'Information',
+  ).toList();
   XmlElement? chosenInfo;
   // Prefer 市町村 granularity > 一次細分区域 > 府県予報区.
   const granularityOrder = <String>[
@@ -269,19 +303,19 @@ List<JmaForecastRecord> parseJmaReportXml(String body) {
       final eventCode = _findFirstByLocalName(kind, 'Code')?.innerText ?? '';
       if (eventName.isEmpty) continue;
       for (final area in areas) {
-        final areaName =
-            _findFirstByLocalName(area, 'Name')?.innerText ?? '';
-        final areaCode =
-            _findFirstByLocalName(area, 'Code')?.innerText ?? '';
-        out.add(JmaForecastRecord(
-          eventName: eventName,
-          eventCode: eventCode,
-          headline: headline,
-          areaName: areaName,
-          areaCode: areaCode,
-          reportDateTime: reportDateTime,
-          targetDateTime: targetDateTime,
-        ));
+        final areaName = _findFirstByLocalName(area, 'Name')?.innerText ?? '';
+        final areaCode = _findFirstByLocalName(area, 'Code')?.innerText ?? '';
+        out.add(
+          JmaForecastRecord(
+            eventName: eventName,
+            eventCode: eventCode,
+            headline: headline,
+            areaName: areaName,
+            areaCode: areaCode,
+            reportDateTime: reportDateTime,
+            targetDateTime: targetDateTime,
+          ),
+        );
       }
     }
   }
@@ -332,11 +366,8 @@ XmlElement? _findFirstByLocalName(XmlElement parent, String localName) {
   return null;
 }
 
-Iterable<XmlElement> _findAllByLocalName(
-  XmlElement parent,
-  String localName,
-) {
-  return parent.descendants
-      .whereType<XmlElement>()
-      .where((e) => e.name.local == localName);
+Iterable<XmlElement> _findAllByLocalName(XmlElement parent, String localName) {
+  return parent.descendants.whereType<XmlElement>().where(
+    (e) => e.name.local == localName,
+  );
 }

@@ -75,26 +75,32 @@ void main() {
       expect(adv, isNull);
     });
 
-    test('toAdvisory returns AlertExplainer for stop / slowdown / approach / limit',
-        () {
-      for (final action in [
-        Nav2CollisionAction.stop,
-        Nav2CollisionAction.slowdown,
-        Nav2CollisionAction.approach,
-        Nav2CollisionAction.limit,
-      ]) {
-        final state = Nav2CollisionMonitorState(
-          actionType: action,
-          polygonName: 'forward',
-        );
-        final adv = Nav2SafetyMapper.toAdvisory(
-          state,
-          DriverProfile.snowZoneExperienced,
-        );
-        expect(adv, isNotNull, reason: 'action $action should map to advisory');
-        expect(adv!.action, isNotEmpty);
-      }
-    });
+    test(
+      'toAdvisory returns AlertExplainer for stop / slowdown / approach / limit',
+      () {
+        for (final action in [
+          Nav2CollisionAction.stop,
+          Nav2CollisionAction.slowdown,
+          Nav2CollisionAction.approach,
+          Nav2CollisionAction.limit,
+        ]) {
+          final state = Nav2CollisionMonitorState(
+            actionType: action,
+            polygonName: 'forward',
+          );
+          final adv = Nav2SafetyMapper.toAdvisory(
+            state,
+            DriverProfile.snowZoneExperienced,
+          );
+          expect(
+            adv,
+            isNotNull,
+            reason: 'action $action should map to advisory',
+          );
+          expect(adv!.action, isNotEmpty);
+        }
+      },
+    );
   });
 
   group('Nav2SafetyLayer', () {
@@ -106,10 +112,12 @@ void main() {
       final received = <String>[];
       final sub = layer.advisories.listen(received.add);
 
-      layer.onMonitorState(const Nav2CollisionMonitorState(
-        actionType: Nav2CollisionAction.stop,
-        polygonName: 'forward',
-      ));
+      layer.onMonitorState(
+        const Nav2CollisionMonitorState(
+          actionType: Nav2CollisionAction.stop,
+          polygonName: 'forward',
+        ),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(received, hasLength(1));
@@ -125,10 +133,12 @@ void main() {
       final received = <String>[];
       final sub = layer.advisories.listen(received.add);
 
-      layer.onMonitorState(const Nav2CollisionMonitorState(
-        actionType: Nav2CollisionAction.doNothing,
-        polygonName: '',
-      ));
+      layer.onMonitorState(
+        const Nav2CollisionMonitorState(
+          actionType: Nav2CollisionAction.doNothing,
+          polygonName: '',
+        ),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(received, isEmpty);
@@ -136,26 +146,30 @@ void main() {
       await layer.dispose();
     });
 
-    test('detector state with detections emits advisory citing polygon names',
-        () async {
-      final layer = Nav2SafetyLayer(
-        profile: DriverProfile.snowZoneExperienced,
-        throttle: AlertDensityThrottle(alertsPerMinuteCap: 60),
-      );
-      final received = <String>[];
-      final sub = layer.advisories.listen(received.add);
+    test(
+      'detector state with detections emits advisory citing polygon names',
+      () async {
+        final layer = Nav2SafetyLayer(
+          profile: DriverProfile.snowZoneExperienced,
+          throttle: AlertDensityThrottle(alertsPerMinuteCap: 60),
+        );
+        final received = <String>[];
+        final sub = layer.advisories.listen(received.add);
 
-      layer.onDetectorState(const Nav2CollisionDetectorState(
-        polygons: ['front', 'rear'],
-        detections: [true, false],
-      ));
+        layer.onDetectorState(
+          const Nav2CollisionDetectorState(
+            polygons: ['front', 'rear'],
+            detections: [true, false],
+          ),
+        );
 
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(received, hasLength(1));
-      expect(received.first, contains('front'));
-      await sub.cancel();
-      await layer.dispose();
-    });
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(received, hasLength(1));
+        expect(received.first, contains('front'));
+        await sub.cancel();
+        await layer.dispose();
+      },
+    );
 
     test('detector state with no detections emits nothing', () async {
       final layer = Nav2SafetyLayer(
@@ -165,10 +179,12 @@ void main() {
       final received = <String>[];
       final sub = layer.advisories.listen(received.add);
 
-      layer.onDetectorState(const Nav2CollisionDetectorState(
-        polygons: ['front'],
-        detections: [false],
-      ));
+      layer.onDetectorState(
+        const Nav2CollisionDetectorState(
+          polygons: ['front'],
+          detections: [false],
+        ),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 10));
       expect(received, isEmpty);

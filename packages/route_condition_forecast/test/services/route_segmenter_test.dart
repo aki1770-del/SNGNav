@@ -71,11 +71,7 @@ void main() {
       const p2 = LatLng(35.2, 136.2);
       final route = RouteResult(
         shape: const [p0, p1, p2],
-        maneuvers: [
-          _maneuver(0, p0),
-          _maneuver(1, p1),
-          _maneuver(2, p2),
-        ],
+        maneuvers: [_maneuver(0, p0), _maneuver(1, p1), _maneuver(2, p2)],
         totalDistanceKm: 10,
         totalTimeSeconds: 600,
         summary: '',

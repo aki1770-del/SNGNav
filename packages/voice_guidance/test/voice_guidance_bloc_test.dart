@@ -82,25 +82,31 @@ void main() {
     );
     final route = _buildRoute();
 
-    navController.add(NavigationState(
-      status: NavigationStatus.navigating,
-      route: route,
-      currentManeuverIndex: 0,
-    ));
+    navController.add(
+      NavigationState(
+        status: NavigationStatus.navigating,
+        route: route,
+        currentManeuverIndex: 0,
+      ),
+    );
     await _drain();
 
-    navController.add(NavigationState(
-      status: NavigationStatus.navigating,
-      route: route,
-      currentManeuverIndex: 0,
-    ));
+    navController.add(
+      NavigationState(
+        status: NavigationStatus.navigating,
+        route: route,
+        currentManeuverIndex: 0,
+      ),
+    );
     await _drain();
 
-    navController.add(NavigationState(
-      status: NavigationStatus.navigating,
-      route: route,
-      currentManeuverIndex: 1,
-    ));
+    navController.add(
+      NavigationState(
+        status: NavigationStatus.navigating,
+        route: route,
+        currentManeuverIndex: 1,
+      ),
+    );
     await _drain();
 
     verify(() => ttsEngine.speak('Nagoya Station を出発します。')).called(1);
@@ -114,10 +120,12 @@ void main() {
       navigationStateStream: navController.stream,
     );
 
-    navController.add(const NavigationState(
-      status: NavigationStatus.arrived,
-      destinationLabel: 'Toyota HQ',
-    ));
+    navController.add(
+      const NavigationState(
+        status: NavigationStatus.arrived,
+        destinationLabel: 'Toyota HQ',
+      ),
+    );
     await _drain();
 
     verify(() => ttsEngine.speak('Toyota HQ に到着しました。')).called(1);
@@ -146,11 +154,13 @@ void main() {
       navigationStateStream: navController.stream,
     );
 
-    navController.add(const NavigationState(
-      status: NavigationStatus.navigating,
-      alertMessage: '圧雪路です。速度を落としてください。',
-      alertSeverity: AlertSeverity.warning,
-    ));
+    navController.add(
+      const NavigationState(
+        status: NavigationStatus.navigating,
+        alertMessage: '圧雪路です。速度を落としてください。',
+        alertSeverity: AlertSeverity.warning,
+      ),
+    );
     await _drain();
 
     verifyInOrder([
@@ -172,10 +182,16 @@ void main() {
         ..add(const VoiceEnabled());
     },
     expect: () => [
-      isA<VoiceGuidanceState>()
-          .having((state) => state.status, 'status', VoiceGuidanceStatus.muted),
-      isA<VoiceGuidanceState>()
-          .having((state) => state.status, 'status', VoiceGuidanceStatus.idle),
+      isA<VoiceGuidanceState>().having(
+        (state) => state.status,
+        'status',
+        VoiceGuidanceStatus.muted,
+      ),
+      isA<VoiceGuidanceState>().having(
+        (state) => state.status,
+        'status',
+        VoiceGuidanceStatus.idle,
+      ),
     ],
   );
 
@@ -184,52 +200,62 @@ void main() {
   // ----------------------------------------------------------------
 
   group('VoiceGuidanceBloc — action-coupled hazard (0.5.0)', () {
-    test('condition + profile -> explainer.action spoken (JA profile)',
-        () async {
-      final bloc = VoiceGuidanceBloc(
-        ttsEngine: ttsEngine,
-        navigationStateStream: navController.stream,
-        profile: DriverProfile.snowZoneExperienced,
-      );
+    test(
+      'condition + profile -> explainer.action spoken (JA profile)',
+      () async {
+        final bloc = VoiceGuidanceBloc(
+          ttsEngine: ttsEngine,
+          navigationStateStream: navController.stream,
+          profile: DriverProfile.snowZoneExperienced,
+        );
 
-      navController.add(const NavigationState(
-        status: NavigationStatus.navigating,
-        alertMessage: 'fallback if explainer not used',
-        alertSeverity: AlertSeverity.warning,
-        alertCondition: RoadSurfaceCondition.ice,
-      ));
-      await _drain();
+        navController.add(
+          const NavigationState(
+            status: NavigationStatus.navigating,
+            alertMessage: 'fallback if explainer not used',
+            alertSeverity: AlertSeverity.warning,
+            alertCondition: RoadSurfaceCondition.ice,
+          ),
+        );
+        await _drain();
 
-      verifyInOrder([
-        () => ttsEngine.stop(),
-        () => ttsEngine.speak('注意。凍結路面。30km/h以下に減速'),
-      ]);
-      await bloc.close();
-    });
+        verifyInOrder([
+          () => ttsEngine.stop(),
+          () => ttsEngine.speak('注意。凍結路面。30km/h以下に減速'),
+        ]);
+        await bloc.close();
+      },
+    );
 
-    test('condition + profile -> localeTag passed to engine (EN profile)',
-        () async {
-      final bloc = VoiceGuidanceBloc(
-        ttsEngine: ttsEngine,
-        navigationStateStream: navController.stream,
-        profile: DriverProfile.foreignTouristSnowZone,
-      );
+    test(
+      'condition + profile -> localeTag passed to engine (EN profile)',
+      () async {
+        final bloc = VoiceGuidanceBloc(
+          ttsEngine: ttsEngine,
+          navigationStateStream: navController.stream,
+          profile: DriverProfile.foreignTouristSnowZone,
+        );
 
-      navController.add(const NavigationState(
-        status: NavigationStatus.navigating,
-        alertMessage: 'fallback if explainer not used',
-        alertSeverity: AlertSeverity.warning,
-        alertCondition: RoadSurfaceCondition.ice,
-      ));
-      await _drain();
+        navController.add(
+          const NavigationState(
+            status: NavigationStatus.navigating,
+            alertMessage: 'fallback if explainer not used',
+            alertSeverity: AlertSeverity.warning,
+            alertCondition: RoadSurfaceCondition.ice,
+          ),
+        );
+        await _drain();
 
-      // EN-locale switch fires before speak.
-      verify(() => ttsEngine.setLanguage('en')).called(1);
-      verify(() => ttsEngine.speak(
+        // EN-locale switch fires before speak.
+        verify(() => ttsEngine.setLanguage('en')).called(1);
+        verify(
+          () => ttsEngine.speak(
             'Warning. Icy road. Slow to 30 km/h. Avoid sudden braking.',
-          )).called(1);
-      await bloc.close();
-    });
+          ),
+        ).called(1);
+        await bloc.close();
+      },
+    );
 
     test('fallback to alertMessage when condition+profile absent', () async {
       final bloc = VoiceGuidanceBloc(
@@ -238,12 +264,14 @@ void main() {
         // No profile supplied — back-compat path.
       );
 
-      navController.add(const NavigationState(
-        status: NavigationStatus.navigating,
-        alertMessage: '圧雪路です。速度を落としてください。',
-        alertSeverity: AlertSeverity.warning,
-        alertCondition: RoadSurfaceCondition.snow,
-      ));
+      navController.add(
+        const NavigationState(
+          status: NavigationStatus.navigating,
+          alertMessage: '圧雪路です。速度を落としてください。',
+          alertSeverity: AlertSeverity.warning,
+          alertCondition: RoadSurfaceCondition.snow,
+        ),
+      );
       await _drain();
 
       verifyInOrder([

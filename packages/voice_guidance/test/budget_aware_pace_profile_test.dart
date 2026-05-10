@@ -13,10 +13,8 @@ void main() {
       expect(profile.curve, InterpolationCurve.linear);
     });
 
-    test(
-        'paceForRemainingRatio linear: 1.0 -> maxPace, 0.0 -> minPace, '
-        '0.5 -> midpoint',
-        () {
+    test('paceForRemainingRatio linear: 1.0 -> maxPace, 0.0 -> minPace, '
+        '0.5 -> midpoint', () {
       const profile = BudgetAwarePaceProfile();
       expect(profile.paceForRemainingRatio(1.0), 1.0);
       expect(profile.paceForRemainingRatio(0.0), 0.7);
@@ -29,10 +27,8 @@ void main() {
       expect(profile.paceForRemainingRatio(1.5), 1.0);
     });
 
-    test(
-        'smoothstep is monotone and matches boundaries; midpoint '
-        'equals linear midpoint',
-        () {
+    test('smoothstep is monotone and matches boundaries; midpoint '
+        'equals linear midpoint', () {
       const profile = BudgetAwarePaceProfile(
         curve: InterpolationCurve.smoothstep,
       );
@@ -46,10 +42,8 @@ void main() {
       expect(a < b, isTrue);
     });
 
-    test(
-        'caution-add-only invariant: maxPace > 1.0 fails assert '
-        '(pace must never exceed engine-base)',
-        () {
+    test('caution-add-only invariant: maxPace > 1.0 fails assert '
+        '(pace must never exceed engine-base)', () {
       expect(
         () => BudgetAwarePaceProfile(minPace: 0.7, maxPace: 1.5),
         throwsA(isA<AssertionError>()),

@@ -1,14 +1,9 @@
 name: navigation_safety_calibration
 description: >-
-  Pure Dart navigation-safety calibration primitives — Magnus formula
-  humidity-temperature relationship, precipitation history decay, and
-  speed-dependent visibility heuristic. Extracted from
-  navigation_safety_core 0.10.0 for cohort-3 (config-defaults consumers
-  via predictable inheritance) per the SNGNav universal-edge-developer
-  dignity model. No Flutter dependency; safe to consume from CLI tools,
-  server-side test fixtures, and any other Pure Dart package doing
-  meteorological-class calculations.
-version: 0.1.0
+  Pure Dart navigation-safety calibration primitives — Magnus
+  humidity-temperature, precipitation decay, and speed-dependent
+  visibility heuristics.
+version: 0.1.1
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues

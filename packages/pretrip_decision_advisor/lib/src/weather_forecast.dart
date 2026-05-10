@@ -1,14 +1,7 @@
 /// Coarse estimated road condition for an hourly forecast slot.
 ///
 /// Explore-phase substrate; not a declared-final taxonomy.
-enum RoadConditionEstimate {
-  dry,
-  wet,
-  slush,
-  packedSnow,
-  ice,
-  unknown,
-}
+enum RoadConditionEstimate { dry, wet, slush, packedSnow, ice, unknown }
 
 /// One hour of forecast input.
 class HourlyForecast {
@@ -53,21 +46,18 @@ class HourlyForecast {
 
   @override
   int get hashCode => Object.hash(
-        hour,
-        tempCelsius,
-        humidityRH,
-        precipitationMmPerHour,
-        visibilityMeters,
-        estimatedRoadCondition,
-      );
+    hour,
+    tempCelsius,
+    humidityRH,
+    precipitationMmPerHour,
+    visibilityMeters,
+    estimatedRoadCondition,
+  );
 }
 
 /// Hourly forecast bundle the advisor consumes.
 class WeatherForecast {
-  WeatherForecast({
-    required this.hourly,
-    required this.issuedAt,
-  });
+  WeatherForecast({required this.hourly, required this.issuedAt});
 
   /// Hourly forecast slots, ordered earliest first by convention.
   final List<HourlyForecast> hourly;

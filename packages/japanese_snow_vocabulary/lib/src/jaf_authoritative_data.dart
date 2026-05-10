@@ -21,7 +21,7 @@ import 'japanese_snow_vocabulary_entry.dart';
 /// (2026-05-07). Mutating these literals is forbidden; the package's
 /// `verbatim_citation_test.dart` regression-guards each string.
 const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
-    jafAuthoritativeData = {
+jafAuthoritativeData = {
   // --- アイスバーン (FULL data 0.1.0) ---
   JapaneseSnowSurfaceClass.iceBahn: JapaneseSnowVocabularyEntry(
     termJa: 'アイスバーン',
@@ -41,7 +41,8 @@ const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
         'Icy hardpack is more slippery than a general snow road; '
         'caution is required. Use roadside boundary arrows and '
         'reflector poles as visual reference while driving.',
-    regionFrequency: 'snow-prone regions; refreezes overnight after '
+    regionFrequency:
+        'snow-prone regions; refreezes overnight after '
         'daytime melt or post-rain cold',
   ),
 
@@ -97,7 +98,8 @@ const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
         'lane changes and hard braking are strictly forbidden; '
         'increase distance to the vehicle ahead. On start, press the '
         'accelerator gently and pull away slowly.',
-    regionFrequency: 'general snow-fall conditions across all '
+    regionFrequency:
+        'general snow-fall conditions across all '
         'snow-prone regions',
   ),
 
@@ -120,7 +122,8 @@ const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
         'traffic such as intersections, the compacted snow gets '
         'polished and tends to become icy hardpack, so abrupt '
         'operations should be avoided.',
-    regionFrequency: 'snow-prone regions; common state across all '
+    regionFrequency:
+        'snow-prone regions; common state across all '
         'winter-driving scenarios; transitions to icy hardpack at '
         'intersections and high-traffic locations',
   ),
@@ -142,7 +145,8 @@ const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
         'Unlike fresh snow or compacted snow, the snow-specific risks '
         'are lower; however, in some places the slush may have frozen '
         'surface beneath it, so vigilance must not be relaxed.',
-    regionFrequency: 'spring-thaw conditions; rising-temperature '
+    regionFrequency:
+        'spring-thaw conditions; rising-temperature '
         'phase; covered-frozen-substrate hazard noted by JAF '
         '(single-publisher coverage at 0.2.0; see KNOWN_LIMITATIONS.md)',
   ),
@@ -177,7 +181,8 @@ const Map<JapaneseSnowSurfaceClass, JapaneseSnowVocabularyEntry>
         'elsewhere, the road surface freezes easily and is very '
         'dangerous. In such places, you must reduce speed sufficiently '
         'in advance and drive carefully.',
-    regionFrequency: 'bridges, overpasses, tunnel entrances; cold '
+    regionFrequency:
+        'bridges, overpasses, tunnel entrances; cold '
         'dawn/dusk/night hours; post-rain-cold and post-thaw-refreeze '
         'conditions',
   ),

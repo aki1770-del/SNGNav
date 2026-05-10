@@ -52,8 +52,8 @@ class OwmRoadRiskClient {
     required this.apiKey,
     this.baseUrl = kOwmRoadRiskDefaultBaseUrl,
     http.Client? httpClient,
-  })  : httpClient = httpClient ?? http.Client(),
-        assert(apiKey != '', 'OWM Road Risk: apiKey must be non-empty.');
+  }) : httpClient = httpClient ?? http.Client(),
+       assert(apiKey != '', 'OWM Road Risk: apiKey must be non-empty.');
 
   /// Fetches alerts for a single point.
   Future<List<OwmRoadRiskAlert>> fetchPoint({

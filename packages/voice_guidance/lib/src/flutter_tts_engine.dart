@@ -7,7 +7,8 @@ import 'package:flutter/services.dart';
 import 'tts_engine.dart';
 
 class FlutterTtsEngine implements TtsEngine {
-  FlutterTtsEngine({FlutterTts? flutterTts}) : _flutterTts = flutterTts ?? FlutterTts();
+  FlutterTtsEngine({FlutterTts? flutterTts})
+    : _flutterTts = flutterTts ?? FlutterTts();
 
   final FlutterTts _flutterTts;
   bool _disposed = false;

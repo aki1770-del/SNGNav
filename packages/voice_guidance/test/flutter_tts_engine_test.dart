@@ -29,7 +29,9 @@ void main() {
     });
 
     test('isAvailable returns false when getLanguages throws', () async {
-      when(() => flutterTts.getLanguages).thenThrow(Exception('tts unavailable'));
+      when(
+        () => flutterTts.getLanguages,
+      ).thenThrow(Exception('tts unavailable'));
 
       expect(await engine.isAvailable(), isFalse);
     });
@@ -43,7 +45,9 @@ void main() {
     });
 
     test('setLanguage disables plugin on MissingPluginException', () async {
-      when(() => flutterTts.setLanguage(any())).thenThrow(MissingPluginException());
+      when(
+        () => flutterTts.setLanguage(any()),
+      ).thenThrow(MissingPluginException());
 
       await engine.setLanguage('ja-JP');
 

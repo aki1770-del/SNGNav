@@ -51,11 +51,11 @@ class PretripRecommendation {
 
   @override
   int get hashCode => Object.hash(
-        suggestedDelay,
-        confidenceWindow,
-        strength,
-        Object.hashAll(rationale),
-      );
+    suggestedDelay,
+    confidenceWindow,
+    strength,
+    Object.hashAll(rationale),
+  );
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

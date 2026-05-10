@@ -1,12 +1,9 @@
 name: japanese_snow_vocabulary
 description: >-
-  Pure Dart JP-domestic snow vocabulary primitive — six enum cases
+  Pure Dart JP-domestic snow vocabulary — six enum cases
   (アイスバーン / ブラックアイスバーン / 雪道 / 圧雪 / シャーベット
-  / 凍結) with verbatim JAF authoritative-source citations on all
-  six entries at 0.2.0. No Flutter dependency; consumable from CLI /
-  server-side / any Pure Dart package doing JP-domestic
-  winter-driving vocabulary work.
-version: 0.2.0
+  / 凍結) with verbatim JAF citations.
+version: 0.2.1
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues

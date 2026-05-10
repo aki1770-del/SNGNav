@@ -39,10 +39,10 @@ class OwmRoadRiskWaypoint extends Equatable {
 
   /// JSON-encodable map matching the publisher's request shape.
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'lat': latitude,
-        'lon': longitude,
-        'dt': unixTime,
-      };
+    'lat': latitude,
+    'lon': longitude,
+    'dt': unixTime,
+  };
 
   @override
   List<Object?> get props => [latitude, longitude, unixTime];

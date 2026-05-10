@@ -95,8 +95,7 @@ void main() {
       }
     });
 
-    test('JAF Training snow-drive URL is byte-identical for 圧雪 + シャーベット',
-        () {
+    test('JAF Training snow-drive URL is byte-identical for 圧雪 + シャーベット', () {
       const expected = 'https://jaf-training.jp/column/snow-drive/';
       for (final c in const [
         JapaneseSnowSurfaceClass.compactedSnow,
@@ -111,14 +110,12 @@ void main() {
           'https://jaf.or.jp/common/kuruma-qa/category-natural/'
           'subcategory-snow/faq148';
       expect(
-        jafAuthoritativeData[JapaneseSnowSurfaceClass.surfaceFrozen]!
-            .sourceUrl,
+        jafAuthoritativeData[JapaneseSnowSurfaceClass.surfaceFrozen]!.sourceUrl,
         expected,
       );
     });
 
-    test('authoritativeSource label is the literal "JAF" for all entries',
-        () {
+    test('authoritativeSource label is the literal "JAF" for all entries', () {
       for (final c in JapaneseSnowSurfaceClass.values) {
         expect(jafAuthoritativeData[c]!.authoritativeSource, 'JAF');
       }

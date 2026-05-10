@@ -11,10 +11,10 @@ import 'package:voice_guidance/voice_guidance.dart';
 class _MockTtsEngine extends Mock implements TtsEngine {}
 
 GlanceEvent _ev(int millis) => GlanceEvent(
-      timestamp: DateTime.fromMillisecondsSinceEpoch(0),
-      duration: Duration(milliseconds: millis),
-      modalClass: GlanceModalClass.visual,
-    );
+  timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+  duration: Duration(milliseconds: millis),
+  modalClass: GlanceModalClass.visual,
+);
 
 void main() {
   late _MockTtsEngine ttsEngine;
@@ -36,8 +36,7 @@ void main() {
     await navController.close();
   });
 
-  test(
-      'back-compat: null glanceBudgetTracker + null budgetAwarePace -> '
+  test('back-compat: null glanceBudgetTracker + null budgetAwarePace -> '
       'init applies plain config.speakingRate', () async {
     final bloc = VoiceGuidanceBloc(
       ttsEngine: ttsEngine,
@@ -49,8 +48,7 @@ void main() {
     await bloc.close();
   });
 
-  test(
-      'with tracker + budgetAwarePace: init applies maxPace*baseline '
+  test('with tracker + budgetAwarePace: init applies maxPace*baseline '
       '(full budget remaining)', () async {
     final tracker = GlanceBudgetTracker();
     final bloc = VoiceGuidanceBloc(
@@ -70,40 +68,41 @@ void main() {
   });
 
   test(
-      'on BudgetExhausted: bloc reapplies effective rate at minPace*baseline',
-      () async {
-    final tracker = GlanceBudgetTracker();
-    final bloc = VoiceGuidanceBloc(
-      ttsEngine: ttsEngine,
-      navigationStateStream: navController.stream,
-      config: const VoiceGuidanceConfig(
-        speakingRate: 1.0,
-        budgetAwarePace: BudgetAwarePaceProfile(),
-      ),
-      glanceBudgetTracker: tracker,
-    );
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-    clearInteractions(ttsEngine);
+    'on BudgetExhausted: bloc reapplies effective rate at minPace*baseline',
+    () async {
+      final tracker = GlanceBudgetTracker();
+      final bloc = VoiceGuidanceBloc(
+        ttsEngine: ttsEngine,
+        navigationStateStream: navController.stream,
+        config: const VoiceGuidanceConfig(
+          speakingRate: 1.0,
+          budgetAwarePace: BudgetAwarePaceProfile(),
+        ),
+        glanceBudgetTracker: tracker,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      clearInteractions(ttsEngine);
 
-    // Consume the entire budget; budgetEvents fires Warning + Exhausted.
-    tracker.record(_ev(12000));
-    await Future<void>.delayed(const Duration(milliseconds: 30));
+      // Consume the entire budget; budgetEvents fires Warning + Exhausted.
+      tracker.record(_ev(12000));
+      await Future<void>.delayed(const Duration(milliseconds: 30));
 
-    // Two budget events -> two setSpeechRate calls (warning + exhausted).
-    // Both should apply the budget-aware-reduced rate; at exhaustion
-    // the rate equals minPace * baseline = 0.7 * 1.0 = 0.7.
-    final captured = verify(() => ttsEngine.setSpeechRate(captureAny()))
-        .captured
-        .cast<double>();
-    expect(captured.length, greaterThanOrEqualTo(1));
-    // Last applied rate should be 0.7 (minPace * baseline 1.0).
-    expect(captured.last, closeTo(0.7, 1e-9));
-    // Caution-add-only: every applied rate must be <= 1.0 (baseline).
-    for (final r in captured) {
-      expect(r <= 1.0, isTrue, reason: 'rate $r exceeds baseline 1.0');
-    }
+      // Two budget events -> two setSpeechRate calls (warning + exhausted).
+      // Both should apply the budget-aware-reduced rate; at exhaustion
+      // the rate equals minPace * baseline = 0.7 * 1.0 = 0.7.
+      final captured = verify(
+        () => ttsEngine.setSpeechRate(captureAny()),
+      ).captured.cast<double>();
+      expect(captured.length, greaterThanOrEqualTo(1));
+      // Last applied rate should be 0.7 (minPace * baseline 1.0).
+      expect(captured.last, closeTo(0.7, 1e-9));
+      // Caution-add-only: every applied rate must be <= 1.0 (baseline).
+      for (final r in captured) {
+        expect(r <= 1.0, isTrue, reason: 'rate $r exceeds baseline 1.0');
+      }
 
-    await bloc.close();
-    await tracker.dispose();
-  });
+      await bloc.close();
+      await tracker.dispose();
+    },
+  );
 }

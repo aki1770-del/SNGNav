@@ -8,16 +8,15 @@ WeatherCondition _condition({
   double temperatureCelsius = 5.0,
   double visibilityMeters = 10000,
   bool iceRisk = false,
-}) =>
-    WeatherCondition(
-      precipType: precipType,
-      intensity: intensity,
-      temperatureCelsius: temperatureCelsius,
-      visibilityMeters: visibilityMeters,
-      windSpeedKmh: 0,
-      iceRisk: iceRisk,
-      timestamp: DateTime(2026),
-    );
+}) => WeatherCondition(
+  precipType: precipType,
+  intensity: intensity,
+  temperatureCelsius: temperatureCelsius,
+  visibilityMeters: visibilityMeters,
+  windSpeedKmh: 0,
+  iceRisk: iceRisk,
+  timestamp: DateTime(2026),
+);
 
 void main() {
   group('RoadSurfaceState.fromCondition', () {
@@ -37,235 +36,266 @@ void main() {
 
     test('no precip, very cold → blackIce', () {
       expect(
-        RoadSurfaceState.fromCondition(
-          _condition(temperatureCelsius: -5),
-        ),
+        RoadSurfaceState.fromCondition(_condition(temperatureCelsius: -5)),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('rain heavy warm → standingWater', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 10,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 10,
+          ),
+        ),
         RoadSurfaceState.standingWater,
       );
     });
 
     test('rain light warm → wet', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 10,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 10,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('freezing rain → blackIce', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -1,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -1,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('snow warm → slush (melting)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: 3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 3,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('snow cold heavy → compactedSnow', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: -5,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: -5,
+          ),
+        ),
         RoadSurfaceState.compactedSnow,
       );
     });
 
     test('sleet → slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.sleet,
-          intensity: PrecipitationIntensity.moderate,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.sleet,
+            intensity: PrecipitationIntensity.moderate,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('hail heavy → standingWater', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.hail,
-          intensity: PrecipitationIntensity.heavy,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.hail,
+            intensity: PrecipitationIntensity.heavy,
+          ),
+        ),
         RoadSurfaceState.standingWater,
       );
     });
 
     test('snow cold light → slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: -5,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: -5,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('hail light → wet', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.hail,
-          intensity: PrecipitationIntensity.light,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.hail,
+            intensity: PrecipitationIntensity.light,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('heavy rain at exactly 3°C → wet (boundary, not standingWater)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 3,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('snow at exactly 2°C → slush (boundary)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: 2,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 2,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
-    test('snow moderate at exactly -2°C → slush (boundary, not compacted)',
-        () {
+    test('snow moderate at exactly -2°C → slush (boundary, not compacted)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -2,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -2,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('no precip at exactly -3°C → blackIce (boundary)', () {
       expect(
-        RoadSurfaceState.fromCondition(
-          _condition(temperatureCelsius: -3),
-        ),
+        RoadSurfaceState.fromCondition(_condition(temperatureCelsius: -3)),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('no precip at -2°C → dry (above blackIce threshold)', () {
       expect(
-        RoadSurfaceState.fromCondition(
-          _condition(temperatureCelsius: -2),
-        ),
+        RoadSurfaceState.fromCondition(_condition(temperatureCelsius: -2)),
         RoadSurfaceState.dry,
       );
     });
 
     test('rain at exactly 0°C → blackIce (freezing boundary)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 0,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 0,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('rain at exactly 1°C → wet (just above freezing)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 1,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 1,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('heavy rain at 4°C → standingWater (just above 3°C boundary)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 4,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 4,
+          ),
+        ),
         RoadSurfaceState.standingWater,
       );
     });
 
     test('snow at -3°C moderate → compactedSnow (crosses <-2 boundary)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -3,
+          ),
+        ),
         RoadSurfaceState.compactedSnow,
       );
     });
 
     test('hail moderate → wet (not heavy, not standingWater)', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.hail,
-          intensity: PrecipitationIntensity.moderate,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.hail,
+            intensity: PrecipitationIntensity.moderate,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('iceRisk overrides snow classification', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 5,
-          iceRisk: true,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 5,
+            iceRisk: true,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('iceRisk overrides rain classification', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 20,
-          iceRisk: true,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 20,
+            iceRisk: true,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
@@ -303,18 +333,31 @@ void main() {
       }
     });
 
-    test('grip factors ordered: dry > wet > standingWater > slush > compactedSnow > blackIce', () {
-      expect(RoadSurfaceState.dry.gripFactor,
-          greaterThan(RoadSurfaceState.wet.gripFactor));
-      expect(RoadSurfaceState.wet.gripFactor,
-          greaterThan(RoadSurfaceState.standingWater.gripFactor));
-      expect(RoadSurfaceState.standingWater.gripFactor,
-          greaterThan(RoadSurfaceState.slush.gripFactor));
-      expect(RoadSurfaceState.slush.gripFactor,
-          greaterThan(RoadSurfaceState.compactedSnow.gripFactor));
-      expect(RoadSurfaceState.compactedSnow.gripFactor,
-          greaterThan(RoadSurfaceState.blackIce.gripFactor));
-    });
+    test(
+      'grip factors ordered: dry > wet > standingWater > slush > compactedSnow > blackIce',
+      () {
+        expect(
+          RoadSurfaceState.dry.gripFactor,
+          greaterThan(RoadSurfaceState.wet.gripFactor),
+        );
+        expect(
+          RoadSurfaceState.wet.gripFactor,
+          greaterThan(RoadSurfaceState.standingWater.gripFactor),
+        );
+        expect(
+          RoadSurfaceState.standingWater.gripFactor,
+          greaterThan(RoadSurfaceState.slush.gripFactor),
+        );
+        expect(
+          RoadSurfaceState.slush.gripFactor,
+          greaterThan(RoadSurfaceState.compactedSnow.gripFactor),
+        );
+        expect(
+          RoadSurfaceState.compactedSnow.gripFactor,
+          greaterThan(RoadSurfaceState.blackIce.gripFactor),
+        );
+      },
+    );
   });
 
   group('HysteresisFilter', () {

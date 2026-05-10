@@ -63,8 +63,11 @@ void main() {
           expect(req.url.queryParameters['appid'], 'test-key');
           final body = jsonDecode(req.body) as Map<String, dynamic>;
           expect(body['track'], isA<List<dynamic>>());
-          return http.Response(goldenBody, 200,
-              headers: {'content-type': 'application/json'});
+          return http.Response(
+            goldenBody,
+            200,
+            headers: {'content-type': 'application/json'},
+          );
         }),
       );
 
@@ -83,10 +86,10 @@ void main() {
     test('throws OwmRoadRiskHttpException on 401', () async {
       final client = OwmRoadRiskClient(
         apiKey: 'bad-key',
-        httpClient: MockClient((_) async => http.Response(
-              '{"cod":401,"message":"Invalid API key"}',
-              401,
-            )),
+        httpClient: MockClient(
+          (_) async =>
+              http.Response('{"cod":401,"message":"Invalid API key"}', 401),
+        ),
       );
       await expectLater(
         client.fetchPoint(latitude: 0.0, longitude: 0.0),
@@ -104,8 +107,9 @@ void main() {
     test('throws OwmRoadRiskParseException on non-JSON body', () async {
       final client = OwmRoadRiskClient(
         apiKey: 'test-key',
-        httpClient:
-            MockClient((_) async => http.Response('<html>oops</html>', 200)),
+        httpClient: MockClient(
+          (_) async => http.Response('<html>oops</html>', 200),
+        ),
       );
       await expectLater(
         client.fetchPoint(latitude: 0.0, longitude: 0.0),
@@ -117,16 +121,26 @@ void main() {
 
   group('OwmRoadRiskMapper', () {
     test('severityFromEventLevel maps caution-add-only', () {
-      expect(OwmRoadRiskMapper.severityFromEventLevel(0),
-          AdvisorySeverity.unknown);
-      expect(OwmRoadRiskMapper.severityFromEventLevel(1),
-          AdvisorySeverity.minor);
-      expect(OwmRoadRiskMapper.severityFromEventLevel(2),
-          AdvisorySeverity.moderate);
-      expect(OwmRoadRiskMapper.severityFromEventLevel(3),
-          AdvisorySeverity.severe);
-      expect(OwmRoadRiskMapper.severityFromEventLevel(4),
-          AdvisorySeverity.extreme);
+      expect(
+        OwmRoadRiskMapper.severityFromEventLevel(0),
+        AdvisorySeverity.unknown,
+      );
+      expect(
+        OwmRoadRiskMapper.severityFromEventLevel(1),
+        AdvisorySeverity.minor,
+      );
+      expect(
+        OwmRoadRiskMapper.severityFromEventLevel(2),
+        AdvisorySeverity.moderate,
+      );
+      expect(
+        OwmRoadRiskMapper.severityFromEventLevel(3),
+        AdvisorySeverity.severe,
+      );
+      expect(
+        OwmRoadRiskMapper.severityFromEventLevel(4),
+        AdvisorySeverity.extreme,
+      );
     });
 
     test('toAdvisory preserves publisher event and description', () {

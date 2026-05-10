@@ -32,13 +32,13 @@ import 'budget_aware_pace_profile.dart';
 /// in the Automobile" (AAA Foundation; PubMed Central PMC7283540).
 const Map<DriverProfile, double> kSpeakingRateMultiplierByProfile =
     <DriverProfile, double>{
-  DriverProfile.snowZoneExperienced: 1.0,
-  DriverProfile.professional: 1.0,
-  DriverProfile.agriculturalForestry: 1.0,
-  DriverProfile.noviceUrban: 0.85,
-  DriverProfile.ageingRural: 0.70,
-  DriverProfile.foreignTouristSnowZone: 0.70,
-};
+      DriverProfile.snowZoneExperienced: 1.0,
+      DriverProfile.professional: 1.0,
+      DriverProfile.agriculturalForestry: 1.0,
+      DriverProfile.noviceUrban: 0.85,
+      DriverProfile.ageingRural: 0.70,
+      DriverProfile.foreignTouristSnowZone: 0.70,
+    };
 
 class VoiceGuidanceConfig extends Equatable {
   const VoiceGuidanceConfig({
@@ -49,10 +49,10 @@ class VoiceGuidanceConfig extends Equatable {
     this.maneuverLeadDistanceMeters = 120.0,
     this.minAnnouncementIntervalSeconds = 3,
     this.budgetAwarePace,
-  })  : assert(volume >= 0.0 && volume <= 1.0),
-        assert(speakingRate > 0.0 && speakingRate <= 2.0),
-        assert(maneuverLeadDistanceMeters >= 0),
-        assert(minAnnouncementIntervalSeconds >= 0);
+  }) : assert(volume >= 0.0 && volume <= 1.0),
+       assert(speakingRate > 0.0 && speakingRate <= 2.0),
+       assert(maneuverLeadDistanceMeters >= 0),
+       assert(minAnnouncementIntervalSeconds >= 0);
 
   final bool enabled;
   final String languageTag;
@@ -117,12 +117,12 @@ class VoiceGuidanceConfig extends Equatable {
 
   @override
   List<Object?> get props => [
-        enabled,
-        languageTag,
-        volume,
-        speakingRate,
-        maneuverLeadDistanceMeters,
-        minAnnouncementIntervalSeconds,
-        budgetAwarePace,
-      ];
+    enabled,
+    languageTag,
+    volume,
+    speakingRate,
+    maneuverLeadDistanceMeters,
+    minAnnouncementIntervalSeconds,
+    budgetAwarePace,
+  ];
 }

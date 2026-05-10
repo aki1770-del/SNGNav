@@ -13,8 +13,11 @@ void main() {
   group('data_completeness_test — 6-of-6 fully populated at 0.2.0', () {
     test('jafAuthoritativeData covers all six enum cases', () {
       for (final c in JapaneseSnowSurfaceClass.values) {
-        expect(jafAuthoritativeData.containsKey(c), isTrue,
-            reason: 'expected jafAuthoritativeData to contain key $c');
+        expect(
+          jafAuthoritativeData.containsKey(c),
+          isTrue,
+          reason: 'expected jafAuthoritativeData to contain key $c',
+        );
       }
       expect(jafAuthoritativeData.length, 6);
     });
@@ -25,14 +28,17 @@ void main() {
           .map((e) => e.key)
           .toList();
       expect(populated.length, 6);
-      expect(populated, containsAll(const [
-        JapaneseSnowSurfaceClass.iceBahn,
-        JapaneseSnowSurfaceClass.blackIceBahn,
-        JapaneseSnowSurfaceClass.snowyRoad,
-        JapaneseSnowSurfaceClass.compactedSnow,
-        JapaneseSnowSurfaceClass.slush,
-        JapaneseSnowSurfaceClass.surfaceFrozen,
-      ]));
+      expect(
+        populated,
+        containsAll(const [
+          JapaneseSnowSurfaceClass.iceBahn,
+          JapaneseSnowSurfaceClass.blackIceBahn,
+          JapaneseSnowSurfaceClass.snowyRoad,
+          JapaneseSnowSurfaceClass.compactedSnow,
+          JapaneseSnowSurfaceClass.slush,
+          JapaneseSnowSurfaceClass.surfaceFrozen,
+        ]),
+      );
     });
 
     test('zero entries are null-deferred at 0.2.0', () {
@@ -46,28 +52,41 @@ void main() {
     test('every entry has all five authoritative fields populated', () {
       for (final c in JapaneseSnowSurfaceClass.values) {
         final entry = jafAuthoritativeData[c]!;
-        expect(entry.authoritativeSource, isNotNull,
-            reason: 'authoritativeSource null for $c');
-        expect(entry.sourceUrl, isNotNull,
-            reason: 'sourceUrl null for $c');
-        expect(entry.safeDrivingResponseJa, isNotNull,
-            reason: 'safeDrivingResponseJa null for $c');
-        expect(entry.safeDrivingResponseEn, isNotNull,
-            reason: 'safeDrivingResponseEn null for $c');
-        expect(entry.regionFrequency, isNotNull,
-            reason: 'regionFrequency null for $c');
+        expect(
+          entry.authoritativeSource,
+          isNotNull,
+          reason: 'authoritativeSource null for $c',
+        );
+        expect(entry.sourceUrl, isNotNull, reason: 'sourceUrl null for $c');
+        expect(
+          entry.safeDrivingResponseJa,
+          isNotNull,
+          reason: 'safeDrivingResponseJa null for $c',
+        );
+        expect(
+          entry.safeDrivingResponseEn,
+          isNotNull,
+          reason: 'safeDrivingResponseEn null for $c',
+        );
+        expect(
+          entry.regionFrequency,
+          isNotNull,
+          reason: 'regionFrequency null for $c',
+        );
       }
     });
 
-    test('every entry has non-empty taxonomic surface (term + romaji + en)',
-        () {
-      for (final c in JapaneseSnowSurfaceClass.values) {
-        final entry = jafAuthoritativeData[c]!;
-        expect(entry.termJa, isNotEmpty);
-        expect(entry.termRomaji, isNotEmpty);
-        expect(entry.labelEn, isNotEmpty);
-      }
-    });
+    test(
+      'every entry has non-empty taxonomic surface (term + romaji + en)',
+      () {
+        for (final c in JapaneseSnowSurfaceClass.values) {
+          final entry = jafAuthoritativeData[c]!;
+          expect(entry.termJa, isNotEmpty);
+          expect(entry.termRomaji, isNotEmpty);
+          expect(entry.labelEn, isNotEmpty);
+        }
+      },
+    );
 
     test('JapaneseSnowVocabularyEntry equality is by-value across all '
         'eight fields', () {

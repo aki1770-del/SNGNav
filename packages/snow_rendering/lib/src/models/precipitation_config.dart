@@ -85,11 +85,11 @@ class PrecipitationConfig extends Equatable {
 
   @override
   List<Object?> get props => [
-        particleCount,
-        minVelocity,
-        maxVelocity,
-        minSize,
-        maxSize,
-        lifetime,
-      ];
+    particleCount,
+    minVelocity,
+    maxVelocity,
+    minSize,
+    maxSize,
+    lifetime,
+  ];
 }

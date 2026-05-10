@@ -17,10 +17,7 @@ void main() {
         position: LatLng(35.0, 136.0),
       );
 
-      final text = formatter.formatManeuver(
-        maneuver,
-        languageTag: 'ja-JP',
-      );
+      final text = formatter.formatManeuver(maneuver, languageTag: 'ja-JP');
 
       expect(text, '200m ahead, turn right');
     });
@@ -35,10 +32,7 @@ void main() {
         position: LatLng(35.0, 136.0),
       );
 
-      final text = formatter.formatManeuver(
-        maneuver,
-        languageTag: 'ja-JP',
-      );
+      final text = formatter.formatManeuver(maneuver, languageTag: 'ja-JP');
 
       expect(text, '左折です。');
     });

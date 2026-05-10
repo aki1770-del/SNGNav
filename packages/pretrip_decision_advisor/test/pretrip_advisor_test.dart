@@ -20,9 +20,7 @@ class _StubAdvisor implements PretripAdvisor {
         suggestedDelay: Duration.zero,
         confidenceWindow: Duration.zero,
         strength: RecommendationStrength.honestyMode,
-        rationale: const [
-          'Commute is required; deferring to the driver.',
-        ],
+        rationale: const ['Commute is required; deferring to the driver.'],
       );
     }
 
@@ -52,38 +50,38 @@ class _StubAdvisor implements PretripAdvisor {
 }
 
 WeatherForecast _clearForecast(DateTime base) => WeatherForecast(
-      issuedAt: base,
-      hourly: [
-        HourlyForecast(
-          hour: base.add(const Duration(hours: 1)),
-          tempCelsius: 4.0,
-          estimatedRoadCondition: RoadConditionEstimate.dry,
-        ),
-        HourlyForecast(
-          hour: base.add(const Duration(hours: 2)),
-          tempCelsius: 5.0,
-          estimatedRoadCondition: RoadConditionEstimate.dry,
-        ),
-      ],
-    );
+  issuedAt: base,
+  hourly: [
+    HourlyForecast(
+      hour: base.add(const Duration(hours: 1)),
+      tempCelsius: 4.0,
+      estimatedRoadCondition: RoadConditionEstimate.dry,
+    ),
+    HourlyForecast(
+      hour: base.add(const Duration(hours: 2)),
+      tempCelsius: 5.0,
+      estimatedRoadCondition: RoadConditionEstimate.dry,
+    ),
+  ],
+);
 
 WeatherForecast _iceForecast(DateTime base) => WeatherForecast(
-      issuedAt: base,
-      hourly: [
-        HourlyForecast(
-          hour: base.add(const Duration(hours: 1)),
-          tempCelsius: -2.0,
-          estimatedRoadCondition: RoadConditionEstimate.ice,
-        ),
-      ],
-    );
+  issuedAt: base,
+  hourly: [
+    HourlyForecast(
+      hour: base.add(const Duration(hours: 1)),
+      tempCelsius: -2.0,
+      estimatedRoadCondition: RoadConditionEstimate.ice,
+    ),
+  ],
+);
 
 CommuteShape _commute(CommuteFlexibility flex, DateTime base) => CommuteShape(
-      plannedDuration: const Duration(minutes: 30),
-      routeIdentifiers: const ['route-a'],
-      flexibility: flex,
-      plannedDeparture: base,
-    );
+  plannedDuration: const Duration(minutes: 30),
+  routeIdentifiers: const ['route-a'],
+  flexibility: flex,
+  plannedDeparture: base,
+);
 
 const _profile = DriverProfileSpec(
   profileTag: 'ageingRural',
@@ -173,25 +171,19 @@ void main() {
 
   group('enum exhaustivity', () {
     test('RecommendationStrength has the three documented cases', () {
-      expect(
-        RecommendationStrength.values.toSet(),
-        {
-          RecommendationStrength.advisoryWeak,
-          RecommendationStrength.advisoryStrong,
-          RecommendationStrength.honestyMode,
-        },
-      );
+      expect(RecommendationStrength.values.toSet(), {
+        RecommendationStrength.advisoryWeak,
+        RecommendationStrength.advisoryStrong,
+        RecommendationStrength.honestyMode,
+      });
     });
 
     test('CommuteFlexibility has the three documented cases', () {
-      expect(
-        CommuteFlexibility.values.toSet(),
-        {
-          CommuteFlexibility.required,
-          CommuteFlexibility.discretionary,
-          CommuteFlexibility.unknown,
-        },
-      );
+      expect(CommuteFlexibility.values.toSet(), {
+        CommuteFlexibility.required,
+        CommuteFlexibility.discretionary,
+        CommuteFlexibility.unknown,
+      });
     });
   });
 }

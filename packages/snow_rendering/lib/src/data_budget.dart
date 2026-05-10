@@ -125,9 +125,11 @@ class DataBudgetConfig extends Equatable {
   const DataBudgetConfig({
     this.budgetBytes = baselineBudgetBytes,
     this.warningRatio = 0.75,
-  })  : assert(budgetBytes > 0, 'budgetBytes must be > 0'),
-        assert(warningRatio > 0.0 && warningRatio < 1.0,
-            'warningRatio must be in (0.0, 1.0)');
+  }) : assert(budgetBytes > 0, 'budgetBytes must be > 0'),
+       assert(
+         warningRatio > 0.0 && warningRatio < 1.0,
+         'warningRatio must be in (0.0, 1.0)',
+       );
 
   /// Per-cohort tighter-direction defaults.
   ///
@@ -174,10 +176,7 @@ class DataFetchEvent extends Equatable {
   /// Bytes fetched (must be non-negative).
   final int bytesFetched;
 
-  const DataFetchEvent({
-    required this.timestamp,
-    required this.bytesFetched,
-  });
+  const DataFetchEvent({required this.timestamp, required this.bytesFetched});
 
   @override
   List<Object?> get props => [timestamp, bytesFetched];
@@ -280,12 +279,11 @@ class RenderFidelityDrop extends DataBudgetEvent {
 /// See library-level documentation for invariants (caution-add-only /
 /// severity-not-profile / driver-always-drives) and wiring example.
 class DataBudget {
-  DataBudget({
-    DataBudgetConfig config = const DataBudgetConfig(),
-  })  : _config = config,
-        _consumedBytes = 0,
-        _warningFired = false,
-        _exhaustedFired = false;
+  DataBudget({DataBudgetConfig config = const DataBudgetConfig()})
+    : _config = config,
+      _consumedBytes = 0,
+      _warningFired = false,
+      _exhaustedFired = false;
 
   DataBudgetConfig _config;
   final StreamController<DataBudgetEvent> _controller =
@@ -345,23 +343,29 @@ class DataBudget {
 
     if (!_warningFired && consumedRatio >= _config.warningRatio) {
       _warningFired = true;
-      _controller.add(BudgetWarning(
-        consumedBytes: _consumedBytes,
-        remainingBytes: remainingBytes,
-      ));
+      _controller.add(
+        BudgetWarning(
+          consumedBytes: _consumedBytes,
+          remainingBytes: remainingBytes,
+        ),
+      );
     }
 
     if (!_exhaustedFired && consumedRatio >= 1.0) {
       _exhaustedFired = true;
       final overshoot = _consumedBytes - _config.budgetBytes;
-      _controller.add(BudgetExhausted(
-        consumedBytes: _consumedBytes,
-        overshootBytes: overshoot < 0 ? 0 : overshoot,
-      ));
-      _controller.add(RenderFidelityDrop(
-        consumedBytes: _consumedBytes,
-        budgetBytes: _config.budgetBytes,
-      ));
+      _controller.add(
+        BudgetExhausted(
+          consumedBytes: _consumedBytes,
+          overshootBytes: overshoot < 0 ? 0 : overshoot,
+        ),
+      );
+      _controller.add(
+        RenderFidelityDrop(
+          consumedBytes: _consumedBytes,
+          budgetBytes: _config.budgetBytes,
+        ),
+      );
     }
   }
 
@@ -374,10 +378,7 @@ class DataBudget {
   /// integrator-affirmed loosening.
   void tighten(int newBudgetBytes) {
     if (_disposed) return;
-    assert(
-      newBudgetBytes > 0,
-      'DataBudget.tighten newBudgetBytes must be > 0',
-    );
+    assert(newBudgetBytes > 0, 'DataBudget.tighten newBudgetBytes must be > 0');
     assert(
       newBudgetBytes <= _config.budgetBytes,
       'DataBudget.tighten newBudgetBytes ($newBudgetBytes) must be <= '
@@ -409,10 +410,7 @@ class DataBudget {
       'DataBudget.relax requires non-empty confirmation.reason; '
       'driver-always-drives invariant: blank-relax forbidden.',
     );
-    assert(
-      newBudgetBytes > 0,
-      'DataBudget.relax newBudgetBytes must be > 0',
-    );
+    assert(newBudgetBytes > 0, 'DataBudget.relax newBudgetBytes must be > 0');
     _config = DataBudgetConfig(
       budgetBytes: newBudgetBytes,
       warningRatio: _config.warningRatio,

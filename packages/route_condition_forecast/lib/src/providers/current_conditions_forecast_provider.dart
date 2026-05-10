@@ -22,6 +22,5 @@ class CurrentConditionsForecastProvider implements ForecastProvider {
   Future<WeatherCondition> forecastAt(
     LatLng position, {
     required double etaSeconds,
-  }) async =>
-      _condition;
+  }) async => _condition;
 }

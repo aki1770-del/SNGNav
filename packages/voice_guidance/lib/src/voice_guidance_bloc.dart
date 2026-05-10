@@ -20,14 +20,16 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     ManeuverSpeechFormatter formatter = const ManeuverSpeechFormatter(),
     DriverProfile? profile,
     GlanceBudgetTracker? glanceBudgetTracker,
-  })  : _ttsEngine = ttsEngine,
-        _config = config,
-        _formatter = formatter,
-        _profile = profile,
-        _glanceBudgetTracker = glanceBudgetTracker,
-        super(config.enabled
-            ? const VoiceGuidanceState.idle()
-            : const VoiceGuidanceState(status: VoiceGuidanceStatus.muted)) {
+  }) : _ttsEngine = ttsEngine,
+       _config = config,
+       _formatter = formatter,
+       _profile = profile,
+       _glanceBudgetTracker = glanceBudgetTracker,
+       super(
+         config.enabled
+             ? const VoiceGuidanceState.idle()
+             : const VoiceGuidanceState(status: VoiceGuidanceStatus.muted),
+       ) {
     on<VoiceEnabled>(_onVoiceEnabled);
     on<VoiceDisabled>(_onVoiceDisabled);
     on<NavigationStateObserved>(_onNavigationStateObserved);
@@ -46,8 +48,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     // pre-0.6.0 back-compat (no extra subscription, no extra rate
     // changes beyond the per-profile baseline applied at init).
     if (_glanceBudgetTracker != null && _config.budgetAwarePace != null) {
-      _glanceBudgetSub =
-          _glanceBudgetTracker.budgetEvents.listen((_) {
+      _glanceBudgetSub = _glanceBudgetTracker.budgetEvents.listen((_) {
         unawaited(_applyBudgetAwareRate());
       });
     }
@@ -112,10 +113,10 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     }
     final totalMicros = tracker.totalBudget.inMicroseconds;
     if (totalMicros <= 0) return _config.speakingRate;
-    final remainingRatio =
-        tracker.remainingBudget.inMicroseconds / totalMicros;
-    final budgetMultiplier =
-        budgetProfile.paceForRemainingRatio(remainingRatio);
+    final remainingRatio = tracker.remainingBudget.inMicroseconds / totalMicros;
+    final budgetMultiplier = budgetProfile.paceForRemainingRatio(
+      remainingRatio,
+    );
     return _config.speakingRate * budgetMultiplier;
   }
 
@@ -164,7 +165,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
 
     final hasArrivedTransition =
         navigationState.status == NavigationStatus.arrived &&
-            _lastNavigationStatus != NavigationStatus.arrived;
+        _lastNavigationStatus != NavigationStatus.arrived;
     if (hasArrivedTransition) {
       final text = _formatter.formatArrival(
         destinationLabel: navigationState.destinationLabel,
@@ -175,20 +176,25 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
 
     final hasDeviationTransition =
         navigationState.status == NavigationStatus.deviated &&
-            _lastNavigationStatus != NavigationStatus.deviated;
+        _lastNavigationStatus != NavigationStatus.deviated;
     if (hasDeviationTransition) {
-      final deviationMessage =
-          _formatter.formatDeviation(languageTag: _config.languageTag);
-      add(HazardAnnounced(
-        message: deviationMessage,
-        severity: AlertSeverity.warning,
-      ));
+      final deviationMessage = _formatter.formatDeviation(
+        languageTag: _config.languageTag,
+      );
+      add(
+        HazardAnnounced(
+          message: deviationMessage,
+          severity: AlertSeverity.warning,
+        ),
+      );
     }
 
-    if (navigationState.alertMessage != null && navigationState.alertSeverity != null) {
+    if (navigationState.alertMessage != null &&
+        navigationState.alertSeverity != null) {
       final shouldAnnounceAlert =
           navigationState.alertSeverity!.index >= AlertSeverity.warning.index;
-      final alertChanged = navigationState.alertMessage != _lastAlertMessage ||
+      final alertChanged =
+          navigationState.alertMessage != _lastAlertMessage ||
           navigationState.alertSeverity != _lastAlertSeverity;
       if (shouldAnnounceAlert && alertChanged) {
         // Action-coupled hazard rendering (0.5.0). When the state
@@ -203,8 +209,10 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
         String hazardText;
         String? overrideLocaleTag;
         if (condition != null && _profile != null) {
-          final explainer =
-              AlertExplainer.forConditionAndProfile(condition, _profile);
+          final explainer = AlertExplainer.forConditionAndProfile(
+            condition,
+            _profile,
+          );
           hazardText = _formatter.formatHazard(
             message: explainer.action,
             severity: navigationState.alertSeverity!,
@@ -227,10 +235,12 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
           unawaited(_ttsEngine.setLanguage(overrideLocaleTag));
         }
 
-        add(HazardAnnounced(
-          message: hazardText,
-          severity: navigationState.alertSeverity!,
-        ));
+        add(
+          HazardAnnounced(
+            message: hazardText,
+            severity: navigationState.alertSeverity!,
+          ),
+        );
       }
     }
 
@@ -243,11 +253,13 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   ) async {
     if (!_voiceEnabled) return;
 
-    emit(state.copyWith(
-      status: VoiceGuidanceStatus.speaking,
-      lastSpokenText: event.text,
-      lastManeuverIndex: _lastManeuverIndex,
-    ));
+    emit(
+      state.copyWith(
+        status: VoiceGuidanceStatus.speaking,
+        lastSpokenText: event.text,
+        lastManeuverIndex: _lastManeuverIndex,
+      ),
+    );
 
     await _ttsEngine.speak(event.text);
 
@@ -263,11 +275,13 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     // Hazard announcements interrupt maneuver speech for safety priority.
     await _ttsEngine.stop();
 
-    emit(state.copyWith(
-      status: VoiceGuidanceStatus.speaking,
-      lastSpokenText: event.message,
-      lastHazardMessage: event.message,
-    ));
+    emit(
+      state.copyWith(
+        status: VoiceGuidanceStatus.speaking,
+        lastSpokenText: event.message,
+        lastHazardMessage: event.message,
+      ),
+    );
 
     await _ttsEngine.speak(event.message);
 

@@ -63,11 +63,7 @@ class JmaAdvisoryFetchException implements Exception {
   final String message;
   final Uri? uri;
   final int? statusCode;
-  const JmaAdvisoryFetchException(
-    this.message, {
-    this.uri,
-    this.statusCode,
-  });
+  const JmaAdvisoryFetchException(this.message, {this.uri, this.statusCode});
 
   @override
   String toString() {
@@ -189,8 +185,10 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       // caller's prefecture before any per-report fetch.
       if (!entry.reportUrl.contains('_$prefectureCode.xml')) continue;
 
-      final reportBody =
-          await _httpGet(Uri.parse(entry.reportUrl), kJmaReportXmlMaxBytes);
+      final reportBody = await _httpGet(
+        Uri.parse(entry.reportUrl),
+        kJmaReportXmlMaxBytes,
+      );
       final List<JmaForecastRecord> records;
       try {
         records = parseJmaReportXml(reportBody);

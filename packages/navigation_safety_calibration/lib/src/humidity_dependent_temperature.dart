@@ -72,7 +72,7 @@ double computeEffectiveTemperatureCelsius({
 
   final gamma =
       (_magnusA * ambientCelsius) / (_magnusB + ambientCelsius) +
-          math.log(humidityRH);
+      math.log(humidityRH);
   final dewPoint = (_magnusB * gamma) / (_magnusA - gamma);
   final depression = ambientCelsius - dewPoint;
 

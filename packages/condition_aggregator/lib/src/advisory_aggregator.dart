@@ -39,10 +39,7 @@ class AdvisoryProviderError {
   /// Human-readable description of the failure (typically `e.toString()`).
   final String message;
 
-  const AdvisoryProviderError({
-    required this.source,
-    required this.message,
-  });
+  const AdvisoryProviderError({required this.source, required this.message});
 
   @override
   String toString() =>
@@ -56,7 +53,7 @@ class AdvisoryAggregator {
   bool _initialized = false;
 
   AdvisoryAggregator({required List<AdvisoryProvider> providers})
-      : _providers = List<AdvisoryProvider>.unmodifiable(providers);
+    : _providers = List<AdvisoryProvider>.unmodifiable(providers);
 
   /// Read-only view of registered providers.
   List<AdvisoryProvider> get providers => _providers;
@@ -107,10 +104,9 @@ class AdvisoryAggregator {
         );
         advisories.addAll(found);
       } on Object catch (e) {
-        errors.add(AdvisoryProviderError(
-          source: p.source,
-          message: e.toString(),
-        ));
+        errors.add(
+          AdvisoryProviderError(source: p.source, message: e.toString()),
+        );
       }
     }
     return AdvisoryAggregateResult(

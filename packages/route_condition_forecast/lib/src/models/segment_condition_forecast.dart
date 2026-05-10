@@ -51,8 +51,13 @@ class SegmentConditionForecast extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [segment, condition, hazardZones, etaSeconds, confidence];
+  List<Object?> get props => [
+    segment,
+    condition,
+    hazardZones,
+    etaSeconds,
+    confidence,
+  ];
 
   @override
   String toString() =>

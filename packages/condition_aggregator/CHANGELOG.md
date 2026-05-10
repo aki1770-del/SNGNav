@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.4 — 2026-05-10 — Pana score recovery (Theme α P3)
+
+- Trim pubspec `description` to within the pana 60–180 character target.
+- Add minimal `example/main.dart` for pana documentation scoring.
+- Apply `dart format` to clear any formatter findings.
+- No SDK source changes; metadata + format pass only.
+
+
 ## 0.0.3 — 2026-05-06 — Source attribution + JSON serialization
 
 Adds source-attribution serialization so the advisory carries a

@@ -51,16 +51,18 @@ void main() {
     test('opacity never exceeds 0.9', () {
       for (final meters in [0.0, 10.0, 50.0, 100.0, 200.0]) {
         final v = VisibilityDegradation.compute(meters);
-        expect(v.opacity, lessThanOrEqualTo(0.9),
-            reason: 'opacity exceeded 0.9 at ${meters}m');
+        expect(
+          v.opacity,
+          lessThanOrEqualTo(0.9),
+          reason: 'opacity exceeded 0.9 at ${meters}m',
+        );
       }
     });
 
     test('opacity is 0.0 at >= 1000m', () {
       for (final meters in [1000.0, 2000.0, 5000.0, 10000.0]) {
         final v = VisibilityDegradation.compute(meters);
-        expect(v.opacity, 0.0,
-            reason: 'opacity non-zero at ${meters}m');
+        expect(v.opacity, 0.0, reason: 'opacity non-zero at ${meters}m');
       }
     });
 

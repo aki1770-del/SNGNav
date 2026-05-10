@@ -208,17 +208,17 @@ class Advisory extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-        source,
-        eventClass,
-        severity,
-        certainty,
-        urgency,
-        areaDescription,
-        effective,
-        expires,
-        headline,
-        description,
-      ];
+    source,
+    eventClass,
+    severity,
+    certainty,
+    urgency,
+    areaDescription,
+    effective,
+    expires,
+    headline,
+    description,
+  ];
 
   @override
   String toString() =>

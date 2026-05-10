@@ -50,11 +50,11 @@ class CommuteShape {
 
   @override
   int get hashCode => Object.hash(
-        plannedDuration,
-        Object.hashAll(routeIdentifiers),
-        flexibility,
-        plannedDeparture,
-      );
+    plannedDuration,
+    Object.hashAll(routeIdentifiers),
+    flexibility,
+    plannedDeparture,
+  );
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

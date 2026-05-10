@@ -42,9 +42,7 @@ void main() {
     });
 
     test('isAvailable returns false when executable is missing', () async {
-      final missingEngine = LinuxTtsEngine(
-        resolveExecutable: (_) => null,
-      );
+      final missingEngine = LinuxTtsEngine(resolveExecutable: (_) => null);
 
       expect(await missingEngine.isAvailable(), isFalse);
     });
@@ -57,36 +55,42 @@ void main() {
 
       expect(startedCommands, hasLength(1));
       expect(startedCommands.single.first, '/usr/bin/spd-say');
-      expect(startedCommands.single, containsAllInOrder([
-        '--application-name',
-        'SNGNav',
-        '--connection-name',
-        'voice_guidance',
-        '--priority',
-        'important',
-        '--language',
-        'ja',
-        '--volume',
-        '50',
-        '右折です。',
-      ]));
-    });
-
-    test('stop terminates the active process and requests dispatcher stop', () async {
-      await engine.speak('左折です。');
-
-      await engine.stop();
-
       expect(
-        runCommands.any(
-          (command) =>
-              command.length == 2 &&
-              command[0] == '/usr/bin/spd-say' &&
-              command[1] == '--stop',
-        ),
-        isTrue,
+        startedCommands.single,
+        containsAllInOrder([
+          '--application-name',
+          'SNGNav',
+          '--connection-name',
+          'voice_guidance',
+          '--priority',
+          'important',
+          '--language',
+          'ja',
+          '--volume',
+          '50',
+          '右折です。',
+        ]),
       );
     });
+
+    test(
+      'stop terminates the active process and requests dispatcher stop',
+      () async {
+        await engine.speak('左折です。');
+
+        await engine.stop();
+
+        expect(
+          runCommands.any(
+            (command) =>
+                command.length == 2 &&
+                command[0] == '/usr/bin/spd-say' &&
+                command[1] == '--stop',
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('dispose stops speaking and ignores future requests', () async {
       await engine.speak('目的地です。');

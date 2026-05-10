@@ -22,14 +22,14 @@ class NwsAdvisoryProvider implements AdvisoryProvider {
   /// rate-limit-accounting + security-contact identifier; see
   /// `noaa_nws_adapter` README).
   NwsAdvisoryProvider({required String userAgent})
-      : _client = NoaaNwsClient(userAgent: userAgent),
-        _ownsClient = true;
+    : _client = NoaaNwsClient(userAgent: userAgent),
+      _ownsClient = true;
 
   /// Constructs an adapter against a caller-supplied [NoaaNwsClient]
   /// (test injection).
   NwsAdvisoryProvider.withClient(NoaaNwsClient client)
-      : _client = client,
-        _ownsClient = false;
+    : _client = client,
+      _ownsClient = false;
 
   /// Names the publisher this adapter speaks for.
   @override

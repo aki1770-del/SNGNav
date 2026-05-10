@@ -16,10 +16,7 @@ class VisibilityDegradation extends Equatable {
   /// 0.0 = no blur. Higher values = more blur.
   final double blurSigma;
 
-  const VisibilityDegradation({
-    required this.opacity,
-    required this.blurSigma,
-  });
+  const VisibilityDegradation({required this.opacity, required this.blurSigma});
 
   /// No degradation — fully clear.
   static const clear = VisibilityDegradation(opacity: 0.0, blurSigma: 0.0);

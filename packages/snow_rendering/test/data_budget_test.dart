@@ -27,18 +27,21 @@ void main() {
         DriverProfile.agriculturalForestry,
       ]) {
         final config = DataBudgetConfig.forProfile(p);
-        expect(config.budgetBytes, DataBudgetConfig.baselineBudgetBytes,
-            reason: 'cohort $p should get baseline');
+        expect(
+          config.budgetBytes,
+          DataBudgetConfig.baselineBudgetBytes,
+          reason: 'cohort $p should get baseline',
+        );
       }
     });
 
-    test(
-        'forProfile: bandwidth-margin cohorts get SMALLER (tighter) '
+    test('forProfile: bandwidth-margin cohorts get SMALLER (tighter) '
         'budget than baseline', () {
       final novice = DataBudgetConfig.forProfile(DriverProfile.noviceUrban);
       final ageing = DataBudgetConfig.forProfile(DriverProfile.ageingRural);
       final tourist = DataBudgetConfig.forProfile(
-          DriverProfile.foreignTouristSnowZone);
+        DriverProfile.foreignTouristSnowZone,
+      );
 
       expect(novice.budgetBytes, 3 * 1024 * 1024);
       expect(ageing.budgetBytes, 2 * 1024 * 1024);
@@ -56,15 +59,21 @@ void main() {
     });
 
     test('budgetBytes <= 0 fails assert', () {
-      expect(() => DataBudgetConfig(budgetBytes: 0),
-          throwsA(isA<AssertionError>()));
+      expect(
+        () => DataBudgetConfig(budgetBytes: 0),
+        throwsA(isA<AssertionError>()),
+      );
     });
 
     test('warningRatio out of range fails assert', () {
-      expect(() => DataBudgetConfig(warningRatio: 0.0),
-          throwsA(isA<AssertionError>()));
-      expect(() => DataBudgetConfig(warningRatio: 1.0),
-          throwsA(isA<AssertionError>()));
+      expect(
+        () => DataBudgetConfig(warningRatio: 0.0),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => DataBudgetConfig(warningRatio: 1.0),
+        throwsA(isA<AssertionError>()),
+      );
     });
   });
 
@@ -73,8 +82,10 @@ void main() {
       final tracker = DataBudget();
       tracker.record(_ev(1024 * 1024)); // 1MB
       expect(tracker.consumedBytes, 1024 * 1024);
-      expect(tracker.remainingBytes,
-          DataBudgetConfig.baselineBudgetBytes - 1024 * 1024);
+      expect(
+        tracker.remainingBytes,
+        DataBudgetConfig.baselineBudgetBytes - 1024 * 1024,
+      );
       tracker.dispose();
     });
 
@@ -92,8 +103,7 @@ void main() {
       await tracker.dispose();
     });
 
-    test(
-        'BudgetExhausted + RenderFidelityDrop fire (in lock-step) at 100% '
+    test('BudgetExhausted + RenderFidelityDrop fire (in lock-step) at 100% '
         'consumed', () async {
       final tracker = DataBudget();
       final events = <DataBudgetEvent>[];
@@ -152,8 +162,10 @@ void main() {
       expect(tracker.config.budgetBytes, 2 * 1024 * 1024);
 
       // Larger is rejected (would relax).
-      expect(() => tracker.tighten(8 * 1024 * 1024),
-          throwsA(isA<AssertionError>()));
+      expect(
+        () => tracker.tighten(8 * 1024 * 1024),
+        throwsA(isA<AssertionError>()),
+      );
 
       tracker.dispose();
     });
@@ -200,10 +212,12 @@ void main() {
     test('caution-add-only: negative-bytes DataFetchEvent fails assert', () {
       final tracker = DataBudget();
       expect(
-        () => tracker.record(DataFetchEvent(
-          timestamp: DateTime.fromMillisecondsSinceEpoch(0),
-          bytesFetched: -1,
-        )),
+        () => tracker.record(
+          DataFetchEvent(
+            timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+            bytesFetched: -1,
+          ),
+        ),
         throwsA(isA<AssertionError>()),
       );
       tracker.dispose();

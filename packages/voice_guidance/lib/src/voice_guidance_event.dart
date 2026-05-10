@@ -38,10 +38,7 @@ class ManeuverAnnounced extends VoiceGuidanceEvent {
 }
 
 class HazardAnnounced extends VoiceGuidanceEvent {
-  const HazardAnnounced({
-    required this.message,
-    required this.severity,
-  });
+  const HazardAnnounced({required this.message, required this.severity});
 
   final String message;
   final AlertSeverity severity;

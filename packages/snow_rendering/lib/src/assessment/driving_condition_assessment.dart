@@ -37,9 +37,7 @@ class DrivingConditionAssessment extends Equatable {
   });
 
   /// Build a full assessment from current weather conditions.
-  factory DrivingConditionAssessment.fromCondition(
-    WeatherCondition condition,
-  ) {
+  factory DrivingConditionAssessment.fromCondition(WeatherCondition condition) {
     final surface = RoadSurfaceState.fromCondition(condition);
     final vis = VisibilityDegradation.compute(condition.visibilityMeters);
     final precip = PrecipitationConfig.fromCondition(condition);
@@ -81,10 +79,10 @@ class DrivingConditionAssessment extends Equatable {
 
   @override
   List<Object?> get props => [
-        surfaceState,
-        gripFactor,
-        visibility,
-        precipitation,
-        advisoryMessage,
-      ];
+    surfaceState,
+    gripFactor,
+    visibility,
+    precipitation,
+    advisoryMessage,
+  ];
 }

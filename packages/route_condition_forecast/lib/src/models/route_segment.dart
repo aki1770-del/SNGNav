@@ -27,9 +27,9 @@ class RouteSegment extends Equatable {
   /// Geometric midpoint — used as the representative query location
   /// for weather and hazard lookups.
   LatLng get midpoint => LatLng(
-        (start.latitude + end.latitude) / 2,
-        (start.longitude + end.longitude) / 2,
-      );
+    (start.latitude + end.latitude) / 2,
+    (start.longitude + end.longitude) / 2,
+  );
 
   @override
   List<Object?> get props => [index, start, end, distanceKm, maneuver];

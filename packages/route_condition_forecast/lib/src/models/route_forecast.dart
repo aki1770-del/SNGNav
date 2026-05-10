@@ -40,9 +40,7 @@ class RouteForecast extends Equatable {
   /// Minimum confidence across all segments.
   double get minimumConfidence {
     if (segments.isEmpty) return 1.0;
-    return segments.map((s) => s.confidence).reduce(
-          (a, b) => a < b ? a : b,
-        );
+    return segments.map((s) => s.confidence).reduce((a, b) => a < b ? a : b);
   }
 
   /// Total route distance in km.

@@ -1,9 +1,9 @@
 name: nav2_safety_layer
 description: >-
-  Pure-Dart bridge composing navigation_safety_core driver-cognition
-  primitives over the ROS 2 Navigation Stack (nav2) Collision Monitor
-  and Collision Detector state messages. No transport lock-in.
-version: 0.1.0
+  Pure-Dart bridge composing navigation_safety_core primitives over
+  ROS 2 Navigation Stack (nav2) Collision Monitor / Detector state
+  messages.
+version: 0.1.1
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 

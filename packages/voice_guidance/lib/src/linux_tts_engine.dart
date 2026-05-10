@@ -5,14 +5,10 @@ import 'dart:io';
 
 import 'tts_engine.dart';
 
-typedef LinuxProcessRun = Future<ProcessResult> Function(
-  String executable,
-  List<String> arguments,
-);
-typedef LinuxProcessStart = Future<Process> Function(
-  String executable,
-  List<String> arguments,
-);
+typedef LinuxProcessRun =
+    Future<ProcessResult> Function(String executable, List<String> arguments);
+typedef LinuxProcessStart =
+    Future<Process> Function(String executable, List<String> arguments);
 typedef LinuxExecutableResolver = String? Function(String executable);
 
 /// Linux TTS implementation backed by `spd-say`.
@@ -22,10 +18,10 @@ class LinuxTtsEngine implements TtsEngine {
     LinuxProcessRun? runProcess,
     LinuxProcessStart? startProcess,
     LinuxExecutableResolver? resolveExecutable,
-  })  : _executable = executable,
-        _runProcess = runProcess ?? Process.run,
-        _startProcess = startProcess ?? Process.start,
-        _resolveExecutable = resolveExecutable ?? _defaultResolveExecutable;
+  }) : _executable = executable,
+       _runProcess = runProcess ?? Process.run,
+       _startProcess = startProcess ?? Process.start,
+       _resolveExecutable = resolveExecutable ?? _defaultResolveExecutable;
 
   final String _executable;
   final LinuxProcessRun _runProcess;
@@ -105,11 +101,13 @@ class LinuxTtsEngine implements TtsEngine {
         trimmed,
       ]);
       _activeProcess = process;
-      unawaited(process.exitCode.then((_) {
-        if (identical(_activeProcess, process)) {
-          _activeProcess = null;
-        }
-      }));
+      unawaited(
+        process.exitCode.then((_) {
+          if (identical(_activeProcess, process)) {
+            _activeProcess = null;
+          }
+        }),
+      );
     } on ProcessException {
       _resolvedExecutable = null;
     }

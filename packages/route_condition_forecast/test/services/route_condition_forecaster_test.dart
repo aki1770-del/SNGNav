@@ -222,8 +222,14 @@ void main() {
         forecastProvider: CurrentConditionsForecastProvider(clear),
       ).forecast(route);
       final after = DateTime.now().toUtc();
-      expect(result.generatedAt.isAfter(before) || result.generatedAt == before, isTrue);
-      expect(result.generatedAt.isBefore(after) || result.generatedAt == after, isTrue);
+      expect(
+        result.generatedAt.isAfter(before) || result.generatedAt == before,
+        isTrue,
+      );
+      expect(
+        result.generatedAt.isBefore(after) || result.generatedAt == after,
+        isTrue,
+      );
     });
 
     test('hazardSegmentCount counts correctly', () async {

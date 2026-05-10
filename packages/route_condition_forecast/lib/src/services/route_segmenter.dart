@@ -32,13 +32,15 @@ class RouteSegmenter {
           ? (shape.isNotEmpty ? shape.last : maneuver.position)
           : maneuvers[i + 1].position;
 
-      segments.add(RouteSegment(
-        index: i,
-        start: maneuver.position,
-        end: end,
-        distanceKm: maneuver.lengthKm,
-        maneuver: maneuver,
-      ));
+      segments.add(
+        RouteSegment(
+          index: i,
+          start: maneuver.position,
+          end: end,
+          distanceKm: maneuver.lengthKm,
+          maneuver: maneuver,
+        ),
+      );
     }
 
     return segments;
@@ -63,13 +65,15 @@ class RouteSegmenter {
 
     for (final seg in raw) {
       if (seg.distanceKm <= maxKm) {
-        result.add(RouteSegment(
-          index: nextIndex++,
-          start: seg.start,
-          end: seg.end,
-          distanceKm: seg.distanceKm,
-          maneuver: seg.maneuver,
-        ));
+        result.add(
+          RouteSegment(
+            index: nextIndex++,
+            start: seg.start,
+            end: seg.end,
+            distanceKm: seg.distanceKm,
+            maneuver: seg.maneuver,
+          ),
+        );
         continue;
       }
 
@@ -80,15 +84,19 @@ class RouteSegmenter {
         final t0 = p / parts;
         final t1 = (p + 1) / parts;
         final partStart = p == 0 ? seg.start : _lerp(seg.start, seg.end, t0);
-        final partEnd = p == parts - 1 ? seg.end : _lerp(seg.start, seg.end, t1);
+        final partEnd = p == parts - 1
+            ? seg.end
+            : _lerp(seg.start, seg.end, t1);
 
-        result.add(RouteSegment(
-          index: nextIndex++,
-          start: partStart,
-          end: partEnd,
-          distanceKm: partKm,
-          maneuver: p == 0 ? seg.maneuver : null,
-        ));
+        result.add(
+          RouteSegment(
+            index: nextIndex++,
+            start: partStart,
+            end: partEnd,
+            distanceKm: partKm,
+            maneuver: p == 0 ? seg.maneuver : null,
+          ),
+        );
       }
     }
 
@@ -96,7 +104,7 @@ class RouteSegmenter {
   }
 
   static LatLng _lerp(LatLng a, LatLng b, double t) => LatLng(
-        a.latitude + (b.latitude - a.latitude) * t,
-        a.longitude + (b.longitude - a.longitude) * t,
-      );
+    a.latitude + (b.latitude - a.latitude) * t,
+    a.longitude + (b.longitude - a.longitude) * t,
+  );
 }

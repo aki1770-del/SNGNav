@@ -8,16 +8,15 @@ WeatherCondition _condition({
   double temperatureCelsius = 5.0,
   double visibilityMeters = 10000,
   bool iceRisk = false,
-}) =>
-    WeatherCondition(
-      precipType: precipType,
-      intensity: intensity,
-      temperatureCelsius: temperatureCelsius,
-      visibilityMeters: visibilityMeters,
-      windSpeedKmh: 0,
-      iceRisk: iceRisk,
-      timestamp: DateTime(2026),
-    );
+}) => WeatherCondition(
+  precipType: precipType,
+  intensity: intensity,
+  temperatureCelsius: temperatureCelsius,
+  visibilityMeters: visibilityMeters,
+  windSpeedKmh: 0,
+  iceRisk: iceRisk,
+  timestamp: DateTime(2026),
+);
 
 void main() {
   group('DrivingConditionAssessment.fromCondition', () {
@@ -43,8 +42,11 @@ void main() {
       ];
       for (final c in conditions) {
         final a = DrivingConditionAssessment.fromCondition(c);
-        expect(a.gripFactor, a.surfaceState.gripFactor,
-            reason: 'gripFactor mismatch for ${a.surfaceState}');
+        expect(
+          a.gripFactor,
+          a.surfaceState.gripFactor,
+          reason: 'gripFactor mismatch for ${a.surfaceState}',
+        );
       }
     });
 
@@ -81,37 +83,45 @@ void main() {
     });
 
     test('compactedSnow → advisory contains "Compacted snow"', () {
-      final a = DrivingConditionAssessment.fromCondition(_condition(
-        precipType: PrecipitationType.snow,
-        intensity: PrecipitationIntensity.heavy,
-        temperatureCelsius: -5,
-      ));
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.snow,
+          intensity: PrecipitationIntensity.heavy,
+          temperatureCelsius: -5,
+        ),
+      );
       expect(a.advisoryMessage, contains('Compacted snow'));
     });
 
     test('slush → advisory contains "Slushy"', () {
-      final a = DrivingConditionAssessment.fromCondition(_condition(
-        precipType: PrecipitationType.sleet,
-        intensity: PrecipitationIntensity.moderate,
-      ));
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.sleet,
+          intensity: PrecipitationIntensity.moderate,
+        ),
+      );
       expect(a.advisoryMessage, contains('Slushy'));
     });
 
     test('standingWater → advisory contains "Standing water"', () {
-      final a = DrivingConditionAssessment.fromCondition(_condition(
-        precipType: PrecipitationType.rain,
-        intensity: PrecipitationIntensity.heavy,
-        temperatureCelsius: 10,
-      ));
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.rain,
+          intensity: PrecipitationIntensity.heavy,
+          temperatureCelsius: 10,
+        ),
+      );
       expect(a.advisoryMessage, contains('Standing water'));
     });
 
     test('wet → advisory contains "Wet road"', () {
-      final a = DrivingConditionAssessment.fromCondition(_condition(
-        precipType: PrecipitationType.rain,
-        intensity: PrecipitationIntensity.light,
-        temperatureCelsius: 10,
-      ));
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.rain,
+          intensity: PrecipitationIntensity.light,
+          temperatureCelsius: 10,
+        ),
+      );
       expect(a.advisoryMessage, contains('Wet road'));
     });
 
@@ -128,11 +138,13 @@ void main() {
     });
 
     test('snow heavy warm → precipitation config non-zero', () {
-      final a = DrivingConditionAssessment.fromCondition(_condition(
-        precipType: PrecipitationType.snow,
-        intensity: PrecipitationIntensity.heavy,
-        temperatureCelsius: 5,
-      ));
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.snow,
+          intensity: PrecipitationIntensity.heavy,
+          temperatureCelsius: 5,
+        ),
+      );
       expect(a.precipitation.particleCount, greaterThan(0));
     });
 

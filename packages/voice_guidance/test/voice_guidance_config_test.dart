@@ -82,7 +82,8 @@ void main() {
     test('snowZoneExperienced returns 1.0 (engine-base rate)', () {
       expect(
         VoiceGuidanceConfig.speakingRateForProfile(
-            DriverProfile.snowZoneExperienced),
+          DriverProfile.snowZoneExperienced,
+        ),
         1.0,
       );
     });
@@ -94,7 +95,8 @@ void main() {
       );
       expect(
         VoiceGuidanceConfig.speakingRateForProfile(
-            DriverProfile.agriculturalForestry),
+          DriverProfile.agriculturalForestry,
+        ),
         1.0,
       );
     });
@@ -116,7 +118,8 @@ void main() {
     test('foreignTouristSnowZone returns 0.70', () {
       expect(
         VoiceGuidanceConfig.speakingRateForProfile(
-            DriverProfile.foreignTouristSnowZone),
+          DriverProfile.foreignTouristSnowZone,
+        ),
         0.70,
       );
     });
