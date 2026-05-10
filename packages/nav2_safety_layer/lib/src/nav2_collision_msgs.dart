@@ -1,0 +1,128 @@
+/// Dart records mirroring the `nav2_msgs/msg/CollisionMonitorState`
+/// and `nav2_msgs/msg/CollisionDetectorState` ROS 2 message shapes
+/// published by the ROS 2 Navigation Stack (nav2) Collision Monitor
+/// and Collision Detector nodes.
+///
+/// Field-name mapping is verbatim from the upstream `.msg` files at
+/// `github.com/ros-navigation/navigation2/tree/main/nav2_msgs/msg`
+/// (snake_case in ROS → camelCase in Dart, semantics unchanged).
+///
+/// This package does NOT depend on a specific ROS-Dart bridge
+/// (`roslibdart`, `rosbridge`, MQTT bridge, etc.). The integrator
+/// wires their bridge of choice to construct these records and pass
+/// them to [Nav2SafetyMapper].
+library;
+
+import 'package:equatable/equatable.dart';
+
+/// Action codes published by the nav2 Collision Monitor on the
+/// `CollisionMonitorState` message — verbatim from the upstream
+/// `.msg` constant block.
+enum Nav2CollisionAction {
+  /// `DO_NOTHING=0` — no action; monitor sees no triggered polygon.
+  doNothing,
+
+  /// `STOP=1` — stop the robot; closest collision-class polygon
+  /// triggered.
+  stop,
+
+  /// `SLOWDOWN=2` — slow down to a percentage of current operating
+  /// speed.
+  slowdown,
+
+  /// `APPROACH=3` — keep a constant time-to-collision interval.
+  approach,
+
+  /// `LIMIT=4` — set a velocity limit when points are in range.
+  limit;
+
+  /// Maps the publisher's `uint8` value to the enum. Returns
+  /// [doNothing] for any unknown value (caution-add-only invariant —
+  /// unknown actions degrade to "no action" rather than asserting a
+  /// specific behavior the publisher did not intend).
+  static Nav2CollisionAction fromInt(int v) {
+    switch (v) {
+      case 0:
+        return Nav2CollisionAction.doNothing;
+      case 1:
+        return Nav2CollisionAction.stop;
+      case 2:
+        return Nav2CollisionAction.slowdown;
+      case 3:
+        return Nav2CollisionAction.approach;
+      case 4:
+        return Nav2CollisionAction.limit;
+      default:
+        return Nav2CollisionAction.doNothing;
+    }
+  }
+}
+
+/// `nav2_msgs/msg/CollisionMonitorState` — Collision Monitor state
+/// snapshot.
+class Nav2CollisionMonitorState extends Equatable {
+  /// `action_type` — the action the monitor is requesting.
+  final Nav2CollisionAction actionType;
+
+  /// `polygon_name` — name of the triggered polygon (empty when
+  /// `actionType` is [Nav2CollisionAction.doNothing]).
+  final String polygonName;
+
+  const Nav2CollisionMonitorState({
+    required this.actionType,
+    required this.polygonName,
+  });
+
+  /// Construct from the publisher's JSON shape (rosbridge / roslibdart
+  /// dispatch typically delivers messages as JSON-encoded maps).
+  factory Nav2CollisionMonitorState.fromJson(Map<String, dynamic> json) {
+    return Nav2CollisionMonitorState(
+      actionType: Nav2CollisionAction.fromInt((json['action_type'] as int?) ?? 0),
+      polygonName: (json['polygon_name'] as String?) ?? '',
+    );
+  }
+
+  @override
+  List<Object?> get props => [actionType, polygonName];
+}
+
+/// `nav2_msgs/msg/CollisionDetectorState` — Collision Detector state
+/// snapshot. Per polygon, whether a detection is active.
+class Nav2CollisionDetectorState extends Equatable {
+  /// `polygons` — names of the configured polygons.
+  final List<String> polygons;
+
+  /// `detections` — parallel-indexed detection booleans.
+  final List<bool> detections;
+
+  const Nav2CollisionDetectorState({
+    required this.polygons,
+    required this.detections,
+  });
+
+  /// Construct from the publisher's JSON shape.
+  factory Nav2CollisionDetectorState.fromJson(Map<String, dynamic> json) {
+    final polys = (json['polygons'] as List<dynamic>? ?? [])
+        .map((e) => e.toString())
+        .toList(growable: false);
+    final dets = (json['detections'] as List<dynamic>? ?? [])
+        .map((e) => e == true)
+        .toList(growable: false);
+    return Nav2CollisionDetectorState(polygons: polys, detections: dets);
+  }
+
+  /// True if any configured polygon currently reports a detection.
+  bool get anyDetection => detections.any((d) => d);
+
+  /// Returns the names of polygons currently reporting a detection.
+  List<String> get triggeredPolygons {
+    final out = <String>[];
+    for (var i = 0; i < polygons.length && i < detections.length; i++) {
+      if (detections[i]) out.add(polygons[i]);
+    }
+    return out;
+  }
+
+  @override
+  List<Object?> get props => [polygons, detections];
+}
