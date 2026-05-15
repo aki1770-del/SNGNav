@@ -57,6 +57,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 - **Content distribution** — technical article and thread series on the architecture and regulatory positioning
 - **Community building** — monitoring engagement, responding to feedback
+- **Adjacent 3D-rendering catalog** — first complement to SNGNav's 2D foundation shipped 2026-05-15: [`glb_stream`](https://pub.dev/packages/glb_stream) v0.1.0, a pure-Dart streaming parser for the glTF 2.0 binary container (`.glb`) format. Reads from any `Stream<List<int>>` and yields header + JSON chunk + binary chunk events progressively — useful for IVI / cabin / crash-test 3D scenes too large to hold in memory at once. Next planned in the same catalog: point cloud format parsers (`.ply`, `.pcd`) and a VSS-compatible crash-event vocabulary contribution to COVESA.
 
 ## Near-Term
 
@@ -68,7 +69,7 @@ This document shows what has been built, what is in progress, and what comes nex
 
 - [x] **Voice guidance** — Flutter TTS integration for turn announcements and hazard warnings (`voice_guidance` 0.3.0)
 - [ ] **Real-world validation** — field testing with actual GPS hardware and winter driving conditions
-- [ ] **3D visualization** — elevation-aware rendering (current foundation is 2D)
+- [ ] **3D visualization** — elevation-aware rendering (current foundation is 2D; an adjacent 3D-rendering catalog is now in progress — see "In Progress" above for `glb_stream` and follow-ons)
 - [ ] **Additional routing engines** — GraphHopper, custom OSRM profiles for winter conditions
 
 ## Non-Goals
