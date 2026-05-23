@@ -84,5 +84,20 @@ dependency_overrides:
   adaptive_reroute:
     path: packages/adaptive_reroute
 
+# Embedded ARM IVI Blocker 2 closure — BDE-CANDIDATE-1 SHAPE A-PRIME component 2 (2026-05-23).
+# sqlite3 ^3.2.0 uses Dart code-asset hooks; on the embedded ARM IVI target the
+# sqlite3 native side is provided by oe-core's libsqlite3-0 (build-verified for
+# cortexa15t2hf armv7 against scarthgap sysroot; 5 CVE patches applied). Declare
+# source=system so the Dart hook resolves to the rootfs library, not a vendored
+# build. Serves drivers in unexpected snow + their families by closing the asset-
+# resolution path between SNGNav's AOT libapp.so and the verified system libsqlite3.
+# Defense-in-depth pairing with the YRA recipe RDEPENDS; harmless on desktop targets
+# where dependency_overrides + standard pub-get continue to govern.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+      name_linux: sqlite3
+
 flutter:
   uses-material-design: true
