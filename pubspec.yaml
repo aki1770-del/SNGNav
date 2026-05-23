@@ -1,7 +1,8 @@
 name: sngnav_snow_scene
 description: >
   Offline-first Flutter navigation with dead reckoning, weather safety,
-  and configurable providers.
+  and configurable providers; build-verified on Linux desktop + embedded
+  ARM IVI (Yocto scarthgap, flutter-engine 3.38.3).
 publish_to: 'none'
 version: 0.4.0
 
