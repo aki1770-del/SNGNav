@@ -51,6 +51,12 @@ dependency_overrides:
     path: ../packages/routing_engine
   voice_guidance:
     path: ../packages/voice_guidance
+  snow_rendering:
+    path: ../packages/snow_rendering
+  route_condition_forecast:
+    path: ../packages/route_condition_forecast
+  adaptive_reroute:
+    path: ../packages/adaptive_reroute
 
 flutter:
   uses-material-design: true
