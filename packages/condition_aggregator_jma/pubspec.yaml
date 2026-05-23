@@ -20,7 +20,7 @@ topics:
   - meteorology
 
 environment:
-  sdk: '>=3.11.0-0 <4.0.0'
+  sdk: ^3.10.0
 
 dependencies:
   condition_aggregator: ^0.0.4
