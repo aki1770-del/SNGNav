@@ -182,14 +182,14 @@ packages:
       path: "../../navigation_safety"
       relative: true
     source: path
-    version: "0.9.0"
+    version: "0.9.1"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.10.1"
+    version: "0.10.2"
   nested:
     dependency: transitive
     description:
