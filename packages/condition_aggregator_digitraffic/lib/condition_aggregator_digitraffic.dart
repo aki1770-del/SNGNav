@@ -28,6 +28,12 @@ library;
 export 'src/digitraffic_advisory_provider.dart'
     show
         DigitrafficAdvisoryProvider,
+        DigitrafficCapMapping,
         DigitrafficHttpException,
         DigitrafficParseException,
+        defaultDigitrafficCapMapping,
+        defaultDigitrafficFallbackMapping,
+        kDefaultDigitrafficBoundingBoxHalfDegrees,
+        kDefaultDigitrafficTrafficAnnouncementsUrl,
+        kDigitrafficAttributionString,
         mapTrafficAnnouncementFeatureToAdvisory;
