@@ -1,0 +1,26 @@
+name: condition_aggregator_digitraffic
+description: >-
+  Fintraffic Digitraffic traffic-announcements adapter for the
+  condition_aggregator interface. Maps Finnish traffic announcements
+  to source-neutral Advisory events. Pure Dart.
+version: 0.0.1
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - aggregator
+  - advisory
+  - digitraffic
+  - finland
+  - winter-driving
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  condition_aggregator: ^0.0.4
+  http: ^1.3.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
