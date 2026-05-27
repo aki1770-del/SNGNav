@@ -74,8 +74,7 @@ Map<String, dynamic> _featureCollection(List<Map<String, dynamic>> features) {
 
 void main() {
   group('mapTrafficAnnouncementFeatureToAdvisory', () {
-    test(
-        'maps a minimal English announcement to Advisory with publisher '
+    test('maps a minimal English announcement to Advisory with publisher '
         'fields + default CAP mapping for "accident report"', () {
       final feature = _feature(
         trafficAnnouncementType: 'accident report',
@@ -97,18 +96,21 @@ void main() {
       expect(advisory.severity, AdvisorySeverity.severe);
       expect(advisory.certainty, AdvisoryCertainty.observed);
       expect(advisory.urgency, AdvisoryUrgency.immediate);
-      expect(advisory.headline,
-          'Road 5, Ristijärvi. Traffic announcement of an accident.');
-      expect(advisory.description,
-          contains('Accident on Road 5; traffic disruption expected.'));
+      expect(
+        advisory.headline,
+        'Road 5, Ristijärvi. Traffic announcement of an accident.',
+      );
+      expect(
+        advisory.description,
+        contains('Accident on Road 5; traffic disruption expected.'),
+      );
       expect(advisory.description, contains(kDigitrafficAttributionString));
       expect(advisory.areaDescription, contains('Ristijärvi'));
       expect(advisory.effective, DateTime.utc(2026, 5, 24, 10, 0, 0));
       expect(advisory.expires, DateTime.utc(2026, 5, 24, 12, 0, 0));
     });
 
-    test(
-        'falls back to primary-language announcement when no English entry; '
+    test('falls back to primary-language announcement when no English entry; '
         'applies default CAP mapping for "preliminary accident report"', () {
       final feature = _feature(
         trafficAnnouncementType: 'preliminary accident report',
@@ -205,30 +207,31 @@ void main() {
       expect(advisory.urgency, AdvisoryUrgency.past);
     });
 
-    test('defaultDigitrafficCapMapping is exhaustive against 2026-05-24 ground-truth',
-        () {
-      const observed2026May24 = <String>{
-        'accident report',
-        'general',
-        'preliminary accident report',
-        'ended',
-        'retracted',
-      };
-      for (final t in observed2026May24) {
-        expect(
-          defaultDigitrafficCapMapping.containsKey(t),
-          isTrue,
-          reason:
-              'defaultDigitrafficCapMapping is missing observed event-class "$t" '
-              'from 2026-05-24 live API genchi-genbutsu',
-        );
-      }
-    });
+    test(
+      'defaultDigitrafficCapMapping is exhaustive against 2026-05-24 ground-truth',
+      () {
+        const observed2026May24 = <String>{
+          'accident report',
+          'general',
+          'preliminary accident report',
+          'ended',
+          'retracted',
+        };
+        for (final t in observed2026May24) {
+          expect(
+            defaultDigitrafficCapMapping.containsKey(t),
+            isTrue,
+            reason:
+                'defaultDigitrafficCapMapping is missing observed event-class "$t" '
+                'from 2026-05-24 live API genchi-genbutsu',
+          );
+        }
+      },
+    );
   });
 
   group('Fallback + integrator-override CAP mapping', () {
-    test(
-        'unobserved trafficAnnouncementType falls through to '
+    test('unobserved trafficAnnouncementType falls through to '
         'fallbackMapping (conservative minor / possible / unknown)', () {
       final feature = _feature(
         trafficAnnouncementType: 'hypothetical_future_class',
@@ -242,8 +245,7 @@ void main() {
       expect(advisory.urgency, AdvisoryUrgency.unknown);
     });
 
-    test(
-        'integrator-supplied capMapping override is honored for an '
+    test('integrator-supplied capMapping override is honored for an '
         'existing event class', () {
       final integratorMapping = <String, DigitrafficCapMapping>{
         // Rural-Finland integrator wants "general" elevated to moderate
@@ -268,8 +270,7 @@ void main() {
       expect(advisory.certainty, AdvisoryCertainty.likely);
     });
 
-    test(
-        'integrator-supplied fallbackMapping override is honored for '
+    test('integrator-supplied fallbackMapping override is honored for '
         'unobserved future event-class values', () {
       final integratorFallback = DigitrafficCapMapping(
         severity: AdvisorySeverity.moderate,
@@ -291,26 +292,28 @@ void main() {
       expect(advisory.urgency, AdvisoryUrgency.expected);
     });
 
-    test('Fintraffic CC-BY-4.0 attribution string appears in every emitted advisory',
-        () {
-      for (final t in defaultDigitrafficCapMapping.keys) {
-        final feature = _feature(
-          trafficAnnouncementType: t,
-          englishTitle: 'title-for-$t',
-          englishAdditionalInformation: 'body-for-$t',
-        );
-        final advisory = mapTrafficAnnouncementFeatureToAdvisory(feature);
-        expect(advisory, isNotNull);
-        expect(
-          advisory!.description,
-          contains(kDigitrafficAttributionString),
-          reason:
-              'CC-BY-4.0 attribution string must surface verbatim in every '
-              'emitted advisory description so the credit reaches the '
-              'driver-facing HMI surface (Fintraffic ToS verbatim).',
-        );
-      }
-    });
+    test(
+      'Fintraffic CC-BY-4.0 attribution string appears in every emitted advisory',
+      () {
+        for (final t in defaultDigitrafficCapMapping.keys) {
+          final feature = _feature(
+            trafficAnnouncementType: t,
+            englishTitle: 'title-for-$t',
+            englishAdditionalInformation: 'body-for-$t',
+          );
+          final advisory = mapTrafficAnnouncementFeatureToAdvisory(feature);
+          expect(advisory, isNotNull);
+          expect(
+            advisory!.description,
+            contains(kDigitrafficAttributionString),
+            reason:
+                'CC-BY-4.0 attribution string must surface verbatim in every '
+                'emitted advisory description so the credit reaches the '
+                'driver-facing HMI surface (Fintraffic ToS verbatim).',
+          );
+        }
+      },
+    );
   });
 
   group('DigitrafficAdvisoryProvider', () {
@@ -335,8 +338,7 @@ void main() {
   });
 
   group('DigitrafficAdvisoryProvider mocked-HTTP integration', () {
-    test(
-        'returns CAP-mapped advisories for features inside the bounding box; '
+    test('returns CAP-mapped advisories for features inside the bounding box; '
         'filters features outside', () async {
       final inside = _feature(
         trafficAnnouncementType: 'accident report',
@@ -354,12 +356,18 @@ void main() {
       );
       final mock = MockClient((http.Request request) async {
         expect(request.url.host, 'tie.digitraffic.fi');
-        expect(request.url.path,
-            '/api/traffic-message/v2/traffic-announcements');
+        expect(
+          request.url.path,
+          '/api/traffic-message/v2/traffic-announcements',
+        );
         final body = jsonEncode(_featureCollection([inside, outside]));
-        return http.Response(body, 200, headers: <String, String>{
-          'Content-Type': 'application/json; charset=utf-8',
-        });
+        return http.Response(
+          body,
+          200,
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=utf-8',
+          },
+        );
       });
 
       final provider = DigitrafficAdvisoryProvider.withClient(mock);
@@ -385,8 +393,7 @@ void main() {
       }
     });
 
-    test(
-        'returns an empty list when the publisher response carries an '
+    test('returns an empty list when the publisher response carries an '
         'empty features array (no throw)', () async {
       final mock = MockClient((http.Request request) async {
         final body = jsonEncode(_featureCollection(<Map<String, dynamic>>[]));
@@ -405,8 +412,7 @@ void main() {
       }
     });
 
-    test(
-        'throws DigitrafficParseException on malformed JSON body', () async {
+    test('throws DigitrafficParseException on malformed JSON body', () async {
       final mock = MockClient((http.Request request) async {
         return http.Response('not valid { json', 200);
       });
@@ -425,51 +431,57 @@ void main() {
       }
     });
 
-    test('throws DigitrafficHttpException with statusCode on HTTP 503',
-        () async {
-      final mock = MockClient((http.Request request) async {
-        return http.Response('Service Unavailable', 503);
-      });
-      final provider = DigitrafficAdvisoryProvider.withClient(mock);
-      await provider.init();
-      try {
-        await expectLater(
-          provider.fetchActiveAdvisoriesAtPoint(
-            latitude: 60.17,
-            longitude: 24.93,
-          ),
-          throwsA(isA<DigitrafficHttpException>().having(
-            (e) => e.statusCode,
-            'statusCode',
-            503,
-          )),
-        );
-      } finally {
-        provider.close();
-      }
-    });
+    test(
+      'throws DigitrafficHttpException with statusCode on HTTP 503',
+      () async {
+        final mock = MockClient((http.Request request) async {
+          return http.Response('Service Unavailable', 503);
+        });
+        final provider = DigitrafficAdvisoryProvider.withClient(mock);
+        await provider.init();
+        try {
+          await expectLater(
+            provider.fetchActiveAdvisoriesAtPoint(
+              latitude: 60.17,
+              longitude: 24.93,
+            ),
+            throwsA(
+              isA<DigitrafficHttpException>().having(
+                (e) => e.statusCode,
+                'statusCode',
+                503,
+              ),
+            ),
+          );
+        } finally {
+          provider.close();
+        }
+      },
+    );
 
-    test('throws DigitrafficParseException when "features" key is missing',
-        () async {
-      final mock = MockClient((http.Request request) async {
-        return http.Response(
-          jsonEncode(<String, dynamic>{'type': 'FeatureCollection'}),
-          200,
-        );
-      });
-      final provider = DigitrafficAdvisoryProvider.withClient(mock);
-      await provider.init();
-      try {
-        await expectLater(
-          provider.fetchActiveAdvisoriesAtPoint(
-            latitude: 60.17,
-            longitude: 24.93,
-          ),
-          throwsA(isA<DigitrafficParseException>()),
-        );
-      } finally {
-        provider.close();
-      }
-    });
+    test(
+      'throws DigitrafficParseException when "features" key is missing',
+      () async {
+        final mock = MockClient((http.Request request) async {
+          return http.Response(
+            jsonEncode(<String, dynamic>{'type': 'FeatureCollection'}),
+            200,
+          );
+        });
+        final provider = DigitrafficAdvisoryProvider.withClient(mock);
+        await provider.init();
+        try {
+          await expectLater(
+            provider.fetchActiveAdvisoriesAtPoint(
+              latitude: 60.17,
+              longitude: 24.93,
+            ),
+            throwsA(isA<DigitrafficParseException>()),
+          );
+        } finally {
+          provider.close();
+        }
+      },
+    );
   });
 }

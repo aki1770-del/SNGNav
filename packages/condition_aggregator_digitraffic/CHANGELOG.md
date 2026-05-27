@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.3 — 2026-05-27 — Documentation framing: HER-trace → "Service trace (driver in unexpected snow)"
+
+- Documentation-only release. No code changes; no test changes; no behavior changes.
+- README section heading "HER-trace (≤4 hops)" → "Service trace (driver in
+  unexpected snow; ≤4 hops)". The new framing names the subject explicitly
+  (driver in unexpected snow) rather than relying on a capitalized "HER"
+  pronoun-trace convention that external readers may parse as an acronym.
+  The substantive trace chain is unchanged (Fintraffic Digitraffic feed →
+  `DigitrafficAdvisoryProvider` → `AdvisoryAggregator` typed merge →
+  integrator HMI → driver in unexpected snow on Finnish roads).
+- `lib/condition_aggregator_digitraffic.dart` barrel-file dartdoc: same
+  framing revision ("HER-trace (≤4-hop)" → "Service trace (driver in
+  unexpected snow; ≤4-hop)"); version banner bumped from stale "v0.0.1"
+  to "v0.0.3" (was inconsistent across v0.0.2 cycle).
+- Mission anchor: doc-class clarity revision serves drivers + their families
+  by ensuring the README is parseable on first reading by an external
+  Flutter developer encountering the package on pub.dev without prior
+  context — substantive substrate (CAP heuristic mapping, license
+  attribution, test coverage) was already substance-quality clean at v0.0.2
+  per the 2026-05-27 retroactive audit; this release closes the one
+  external-reader-clarity opportunity that audit surfaced.
+
 ## 0.0.2 — 2026-05-24 — CAP heuristic mapping + mocked-HTTP integration tests + license/attribution clarifications
 
 - CAP-class heuristic mapping by `trafficAnnouncementType`. The

@@ -7,9 +7,9 @@
 /// and maps each GeoJSON feature to a source-neutral `Advisory` typed
 /// event at the adapter boundary.
 ///
-/// Phase: explore — v0.0.1.
+/// Phase: explore — v0.0.3.
 ///
-/// HER-trace (≤4-hop) end-to-end:
+/// Service trace (driver in unexpected snow; ≤4-hop) end-to-end:
 ///   Fintraffic Digitraffic traffic-announcements feed
 ///     → `DigitrafficAdvisoryProvider` (this package)
 ///     → `AdvisoryAggregator` typed merge

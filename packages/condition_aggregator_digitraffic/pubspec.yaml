@@ -3,7 +3,7 @@ description: >-
   Fintraffic Digitraffic traffic-announcements adapter for the
   condition_aggregator interface. Maps Finnish traffic announcements
   to source-neutral Advisory events. Pure Dart.
-version: 0.0.2
+version: 0.0.3
 license: BSD-3-Clause
 
 repository: https://github.com/aki1770-del/sngnav

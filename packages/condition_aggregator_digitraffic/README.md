@@ -18,7 +18,7 @@ This is the **first** adapter under the Nordic-region adapter family;
 the **second** is
 [`condition_aggregator_met_norway`](../condition_aggregator_met_norway/).
 
-## HER-trace (≤4 hops)
+## Service trace (driver in unexpected snow; ≤4 hops)
 
 ```
 Fintraffic Digitraffic traffic-announcements feed
@@ -28,11 +28,10 @@ Fintraffic Digitraffic traffic-announcements feed
     on Finnish roads
 ```
 
-Mission anchor: this package exists to help a driver on a Finnish
-road in unexpected snow — and her family — especially in
-compound-failure conditions when standard navigation infrastructure
-has gone away. Adapter-count is not the success metric; integrator
-pull + driver-relevance is.
+This package exists to help a driver on a Finnish road in unexpected
+snow — and her family — especially in compound-failure conditions
+when standard navigation infrastructure has gone away. Adapter-count
+is not the success metric; integrator pull + driver-relevance is.
 
 ## Source attribution
 

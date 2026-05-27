@@ -173,8 +173,7 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
   /// Constructs an adapter that owns its own [http.Client].
   DigitrafficAdvisoryProvider({
     this.endpointUrl = kDefaultDigitrafficTrafficAnnouncementsUrl,
-    this.boundingBoxHalfDegrees =
-        kDefaultDigitrafficBoundingBoxHalfDegrees,
+    this.boundingBoxHalfDegrees = kDefaultDigitrafficBoundingBoxHalfDegrees,
     Map<String, DigitrafficCapMapping>? capMapping,
     this.fallbackMapping = defaultDigitrafficFallbackMapping,
   }) : capMapping = capMapping ?? defaultDigitrafficCapMapping,
@@ -187,8 +186,7 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
   DigitrafficAdvisoryProvider.withClient(
     http.Client client, {
     this.endpointUrl = kDefaultDigitrafficTrafficAnnouncementsUrl,
-    this.boundingBoxHalfDegrees =
-        kDefaultDigitrafficBoundingBoxHalfDegrees,
+    this.boundingBoxHalfDegrees = kDefaultDigitrafficBoundingBoxHalfDegrees,
     Map<String, DigitrafficCapMapping>? capMapping,
     this.fallbackMapping = defaultDigitrafficFallbackMapping,
   }) : capMapping = capMapping ?? defaultDigitrafficCapMapping,
@@ -397,10 +395,8 @@ bool _anyCoordinateInBox(
 /// Visible at top level for direct-call testing.
 Advisory? mapTrafficAnnouncementFeatureToAdvisory(
   Map<String, dynamic> feature, {
-  Map<String, DigitrafficCapMapping> capMapping =
-      defaultDigitrafficCapMapping,
-  DigitrafficCapMapping fallbackMapping =
-      defaultDigitrafficFallbackMapping,
+  Map<String, DigitrafficCapMapping> capMapping = defaultDigitrafficCapMapping,
+  DigitrafficCapMapping fallbackMapping = defaultDigitrafficFallbackMapping,
 }) {
   final props = feature['properties'];
   if (props is! Map<String, dynamic>) return null;
@@ -423,8 +419,7 @@ Advisory? mapTrafficAnnouncementFeatureToAdvisory(
   final chosen = englishAnnouncement ?? primaryAnnouncement;
 
   final headline = chosen?['title']?.toString() ?? '';
-  final baseDescription =
-      chosen?['additionalInformation']?.toString() ?? '';
+  final baseDescription = chosen?['additionalInformation']?.toString() ?? '';
   final areaDescription = _composeAreaDescription(chosen);
 
   DateTime? effective;
@@ -439,9 +434,7 @@ Advisory? mapTrafficAnnouncementFeatureToAdvisory(
   // through to fallback for unobserved future event-class values.
   final mapping = capMapping[eventClass] ?? fallbackMapping;
 
-  final description = _composeDescription(
-    baseDescription: baseDescription,
-  );
+  final description = _composeDescription(baseDescription: baseDescription);
 
   return Advisory(
     source: AdvisorySource.other,
