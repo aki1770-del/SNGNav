@@ -484,4 +484,131 @@ void main() {
       },
     );
   });
+
+  group('Large-response graceful degradation (v0.0.4 defect fix)', () {
+    // Regression for the shipped v0.0.3 defect: the adapter applied a
+    // HARD 8 MB cap that THREW DigitrafficHttpException on any larger
+    // body. The live all-Finland /v2/traffic-announcements payload is
+    // not stable and was measured above 8 MB (~16.4 MB at peak), which
+    // broke the adapter for every edge developer fetching live Finnish
+    // road data — not just our demo. The fix degrades gracefully:
+    // parse the valid 200 anyway, surface a diagnostic instead of
+    // discarding it.
+
+    /// Builds a FeatureCollection whose JSON body exceeds [minBytes] by
+    /// padding many in-bounds accident-report features, so the parser
+    /// path is exercised on a genuinely large body.
+    Map<String, dynamic> bigFeatureCollection({required int minBytes}) {
+      final features = <Map<String, dynamic>>[];
+      var approxBytes = 0;
+      // Each feature carries a sizeable padded additionalInformation so
+      // the serialized body crosses the threshold without needing an
+      // absurd feature count.
+      final pad = 'x' * 4096;
+      while (approxBytes < minBytes) {
+        features.add(
+          _feature(
+            trafficAnnouncementType: 'accident report',
+            lng: 24.93,
+            lat: 60.17,
+            englishTitle: 'In-bounds accident',
+            englishAdditionalInformation: 'Accident. $pad',
+          ),
+        );
+        approxBytes += 4096 + 256;
+      }
+      return _featureCollection(features);
+    }
+
+    test('does NOT throw on a >8 MB body and still parses + maps features '
+        '(graceful degradation, not hard cap)', () async {
+      final body = jsonEncode(bigFeatureCollection(minBytes: 9 * 1024 * 1024));
+      // Sanity: the body really is larger than the old 8 MB hard cap.
+      expect(
+        body.length,
+        greaterThan(8 * 1024 * 1024),
+        reason: 'test fixture must exceed the retired 8 MB cap',
+      );
+      final mock = MockClient((http.Request request) async {
+        return http.Response(body, 200);
+      });
+      final provider = DigitrafficAdvisoryProvider.withClient(mock);
+      await provider.init();
+      try {
+        final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+          latitude: 60.17,
+          longitude: 24.93,
+        );
+        // The previously-thrown body is now parsed; in-bounds features
+        // map to advisories rather than being discarded.
+        expect(advisories, isNotEmpty);
+        expect(advisories.first.eventClass, 'accident report');
+        expect(
+          advisories.first.description,
+          contains(kDigitrafficAttributionString),
+        );
+      } finally {
+        provider.close();
+      }
+    });
+
+    test('invokes onLargeResponse diagnostic when body exceeds the 32 MB '
+        'soft warn threshold, and still parses', () async {
+      // Build a body over 32 MB to trip the soft warn threshold.
+      final body = jsonEncode(bigFeatureCollection(minBytes: 33 * 1024 * 1024));
+      expect(body.length, greaterThan(32 * 1024 * 1024));
+      int? observed;
+      final mock = MockClient((http.Request request) async {
+        return http.Response(body, 200);
+      });
+      final provider = DigitrafficAdvisoryProvider.withClient(
+        mock,
+        onLargeResponse: (bytes) => observed = bytes,
+      );
+      await provider.init();
+      try {
+        final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+          latitude: 60.17,
+          longitude: 24.93,
+        );
+        expect(advisories, isNotEmpty, reason: 'valid 200 must still parse');
+        expect(observed, isNotNull, reason: 'diagnostic hook must fire');
+        expect(observed, greaterThan(32 * 1024 * 1024));
+      } finally {
+        provider.close();
+      }
+    });
+
+    test(
+      'does NOT invoke onLargeResponse for a small (in-threshold) body',
+      () async {
+        var fired = false;
+        final inside = _feature(
+          trafficAnnouncementType: 'accident report',
+          lng: 24.93,
+          lat: 60.17,
+          englishTitle: 'small body',
+          englishAdditionalInformation: 'tiny',
+        );
+        final mock = MockClient((http.Request request) async {
+          return http.Response(jsonEncode(_featureCollection([inside])), 200);
+        });
+        final provider = DigitrafficAdvisoryProvider.withClient(
+          mock,
+          onLargeResponse: (_) => fired = true,
+        );
+        await provider.init();
+        try {
+          final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+            latitude: 60.17,
+            longitude: 24.93,
+          );
+          expect(advisories, hasLength(1));
+          expect(fired, isFalse);
+        } finally {
+          provider.close();
+        }
+      },
+    );
+  });
 }

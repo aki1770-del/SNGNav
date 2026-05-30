@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.0.4 — 2026-05-30 — Defect fix: large live response no longer throws (graceful degradation)
+
+- **Defect (shipped in v0.0.2/v0.0.3)**: `fetchActiveAdvisoriesAtPoint`
+  applied a HARD 8 MB cap (`_kMaxResponseBytes = 8 * 1024 * 1024`) that
+  THREW `DigitrafficHttpException` on any larger response body. The live
+  all-Finland `/v2/traffic-announcements` payload is not stable — it
+  tracks the active-announcement count and attached area geometries —
+  and was measured above 8 MB (~16.4 MB at peak; ~3.5 MB at a 2026-05-30
+  low) on a perfectly valid HTTP 200. At those times the adapter threw
+  on a good response, breaking it for EVERY edge developer fetching live
+  Finnish road data, not just our demo.
+- **Fix — graceful degradation, robust to future growth**: the hard
+  byte-cap throw is removed. A valid HTTP 200 is always parsed. The
+  former cap is replaced by a *soft* 32 MB warn threshold
+  (`_kSoftResponseWarnBytes`) that is well above observed volumes; when a
+  body exceeds it the adapter invokes the optional new
+  `onLargeResponse(int observedBytes)` diagnostic callback and parses the
+  body anyway rather than discarding it. A fixed-larger hard cap was
+  rejected because the payload grew 3.5 MB → 16.4 MB in days — a bigger
+  number would only delay the next re-regression.
+- **Server-side narrowing investigated and NOT available**: the live
+  `/v2/traffic-announcements` endpoint accepts NO query parameters
+  (no bbox / `situationType` / `includeAreaGeometry`) — confirmed
+  against the Digitraffic OpenAPI spec and live HTTP 400 responses on
+  2026-05-30 (the bbox params documented elsewhere apply to a different
+  endpoint shape). The adapter therefore continues to fetch the
+  all-Finland FeatureCollection and filter client-side via the existing
+  bounding-box intersection. A smaller server-side query would have been
+  the preferred bandwidth fix for embedded/edge consumers, but the v2
+  endpoint does not support it.
+- **New public API (additive; no breaking removals)**: optional
+  `onLargeResponse` callback on both `DigitrafficAdvisoryProvider()` and
+  `DigitrafficAdvisoryProvider.withClient()` constructors.
+- Fintraffic CC-BY-4.0 attribution behavior and all existing public
+  symbols / mappings are unchanged.
+- Tests: 19 → 22. Added a >8 MB mocked body proving the adapter no
+  longer throws and still parses + maps features; a >32 MB body proving
+  the `onLargeResponse` diagnostic fires while the body still parses; and
+  a small-body case proving the diagnostic does NOT fire on routine
+  responses.
+
 ## 0.0.3 — 2026-05-27 — Documentation framing: HER-trace → "Service trace (driver in unexpected snow)"
 
 - Documentation-only release. No code changes; no test changes; no behavior changes.

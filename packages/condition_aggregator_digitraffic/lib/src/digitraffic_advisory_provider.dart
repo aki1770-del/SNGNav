@@ -33,10 +33,30 @@ const double kDefaultDigitrafficBoundingBoxHalfDegrees = 0.5;
 /// HMI from stalling indefinitely.
 const Duration _kFetchBudget = Duration(seconds: 30);
 
-/// Hard cap on the response body in bytes. The 2026-05-24 live response
-/// measured ~3.5 MB; 8 MB headroom prevents an unbounded growth in
-/// active-announcement count from exhausting integrator memory.
-const int _kMaxResponseBytes = 8 * 1024 * 1024;
+/// Soft cap on the response body in bytes used only to emit a
+/// diagnostic warning — NOT to reject the response.
+///
+/// History: the v0.0.2/v0.0.3 adapter applied a *hard* 8 MB cap that
+/// THREW [DigitrafficHttpException] on any larger body. The live
+/// all-Finland `/v2/traffic-announcements` payload is not stable — it
+/// tracks the active-announcement count and the size of attached area
+/// geometries, and was measured well above 8 MB (~16.4 MB) during a
+/// peak. A hard throw on a perfectly valid HTTP 200 broke the adapter
+/// for every edge developer fetching live Finnish road data at those
+/// times — not just our demo.
+///
+/// The v2 traffic-announcements endpoint exposes NO server-side
+/// area / bbox / situationType query parameters (Digitraffic OpenAPI
+/// spec + live 400 responses verified 2026-05-30), so the payload
+/// cannot be narrowed at the server; the adapter must accept the
+/// all-Finland body and filter client-side. The adapter therefore
+/// degrades gracefully: when a body exceeds this threshold it surfaces
+/// a diagnostic via [DigitrafficAdvisoryProvider.onLargeResponse] and
+/// parses anyway rather than discarding a valid 200. 32 MB is well
+/// above observed volumes, so the warning fires only on genuinely
+/// anomalous growth — and even then the response is still parsed,
+/// never thrown away.
+const int _kSoftResponseWarnBytes = 32 * 1024 * 1024;
 
 /// CAP-class mapping derived from one `trafficAnnouncementType` value
 /// to severity / certainty / urgency tuple — integrator-overridable at
@@ -167,6 +187,13 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
   /// Defaults to [defaultDigitrafficFallbackMapping].
   final DigitrafficCapMapping fallbackMapping;
 
+  /// Optional diagnostic hook invoked when a response body exceeds
+  /// [_kSoftResponseWarnBytes]. The adapter still parses and returns the
+  /// (valid) body; this callback exists so an integrator can log /
+  /// surface the anomaly. Defaults to null (no-op). Receives the
+  /// observed body length in bytes.
+  final void Function(int observedBytes)? onLargeResponse;
+
   final http.Client _client;
   final bool _ownsClient;
 
@@ -176,6 +203,7 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
     this.boundingBoxHalfDegrees = kDefaultDigitrafficBoundingBoxHalfDegrees,
     Map<String, DigitrafficCapMapping>? capMapping,
     this.fallbackMapping = defaultDigitrafficFallbackMapping,
+    this.onLargeResponse,
   }) : capMapping = capMapping ?? defaultDigitrafficCapMapping,
        _client = http.Client(),
        _ownsClient = true;
@@ -189,6 +217,7 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
     this.boundingBoxHalfDegrees = kDefaultDigitrafficBoundingBoxHalfDegrees,
     Map<String, DigitrafficCapMapping>? capMapping,
     this.fallbackMapping = defaultDigitrafficFallbackMapping,
+    this.onLargeResponse,
   }) : capMapping = capMapping ?? defaultDigitrafficCapMapping,
        _client = client,
        _ownsClient = false;
@@ -220,6 +249,12 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
     required double latitude,
     required double longitude,
   }) async {
+    // NOTE: the live /v2/traffic-announcements endpoint accepts NO query
+    // parameters (server-side bbox / situationType narrowing is not
+    // available on v2; verified against the Digitraffic OpenAPI spec and
+    // live HTTP 400 responses on 2026-05-30). The full all-Finland
+    // FeatureCollection is fetched and filtered client-side via
+    // [_featureIntersectsBoundingBox].
     final response = await _client
         .get(
           Uri.parse(endpointUrl),
@@ -247,13 +282,12 @@ class DigitrafficAdvisoryProvider implements AdvisoryProvider {
             'HTTP ${response.statusCode}',
       );
     }
-    if (response.bodyBytes.length > _kMaxResponseBytes) {
-      throw DigitrafficHttpException(
-        statusCode: response.statusCode,
-        message:
-            'Digitraffic response exceeded $_kMaxResponseBytes-byte '
-            'cap (${response.bodyBytes.length} bytes received).',
-      );
+    // Graceful degradation: a large-but-valid body is NOT rejected. The
+    // publisher payload has grown over time (3.5 MB → 16.4 MB) and a
+    // hard throw on a valid HTTP 200 would break every consumer. We
+    // surface a diagnostic via [onLargeResponse] and parse anyway.
+    if (response.bodyBytes.length > _kSoftResponseWarnBytes) {
+      onLargeResponse?.call(response.bodyBytes.length);
     }
 
     final Map<String, dynamic> json;
