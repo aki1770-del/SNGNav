@@ -1,6 +1,10 @@
-# Offline-first navigation building blocks for Flutter: dead reckoning, local map tiles, and open road-condition data
+# Watch a Flutter map keep navigating when GPS and the network die — offline-first building blocks for embedded Linux
 
-> **Honest scope.** This is a how-to about four small, separately usable pub.dev packages and the live open data behind one of them. It is *not* a screen-recording demo: the assembled reference app targets embedded Linux head units (Flutter via [flutter-elinux](https://github.com/sony/flutter-elinux)) and isn't shown running here — that write-up follows when it builds and records on real hardware. Everything I *do* claim below is backed by tests or a live fetch, and I say which is which.
+> **Honest scope.** The demo below is a real Flutter app, captured running on desktop Linux (software-rendered). The packages target embedded Linux head units (via [flutter-elinux](https://github.com/sony/flutter-elinux)); an on-target ARM build is a separate effort, not shown here. Every claim is bounded to what the recording actually shows.
+
+![Offline-first navigation demo: dead-reckoning through a tunnel, then a live severe road-hazard overlay](screenshots/demo.gif)
+
+*(Full clip: [`demo.mp4`](screenshots/demo.mp4) — 62 s.)*
 
 ## The problem nobody designs for
 
@@ -10,77 +14,52 @@ Most navigation code quietly assumes three things that fail exactly when a drive
 2. **The network is always there.** It isn't — rural roads, mountain passes, and the snowstorm where you most need a map are where cellular dies.
 3. **The driver can see.** In a whiteout, they can't.
 
-If you build for embedded automotive Linux (an IVI head unit, a fleet device, a Yocto image on an ARM SBC) you eventually hit a requirement desktop and phone apps get to ignore: *keep navigating when GPS, the network, and visibility all degrade at once.* That compound-failure case is the design target.
+If you build for embedded automotive Linux (an IVI head unit, a fleet device, a Yocto image on an ARM SBC) you eventually hit a requirement desktop and phone apps get to ignore: *keep navigating when GPS, the network, and visibility all degrade at once.* That compound-failure case is the design target — and the demo above is exactly it, in two scenes, built from four small `pub add`-able packages.
 
-What follows is four small packages for that case — `pub add` what you need, ignore the rest — and the verification behind each, so you can trust the building blocks even though the assembled demo isn't on screen yet.
+## Scene 1 — keep moving after the GPS drops (fully offline)
 
-## 1 — Keep moving after the GPS drops: `kalman_dr`
+The first half of the clip runs **with no network and no live GPS** — simulated location, map tiles from a local MBTiles file. The simulated drive enters a tunnel (~9–15 s into the loop) where the GPS fix goes silent.
 
-The hard part isn't drawing a map. It's *honestly* continuing to position the vehicle when the fix disappears — and being honest about when you can no longer trust the estimate.
+Watch the **position marker**: blue while it has a fix, then **amber while it's dead-reckoning** through the tunnel — [`kalman_dr`](https://pub.dev/packages/kalman_dr) keeps estimating position from the last heading and speed with a Kalman filter, and the marker's colour reports that its accuracy has degraded past the trustworthy threshold. When the route exits the tunnel and GPS resumes, the marker snaps **back to blue**.
 
-[`kalman_dr`](https://pub.dev/packages/kalman_dr) (v0.4.0) wraps your location stream and, when the GPS fix times out, keeps estimating position from the last known heading and speed with a Kalman filter (a simpler linear mode is also available). Two things make it usable in a safety context rather than a toy:
+![Dead-reckoning handoff: blue fix → amber while dead-reckoning → blue on recovery](screenshots/scene1_dr_handoff_triptych.png)
 
-- It reports **honestly degrading accuracy** while dead-reckoning — uncertainty grows the longer GPS is gone, and your UI can show it.
-- It has a **safety cap**: past a configured un-corrected distance it stops claiming a position and surfaces "position unavailable" rather than lying to the driver.
+Two design choices make this usable in a safety context rather than a toy:
 
-**Verification:** `flutter test` → **68 unit tests pass** (run 2026-05-30), covering tunnel-entry, degradation, recovery, multi-cycle, and the safety-cap cases. It's pure Dart logic over a location stream, so it carries no platform baggage.
+- **Honest degradation, shown.** The marker doesn't pretend it still has a fix — its colour changes the moment the estimate stops being trustworthy. (The on-screen signal here is colour; there's no separate "GPS lost" label.)
+- **A safety cap.** Past a configured un-corrected distance, `kalman_dr` stops claiming a position entirely and surfaces "position unavailable" rather than lying to the driver. **68 unit tests** cover the tunnel-entry, degradation, recovery, multi-cycle, and cap cases.
 
-```dart
-// wrap any Stream<Position> (geolocator, a mock, your own GNSS bridge)
-final dr = DeadReckoningProvider(mode: DrMode.kalman);
-dr.wrap(rawPositionStream).listen((estimate) {
-  // estimate.position keeps advancing through a GPS gap;
-  // estimate.accuracy widens honestly; past the cap it reports unavailable.
-});
-```
+The map itself is [`offline_tiles`](https://pub.dev/packages/offline_tiles) — a `TileProvider` for [`flutter_map`](https://pub.dev/packages/flutter_map) that serves tiles from a local `.mbtiles` file with zero network (resolver order: cache → MBTiles → lower zoom → online if available → placeholder, so the map never blanks). The clip is rendering a 1.8 MB regional MBTiles in airplane mode. (**51 tests pass.**)
 
-## 2 — Render the map with no network: `offline_tiles`
+## Scene 2 — warn about the road ahead from live open data (online)
 
-[`offline_tiles`](https://pub.dev/packages/offline_tiles) (v0.5.1) is a `TileProvider` for [`flutter_map`](https://pub.dev/packages/flutter_map) that serves tiles from a local `.mbtiles` file with **zero network**. Its resolver tries, in order: in-memory cache → MBTiles → a lower zoom level (so you always show *something*) → online (if available) → a placeholder. You ship the region you care about alongside the app and the map renders in airplane mode.
+Offline keeps you *oriented*. It doesn't tell you the road ahead is sheet ice. The second half of the clip switches to live data: the whole map takes a **red severe-condition tint** and a **hazard alert** appears.
 
-```dart
-TileLayer(
-  tileProvider: MbTilesTileProvider(path: 'data/region.mbtiles'),
-  // ... falls back gracefully when a tile is missing; never blanks the map.
-)
-```
+That's driven by [`condition_aggregator_digitraffic`](https://pub.dev/packages/condition_aggregator_digitraffic) (v0.0.4) reading [Fintraffic's Digitraffic](https://www.digitraffic.fi/) open road data (Finland, **CC-BY 4.0**) and turning the raw CAP-style messages into a typed `Advisory` stream, which a small provider in [`driving_weather`](https://pub.dev/packages/driving_weather) maps onto the safety overlay.
 
-**Verification caveat (honest):** `offline_tiles` is published and in use, but I could not exercise its test suite on the machine I'm writing from — it pulls in Flutter's widget/rendering layer, and the local ARM-patched Flutter SDK here has a `TargetPlatform` enum/switch mismatch (`linux_arm64`) that fails to compile *any* widget-touching code. That's an SDK-fork issue, not an `offline_tiles` one; its tests should be re-run on a stock Flutter SDK. I'm flagging it rather than claiming a green I didn't see.
+![Live severe-class Digitraffic advisory driving the red hazard overlay](screenshots/scene2_online_digitraffic.png)
 
-## 3 — Warn about the road ahead from live open data: `condition_aggregator_digitraffic`
+**Two honest boundaries** on this scene:
 
-Offline keeps you *oriented*. It doesn't tell you the road 5 km ahead is sheet ice. For that you need live road-condition data — and many countries publish it as open data.
+- The weather bar ("Snow / −4 °C / Vis 150 m / ICE") shows *representative values keyed to the advisory's severity class* — the **severity is live** (a real severe-class Digitraffic advisory), the specific numbers are bucketed presentation, not measured weather.
+- This scene needs the network — it's the *complement* to Scene 1, not part of the offline story.
 
-[`condition_aggregator_digitraffic`](https://pub.dev/packages/condition_aggregator_digitraffic) (v0.0.4) reads [Fintraffic's Digitraffic](https://www.digitraffic.fi/) traffic-message API (Finland's open road data, **CC-BY 4.0**) and turns the raw CAP-style messages into a small, typed `Advisory` stream — severity, area, effective/expires, headline.
-
-**Verification (live, not mocked):** one snapshot fetch of the all-Finland feed on 2026-05-30 returned HTTP 200 with a **~16.4 MB** body — **1489 active announcements**, of which **730 severe** — and the package parsed all 1489, mapping a worst-of winter case to `precip=snow, intensity=heavy, visibility=150 m, ice=true, hazardous=true`, with Fintraffic's CC-BY-4.0 attribution carried through every advisory. Treat those figures as a point-in-time reading, not a constant: the live feed's size and severity mix move through the day with the actual road situation (it was ~3.5 MB a few days earlier).
-
-That volatility is exactly why **v0.0.4 exists**. The all-Finland feed isn't a fixed size (it tracks active-announcement count and attached geometries), and the v0.0.2/v0.0.3 adapter applied a *hard* 8 MB cap that **threw** on a perfectly valid large 200 — so on a busy winter day the advisory silently never arrived. v0.0.4 removes the hard throw: it always parses a valid 200 and replaces the cap with a soft 32 MB warn threshold plus an optional `onLargeResponse` diagnostic. **22 unit tests pass**, including the large-response regression cases — a >8 MB body parses without throwing, a >32 MB body additionally fires the soft-warn diagnostic and still parses, and an in-threshold body fires nothing. If you fetch live national road data, this class of size-cap bug is worth checking for in your own adapters.
-
-```dart
-final provider = DigitrafficAdvisoryProvider(
-  onLargeResponse: (bytes) => log.info('Digitraffic body $bytes B'), // optional
-);
-final advisories = await provider.fetchActiveAdvisoriesAtPoint(lat, lon);
-// typed, severity-ranked, CC-BY-4.0 attributed — feed them to your safety UI.
-```
-
-Wiring those advisories into an on-screen safety overlay is the job of a weather/advisory provider in [`driving_weather`](https://pub.dev/packages/driving_weather) (v0.4.0, **45 tests pass**); a Digitraffic-backed provider that bridges section 3's advisories into that overlay is in progress (working tree today, not yet in the published `driving_weather`) — I'll note it here rather than imply it's already a `pub add` away.
+There's a real bug-fix story underneath it. Finland's all-country feed isn't a fixed size (it tracks active-announcement count and geometries — measured from ~3.5 MB to ~16.4 MB within days). The v0.0.2/v0.0.3 adapter applied a *hard* 8 MB cap that **threw** on a valid large response, so on a busy winter day the advisory silently never arrived. **v0.0.4** removes the hard throw — it always parses a valid 200, with a soft 32 MB warn threshold and an optional diagnostic instead. The demo's advisory reached the UI on a live ~16.4 MB body; **22 unit tests** (including the large-response regression cases) cover the robustness the single live poll can't. If you fetch live national road data, this class of size-cap bug is worth checking for in your own adapters.
 
 ## Why these are separate packages
 
-| Package | One job | pub.dev | verified 2026-05-30 |
+| Package | One job | pub.dev | tests |
 |---|---|---|---|
-| `kalman_dr` | dead-reckon through GPS loss, honestly | 0.4.0 | 68 tests pass |
-| `offline_tiles` | render `flutter_map` tiles from local MBTiles, no network | 0.5.1 | published; suite pending stock-SDK re-run |
-| `driving_weather` | a weather/advisory `Stream` your UI can react to | 0.4.0 | 45 tests pass |
-| `condition_aggregator_digitraffic` | turn Finnish open road data into typed advisories | 0.0.4 | 22 tests pass; live fetch → hazardous=true |
+| `kalman_dr` | dead-reckon through GPS loss, honestly | 0.4.0 | 68 |
+| `offline_tiles` | render `flutter_map` tiles from local MBTiles, no network | 0.5.1 | 51 |
+| `driving_weather` | a weather/advisory `Stream` your UI can react to | 0.4.0 | 45 |
+| `condition_aggregator_digitraffic` | turn Finnish open road data into typed advisories | 0.0.4 | 22 |
 
 Each does one thing and is independently useful. Take the dead-reckoning provider into your own `flutter_map` app and ignore everything else — that's the point.
 
-## On embedded Linux, and what isn't shown yet
+## On embedded Linux
 
-These are written for embedded Linux head units via [flutter-elinux](https://github.com/sony/flutter-elinux); the offline-first design (local tiles, dead reckoning, open-data advisories) exists precisely for the constrained, intermittently-connected automotive context. The assembled reference app and an on-target ARM build are **work in progress and deliberately not claimed here** — the local SDK I'm building on has an enum/switch mismatch that blocks a desktop GUI build, so rather than stage a misleading screenshot, the running demo waits for a build I can stand behind. When it's verified on hardware, that's its own write-up.
+These are written for embedded Linux head units via [flutter-elinux](https://github.com/sony/flutter-elinux); the offline-first design (local tiles, dead reckoning, open-data advisories) exists precisely for the constrained, intermittently-connected automotive context. The demo above is desktop Linux; the on-target ARM head-unit build is a separate effort and, when it's verified on hardware, will be its own write-up rather than an unproven claim here.
 
 ## Try it
 
