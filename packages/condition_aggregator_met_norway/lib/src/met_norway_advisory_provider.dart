@@ -320,8 +320,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
   }
 
   final temperature = _readNum(instantDetails?['air_temperature']);
-  final precipitation =
-      _readNum(next1Details?['precipitation_amount']) ?? 0.0;
+  final precipitation = _readNum(next1Details?['precipitation_amount']) ?? 0.0;
 
   final eventClass = _classify(
     temperature: temperature,
@@ -339,8 +338,9 @@ Advisory? mapLocationForecastResponseToAdvisory({
     freezingTemperatureCelsius: freezingTemperatureCelsius,
   );
 
-  final certainty =
-      next1Symbol != null ? AdvisoryCertainty.likely : AdvisoryCertainty.possible;
+  final certainty = next1Symbol != null
+      ? AdvisoryCertainty.likely
+      : AdvisoryCertainty.possible;
 
   final geometry = response['geometry'];
   final areaDescription = _composeAreaDescription(geometry);
@@ -502,8 +502,7 @@ class MetNorwayParseException implements Exception {
 
 /// Raised when [MetNorwayAdvisoryProvider.init] is called with an
 /// invalid configuration (empty User-Agent, negative threshold).
-class MetNorwayConfigurationException
-    implements AdvisoryProviderInitException {
+class MetNorwayConfigurationException implements AdvisoryProviderInitException {
   /// Human-readable description of the configuration failure.
   @override
   final String message;
@@ -514,6 +513,5 @@ class MetNorwayConfigurationException
   AdvisorySource get source => AdvisorySource.metNorway;
 
   @override
-  String toString() =>
-      'MetNorwayConfigurationException: $message';
+  String toString() => 'MetNorwayConfigurationException: $message';
 }

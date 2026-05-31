@@ -23,8 +23,10 @@ Future<void> main() async {
       longitude: 10.75,
     );
     if (advisories.isEmpty) {
-      print('MET Norway: no driver-actionable condition '
-          'forecast in the next hour.');
+      print(
+        'MET Norway: no driver-actionable condition '
+        'forecast in the next hour.',
+      );
       return;
     }
     for (final a in advisories) {
