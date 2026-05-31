@@ -35,3 +35,4 @@ export 'src/weather_condition.dart';
 export 'src/weather_provider.dart';
 export 'src/open_meteo_weather_provider.dart';
 export 'src/simulated_weather_provider.dart';
+export 'src/digitraffic_weather_provider.dart';
