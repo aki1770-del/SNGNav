@@ -84,6 +84,10 @@ dependency_overrides:
     path: packages/route_condition_forecast
   adaptive_reroute:
     path: packages/adaptive_reroute
+  condition_aggregator:
+    path: packages/condition_aggregator
+  condition_aggregator_digitraffic:
+    path: packages/condition_aggregator_digitraffic
 
 # Embedded ARM IVI Blocker 2 closure — BDE-CANDIDATE-1 SHAPE A-PRIME component 2 (2026-05-23).
 # sqlite3 ^3.2.0 uses Dart code-asset hooks; on the embedded ARM IVI target the

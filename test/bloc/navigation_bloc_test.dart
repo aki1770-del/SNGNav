@@ -11,8 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
 
-import 'package:sngnav_snow_scene/bloc/bloc.dart';
-
 // ---------------------------------------------------------------------------
 // Test data
 // ---------------------------------------------------------------------------

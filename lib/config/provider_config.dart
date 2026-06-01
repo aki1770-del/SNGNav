@@ -4,6 +4,7 @@
 ///
 ///   flutter run -d linux --dart-define=WEATHER_PROVIDER=simulated
 ///   flutter run -d linux --dart-define=WEATHER_PROVIDER=open_meteo  (default)
+///   flutter run -d linux --dart-define=WEATHER_PROVIDER=digitraffic (online; Finland)
 ///   flutter run -d linux --dart-define=LOCATION_PROVIDER=simulated  (default)
 ///   flutter run -d linux --dart-define=LOCATION_PROVIDER=geoclue
 ///   flutter run -d linux --dart-define=ROUTING_ENGINE=valhalla      (default)
@@ -64,6 +65,11 @@ enum WeatherProviderType {
 
   /// Open-Meteo API — real weather data, no API key required.
   openMeteo,
+
+  /// Fintraffic Digitraffic — live Finnish road-hazard advisories.
+  /// Network required (tie.digitraffic.fi). ONLINE scene only; never
+  /// selected on the fully-offline path.
+  digitraffic,
 }
 
 /// Available location provider implementations.
@@ -209,6 +215,8 @@ class ProviderConfig {
   ///
   /// For Open-Meteo: real Nagoya weather (35.18°N, 136.91°E), 5-minute poll.
   /// For Simulated: 5-second cycle through the mountain pass scenario.
+  /// For Digitraffic: live Finnish road-hazard advisories (Oulu default;
+  /// network required), 5-minute poll.
   WeatherProvider createWeatherProvider({
     double latitude = 35.18,
     double longitude = 136.91,
@@ -224,6 +232,15 @@ class ProviderConfig {
         return OpenMeteoWeatherProvider(
           latitude: latitude,
           longitude: longitude,
+          pollInterval: pollInterval ?? const Duration(minutes: 5),
+        );
+      case WeatherProviderType.digitraffic:
+        // Network-dependent ONLINE scene. Defaults to Oulu, northern Finland
+        // (a Digitraffic winter-driving region); the caller's latitude/
+        // longitude override the point when supplied.
+        return DigitrafficWeatherProvider(
+          latitude: latitude == 35.18 ? 65.0124 : latitude,
+          longitude: longitude == 136.91 ? 25.4682 : longitude,
           pollInterval: pollInterval ?? const Duration(minutes: 5),
         );
     }
@@ -261,7 +278,8 @@ class ProviderConfig {
 
   /// Whether this config uses real weather data (requires network).
   bool get isRealWeather =>
-      weatherType == WeatherProviderType.openMeteo;
+      weatherType == WeatherProviderType.openMeteo ||
+      weatherType == WeatherProviderType.digitraffic;
 
   /// Whether this config uses simulated location (no GPS required).
   bool get isSimulatedLocation =>
@@ -338,6 +356,9 @@ class ProviderConfig {
       case 'openmeteo':
       case 'real':
         return WeatherProviderType.openMeteo;
+      case 'digitraffic':
+      case 'finland':
+        return WeatherProviderType.digitraffic;
       default:
         return WeatherProviderType.openMeteo;
     }

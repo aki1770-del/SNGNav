@@ -8,16 +8,17 @@ import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
 
 void main() {
   group('WeatherProviderType', () {
-    test('has two values', () {
-      expect(WeatherProviderType.values.length, 2);
+    test('has three values', () {
+      expect(WeatherProviderType.values.length, 3);
     });
 
-    test('includes simulated and openMeteo', () {
+    test('includes simulated, openMeteo, and digitraffic', () {
       expect(
         WeatherProviderType.values,
         containsAll([
           WeatherProviderType.simulated,
           WeatherProviderType.openMeteo,
+          WeatherProviderType.digitraffic,
         ]),
       );
     });
