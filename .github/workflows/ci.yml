@@ -40,7 +40,7 @@ jobs:
           done
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos
+        run: dart analyze lib test
 
   test:
     name: Test
@@ -176,8 +176,8 @@ jobs:
       - name: Resolve on target Dart
         run: flutter pub get
 
-      - name: Analyze on target Dart
-        run: flutter analyze --no-fatal-infos
+      - name: Analyze app on target Dart
+        run: dart analyze lib test
 
       - name: App tests on target Dart
         run: flutter test --exclude-tags=probe
