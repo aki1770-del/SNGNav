@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale
+  `^3.11.0` SDK floor in the previously-published artifact. No source or behavior change; the
+  source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
+  consumers on Dart 3.10.x.
+
 ## 0.4.1 — 2026-05-10 — Refresh stale dependency constraints
 
 - Bump `navigation_safety: ^0.5.0` → `^0.9.0` (was 7-day-stale).

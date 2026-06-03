@@ -3,7 +3,7 @@ description: >-
   Flutter safety-alert overlay + navigation session state machine
   with configurable severity thresholds. Display-only, never
   controlling.
-version: 0.9.1
+version: 0.9.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

@@ -2,7 +2,7 @@ name: condition_aggregator_nws
 description: >-
   NOAA NWS adapter for the condition_aggregator interface. Maps
   WinterAlert records to source-neutral Advisory events. Pure Dart.
-version: 0.0.4
+version: 0.0.5
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 
