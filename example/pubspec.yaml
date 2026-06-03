@@ -57,6 +57,10 @@ dependency_overrides:
     path: ../packages/route_condition_forecast
   adaptive_reroute:
     path: ../packages/adaptive_reroute
+  condition_aggregator:
+    path: ../packages/condition_aggregator
+  condition_aggregator_digitraffic:
+    path: ../packages/condition_aggregator_digitraffic
 
 flutter:
   uses-material-design: true
