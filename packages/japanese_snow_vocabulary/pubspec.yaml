@@ -3,7 +3,7 @@ description: >-
   Pure Dart JP-domestic snow vocabulary — six enum cases
   (アイスバーン / ブラックアイスバーン / 雪道 / 圧雪 / シャーベット
   / 凍結) with verbatim JAF citations.
-version: 0.2.1
+version: 0.2.2
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues

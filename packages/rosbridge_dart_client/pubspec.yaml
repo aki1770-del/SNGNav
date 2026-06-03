@@ -2,7 +2,7 @@ name: rosbridge_dart_client
 description: >-
   Subscribe-only Dart client for rosbridge_suite — ROS 2 topic JSON
   streams over WebSocket. Pure Dart, no transport-layer lock-in.
-version: 0.1.0
+version: 0.1.1
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 
