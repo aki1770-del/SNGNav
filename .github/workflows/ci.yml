@@ -145,3 +145,39 @@ jobs:
 
       - name: Build release
         run: flutter build linux --release -t lib/snow_scene.dart
+
+  test-target-dart:
+    name: Test (embedded target Dart 3.10.1)
+    # Process-fix C (D-VGC218-1, "freeze-neutral correctness-fix"): the embedded flutter-engine
+    # (Yocto FLUTTER_SDK_TAG 3.38.3) ships Dart 3.10.1, but the other lanes pin 3.41.4 (Dart 3.12)
+    # and silently hid every source requiring >3.10 — the skew that locked the embedded target out.
+    # This lane resolves+analyzes+tests on the EXACT target Dart so that class can never return.
+    # Resolves via the repo's local workspace (how the app is actually built); per-package
+    # PUBLISHED-catalog consumability on 3.10 is the separate per-publish gate, not this lane.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.3'   # ships Dart 3.10.1 — the embedded IVI target
+
+      - name: Assert target Dart is 3.10.x
+        run: |
+          dart --version
+          dart --version 2>&1 | grep -q '3\.10\.' || { echo "::error::expected Dart 3.10.x"; exit 1; }
+
+      - name: Install Linux deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libsqlite3-dev
+
+      - name: Resolve on target Dart
+        run: flutter pub get
+
+      - name: Analyze on target Dart
+        run: flutter analyze --no-fatal-infos
+
+      - name: App tests on target Dart
+        run: flutter test --exclude-tags=probe
