@@ -13,6 +13,7 @@
 ///   3. See the Chūbu region map (Nagoya / Toyota City area)
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:driving_weather/driving_weather.dart';
@@ -22,6 +23,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:snow_rendering/snow_rendering.dart';
 
+import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
 
 void main() {
@@ -68,14 +70,26 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   // The driving-condition picture fed to the 3D forward-view.
   //
-  // NOTE (honest bounds): this is a DEFAULT / SIMULATED assessment, NOT a live
-  // feed. This `main.dart` getting-started entrypoint has no weather provider
-  // wired (the live DigitrafficWeatherProvider lives in the `driving_weather`
-  // package and the full `snow_scene.dart` app, not this minimal demo). Wiring
-  // a live/simulated WeatherProvider stream into this assessment is the NEXT
-  // step; for now we render a representative "compacted snow, reduced
-  // visibility" picture so the forward-view shows a meaningful Snow Scene.
-  final DrivingConditionAssessment _assessment =
+  // OFFLINE-FIRST (D3 worst-case — non-negotiable): this field is initialised
+  // to a SIMULATED default so the forward-view renders IMMEDIATELY with zero
+  // network and zero GPS. The compound-failure case (Google Maps fails AND GPS
+  // fails) must still show a meaningful Snow Scene — so the default is always a
+  // valid assessment and is the permanent fallback.
+  //
+  // LIVE WIRING (additive, never load-bearing for offline): when the edge
+  // developer selects the live Digitraffic provider
+  // (`--dart-define=WEATHER_PROVIDER=digitraffic`, ONLINE only) we subscribe to
+  // its `Stream<WeatherCondition>` and update `_assessment` via setState as real
+  // winter-road severity arrives — reusing the exact provider/stream pattern the
+  // full `snow_scene.dart` app uses (ProviderConfig.createWeatherProvider →
+  // WeatherProvider.conditions). On ANY failure (no provider configured,
+  // network error, parse error, disposed) the scene KEEPS the last-good /
+  // default assessment and keeps rendering — no uncaught exception, no blank
+  // scene, no hard network dependency. The non-digitraffic providers (simulated
+  // default, open_meteo) are left untouched here: this minimal getting-started
+  // entrypoint only opts in to the live winter-severity feed, and otherwise
+  // stays purely offline-renderable.
+  DrivingConditionAssessment _assessment =
       DrivingConditionAssessment.fromCondition(
     WeatherCondition(
       precipType: PrecipitationType.snow,
@@ -88,6 +102,16 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     ),
   );
 
+  // The live weather provider (only constructed when WEATHER_PROVIDER=digitraffic).
+  // Null on every offline/default path — the scene never depends on it existing.
+  WeatherProvider? _weatherProvider;
+  StreamSubscription<WeatherCondition>? _weatherSub;
+
+  // True once a live condition has actually arrived from the feed, so the
+  // caption can tell the truth about whether the scene reflects live severity
+  // or the simulated default.
+  bool _liveConditionReceived = false;
+
   // Nagoya Station — default center for Chūbu region tiles
   static const _nagoya = LatLng(35.1709, 136.8815);
 
@@ -99,6 +123,52 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   void initState() {
     super.initState();
     _initTileProvider();
+    _initLiveWeather();
+  }
+
+  /// Subscribes the held [_assessment] to a LIVE winter-road severity feed,
+  /// but ONLY when the edge developer has opted in via
+  /// `--dart-define=WEATHER_PROVIDER=digitraffic`. On every other path
+  /// (the default offline/simulated path) this is a no-op and the scene keeps
+  /// rendering the simulated default — preserving the offline-first invariant.
+  ///
+  /// All failures are swallowed into the default-fallback: if the provider can
+  /// not be built, can not start, or the feed errors, [_assessment] simply
+  /// stays at its last-good value and the scene never blanks.
+  Future<void> _initLiveWeather() async {
+    try {
+      final config = ProviderConfig.fromEnvironment();
+
+      // Offline-first gate: only the explicit live Digitraffic selection wires
+      // a network stream. simulated/open_meteo defaults stay purely local here.
+      if (config.weatherType != WeatherProviderType.digitraffic) {
+        return;
+      }
+
+      final provider = config.createWeatherProvider();
+      _weatherProvider = provider;
+
+      _weatherSub = provider.conditions.listen(
+        (condition) {
+          // Reuse the proven mapping the rest of the app uses:
+          // WeatherCondition -> DrivingConditionAssessment.
+          if (!mounted) return;
+          setState(() {
+            _assessment =
+                DrivingConditionAssessment.fromCondition(condition);
+            _liveConditionReceived = true;
+          });
+        },
+        // Stream errors fall back to the existing assessment — no rethrow.
+        onError: (Object _) {/* keep last-good assessment */},
+        cancelOnError: false,
+      );
+
+      await provider.startMonitoring();
+    } catch (_) {
+      // Any failure constructing/starting the live feed -> stay on the default
+      // simulated assessment. The offline scene is never compromised.
+    }
   }
 
   Future<void> _initTileProvider() async {
@@ -138,6 +208,8 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   @override
   void dispose() {
+    _weatherSub?.cancel();
+    _weatherProvider?.dispose();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -268,10 +340,17 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// Honest bounds (see [SnowScene3DView] doc-comment): this is a CPU-projected
   /// still-frame pixel \u2014 no GPU/PBR/lighting; the fog is a linear gradient and
   /// precipitation a deterministic glance-cue sample, not a physics sim. It is
-  /// fed by a DEFAULT/SIMULATED [DrivingConditionAssessment] (see [_assessment])
-  /// \u2014 live-data wiring is the next step. The advisory chip's text legibility
-  /// at small sizes is a known gap.
+  /// fed by [_assessment], which is a SIMULATED default (rendered immediately,
+  /// offline) and updates to LIVE Digitraffic winter-road severity only when the
+  /// edge developer opts in with `--dart-define=WEATHER_PROVIDER=digitraffic`
+  /// AND the feed is reachable; on any failure it stays on the simulated
+  /// default. The advisory chip's text legibility at small sizes is a known gap.
   Widget _buildForwardView() {
+    final caption = _liveConditionReceived
+        ? 'Forward-view \u2014 CPU-projected still frame, '
+            'live Digitraffic winter-road severity'
+        : 'Forward-view \u2014 CPU-projected still frame, simulated default '
+            '(live Digitraffic severity when WEATHER_PROVIDER=digitraffic and online)';
     return Stack(
       children: [
         SnowScene3DView(assessment: _assessment),
@@ -282,10 +361,9 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           child: Container(
             color: Colors.black87,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: const Text(
-              'Forward-view \u2014 CPU-projected still frame, simulated condition '
-              '(live-data wiring is the next step)',
-              style: TextStyle(
+            child: Text(
+              caption,
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 12,
                 fontFamily: 'monospace',
