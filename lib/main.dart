@@ -19,10 +19,12 @@ import 'dart:io';
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:kalman_dr/kalman_dr.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:snow_rendering/snow_rendering.dart';
 
+import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
 
@@ -111,6 +113,55 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // caption can tell the truth about whether the scene reflects live severity
   // or the simulated default.
   bool _liveConditionReceived = false;
+
+  // HONEST GPS-LOSS DEGRADATION (D3 worst-case — GPS fails).
+  //
+  // The 3D forward-view is driven by weather alone; on its own it would keep
+  // painting a confident, crisp road even when GPS is lost and the real
+  // position is drifting — the dishonest failure D4 forbids. The fix is to feed
+  // SnowScene3DView a LocationState so it degrades honestly (uncertainty fog +
+  // "GPS lost" banner; "POSITION UNAVAILABLE" at the 500 m DR safety cap).
+  //
+  // A Linux desktop host has no real GPS provider, so this minimal
+  // getting-started entrypoint lets the edge developer SEE the degradation by
+  // cycling a SIMULATED location quality from the AppBar (the GPS icon). A
+  // production app wires a real LocationBloc + DeadReckoningProvider here
+  // instead — the SnowScene3DView contract is identical.
+  int _gpsSimIndex = 0;
+  late final List<LocationState> _gpsSimStates = [
+    // 0: healthy navigation-grade fix (±8 m) → confident scene, no overlay.
+    LocationState(
+      quality: LocationQuality.fix,
+      position: GeoPosition(
+        latitude: 35.17,
+        longitude: 136.88,
+        accuracy: 8,
+        speed: 14,
+        heading: 90,
+        timestamp: DateTime(2026, 1, 1, 7, 15),
+      ),
+    ),
+    // 1: GPS lost → dead reckoning, ±220 m uncertainty → fog + "GPS lost" banner.
+    LocationState(
+      quality: LocationQuality.degraded,
+      isDeadReckoning: true,
+      position: GeoPosition(
+        latitude: 35.17,
+        longitude: 136.88,
+        accuracy: 220,
+        speed: 14,
+        heading: 90,
+        timestamp: DateTime(2026, 1, 1, 7, 15),
+      ),
+    ),
+    // 2: DR exceeded the 500 m safety cap → honesty floor: position unavailable.
+    const LocationState(
+      quality: LocationQuality.error,
+      errorMessage: 'Dead reckoning exceeded 500 m safety cap',
+    ),
+  ];
+
+  LocationState get _location => _gpsSimStates[_gpsSimIndex];
 
   // Nagoya Station — default center for Chūbu region tiles
   static const _nagoya = LatLng(35.1709, 136.8815);
@@ -255,6 +306,20 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
               ),
             ),
           ),
+          // Honest GPS-loss demo: cycle the simulated location quality the 3D
+          // forward-view is fed (fix → dead-reckoning → position-unavailable),
+          // so the honest degradation is actually visible on this host.
+          IconButton(
+            tooltip: 'Simulate GPS quality (fix → estimated → lost)',
+            icon: Icon(switch (_location.quality) {
+              LocationQuality.fix => Icons.gps_fixed,
+              LocationQuality.error => Icons.gps_off,
+              _ => Icons.gps_not_fixed,
+            }),
+            onPressed: () => setState(() {
+              _gpsSimIndex = (_gpsSimIndex + 1) % _gpsSimStates.length;
+            }),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
@@ -353,7 +418,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             '(live Digitraffic severity when WEATHER_PROVIDER=digitraffic and online)';
     return Stack(
       children: [
-        SnowScene3DView(assessment: _assessment),
+        SnowScene3DView(assessment: _assessment, location: _location),
         Positioned(
           bottom: 0,
           left: 0,

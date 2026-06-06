@@ -50,6 +50,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 
+import '../bloc/location_state.dart';
+
 /// A glanceable perspective road-ahead scene driven by `snow_rendering` data.
 ///
 /// Pass a [DrivingConditionAssessment] (build one with
@@ -62,6 +64,7 @@ class SnowScene3DView extends StatelessWidget {
     super.key,
     required this.assessment,
     this.showAdvisory = true,
+    this.location,
   });
 
   /// The driving condition picture to render. The scene reads
@@ -72,13 +75,216 @@ class SnowScene3DView extends StatelessWidget {
   /// Whether to draw the glanceable advisory chip (top-left).
   final bool showAdvisory;
 
+  /// Optional honest-uncertainty signal from the location pipeline
+  /// ([LocationBloc] / `kalman_dr` dead reckoning).
+  ///
+  /// The scene is driven by weather alone — it has no idea where the driver
+  /// actually is. Left unfed, it would keep painting a confident, crisp road
+  /// even when GPS is lost and the real position is drifting: the dishonest
+  /// failure D4 (and aviation RNP) forbids. When a [location] is supplied this
+  /// view DEGRADES HONESTLY:
+  ///
+  ///  * `null` or navigation-grade [LocationQuality.fix] → no overlay; the
+  ///    scene renders at full confidence.
+  ///  * dead reckoning / [LocationQuality.degraded] / [LocationQuality.stale]
+  ///    → an "uncertainty fog" scrim (desaturating the scene, thickening as the
+  ///    confidence radius grows) plus a "GPS lost — position estimated ±N m"
+  ///    banner.
+  ///  * [LocationQuality.error] (provider error, or the `kalman_dr` 500 m DR
+  ///    safety cap exceeded) → an explicit "POSITION UNAVAILABLE" overlay; the
+  ///    confident road is hidden rather than shown as trustworthy.
+  ///
+  /// The view reads only [LocationState.quality], [LocationState.isDeadReckoning],
+  /// [LocationState.confidenceRadius] and [LocationState.errorMessage].
+  final LocationState? location;
+
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
+    final scene = RepaintBoundary(
       child: CustomPaint(
         painter: _RoadAheadPainter(assessment: assessment, showAdvisory: showAdvisory),
         // Expand to fill whatever box the parent gives us.
         child: const SizedBox.expand(),
+      ),
+    );
+
+    final loc = location;
+    // A confident fix (or no location signal at all) → confident scene.
+    if (loc == null ||
+        (loc.quality == LocationQuality.fix && !loc.isDeadReckoning)) {
+      return scene;
+    }
+
+    // Otherwise overlay the honest-degradation layer keyed off the location
+    // quality: uncertainty fog + banner, or the position-unavailable floor.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        scene,
+        _UncertaintyOverlay(location: loc),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Honest-degradation overlay
+// ---------------------------------------------------------------------------
+
+/// Paints the honest GPS-degradation layer over the scene from a
+/// [LocationState]. See [SnowScene3DView.location] for the contract.
+class _UncertaintyOverlay extends StatelessWidget {
+  const _UncertaintyOverlay({required this.location});
+
+  final LocationState location;
+
+  /// Accuracy (m) at/below which a fix is navigation-grade — mirrors
+  /// `GeoPosition.isNavigationGrade` (50 m). Kept as a local const so this view
+  /// carries no hard dependency on the kalman_dr internals.
+  static const double _navGradeMeters = 50.0;
+
+  /// Accuracy (m) at which dead reckoning hits its safety cap and stops —
+  /// mirrors `DeadReckoningState.maxAccuracy` (500 m).
+  static const double _maxAccuracyMeters = 500.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // --- Honesty floor: position unavailable -------------------------------
+    if (location.quality == LocationQuality.error) {
+      return _PositionUnavailable(message: location.errorMessage);
+    }
+
+    // --- Degraded / dead-reckoning: scale uncertainty by the confidence
+    //     radius so the scene visibly loses confidence as accuracy grows. -----
+    final accuracy = location.confidenceRadius; // metres; 0 if no position
+    final u = ((accuracy - _navGradeMeters) /
+            (_maxAccuracyMeters - _navGradeMeters))
+        .clamp(0.0, 1.0);
+    final scrimOpacity = _lerp(0.14, 0.62, u);
+
+    final String banner;
+    if (location.isDeadReckoning) {
+      banner = 'GPS lost — position estimated';
+    } else if (location.quality == LocationQuality.stale) {
+      banner = 'GPS stale — last known position';
+    } else {
+      banner = 'GPS degraded — position approximate';
+    }
+    final accuracyLabel =
+        accuracy > 0 ? '  ±${accuracy.toStringAsFixed(0)} m' : '';
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Uncertainty fog: a desaturating white scrim that thickens as the
+        // confidence radius grows — the scene literally loses confidence.
+        IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9EEF2).withValues(alpha: scrimOpacity),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _DegradeBanner(text: '$banner$accuracyLabel'),
+        ),
+      ],
+    );
+  }
+
+  static double _lerp(double a, double b, double t) => a + (b - a) * t;
+}
+
+/// The amber caution banner shown while the position is estimated.
+class _DegradeBanner extends StatelessWidget {
+  const _DegradeBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        width: double.infinity,
+        color: const Color(0xFFB26A00).withValues(alpha: 0.92), // amber caution
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.gps_off, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The honesty floor — shown when the position is unavailable
+/// ([LocationQuality.error] / DR 500 m safety cap exceeded). The confident road
+/// is hidden under a heavy scrim so it cannot be mistaken for trustworthy.
+class _PositionUnavailable extends StatelessWidget {
+  const _PositionUnavailable({this.message});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.74),
+              ),
+            ),
+          ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_disabled,
+                      color: Colors.white, size: 48),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'POSITION UNAVAILABLE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    message ??
+                        'Location uncertainty exceeds the 500 m safety cap',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
