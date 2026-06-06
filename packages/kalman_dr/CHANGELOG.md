@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+
+- Docs: correct the dead-reckoning description — the package does constant-velocity extrapolation from the last GPS fix, NOT device-sensor/IMU fusion. No code change.
+
 ## 0.4.1
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

@@ -8,7 +8,9 @@
 
 Use it alongside [geolocator](https://pub.dev/packages/geolocator) — when GPS
 fails in tunnels, urban canyons, or parking garages, kalman_dr maintains your
-position estimate using device sensors until GPS returns.
+position estimate by extrapolating from your last known speed and heading
+(constant-velocity dead reckoning), with honestly-growing uncertainty until
+GPS returns.
 
 4D Extended Kalman Filter with covariance-driven accuracy reporting.
 Pure Dart, no native dependencies.
