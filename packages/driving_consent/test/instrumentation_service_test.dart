@@ -79,9 +79,14 @@ void main() {
           Jurisdiction.gdpr,
         );
 
-        final t0 = DateTime(2026, 5, 5, 9);
-        final t1 = DateTime(2026, 5, 5, 10);
-        final t2 = DateTime(2026, 5, 5, 11);
+        // Use now-relative anchors so events always stay inside the 30-day
+        // retention window (recordEvent prunes anything older than
+        // now - retention). Hardcoded calendar dates age past the horizon and
+        // get pruned on record, making the test fail as the calendar advances.
+        final base = DateTime.now().subtract(const Duration(hours: 3));
+        final t0 = base;
+        final t1 = base.add(const Duration(hours: 1));
+        final t2 = base.add(const Duration(hours: 2));
 
         for (final t in [t0, t1, t2]) {
           await instr.recordEvent(
@@ -92,8 +97,8 @@ void main() {
 
         final inside = await instr.readEvents(
           purpose: ConsentPurpose.alertExperienceInstrumentation,
-          since: DateTime(2026, 5, 5, 9, 30),
-          until: DateTime(2026, 5, 5, 10, 30),
+          since: base.add(const Duration(minutes: 30)),
+          until: base.add(const Duration(hours: 1, minutes: 30)),
         );
         expect(inside, hasLength(1));
         expect(inside.first.timestamp, t1);
@@ -106,9 +111,13 @@ void main() {
         Jurisdiction.gdpr,
       );
 
-      final t0 = DateTime(2026, 5, 5, 9);
-      final t1 = DateTime(2026, 5, 5, 10);
-      final t2 = DateTime(2026, 5, 5, 11);
+      // Use now-relative anchors so events always stay inside the 30-day
+      // retention window (recordEvent prunes anything older than
+      // now - retention). Hardcoded calendar dates age past the horizon.
+      final base = DateTime.now().subtract(const Duration(hours: 3));
+      final t0 = base;
+      final t1 = base.add(const Duration(hours: 1));
+      final t2 = base.add(const Duration(hours: 2));
 
       // Record in non-chronological order.
       for (final t in [t2, t0, t1]) {
