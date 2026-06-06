@@ -15,7 +15,7 @@ packages:
       path: "packages/adaptive_reroute"
       relative: true
     source: path
-    version: "0.1.1"
+    version: "0.1.2"
   analyzer:
     dependency: transitive
     description:
@@ -110,7 +110,7 @@ packages:
       path: "packages/condition_aggregator"
       relative: true
     source: path
-    version: "0.0.4"
+    version: "0.0.5"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
@@ -180,21 +180,29 @@ packages:
       path: "packages/driving_conditions"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.5.2"
   driving_consent:
     dependency: "direct main"
     description:
       path: "packages/driving_consent"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.4.3"
   driving_weather:
     dependency: "direct main"
     description:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.4.1"
+  dylib:
+    dependency: transitive
+    description:
+      name: dylib
+      sha256: bf609b3eb6492a3309b3d1dbe8f83a4031de5535dd7686be33487051cc760bb0
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.3"
   equatable:
     dependency: "direct main"
     description:
@@ -241,7 +249,7 @@ packages:
       path: "packages/fleet_hazard"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.4.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -255,6 +263,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.1.1"
+  flutter_libserialport:
+    dependency: "direct main"
+    description:
+      name: flutter_libserialport
+      sha256: f24b5fe6f1821d1c1b3bf2be737ca53f6b0ae78657032a790aa00abb810c8759
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -346,7 +362,7 @@ packages:
       path: "packages/kalman_dr"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.4.2"
   latlong2:
     dependency: "direct main"
     description:
@@ -379,6 +395,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  libserialport:
+    dependency: transitive
+    description:
+      name: libserialport
+      sha256: "392e1592def65282429832ec66fa25e9e163d3b37716b97691482e2406720727"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0+1"
   lints:
     dependency: transitive
     description:
@@ -417,7 +441,7 @@ packages:
       path: "packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.1"
+    version: "0.4.2"
   matcher:
     dependency: transitive
     description:
@@ -488,14 +512,14 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.9.1"
+    version: "0.9.2"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.10.2"
+    version: "0.10.3"
   nested:
     dependency: transitive
     description:
@@ -526,7 +550,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.5.2"
   package_config:
     dependency: transitive
     description:
@@ -653,21 +677,21 @@ packages:
       path: "packages/route_condition_forecast"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.3"
   routing_bloc:
     dependency: "direct main"
     description:
       path: "packages/routing_bloc"
       relative: true
     source: path
-    version: "0.4.1"
+    version: "0.4.2"
   routing_engine:
     dependency: "direct main"
     description:
       path: "packages/routing_engine"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.4.1"
   shelf:
     dependency: transitive
     description:
@@ -711,7 +735,7 @@ packages:
       path: "packages/snow_rendering"
       relative: true
     source: path
-    version: "0.2.2"
+    version: "0.2.3"
   source_map_stack_trace:
     dependency: transitive
     description:

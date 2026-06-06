@@ -24,9 +24,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:snow_rendering/snow_rendering.dart';
 
+import 'bloc/location_bloc.dart';
+import 'bloc/location_event.dart';
 import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
+import 'providers/serial_nmea_location_provider.dart';
 
 void main() {
   runApp(const SNGNavGettingStarted());
@@ -122,46 +125,48 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // SnowScene3DView a LocationState so it degrades honestly (uncertainty fog +
   // "GPS lost" banner; "POSITION UNAVAILABLE" at the 500 m DR safety cap).
   //
-  // A Linux desktop host has no real GPS provider, so this minimal
-  // getting-started entrypoint lets the edge developer SEE the degradation by
-  // cycling a SIMULATED location quality from the AppBar (the GPS icon). A
-  // production app wires a real LocationBloc + DeadReckoningProvider here
-  // instead — the SnowScene3DView contract is identical.
-  int _gpsSimIndex = 0;
-  late final List<LocationState> _gpsSimStates = [
-    // 0: healthy navigation-grade fix (±8 m) → confident scene, no overlay.
-    LocationState(
-      quality: LocationQuality.fix,
-      position: GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: 8,
-        speed: 14,
-        heading: 90,
-        timestamp: DateTime(2026, 1, 1, 7, 15),
-      ),
-    ),
-    // 1: GPS lost → dead reckoning, ±220 m uncertainty → fog + "GPS lost" banner.
-    LocationState(
-      quality: LocationQuality.degraded,
-      isDeadReckoning: true,
-      position: GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: 220,
-        speed: 14,
-        heading: 90,
-        timestamp: DateTime(2026, 1, 1, 7, 15),
-      ),
-    ),
-    // 2: DR exceeded the 500 m safety cap → honesty floor: position unavailable.
-    const LocationState(
-      quality: LocationQuality.error,
-      errorMessage: 'Dead reckoning exceeded 500 m safety cap',
-    ),
-  ];
+  // REAL FEED: a serial GPS receiver speaks NMEA. We open the named port from
+  // `--dart-define=GPS_PORT=/dev/ttyUSB0`, parse RMC/GGA into GeoPosition
+  // (SerialNmeaLocationProvider), wrap it in a Kalman DeadReckoningProvider for
+  // tunnel/GPS-loss fallback, and drive a LocationBloc whose state we subscribe
+  // to here. The SnowScene3DView contract is identical to the simulated case —
+  // the difference is the LocationState is now real.
+  //
+  // HONEST FALLBACK (no fake fix): if GPS_PORT is unset or the port can't be
+  // opened (the usual desktop-host case — no GPS attached), we DO NOT start the
+  // bloc and DO NOT invent a fix. `_location` stays null, which the scene reads
+  // as the "position unavailable" honest floor — never a confident road.
+  static const String _gpsPort = String.fromEnvironment('GPS_PORT');
 
-  LocationState get _location => _gpsSimStates[_gpsSimIndex];
+  LocationBloc? _locationBloc;
+  StreamSubscription<LocationState>? _locationSub;
+  LocationState? _locationState;
+
+  /// The live location state fed to the 3D scene — `null` until a real fix
+  /// arrives (honest floor), never a simulated fix.
+  LocationState? get _location => _locationState;
+
+  /// Starts the real serial-NMEA → kalman_dr → LocationBloc feed when a
+  /// GPS_PORT is configured. No-op (honest floor) otherwise.
+  void _initLocation() {
+    if (_gpsPort.isEmpty) return; // no port → honest floor, no fake fix
+    try {
+      final bloc = LocationBloc(
+        provider: DeadReckoningProvider(
+          inner: SerialNmeaLocationProvider(portName: _gpsPort),
+          mode: DeadReckoningMode.kalman,
+        ),
+      )..add(const LocationStartRequested());
+      _locationBloc = bloc;
+      _locationSub = bloc.stream.listen((state) {
+        if (!mounted) return;
+        setState(() => _locationState = state);
+      });
+    } catch (_) {
+      // Could not start the live feed → stay on the honest floor.
+      _locationState = null;
+    }
+  }
 
   // Nagoya Station — default center for Chūbu region tiles
   static const _nagoya = LatLng(35.1709, 136.8815);
@@ -175,6 +180,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     super.initState();
     _initTileProvider();
     _initLiveWeather();
+    _initLocation();
   }
 
   /// Subscribes the held [_assessment] to a LIVE winter-road severity feed,
@@ -261,6 +267,8 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   void dispose() {
     _weatherSub?.cancel();
     _weatherProvider?.dispose();
+    _locationSub?.cancel();
+    _locationBloc?.close();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -306,19 +314,27 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
               ),
             ),
           ),
-          // Honest GPS-loss demo: cycle the simulated location quality the 3D
-          // forward-view is fed (fix → dead-reckoning → position-unavailable),
-          // so the honest degradation is actually visible on this host.
-          IconButton(
-            tooltip: 'Simulate GPS quality (fix → estimated → lost)',
-            icon: Icon(switch (_location.quality) {
-              LocationQuality.fix => Icons.gps_fixed,
-              LocationQuality.error => Icons.gps_off,
-              _ => Icons.gps_not_fixed,
-            }),
-            onPressed: () => setState(() {
-              _gpsSimIndex = (_gpsSimIndex + 1) % _gpsSimStates.length;
-            }),
+          // Read-only GPS status from the REAL location feed. With no GPS_PORT
+          // configured (or no fix yet) `_location` is null → "no GPS" icon and
+          // the scene shows the honest "position unavailable" floor. As the
+          // serial GPS delivers fixes this reflects fix / estimated / lost.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Tooltip(
+              message: switch (_location?.quality) {
+                null => 'No GPS — set --dart-define=GPS_PORT=/dev/ttyUSB0',
+                LocationQuality.fix => 'GPS fix',
+                LocationQuality.error => 'GPS lost — position unavailable',
+                final q => 'GPS ${q.name}',
+              },
+              child: Icon(switch (_location?.quality) {
+                LocationQuality.fix =>
+                  _location!.isDeadReckoning ? Icons.gps_not_fixed : Icons.gps_fixed,
+                LocationQuality.error => Icons.gps_off,
+                null => Icons.gps_off,
+                _ => Icons.gps_not_fixed,
+              }),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
