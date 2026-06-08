@@ -20,6 +20,7 @@ import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kalman_dr/kalman_dr.dart';
+import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:snow_rendering/snow_rendering.dart';
@@ -29,6 +30,7 @@ import 'bloc/location_event.dart';
 import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
+import 'providers/kuksa_condition_provider.dart';
 import 'providers/serial_nmea_location_provider.dart';
 
 void main() {
@@ -117,6 +119,38 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // or the simulated default.
   bool _liveConditionReceived = false;
 
+  // LIVE IN-VEHICLE CONDITION SOURCE (D3 worst-case — network AND GPS gone).
+  //
+  // The compound-failure path: when Google Maps fails AND GPS fails, the
+  // vehicle's own ECUs are still publishing road-friction (ESC), TCS/ABS
+  // engagement, wiper/rain intensity and ambient temperature onto the local
+  // KUKSA databroker bus. We consume those VSS signals over gRPC via our
+  // published `kuksa_dart_sdk` client and fuse them DETERMINISTICALLY into the
+  // exact same DrivingConditionAssessment the Digitraffic path produces — no
+  // network, no GPS, no cloud weather.
+  //
+  // SOURCE SELECTION (additive — never replaces the offline default or the
+  // Digitraffic opt-in): this live source is wired ONLY when the edge developer
+  // opts in with `--dart-define=KUKSA_HOST=<broker host>` (e.g. localhost on an
+  // IVI headunit). On every other path it is a no-op and the scene keeps its
+  // simulated/Digitraffic behaviour unchanged.
+  //
+  // HONEST FALLBACK (no fabrication): if the broker is unreachable, or the
+  // stream errors/ends, we keep the last-good / default assessment and stop
+  // claiming "live" — we never invent an in-vehicle condition. DISPLAY-ONLY:
+  // signals are read, never written/commanded.
+  static const String _kuksaHost = String.fromEnvironment('KUKSA_HOST');
+  static const int _kuksaPort =
+      int.fromEnvironment('KUKSA_PORT', defaultValue: 55555);
+
+  KuksaClient? _kuksaClient;
+  KuksaConditionProvider? _kuksaProvider;
+  StreamSubscription<KuksaConditionUpdate>? _kuksaSub;
+
+  // True once a live in-vehicle (KUKSA) condition has actually arrived, so the
+  // caption tells the truth about the active source.
+  bool _liveVehicleReceived = false;
+
   // HONEST GPS-LOSS DEGRADATION (D3 worst-case — GPS fails).
   //
   // The 3D forward-view is driven by weather alone; on its own it would keep
@@ -180,7 +214,48 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     super.initState();
     _initTileProvider();
     _initLiveWeather();
+    _initKuksaConditions();
     _initLocation();
+  }
+
+  /// Subscribes the held [_assessment] to the LIVE in-vehicle KUKSA condition
+  /// feed, but ONLY when the edge developer has opted in via
+  /// `--dart-define=KUKSA_HOST=<host>`. On every other path this is a no-op and
+  /// the scene keeps its simulated/Digitraffic behaviour (offline-first
+  /// preserved).
+  ///
+  /// All failures degrade honestly: if the broker can not be reached, the
+  /// stream errors, or no live signals arrive, [_assessment] stays at its
+  /// last-good value, [_liveVehicleReceived] stays/returns false, and no
+  /// in-vehicle condition is ever fabricated.
+  Future<void> _initKuksaConditions() async {
+    if (_kuksaHost.isEmpty) return; // not selected → offline default, no broker
+    try {
+      final client = KuksaClient(host: _kuksaHost, port: _kuksaPort);
+      _kuksaClient = client;
+      final provider = await KuksaConditionProvider.connect(client);
+      _kuksaProvider = provider;
+      _kuksaSub = provider.conditions.listen(
+        (update) {
+          if (!mounted) return;
+          if (!update.isAvailable) {
+            // Honest "no live vehicle signals": keep last-good/default, never
+            // fabricate — just stop claiming the scene is live.
+            setState(() => _liveVehicleReceived = false);
+            return;
+          }
+          setState(() {
+            _assessment = update.assessment!;
+            _liveVehicleReceived = true;
+          });
+        },
+        onError: (Object _) {/* keep last-good assessment */},
+        cancelOnError: false,
+      );
+    } catch (_) {
+      // Broker unreachable (the usual no-vehicle host case) → honest floor:
+      // keep the offline default assessment, never invent a vehicle condition.
+    }
   }
 
   /// Subscribes the held [_assessment] to a LIVE winter-road severity feed,
@@ -267,6 +342,9 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   void dispose() {
     _weatherSub?.cancel();
     _weatherProvider?.dispose();
+    _kuksaSub?.cancel();
+    _kuksaProvider?.dispose();
+    _kuksaClient?.dispose();
     _locationSub?.cancel();
     _locationBloc?.close();
     _offlineTileManager?.dispose();
@@ -427,11 +505,18 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// AND the feed is reachable; on any failure it stays on the simulated
   /// default. The advisory chip's text legibility at small sizes is a known gap.
   Widget _buildForwardView() {
-    final caption = _liveConditionReceived
-        ? 'Forward-view \u2014 CPU-projected still frame, '
-            'live Digitraffic winter-road severity'
-        : 'Forward-view \u2014 CPU-projected still frame, simulated default '
-            '(live Digitraffic severity when WEATHER_PROVIDER=digitraffic and online)';
+    final String caption;
+    if (_liveVehicleReceived) {
+      caption = 'Forward-view \u2014 CPU-projected still frame, '
+          'LIVE in-vehicle VSS signals (KUKSA databroker, offline-capable)';
+    } else if (_liveConditionReceived) {
+      caption = 'Forward-view \u2014 CPU-projected still frame, '
+          'live Digitraffic winter-road severity';
+    } else {
+      caption = 'Forward-view \u2014 CPU-projected still frame, simulated default '
+          '(live Digitraffic when WEATHER_PROVIDER=digitraffic; '
+          'live in-vehicle when KUKSA_HOST set)';
+    }
     return Stack(
       children: [
         SnowScene3DView(assessment: _assessment, location: _location),
