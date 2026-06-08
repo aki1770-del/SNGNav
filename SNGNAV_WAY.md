@@ -2,303 +2,144 @@
 
 **What we build. Why it qualifies. Where it goes next.**
 
+*Version 2 — 2026-06-08. Re-aligned to PHIL-001 v1.5 (the June-3 destination re-anchoring), the Board's landing pivot (BOD-8 / BOD-10), and the constitution's compound-failure anchor. Version 1 (Sprint 91) is superseded; a v1 → v2 changelog is at the end of this document.*
+
+**An honesty note up front.** This document describes what SNGNav *is* and what it *honestly is not yet*. Where a capability is an aspiration rather than a shipped fact, it says so. "We will not optimize for metrics" and "evidence over aspiration" are not slogans here — they are the reason several v1 claims were removed.
+
 ---
 
 ## §1 What is SNGNav?
 
-SNGNav is a **driver-assisting navigation architecture** and working reference
-product that combines real-world fleet data with simulation to generate
-high-density driver safety scores — and shows edge developers how to build
-low-latency, map-aware, weather-relevant, consent-respecting navigation
-assistance on-device.
+SNGNav is a **driver-assisting navigation architecture** and a working reference product. It shows edge developers how to build low-latency, map-aware, weather-relevant, consent-respecting navigation assistance **on the device** — the kind that keeps helping when the cloud, the network, and even GPS have gone away.
 
-Real-world data becomes a game-changer only when combined with simulation
-data. A thousand simulated variants of a mountain-pass incident — varying
-speed, tyre condition, road surface, visibility — identify which safety
-metrics actually predict danger. This is why Fluorite's game engine heritage
-is our strength: we harness simulation power to make driving safer.
+**It is about helping every driver's daily life** — the snow road, the rural route, the moment the forecast was wrong. **It is NOT about harvesting data from every driver.** Data is collected with consent or not at all.
 
-**It is about safety scores that help every driver's daily life. It is NOT
-about harvesting real crash data from every driver.**
+**Who this is for**: edge developers — the engineers who build real-time experiences on embedded hardware at the boundary between the vehicle and the world. They process on-device, not in the cloud. They collect data with consent, not by default. They render a glanceable scene on ARM, not on a gaming GPU.
 
-**Who this is for**: edge developers — engineers who build real-time experiences
-on embedded hardware at the boundary between the vehicle and the world. You
-process on-device, not in the cloud. You collect data with consent, not by
-default. You render at 60fps on ARM, not on a gaming GPU.
+**And we are one of them.** We build SNGNav on the same embedded-Flutter terrain our edge developers work in, and we hit the same walls they hit — the missing aarch64 build target, the Yocto recipe, the embedder, the plugin that silently fails to load on ARM. When we solve one of those walls for ourselves, we solve it for every edge developer standing at it. *(Komada, 2026-06-08: "we are edge developer too. we must serve ourselves.")* We serve edge developers; we do not serve loom builders.
 
-**Why we build this**: Sakichi Toyoda built a loom that stopped itself
-when a thread broke — the machine protected the weaver's work. We build
-navigation that protects the driver when conditions break: GPS lost in a
-tunnel, network gone on a mountain pass, snow the forecast missed. The
-architecture serves the edge developer. The edge developer serves the driver.
+**Why we build this**: Sakichi Toyoda built a loom that stopped itself when a thread broke — the machine protected the weaver's work. We build navigation that protects the driver when conditions break. The architecture serves the edge developer; the edge developer serves the driver.
+
+**The worst case is the design target.** SNGNav is not measured against a clear day. It is measured against the compound failure: **Google Maps is gone AND GPS is gone AND the driver no longer knows where she is** — at once, in unexpected snow. When every standard piece of infrastructure has failed, what we shipped must still help her. Everything below traces to that one moment.
 
 ---
 
 ## §2 The Five Principles
 
-Every feature, package, and line of code in SNGNav must satisfy these five
-principles. If it doesn't, it doesn't ship.
+Every feature, package, and line of code in SNGNav must satisfy these five. If it doesn't, it doesn't ship.
 
 ### 1. Offline-First
-
-The system works when the network fails. GPS dies in a tunnel. The routing
-server is unreachable. The weather API times out. SNGNav continues — with
-dead reckoning, local tiles, cached routes, and stale-but-present weather
-data. The driver never sees a blank screen.
-
-**What this rules out**: any feature that requires a cloud connection to
-function. If it can't degrade gracefully offline, it doesn't belong here.
+The system works when the network fails. GPS dies in a tunnel; the routing server is unreachable; the weather API times out — SNGNav continues, with dead reckoning, local tiles, cached routes, and stale-but-present conditions. The driver never sees a blank screen. *Rules out*: any feature that requires a cloud connection to function.
 
 ### 2. Consent by Default
-
-Data collection is deny-by-default, per-purpose, and revocable. The driver
-explicitly allows each category of data sharing. Fleet telemetry, location
-history, weather reports — none of these flow until the driver says yes.
-And the driver can revoke at any time.
-
-**What this rules out**: implicit data collection, opt-out consent models,
-or any feature that assumes permission rather than requesting it.
+Data collection is deny-by-default, per-purpose, and revocable. Fleet telemetry, location history, condition reports — none flow until the driver says yes, and she can revoke at any time. *Rules out*: implicit collection, opt-out models, assumed permission.
 
 ### 3. Display-Only Safety Boundary
+SNGNav is a navigation **display aid**, classified ASIL-QM. It does not control the vehicle. Dead-reckoning positions are estimates — always shown with an accuracy indicator, never as false certainty. Advisories are never suppressed, hidden, or overridden by application logic. *Rules out*: steering, braking, ADAS commands. **And it rules out the dishonest scene**: when position is uncertain, the display degrades honestly (it says so) rather than painting confidence it does not have.
 
-SNGNav is a navigation **display aid** classified ASIL-QM. It does not
-control the vehicle. Dead reckoning positions are estimates — always shown
-with an accuracy indicator. Safety alerts are advisory — never suppressed,
-never hidden, never overridden by application logic.
-
-**What this rules out**: steering, braking, ADAS integration, or any feature
-that sends commands to vehicle systems.
-
-### 4. Extractable Package Boundaries
-
-Every domain boundary in SNGNav must be extractable into a reusable package.
-Pure Dart packages stay pure Dart. Flutter-track packages are allowed when the
-value is fundamentally a BLoC or widget surface, but their reusable models
-must remain available through a pure Dart `_core` library with no Flutter
-imports. No platform-specific code belongs in the data layer.
-
-This means an edge developer can use `kalman_dr` in a Raspberry Pi CLI tool,
-`driving_weather` in a server-side fleet manager, `navigation_safety_core`
-or `map_viewport_bloc_core` without pulling in Flutter, or `offline_tiles_core`
-for tile source models in a non-Flutter tile server — while still allowing a
-Flutter app to reuse the full navigation safety, viewport BLoC, and offline
-tile management packages.
-
-**What this rules out**: core models that depend on Flutter widgets,
-platform channels, or app-specific state management, and any Flutter-track
-package that fails to preserve a pure Dart core where the domain needs one.
+### 4. Clean, Extractable Boundaries — and the catalog is frozen
+Every domain boundary must be cleanly extractable; pure-Dart cores stay Flutter-free so an edge developer can reuse a model in a CLI, a server, or a test harness. **This architectural virtue stays.** What changed: **we no longer grow a pub.dev catalog of our own.** Publishing net-new packages became an "our own loom" anti-pattern — a catalog with zero external adoption is not service (see §4, §5). Clean boundaries: always. Net-new packages on pub.dev: frozen by Board decision. *Rules out*: core models that depend on Flutter widgets or platform channels; and net-new catalog packages absent a real edge-developer pull.
 
 ### 5. Evidence over Aspiration
-
-We ship only what the test suite proves. Test counts evolve as the repo and
-package portfolio evolve, so sprint-close validation is the authoritative
-source. Every claim in every README is backed by a passing test, a benchmark
-result, or a verified build. The chain is:
-**Evidence → Contribution → Architecture → Edge Developer → Driver**.
-
-**What this rules out**: speculative features, unverified performance claims,
-or documentation that describes intent rather than reality.
+We ship only what is verified — a passing test, a measured benchmark, a build whose real output we read. Every claim traces: **Evidence → Contribution → Architecture → Edge Developer → Driver.** This principle has teeth: a claim authored *ahead of* the evidence it depends on is a stop-the-line event, not a rounding error. *Rules out*: speculative features, unverified performance claims, documentation that describes intent as if it were reality. **This is the principle that rewrote this document** — several v1 claims were aspirations wearing the present tense, and they are corrected below.
 
 ---
 
 ## §3 What's In Scope
 
-SNGNav covers five domains, each protected by a guardian subsystem:
-
 | Domain | Guardian | What it does |
 |--------|----------|-------------|
 | **Position** | Dead Reckoning (Kalman filter) | Predicts location when GPS is lost |
 | **Routing** | Local Routing (OSRM / Valhalla) | Calculates routes without cloud access |
-| **Weather** | Weather Awareness | Monitors driving conditions (snow, ice, visibility) |
-| **Consent** | Consent Lifecycle | Manages per-purpose, revocable data permissions |
+| **Conditions** | Conditions Awareness | Monitors snow, ice, visibility, road surface |
+| **Consent** | Consent Lifecycle | Per-purpose, revocable data permissions |
 | **Fleet** | Hazard Aggregation | Clusters fleet reports into hazard zones |
-| **Simulation** | Safety Score Engine | Combines real-world data with simulated scenarios to generate high-density safety scores |
 
 ### Out of Scope
+- Vehicle control (steering / braking / ADAS) — ASIL-QM, display only.
+- Cloud-required features — violates Offline-First.
+- Non-consensual data collection — violates Consent by Default.
+- **Net-new pub.dev catalog packages** — frozen (see §4 / §5); the energy goes to existing looms.
 
-| Category | Reason |
-|----------|--------|
-| Vehicle control (steering, braking, ADAS) | ASIL-QM boundary — display only |
-| Cloud-required features | Violates Principle 1 (Offline-First) |
-| Proprietary SDK dependencies in core package logic | Violates Principle 4 (Extractable Package Boundaries) |
-| Non-consensual data collection | Violates Principle 2 (Consent by Default) |
+### The 3D scene — the honest position (per PHIL-001 v1.5)
+SNGNav's foundation is 2D. The aspiration is a **glanceable 3D scene** — road state, weather, and position rendered as something the driver understands in a glance, on her real ARM IVI target, offline. **That invariant is non-negotiable.**
 
-### The 3D and Simulation Frontier
+**What changed since v1 (the destination re-anchoring, 2026-06-03, Komada-ratified):** v1 bound this scene to **Fluorite / Filament PBR**, Toyota's Flutter-integrated game engine. We do not own Fluorite and its source is not open; native GPU-3D on Flutter-Linux is also blocked upstream (flutter/flutter #183495). So:
 
-SNGNav's foundation is 2D. The aspiration is a 3D scene layer and simulation
-engine — weather conditions, road state, and vehicle telemetry rendered as a
-real-time 3D experience, driven by thousands of simulated driving scenarios
-that strengthen safety score density.
+- **Fluorite / Filament PBR is retired as a *current capability*** and kept as a named ***contribute-when-open* aspiration** — a bet for the day its source opens, never a present-tense claim.
+- We render the glanceable scene at the **honest fidelity we can ship today — CPU/Skia** — and upgrade through a path we control (**flutter_scene / Impeller**), on her real ARM target, offline.
+- The earlier **"60fps on ARM"** language was an aspiration; it is not a present capability and no longer appears as one.
 
-This depends on [Fluorite](https://fluorite.game), Toyota's Flutter-integrated
-game engine. Fluorite capabilities — tyre pressure physics, road surface
-simulation, real-time 3D rendering — are not decorative. They are the mechanism
-by which simulation produces richer safety metrics than real incident data alone.
-
-Three integration points are explicitly in scope:
-
-- **filament_scene contributions**: dormancy is not death. When filament_scene
-  opens for contributions, SNGNav's safety visualization use case provides
-  concrete upstream value for edge developers. We cannot predict when it
-  launches — we prepare so we are ready.
-- **Embedded / ARM deployment**: the development machine (i7-12700H, 32 GB RAM,
-  Linux) is Phase 2+ capable. Cross-compilation for RPi 5 and ARM targets is
-  the upcoming deployment frontier.
-- **3D scene layer**: when Fluorite's C++ repos become publicly available,
-  `lib/fluorite/` becomes the integration point for rendering safety scores as
-  glanceable 3D scenes.
-
-Until then, SNGNav proves the data layer, the consent model, and the provider
-architecture in 2D — so that the 3D transition is a rendering upgrade, not an
-architectural rewrite.
+**Where the product honestly is today**: a real glanceable perspective scene exists in SNGNav, driven by live road-condition severity (Digitraffic), and it has rendered on the host and **under QEMU-emulated aarch64** (first frames proven). **It has not yet rendered on a physical board.** Per PHIL-001 v1.5 the line stays stopped (**Andon held**) until one measured rung renders on her actual hardware. That rung — the scene on a real aarch64 board — is the **primary product objective** (§5).
 
 ---
 
-## §4 The Package Portfolio
+## §4 The Catalog — a means we paused, not the product
 
-Eleven extracted packages currently live in the SNGNav monorepo. Ten packages are
-already published to [pub.dev](https://pub.dev). The four Flutter-track +
-`_core` packages completed G3 publication in Sprint 51: `navigation_safety`,
-`map_viewport_bloc`, `routing_bloc`, and `offline_tiles`. `voice_guidance` is
-also published. `driving_conditions` is also published (Sprint 89, pub.dev 0.3.0). Sprint 90 promoted `SimulationResult`; Sprint 91 adds `FleetConfidenceProvider` + `FleetHazardConfidenceAdapter` — 0.5.0 G1 ready.
+The monorepo holds **29 packages** (28 publish-eligible; the bulk already on pub.dev) — dead reckoning (`kalman_dr`), routing (`routing_engine`), conditions (`driving_conditions`, `driving_weather`), consent (`driving_consent`), fleet hazard (`fleet_hazard`), the navigation-safety and viewport BLoCs, and the condition-aggregator adapter family (Digitraffic, JMA, MET Norway, NWS, …).
 
-| Package | Track | Status | What it models | Edge developer value |
-|---------|:-----:|:------:|---------------|---------------------|
-| [**kalman_dr**](https://pub.dev/packages/kalman_dr) | Pure Dart | Published | 4D Extended Kalman Filter for dead reckoning | Position continuity when GPS fails — tunnels, canyons, blizzards |
-| [**routing_engine**](https://pub.dev/packages/routing_engine) | Pure Dart | Published | Abstract routing interface + OSRM/Valhalla implementations | Swap routing backends without touching app logic |
-| [**driving_weather**](https://pub.dev/packages/driving_weather) | Pure Dart | Published | Weather conditions model (precipitation, visibility, ice risk) | No equivalent exists on pub.dev — unique positioning |
-| [**driving_consent**](https://pub.dev/packages/driving_consent) | Pure Dart | Published | Consent lifecycle (record, category, manager) | No equivalent exists on pub.dev — privacy-first architecture |
-| [**fleet_hazard**](https://pub.dev/packages/fleet_hazard) | Pure Dart | Published | Fleet reports, hazard zones, Haversine clustering | No equivalent exists on pub.dev — automotive fleet hazard API |
-| [**navigation_safety**](https://pub.dev/packages/navigation_safety) | Flutter + `_core` | Published | Navigation BLoC, SafetyOverlay, and safety score models | Reusable safety session logic for Flutter navigation apps without giving up pure Dart model reuse |
-| [**map_viewport_bloc**](https://pub.dev/packages/map_viewport_bloc) | Flutter + `_core` | Published | Map viewport BLoC, camera modes, layer visibility, and fit-to-bounds models | Reusable viewport state machine with canonical layer rules for Flutter navigation maps |
-| [**routing_bloc**](https://pub.dev/packages/routing_bloc) | Flutter + `_core` | Published | Route lifecycle BLoC, route progress UI, and maneuver icon mapping | Reusable route-guidance state machine and glanceable route UI for Flutter navigation apps |
-| [**offline_tiles**](https://pub.dev/packages/offline_tiles) | Flutter + `_core` | Published | Offline tile manager, runtime tile resolver, coverage tiers | Reusable offline tile management for any Flutter map app needing MBTiles + fallback |
-| [**voice_guidance**](https://pub.dev/packages/voice_guidance) | Flutter | Published | TTS engine abstraction, VoiceGuidanceBloc, platform-safe default engine selection | Platform-agnostic voice guidance — works on mobile, Linux (spd-say), and silently in CI |
-| [**driving_conditions**](https://pub.dev/packages/driving_conditions) | Pure Dart | Published | Road surface state, visibility degradation, precipitation config, driving condition assessment, Monte Carlo safety score simulation with `SimulationResult` + pluggable `FleetConfidenceProvider` | Pure Dart computation models for weather-based driving safety — usable in CLI, server, or test harness without Flutter |
+**The honest finding (Board, 2026-05-31 → 2026-06-08):** external adoption of this catalog is **zero** — every package that depends on one of ours is another of ours. A catalog no edge developer outside the unit pulls is not service; it is "our own loom." So the Board **froze net-new catalog production** and made the freeze the standing default (BOD-8, reaffirmed BOD-10 "convert, not lift"). The packages remain real, tested, and maintained; correctness fixes still ship. **What stops is *growing the catalog as if shipping a package were the same as serving someone.* It is not.**
 
-### Canonical Viewport Contract
+The catalog's real value now is twofold: (1) it is the **evidence** that we understand the domain — the thing that earns a hearing when we contribute upstream; and (2) its clean boundaries let pieces of it ride into the looms edge developers actually use.
 
-`map_viewport_bloc` defines the current viewport contract for Phase A:
-
-- Camera modes are `follow`, `freeLook`, and `overview`.
-- Layer Z-order is fixed: Z0 base tile, Z1 route, Z2 fleet, Z3 hazard, Z4 weather, Z5 safety.
-- Only Z1 through Z4 are user-toggleable.
-- Z0 is foundational and Z5 is safety-critical, so neither is user-toggleable.
-- `freeLook` returns to `follow` after 10 seconds idle by default.
-- Safety-critical events may force a return to `follow`.
-
-### Canonical Offline Tiles Contract
-
-`offline_tiles` defines the canonical offline tile management contract for Phase B:
-
-- Runtime resolution order: RAM cache → MBTiles → lower-zoom fallback → online → placeholder.
-- Coverage tiers: T1 corridor, T2 metro, T3 prefecture, T4 national.
-- Coverage tiers define caching policy; runtime resolution is a separate concern.
-- Archives are opened as editable to support later writes.
-- Expiry cleanup clears metadata and RAM cache; MBTiles-on-disk persistence is kept until explicit eviction.
-- Pure Dart `_core` exports tile source types, coverage tiers, and cache config.
-
-### Canonical Routing Contract
-
-`routing_bloc` defines the current route lifecycle contract for Phase B:
-
-- Lifecycle states are `idle`, `loading`, `routeActive`, and `error`.
-- Route requests and engine checks are engine-agnostic through `routing_engine`.
-- Route progress presentation is package-owned and data-driven.
-- Route UI remains glanceable: instruction first, ETA/distance second.
-
-`routing_bloc` has completed G2 app migration. `offline_tiles` has completed
-G2 app migration. All four Flutter-track + `_core` packages have reached G2.
-
-### Canonical Driving Conditions Contract
-
-`driving_conditions` defines the canonical computation model contract for Phase C:
-
-| Concept | Canonical contract |
-|---------|--------------------|  
-| Road surface states | `dry`, `wet`, `slush`, `compactedSnow`, `blackIce`, `standingWater` — each with grip factor |
-| Decision tree | `RoadSurfaceState.fromCondition(WeatherCondition)` — iceRisk, temperature, precipitation type |
-| Hysteresis filter | `HysteresisFilter<T>` — window=3, threshold=2, prevents rapid state oscillation |
-| Visibility degradation | `opacity = 1.0 - clamp(v/1000, 0.1, 1.0)`, `blurSigma = clamp((500-v)/50, 0, 10)` |
-| Precipitation config | `particleCount = (intensityFactor * 500).round()`, velocity/size/lifetime by type |
-| Safety score simulation | Monte Carlo N-run with ±10% jitter, grip 0.4 + visibility 0.4 + fleet 0.2 weighted mean |
-| SafetyScore origin | Imported from `navigation_safety_core`, not duplicated |
-| Performance gate | 1,000 Monte Carlo runs < 200ms (measured: 5ms) |
-
-### Extraction Method
-
-Every package follows the **G1 → G2 → G3** pipeline:
-- **G1**: Create package, write tests, `dart pub publish --dry-run` → 0 warnings
-- **G2**: Migrate app to use package, delete inline copies, all tests pass
-- **G3**: Publish to pub.dev
-
-See [EXTRACTING.md](EXTRACTING.md) for the full method and history.
+*(The canonical contracts — viewport Z-order and camera modes, the offline-tile resolution order, the routing lifecycle, the driving-conditions computation models — remain as specified in the package READMEs and ARCHITECTURE.md; they are unchanged by the freeze.)*
 
 ---
 
-## §5 Roadmap — Candidate Areas
+## §5 Where It Goes Next — contribute to the looms; render on her hardware
 
-These are **candidates**, not commitments. The next extraction or feature
-is selected by the project maintainer based on edge developer need and
-architectural readiness.
+v1's roadmap was "more extraction candidates." That is retired. Two directions now, both ratified.
 
-### Candidate 1: Phase C Computation Models
+### Direction 1 — Contribution-as-service to existing looms (the channel that lands)
+The Board found that the channel that actually reaches an edge developer is **contributing to the open-source looms they already use**, not publishing our own packages. This is the operating mode now, and it has begun to land:
 
-`driving_conditions` has completed Phase C — the pure Dart computation model
-extraction. Five algorithms and a Monte Carlo scaffold are packaged with 53 tests.
-This completes L1 (all five extraction clusters packaged). Next is G3 publication
-(human-controlled) or L2 Safety Score Simulation Framework advancement.
+- **flutter-geolocator #1783 — MERGED** (2026-06-08): a `Position.heading` correctness clarification, maintainer-invited and merged.
+- **VSS / COVESA #907 — MERGED**: a winter-condition signal into the vehicle-signal standard, reaching the actual demand-holders.
+- **flutter/flutter #187018** — engaged: the missing `linux_arm` target that silently disables FFI plugins on embedded ARM — the wall *we* hit on our own bring-up, which is every embedded-Flutter developer's wall.
 
-**Readiness**: Complete — G1.5 reached. All computation models extracted and
-tested. Performance gate verified (5ms for 1,000 Monte Carlo runs). Cross-package
-dependency on `navigation_safety_core` for `SafetyScore` verified clean.
+Every such engagement runs the same discipline: verify the build before contributing, cite evidence, read the live thread, no fabricated claims, defer to the maintainer. We contribute *to* the loom; we do not route around a maintainer; we do not grow our catalog.
 
-### Candidate 2: Offline Tile Management
+### Direction 2 — The product on her hardware (the primary objective)
+The glanceable scene must render on a **real aarch64 IVI board**, offline, with live conditions — the rung above the host and QEMU rungs already proven. This is the standing objective; the constitution's Andon is held until it renders on real silicon. Progress on the embedded path (the aarch64 build target, the Yocto recipe, the embedder, on-target bring-up) serves this objective **and**, contributed upstream, serves every edge developer on the same path — the two directions are one road.
 
-Guardian 2 (Offline Tiles) uses MBTiles with a five-level fallback (RAM cache
-→ MBTiles → lower-zoom fallback → online → placeholder). This pattern is reusable
-for any Flutter map app that needs offline capability.
-
-**Readiness**: Complete — `offline_tiles` has reached G2 with 16 package tests,
-872 app tests, clean analysis, and 0 publish warnings. Runtime resolution and
-coverage tiers are separated. G3 publication remains human-controlled.
-
-### Candidate 3: 3D Scene Layer (post-Fluorite)
-
-When Fluorite's C++ repos become publicly available, the `lib/fluorite/`
-scaffold becomes the integration point for 3D rendering of weather conditions,
-road state, and vehicle telemetry. This is the architectural aspiration
-described in §3.
-
-**Readiness**: Blocked — waiting for Fluorite source publication. The Dart-side
-scaffold (`FluoriteView`, `FluoriteApi`) exists and is tested.
+**What is no longer "next":** growing the catalog; any feature that needs Fluorite before it opens; any 3D claim ahead of a frame on her board.
 
 ---
 
 ## §6 How Decisions Are Made
 
-Every proposed feature must trace to a single question:
+Every proposed feature traces to one question:
 
-> **"How can we help the driver when conditions are worst?"**
+> **"How does this help the driver when conditions are worst — Google Maps gone, GPS gone, and she no longer knows where she is, in unexpected snow?"**
 
-This traces through five invariants:
+through five invariants:
 
 | # | Invariant | Filter question |
 |:-:|-----------|----------------|
-| D3 | **Purpose** (anchor) | Does this help a driver in unexpected snow? |
-| D4 | **Sakichi** | Does this make the edge developer's life easier? |
-| D1 | **Customer** | Is the edge developer the one we're serving? |
-| D5 | **Chain** | Can we trace Evidence → Contribution → Architecture → Edge Developer → Driver? |
-| D2 | **Product** | Does this fit a driver-assisting navigation architecture? |
+| **D3** | **Purpose** (anchor) | Does it help a driver in the compound-failure worst case? |
+| **D4** | **Sakichi** | Does it make the edge developer's life easier? |
+| **D1** | **Customer** | Is the edge developer the one we serve? (and we are one of them) |
+| **D5** | **Chain** | Can we trace Evidence → Contribution → Architecture → Edge Developer → Driver? |
+| **D2** | **Product** | Does it fit a driver-assisting navigation architecture? |
 
-If a proposed feature can't answer all five, it doesn't ship.
+If a feature can't answer all five, it doesn't ship.
 
-### Upstream Philosophy
+### Upstream philosophy
+SNGNav is the product expression of a broader philosophy:
+- **WHY** — the architecture protects the driver when conditions break (PHIL-001, L2: `why_we_build.md`).
+- **WHO** — governance traces from the human decision anchor through the Board and the skills (the constitution, L3: `CLAUDE.md`).
+- **HOW** — `ARCHITECTURE.md` (the guardians, the provider system, offline-first design).
 
-SNGNav is a product expression of a broader philosophy:
+The SNGNav Way is the **WHAT** — the product-level answer to "what qualifies as SNGNav." Where it ever disagrees with PHIL-001 or the constitution, **they win** (L2 and L3 outrank this L5 document) — surface the conflict so we fix the Way.
 
-- **WHY**: The architecture protects the driver when conditions break — from Sakichi's loom to the driver in the snow
-- **WHO**: The governance hierarchy traces from the human decision anchor through strategic intelligence to build execution
-- **HOW**: [ARCHITECTURE.md](ARCHITECTURE.md) — Five Guardians, the provider system, offline-first design
+---
 
-The SNGNav Way is the **WHAT** — the product-level answer to "what qualifies as SNGNav."
+## v1 → v2 changelog
+- **Fluorite retired as a current capability** → *contribute-when-open* aspiration; honest CPU/Skia → flutter_scene/Impeller path (per PHIL-001 v1.5, 2026-06-03). [§1, §3, §5]
+- **"60fps on ARM" present-tense claim removed** — it was an aspiration. [§1, §3]
+- **Package portfolio (11 extracted / 10 published) → catalog of 29, frozen** — net-new publication paused as standing default; the catalog-as-product framing corrected (external adoption = 0; "our own loom"). [§2.4, §4, §5]
+- **Roadmap "more extraction" → contribution-as-service to existing looms + render-on-her-hardware** (BOD-8 / BOD-10). [§5]
+- **Added "we are edge developers too"** (Komada, 2026-06-08). [§1]
+- **Anchor sharpened to the compound-failure worst case** (constitution §12). [§1, §6]
+- **Evidence-over-Aspiration given teeth; honest product state stated** (host + QEMU-aarch64 proven; physical board pending, Andon held). [§2.5, §3]
+- **Five Principles + Driver-Test decision filter retained** (Principle 4 evolved; the rest intact).
