@@ -1,0 +1,172 @@
+{
+  "Vehicle": {
+    "type": "branch",
+    "description": "Minimal snow-safety VSS overlay for the KUKSA e2e proof.",
+    "children": {
+      "Speed": {
+        "type": "sensor",
+        "datatype": "float",
+        "description": "Vehicle speed (km/h)."
+      },
+      "Exterior": {
+        "type": "branch",
+        "description": "Exterior conditions.",
+        "children": {
+          "AirTemperature": {
+            "type": "sensor",
+            "datatype": "float",
+            "description": "Ambient outside air temperature (degC)."
+          }
+        }
+      },
+      "ADAS": {
+        "type": "branch",
+        "description": "ADAS systems.",
+        "children": {
+          "ESC": {
+            "type": "branch",
+            "description": "Electronic Stability Control.",
+            "children": {
+              "RoadFriction": {
+                "type": "branch",
+                "description": "Road friction estimate.",
+                "children": {
+                  "MostProbable": {
+                    "type": "sensor",
+                    "datatype": "float",
+                    "description": "Most-probable road friction (0.0-1.0)."
+                  },
+                  "LowerBound": {
+                    "type": "sensor",
+                    "datatype": "float",
+                    "description": "Lower bound of friction confidence interval."
+                  }
+                }
+              }
+            }
+          },
+          "TCS": {
+            "type": "branch",
+            "description": "Traction Control System.",
+            "children": {
+              "IsEngaged": {
+                "type": "sensor",
+                "datatype": "boolean",
+                "description": "TCS currently engaged."
+              }
+            }
+          },
+          "ABS": {
+            "type": "branch",
+            "description": "Anti-lock Braking System.",
+            "children": {
+              "IsEngaged": {
+                "type": "sensor",
+                "datatype": "boolean",
+                "description": "ABS currently engaged."
+              }
+            }
+          }
+        }
+      },
+      "Body": {
+        "type": "branch",
+        "description": "Body signals.",
+        "children": {
+          "Windshield": {
+            "type": "branch",
+            "description": "Windshield.",
+            "children": {
+              "Front": {
+                "type": "branch",
+                "description": "Front windshield.",
+                "children": {
+                  "Wiping": {
+                    "type": "branch",
+                    "description": "Front wiping.",
+                    "children": {
+                      "Intensity": {
+                        "type": "sensor",
+                        "datatype": "int32",
+                        "description": "Front wiper intensity level (0-5)."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Raindetection": {
+            "type": "branch",
+            "description": "Rain detection.",
+            "children": {
+              "Intensity": {
+                "type": "sensor",
+                "datatype": "int32",
+                "description": "Rain sensor intensity (0-100%)."
+              }
+            }
+          }
+        }
+      },
+      "Chassis": {
+        "type": "branch",
+        "description": "Chassis.",
+        "children": {
+          "Axle": {
+            "type": "branch",
+            "description": "Axle.",
+            "children": {
+              "Row1": {
+                "type": "branch",
+                "description": "Row 1.",
+                "children": {
+                  "Wheel": {
+                    "type": "branch",
+                    "description": "Wheel.",
+                    "children": {
+                      "Left": {
+                        "type": "branch",
+                        "description": "Left wheel.",
+                        "children": {
+                          "Tire": {
+                            "type": "branch",
+                            "description": "Tire.",
+                            "children": {
+                              "Pressure": {
+                                "type": "sensor",
+                                "datatype": "float",
+                                "description": "Front-left tire pressure (kPa)."
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "type": "branch",
+                        "description": "Right wheel.",
+                        "children": {
+                          "Tire": {
+                            "type": "branch",
+                            "description": "Tire.",
+                            "children": {
+                              "Pressure": {
+                                "type": "sensor",
+                                "datatype": "float",
+                                "description": "Front-right tire pressure (kPa)."
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
