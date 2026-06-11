@@ -62,10 +62,18 @@ void main() {
     await tester.pump();
     expect(find.byType(SnowScene3DView), findsOneWidget);
     expect(tester.takeException(), isNull);
-    // The glanceable advisory is painted on the Canvas (TextPainter), not a
-    // Text widget — so it is NOT in the element tree. We assert the data that
-    // drives the chip is the severe black-ice advisory.
-    expect(severe.advisoryMessage, contains('Black ice'));
+    // The severe scene (near-zero visibility + ice) is whiteout-class, so the
+    // first-class response is to turn back — surfaced as the turn-back banner,
+    // a real Text widget in the tree (unlike the canvas-painted advisory).
+    expect(severe.recommendedResponse, RecommendedResponse.considerTurningBack);
+    expect(find.textContaining('turning back'), findsOneWidget);
+  });
+
+  testWidgets('the CLEAR scene shows no turn-back banner', (tester) async {
+    await tester.pumpWidget(host(clear));
+    await tester.pump();
+    expect(clear.recommendedResponse, RecommendedResponse.proceed);
+    expect(find.textContaining('turning back'), findsNothing);
   });
 
   testWidgets('the two conditions produce DIFFERENT driving data (scene must change)',

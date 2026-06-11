@@ -160,4 +160,60 @@ void main() {
       );
     });
   });
+
+  group('RecommendedResponse — trip-abandonment as a first-class response', () {
+    test('whiteout-class visibility (<100m) → considerTurningBack', () {
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(visibilityMeters: 50),
+      );
+      expect(a.recommendedResponse, RecommendedResponse.considerTurningBack);
+      expect(a.advisoryMessage, contains('turning back'));
+    });
+
+    test('whiteout visibility triggers turn-back regardless of surface', () {
+      // Heavy snow, sub-zero, near-zero visibility (80 m) → can't see → turn
+      // back, whatever the grip.
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(
+          precipType: PrecipitationType.snow,
+          intensity: PrecipitationIntensity.heavy,
+          temperatureCelsius: -5,
+          visibilityMeters: 80,
+        ),
+      );
+      expect(a.recommendedResponse, RecommendedResponse.considerTurningBack);
+    });
+
+    test('black ice on a CLEAR road stays reduceSpeed, not turn-back', () {
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(iceRisk: true, visibilityMeters: 10000),
+      );
+      expect(a.surfaceState, RoadSurfaceState.blackIce);
+      expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
+      expect(a.advisoryMessage, contains('Black ice'));
+    });
+
+    test('black ice while STILL visible (150m) stays reduceSpeed, not turn-back',
+        () {
+      // Low grip but the road is still visible — slow down hard, do not cry
+      // wolf with a turn-back. The boundary is visibility, not grip.
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(iceRisk: true, visibilityMeters: 150),
+      );
+      expect(a.surfaceState, RoadSurfaceState.blackIce);
+      expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
+    });
+
+    test('reduced visibility (500m) on dry road → reduceSpeed', () {
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(visibilityMeters: 500),
+      );
+      expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
+    });
+
+    test('clear dry conditions → proceed', () {
+      final a = DrivingConditionAssessment.fromCondition(_condition());
+      expect(a.recommendedResponse, RecommendedResponse.proceed);
+    });
+  });
 }

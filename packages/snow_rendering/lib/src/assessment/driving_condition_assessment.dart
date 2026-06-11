@@ -9,6 +9,7 @@ import 'package:driving_weather/driving_weather.dart';
 import 'package:equatable/equatable.dart';
 
 import '../models/precipitation_config.dart';
+import '../models/recommended_response.dart';
 import '../models/road_surface_state.dart';
 import '../models/visibility_degradation.dart';
 
@@ -28,12 +29,18 @@ class DrivingConditionAssessment extends Equatable {
   /// Human-readable advisory message for the driver.
   final String advisoryMessage;
 
+  /// Typed recommended response tier. [RecommendedResponse.considerTurningBack]
+  /// makes trip-abandonment a first-class response in whiteout-class conditions
+  /// — see `DRIVER_VOICES.md` (Sapporo→Shinshinotsu whiteout).
+  final RecommendedResponse recommendedResponse;
+
   const DrivingConditionAssessment({
     required this.surfaceState,
     required this.gripFactor,
     required this.visibility,
     required this.precipitation,
     required this.advisoryMessage,
+    required this.recommendedResponse,
   });
 
   /// Build a full assessment from current weather conditions.
@@ -41,7 +48,8 @@ class DrivingConditionAssessment extends Equatable {
     final surface = RoadSurfaceState.fromCondition(condition);
     final vis = VisibilityDegradation.compute(condition.visibilityMeters);
     final precip = PrecipitationConfig.fromCondition(condition);
-    final advisory = _buildAdvisory(condition, surface);
+    final response = _classifyResponse(condition, surface);
+    final advisory = _buildAdvisory(condition, surface, response);
 
     return DrivingConditionAssessment(
       surfaceState: surface,
@@ -49,13 +57,48 @@ class DrivingConditionAssessment extends Equatable {
       visibility: vis,
       precipitation: precip,
       advisoryMessage: advisory,
+      recommendedResponse: response,
     );
+  }
+
+  /// Classify the typed response tier from the live conditions.
+  ///
+  /// Whiteout-class (→ [RecommendedResponse.considerTurningBack]) is reached
+  /// when visibility collapses to the point the driver can no longer see far
+  /// enough to react — near-zero visibility (`< 100 m`, the whiteout / dense-fog
+  /// end of the model, where a `visibilityMeters` of `0` denotes a full
+  /// whiteout). This mirrors the recorded driver decision (`DRIVER_VOICES.md`,
+  /// the Sapporo→Shinshinotsu whiteout): the trigger to turn back is that you
+  /// cannot *see*, not that the surface is slippery.
+  ///
+  /// Low-grip hazards (black ice, snow) on a *still-visible* road stay
+  /// [RecommendedResponse.reduceSpeed]. Turning back is the response to a
+  /// whiteout, not to every hazard — firing it while the road is still visible
+  /// would cry wolf and erode the advisory's trust.
+  static RecommendedResponse _classifyResponse(
+    WeatherCondition condition,
+    RoadSurfaceState surface,
+  ) {
+    if (condition.visibilityMeters < 100) {
+      return RecommendedResponse.considerTurningBack;
+    }
+    if (condition.iceRisk ||
+        surface != RoadSurfaceState.dry ||
+        condition.hasReducedVisibility) {
+      return RecommendedResponse.reduceSpeed;
+    }
+    return RecommendedResponse.proceed;
   }
 
   static String _buildAdvisory(
     WeatherCondition condition,
     RoadSurfaceState surface,
+    RecommendedResponse response,
   ) {
+    if (response == RecommendedResponse.considerTurningBack) {
+      return 'Whiteout-class conditions — consider turning back while you '
+          'safely can';
+    }
     if (condition.iceRisk || surface == RoadSurfaceState.blackIce) {
       return 'Black ice risk — reduce speed significantly';
     }
@@ -84,5 +127,6 @@ class DrivingConditionAssessment extends Equatable {
     visibility,
     precipitation,
     advisoryMessage,
+    recommendedResponse,
   ];
 }

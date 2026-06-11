@@ -23,5 +23,6 @@ library;
 export 'src/assessment/driving_condition_assessment.dart';
 export 'src/data_budget.dart';
 export 'src/models/precipitation_config.dart';
+export 'src/models/recommended_response.dart';
 export 'src/models/road_surface_state.dart';
 export 'src/models/visibility_degradation.dart';

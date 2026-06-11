@@ -109,19 +109,44 @@ class SnowScene3DView extends StatelessWidget {
     );
 
     final loc = location;
-    // A confident fix (or no location signal at all) → confident scene.
-    if (loc == null ||
-        (loc.quality == LocationQuality.fix && !loc.isDeadReckoning)) {
-      return scene;
-    }
+    final turnBack = assessment.recommendedResponse ==
+        RecommendedResponse.considerTurningBack;
+    final confidentFix = loc == null ||
+        (loc.quality == LocationQuality.fix && !loc.isDeadReckoning);
 
-    // Otherwise overlay the honest-degradation layer keyed off the location
-    // quality: uncertainty fog + banner, or the position-unavailable floor.
+    // A confident fix (or no location signal) AND no turn-back advisory → the
+    // plain confident scene.
+    if (confidentFix && !turnBack) return scene;
+
+    final showDegradeBanner =
+        loc != null && !confidentFix && loc.quality != LocationQuality.error;
+
+    // Overlay order, back to front: scene, honest GPS-degradation layer (fog
+    // scrim / position-unavailable floor), then the top banners. When a
+    // turn-back banner is present the degradation layer's own banner is
+    // suppressed so the two compose vertically instead of overlapping — the
+    // whiteout-and-GPS-lost case is the product's core worst case, so the two
+    // must read cleanly together.
     return Stack(
       fit: StackFit.expand,
       children: [
         scene,
-        _UncertaintyOverlay(location: loc),
+        if (!confidentFix)
+          _UncertaintyOverlay(location: loc, showBanner: !turnBack),
+        if (turnBack)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _TurnBackBanner(),
+                if (showDegradeBanner)
+                  _DegradeBanner(text: _degradeBannerText(loc)),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -134,9 +159,13 @@ class SnowScene3DView extends StatelessWidget {
 /// Paints the honest GPS-degradation layer over the scene from a
 /// [LocationState]. See [SnowScene3DView.location] for the contract.
 class _UncertaintyOverlay extends StatelessWidget {
-  const _UncertaintyOverlay({required this.location});
+  const _UncertaintyOverlay({required this.location, this.showBanner = true});
 
   final LocationState location;
+
+  /// When false, the degrade banner is suppressed (the caller is rendering it
+  /// itself, below a higher-priority banner). The fog scrim / floor still show.
+  final bool showBanner;
 
   /// Accuracy (m) at/below which a fix is navigation-grade — mirrors
   /// `GeoPosition.isNavigationGrade` (50 m). Kept as a local const so this view
@@ -162,17 +191,6 @@ class _UncertaintyOverlay extends StatelessWidget {
         .clamp(0.0, 1.0);
     final scrimOpacity = _lerp(0.14, 0.62, u);
 
-    final String banner;
-    if (location.isDeadReckoning) {
-      banner = 'GPS lost — position estimated';
-    } else if (location.quality == LocationQuality.stale) {
-      banner = 'GPS stale — last known position';
-    } else {
-      banner = 'GPS degraded — position approximate';
-    }
-    final accuracyLabel =
-        accuracy > 0 ? '  ±${accuracy.toStringAsFixed(0)} m' : '';
-
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -185,17 +203,34 @@ class _UncertaintyOverlay extends StatelessWidget {
             ),
           ),
         ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: _DegradeBanner(text: '$banner$accuracyLabel'),
-        ),
+        if (showBanner)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _DegradeBanner(text: _degradeBannerText(location)),
+          ),
       ],
     );
   }
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;
+}
+
+/// The degrade-banner text for a degraded / stale / dead-reckoning location.
+String _degradeBannerText(LocationState location) {
+  final String banner;
+  if (location.isDeadReckoning) {
+    banner = 'GPS lost — position estimated';
+  } else if (location.quality == LocationQuality.stale) {
+    banner = 'GPS stale — last known position';
+  } else {
+    banner = 'GPS degraded — position approximate';
+  }
+  final accuracy = location.confidenceRadius;
+  final accuracyLabel =
+      accuracy > 0 ? '  ±${accuracy.toStringAsFixed(0)} m' : '';
+  return '$banner$accuracyLabel';
 }
 
 /// The amber caution banner shown while the position is estimated.
@@ -223,6 +258,43 @@ class _DegradeBanner extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The turn-back banner — the first-class trip-abandonment cue shown in
+/// whiteout-class conditions. Deliberately more prominent than the amber
+/// [_DegradeBanner]: this is the response that gets the driver home rather than
+/// pushing on. Grounded in a recorded driver voice (see DRIVER_VOICES.md, the
+/// Sapporo→Shinshinotsu whiteout) where the life-saving choice was to turn back.
+class _TurnBackBanner extends StatelessWidget {
+  const _TurnBackBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        width: double.infinity,
+        color: const Color(0xFF8E1B1B).withValues(alpha: 0.94), // deep red
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: const Row(
+          children: [
+            Icon(Icons.u_turn_left, color: Colors.white, size: 22),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Whiteout conditions — consider turning back while you safely can',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
