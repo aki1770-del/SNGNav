@@ -130,11 +130,48 @@ void main() {
       expect(a.advisoryMessage, 'Conditions normal');
     });
 
-    test('reduced visibility on dry road → fog advisory', () {
+    test('mildly reduced visibility (500 m) on dry road → fog advisory', () {
       final a = DrivingConditionAssessment.fromCondition(
-        _condition(visibilityMeters: 100),
+        _condition(visibilityMeters: 500),
       );
       expect(a.advisoryMessage, contains('fog lights'));
+    });
+
+    test(
+      'near-whiteout band (150 m) → arrow-test whiteout cue, still reduceSpeed',
+      () {
+        final a = DrivingConditionAssessment.fromCondition(
+          _condition(visibilityMeters: 150),
+        );
+        // The negative-evidence cue from DRIVER_VOICES.md: tell the driver
+        // WHAT to look for, not just that visibility is reduced.
+        expect(a.advisoryMessage, contains('arrow'));
+        expect(a.advisoryMessage, contains('whiteout'));
+        expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
+      },
+    );
+
+    test('band boundaries: 100 m gets the cue, 200 m does not', () {
+      final atLowEdge = DrivingConditionAssessment.fromCondition(
+        _condition(visibilityMeters: 100),
+      );
+      expect(atLowEdge.advisoryMessage, contains('arrow'));
+      expect(atLowEdge.recommendedResponse, RecommendedResponse.reduceSpeed);
+
+      final atHighEdge = DrivingConditionAssessment.fromCondition(
+        _condition(visibilityMeters: 200),
+      );
+      expect(atHighEdge.advisoryMessage, contains('fog lights'));
+    });
+
+    test('black ice at 120 m visibility keeps the black-ice advisory', () {
+      // Surface-hazard advisories keep precedence over the visibility cue:
+      // at 120 m the dominant hazard on a still-visible road is the surface.
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(visibilityMeters: 120, iceRisk: true),
+      );
+      expect(a.advisoryMessage, contains('Black ice'));
+      expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
     });
 
     test('snow heavy warm → precipitation config non-zero', () {

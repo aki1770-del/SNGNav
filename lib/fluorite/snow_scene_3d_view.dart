@@ -568,10 +568,13 @@ class _RoadAheadPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
+        // Pin the bundled Material font: this painter doesn't inherit the
+        // theme, and the chip must render the same glyphs on every embedder.
         style: const TextStyle(
           color: Colors.white,
           fontSize: 15,
           fontWeight: FontWeight.w600,
+          fontFamily: 'Roboto',
         ),
       ),
       textDirection: TextDirection.ltr,

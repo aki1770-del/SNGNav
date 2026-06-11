@@ -111,6 +111,18 @@ class DrivingConditionAssessment extends Equatable {
     if (surface == RoadSurfaceState.standingWater) {
       return 'Standing water — risk of aquaplaning at speed';
     }
+    // Near-whiteout band (100–200 m, the model's `isHazardous` visibility
+    // line): give the driver the negative-evidence test for whiteout onset,
+    // not just a label. A first-time snow driver identifies the regime change
+    // by what she can NO LONGER see — "If you can't see the next arrow,
+    // you're in a real whiteout" (`DRIVER_VOICES.md`, Niseko first-snow
+    // instructional voice) — and the response is JAF's "stop at a safe
+    // place". This is the band where her own eyes must catch the escalation,
+    // because the data feed may lag or be gone entirely.
+    if (condition.visibilityMeters < 200) {
+      return 'Very low visibility — if you can\'t see the next arrow or '
+          'snow pole, that is a whiteout: stop at a safe place';
+    }
     if (condition.hasReducedVisibility) {
       return 'Reduced visibility — use fog lights, reduce speed';
     }
