@@ -1,0 +1,405 @@
+/// Concrete pre-trip departure-timing advisor — the first implementation of
+/// the `pretrip_decision_advisor` contract (which shipped interface-only).
+///
+/// DRIVER_VOICES.md (JAF pre-trip voice): "the most consequential safety
+/// surface is pre-trip — not in-trip. Substrate that fires advisory only at
+/// the moment of detected hazard misses the upstream surface where JAF puts
+/// the most weight." This advisor is that upstream surface: it answers
+/// "should I leave now or wait?" BEFORE the driver is in the hazard.
+///
+/// PURE AND DETERMINISTIC — no LLM, no network, no clock. Everything is
+/// computed from the typed inputs the caller hands in, so the same inputs
+/// always produce the same recommendation and the worst-case path stays
+/// offline. Null forecast fields contribute nothing to hazard scores: the
+/// advisor never fabricates a hazard it has no data for, and it returns
+/// `null` (driver's own judgment) when the forecast does not cover the
+/// departure window at all.
+///
+/// Honesty rule (binding, from the contract): when the commute is
+/// `required` — or its flexibility is `unknown` — the advisor never urges a
+/// delay. It returns `honestyMode`, names what it sees, and defers to the
+/// driver. A school run or work shift is not ours to cancel.
+library;
+
+import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+
+/// Per-hour winter-hazard severity derived from one forecast slot.
+///
+/// Thresholds match the in-trip Snow Scene bands so pre-trip and in-trip
+/// never disagree about what "whiteout" means: < 100 m is whiteout class
+/// (the turn-back trigger in-trip), 100–200 m is the near-whiteout advisory
+/// band, and near-freezing precipitation is the icing surface the JAF
+/// frozen-rut voice warns defeats ABS/ESC.
+enum HourHazard {
+  /// No winter hazard signal in this slot.
+  clear,
+
+  /// Slush, light reduced visibility, or cold rain — drive with care.
+  caution,
+
+  /// Packed snow, near-whiteout visibility (< 200 m), or icing conditions
+  /// (precipitation at near-freezing temperature).
+  elevated,
+
+  /// Whiteout-class visibility (< 100 m) or forecast ice.
+  severe,
+}
+
+/// One verdict shape the app UI renders directly. The contract's
+/// [PretripRecommendation] is derived from this and carries the same
+/// rationale; the briefing keeps the richer typed verdict so the card does
+/// not have to re-parse prose.
+enum PretripVerdict {
+  /// Forecast does not cover the departure window — no recommendation.
+  noData,
+
+  /// No winter hazard signals across the trip window.
+  clear,
+
+  /// Caution-class signals only; no delay suggested.
+  caution,
+
+  /// Hazard in the window and a materially better later window exists.
+  waitAdvised,
+
+  /// Hazard in the window and nothing materially better within the search
+  /// horizon — the honest message is "decide with care", not a fake delay.
+  hazardPersists,
+
+  /// The trip is required (or flexibility unknown): hazard is named, no
+  /// delay is urged, the driver decides.
+  requiredTripHazard,
+}
+
+/// The full pre-trip briefing the app surface renders.
+class PretripBriefing {
+  const PretripBriefing({
+    required this.verdict,
+    required this.chips,
+    required this.recommendation,
+    required this.peakHazard,
+  });
+
+  final PretripVerdict verdict;
+
+  /// Plain-language reason chips (also carried on the recommendation).
+  final List<String> chips;
+
+  /// The contract-shaped recommendation, `null` only for [PretripVerdict.noData].
+  final PretripRecommendation? recommendation;
+
+  /// Worst per-hour hazard inside the trip window.
+  final HourHazard peakHazard;
+}
+
+/// Deterministic snow-aware implementation of [PretripAdvisor].
+class SnowAwarePretripAdvisor implements PretripAdvisor {
+  const SnowAwarePretripAdvisor({
+    this.searchHorizon = const Duration(hours: 6),
+  });
+
+  /// How far past the planned departure a better window is searched for.
+  final Duration searchHorizon;
+
+  /// Visibility below this is whiteout class — same band as the in-trip
+  /// turn-back trigger.
+  static const double whiteoutVisibilityMeters = 100;
+
+  /// Visibility below this is the near-whiteout advisory band.
+  static const double nearWhiteoutVisibilityMeters = 200;
+
+  /// At or below this air temperature, precipitation is treated as an icing
+  /// surface (freezing rain / refreeze band).
+  static const double icingTempCelsius = 0.5;
+
+  /// A forecast older than this at the planned departure gets a staleness
+  /// chip — conditions may have changed since it was issued.
+  static const Duration staleAfter = Duration(hours: 6);
+
+  /// Reaction-time calibration only (never strength, per the contract): a
+  /// slower-reacting driver gets an extra margin added to a suggested delay
+  /// so she is not sent into the trailing edge of a clearing hazard.
+  static const double slowReactionSeconds = 2.5;
+  static const Duration slowReactionMargin = Duration(minutes: 30);
+
+  @override
+  PretripRecommendation? advise({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) =>
+      brief(forecast: forecast, commute: commute, profile: profile)
+          .recommendation;
+
+  /// The richer briefing the app UI consumes; [advise] derives from it.
+  PretripBriefing brief({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) {
+    final window = _slotsCovering(
+      forecast.hourly,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    if (window.isEmpty) {
+      return const PretripBriefing(
+        verdict: PretripVerdict.noData,
+        chips: [],
+        recommendation: null,
+        peakHazard: HourHazard.clear,
+      );
+    }
+
+    final peak = window.map(hazardOf).reduce(_worse);
+    final worstSlot =
+        window.firstWhere((s) => hazardOf(s) == peak, orElse: () => window.first);
+    final chips = <String>[];
+
+    final staleness = commute.plannedDeparture.difference(forecast.issuedAt);
+    void addStalenessChip() {
+      if (staleness > staleAfter) {
+        chips.add(
+          'Forecast is ${staleness.inHours} h old at departure — '
+          'check conditions again before leaving.',
+        );
+      }
+    }
+
+    // Calibration-only margin (never strength).
+    final margin = profile.reactionTimeSeconds >= slowReactionSeconds
+        ? slowReactionMargin
+        : Duration.zero;
+
+    final delayUrgeable =
+        commute.flexibility == CommuteFlexibility.discretionary;
+
+    switch (peak) {
+      case HourHazard.clear:
+        chips.add('No winter hazard signals in your trip window.');
+        addStalenessChip();
+        return PretripBriefing(
+          verdict: PretripVerdict.clear,
+          chips: List.unmodifiable(chips),
+          recommendation: PretripRecommendation(
+            suggestedDelay: Duration.zero,
+            confidenceWindow: const Duration(hours: 1),
+            strength: RecommendationStrength.advisoryWeak,
+            rationale: List.unmodifiable(chips),
+          ),
+          peakHazard: peak,
+        );
+
+      case HourHazard.caution:
+        chips.add(_describe(worstSlot));
+        chips.add('Allow extra time and keep distance — no delay suggested.');
+        addStalenessChip();
+        return PretripBriefing(
+          verdict: PretripVerdict.caution,
+          chips: List.unmodifiable(chips),
+          recommendation: PretripRecommendation(
+            suggestedDelay: Duration.zero,
+            confidenceWindow: const Duration(hours: 1),
+            strength: RecommendationStrength.advisoryWeak,
+            rationale: List.unmodifiable(chips),
+          ),
+          peakHazard: peak,
+        );
+
+      case HourHazard.elevated:
+      case HourHazard.severe:
+        chips.add(_describe(worstSlot));
+        final betterDelay = _findBetterWindow(forecast.hourly, commute);
+
+        if (!delayUrgeable) {
+          // Honesty rule: required (or unknown) commute — never urge a delay.
+          if (betterDelay != null) {
+            chips.add(
+              'Conditions look better around '
+              '${_hhmm(commute.plannedDeparture.add(betterDelay))}, '
+              'if your schedule allows.',
+            );
+          }
+          chips.add(
+            'This trip is marked required — no delay urged. '
+            'Prepare before leaving; your judgment decides.',
+          );
+          addStalenessChip();
+          return PretripBriefing(
+            verdict: PretripVerdict.requiredTripHazard,
+            chips: List.unmodifiable(chips),
+            recommendation: PretripRecommendation(
+              suggestedDelay: Duration.zero,
+              confidenceWindow: const Duration(hours: 1),
+              strength: RecommendationStrength.honestyMode,
+              rationale: List.unmodifiable(chips),
+            ),
+            peakHazard: peak,
+          );
+        }
+
+        if (betterDelay != null) {
+          final delay = betterDelay + margin;
+          chips.add(
+            'Conditions improve by about '
+            '${_hhmm(commute.plannedDeparture.add(betterDelay))}.',
+          );
+          if (margin > Duration.zero) {
+            chips.add(
+              'Extra ${margin.inMinutes} min margin added for your '
+              'reaction-time profile.',
+            );
+          }
+          addStalenessChip();
+          return PretripBriefing(
+            verdict: PretripVerdict.waitAdvised,
+            chips: List.unmodifiable(chips),
+            recommendation: PretripRecommendation(
+              suggestedDelay: delay,
+              confidenceWindow: const Duration(hours: 1),
+              strength: peak == HourHazard.severe
+                  ? RecommendationStrength.advisoryStrong
+                  : RecommendationStrength.advisoryWeak,
+              rationale: List.unmodifiable(chips),
+            ),
+            peakHazard: peak,
+          );
+        }
+
+        chips.add(
+          'No clearly better departure window within the next '
+          '${searchHorizon.inHours} h — consider whether this trip is '
+          'needed today.',
+        );
+        addStalenessChip();
+        return PretripBriefing(
+          verdict: PretripVerdict.hazardPersists,
+          chips: List.unmodifiable(chips),
+          recommendation: PretripRecommendation(
+            // Duration.zero here means "no delay target to suggest", and the
+            // chips carry the honest message; the advisor does not invent a
+            // wait it has no forecast basis for.
+            suggestedDelay: Duration.zero,
+            confidenceWindow: const Duration(hours: 1),
+            strength: RecommendationStrength.advisoryWeak,
+            rationale: List.unmodifiable(chips),
+          ),
+          peakHazard: peak,
+        );
+    }
+  }
+
+  /// Hazard severity of a single forecast slot. Null fields contribute
+  /// nothing — absence of data is never treated as presence of hazard.
+  HourHazard hazardOf(HourlyForecast slot) {
+    final vis = slot.visibilityMeters;
+    final precip = slot.precipitationMmPerHour;
+    final road = slot.estimatedRoadCondition;
+
+    if (road == RoadConditionEstimate.ice ||
+        (vis != null && vis < whiteoutVisibilityMeters)) {
+      return HourHazard.severe;
+    }
+    final icing = precip != null &&
+        precip > 0 &&
+        slot.tempCelsius <= icingTempCelsius;
+    if (road == RoadConditionEstimate.packedSnow ||
+        icing ||
+        (vis != null && vis < nearWhiteoutVisibilityMeters)) {
+      return HourHazard.elevated;
+    }
+    final coldRain = precip != null && precip > 0 && slot.tempCelsius <= 2.0;
+    if (road == RoadConditionEstimate.slush ||
+        coldRain ||
+        (vis != null && vis < 500)) {
+      return HourHazard.caution;
+    }
+    return HourHazard.clear;
+  }
+
+  /// Earliest whole-hour delay (up to [searchHorizon]) whose shifted trip
+  /// window is fully forecast-covered and at worst [HourHazard.caution].
+  Duration? _findBetterWindow(List<HourlyForecast> hourly, CommuteShape c) {
+    for (var h = 1; h <= searchHorizon.inHours; h++) {
+      final delay = Duration(hours: h);
+      final dep = c.plannedDeparture.add(delay);
+      final slots = _slotsCovering(hourly, dep, c.plannedDuration);
+      if (slots.isEmpty) return null; // forecast ran out — stop searching
+      if (!_coversWhole(slots, dep, c.plannedDuration)) return null;
+      final peak = slots.map(hazardOf).reduce(_worse);
+      if (peak.index <= HourHazard.caution.index) return delay;
+    }
+    return null;
+  }
+
+  /// Slots overlapping [start, start + duration). A slot at hour H covers
+  /// [H, H + 1h).
+  List<HourlyForecast> _slotsCovering(
+    List<HourlyForecast> hourly,
+    DateTime start,
+    Duration duration,
+  ) {
+    final end = start.add(duration);
+    return [
+      for (final s in hourly)
+        if (s.hour.isBefore(end) &&
+            s.hour.add(const Duration(hours: 1)).isAfter(start))
+          s,
+    ];
+  }
+
+  /// True when [slots] leave no gap over [start, start + duration).
+  bool _coversWhole(
+    List<HourlyForecast> slots,
+    DateTime start,
+    Duration duration,
+  ) {
+    final end = start.add(duration);
+    var cursor = start;
+    for (final s in slots) {
+      if (s.hour.isAfter(cursor)) return false;
+      final slotEnd = s.hour.add(const Duration(hours: 1));
+      if (slotEnd.isAfter(cursor)) cursor = slotEnd;
+      if (!cursor.isBefore(end)) return true;
+    }
+    return !cursor.isBefore(end);
+  }
+
+  HourHazard _worse(HourHazard a, HourHazard b) =>
+      a.index >= b.index ? a : b;
+
+  String _describe(HourlyForecast slot) {
+    final at = _hhmm(slot.hour);
+    final vis = slot.visibilityMeters;
+    if (vis != null && vis < whiteoutVisibilityMeters) {
+      return 'Visibility may drop to ~${vis.round()} m around $at — '
+          'whiteout conditions.';
+    }
+    if (slot.estimatedRoadCondition == RoadConditionEstimate.ice) {
+      return 'Icy roads expected around $at.';
+    }
+    if (slot.estimatedRoadCondition == RoadConditionEstimate.packedSnow) {
+      return 'Packed snow expected around $at.';
+    }
+    final precip = slot.precipitationMmPerHour;
+    if (precip != null && precip > 0 && slot.tempCelsius <= icingTempCelsius) {
+      return 'Precipitation near freezing around $at — icy patches likely.';
+    }
+    if (vis != null && vis < nearWhiteoutVisibilityMeters) {
+      return 'Visibility may drop to ~${vis.round()} m around $at.';
+    }
+    if (slot.estimatedRoadCondition == RoadConditionEstimate.slush) {
+      return 'Slush possible around $at.';
+    }
+    if (precip != null && precip > 0 && slot.tempCelsius <= 2.0) {
+      return 'Cold rain around $at — surfaces may be slick.';
+    }
+    if (vis != null && vis < 500) {
+      return 'Reduced visibility (~${vis.round()} m) around $at.';
+    }
+    return 'Winter conditions possible around $at.';
+  }
+
+  String _hhmm(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+}

@@ -23,6 +23,7 @@ import 'package:kalman_dr/kalman_dr.dart';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
+import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 
 import 'bloc/location_bloc.dart';
@@ -32,6 +33,8 @@ import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
 import 'providers/kuksa_condition_provider.dart';
 import 'providers/serial_nmea_location_provider.dart';
+import 'services/snow_aware_pretrip_advisor.dart';
+import 'widgets/pretrip_briefing_card.dart';
 
 void main() {
   runApp(const SNGNavGettingStarted());
@@ -55,9 +58,9 @@ class SNGNavGettingStarted extends StatelessWidget {
   }
 }
 
-/// Which view fills the main body: the existing top-down 2D map, or the
-/// perspective forward-looking 3D snow scene.
-enum _ViewMode { map, forward }
+/// Which view fills the main body: the existing top-down 2D map, the
+/// perspective forward-looking 3D snow scene, or the pre-trip briefing.
+enum _ViewMode { map, forward, pretrip }
 
 class OfflineMapPage extends StatefulWidget {
   const OfflineMapPage({super.key});
@@ -175,6 +178,66 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   LocationBloc? _locationBloc;
   StreamSubscription<LocationState>? _locationSub;
   LocationState? _locationState;
+
+  // PRE-TRIP BRIEFING (DRIVER_VOICES.md JAF voice: pre-trip — not in-trip —
+  // is the load-bearing safety surface; everything above this line fires only
+  // once she is already driving).
+  //
+  // OFFLINE-FIRST, like the assessment default: the briefing is computed from
+  // a SIMULATED demo forecast (a morning where visibility collapses to
+  // whiteout class around departure and clears two hours later) so the
+  // surface renders immediately with zero network. The caption tells the
+  // truth about the source. Live forecast wiring (e.g. a condition_aggregator
+  // hourly source) is a future, additive arc — same pattern as the
+  // Digitraffic / KUKSA opt-ins above.
+  //
+  // The "trip required" switch is the contract's honesty rule made visible:
+  // when on, the advisor never urges a delay — it names the hazard, helps her
+  // prepare, and leaves the decision with her.
+  bool _pretripTripRequired = false;
+
+  static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
+
+  static final WeatherForecast _pretripForecast = WeatherForecast(
+    issuedAt: DateTime(2026, 1, 1, 6, 0),
+    hourly: [
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 7),
+        tempCelsius: -4,
+        precipitationMmPerHour: 2.5,
+        visibilityMeters: 80, // whiteout class — below the 100 m band
+        estimatedRoadCondition: RoadConditionEstimate.packedSnow,
+      ),
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 8),
+        tempCelsius: -3,
+        precipitationMmPerHour: 1.0,
+        visibilityMeters: 250,
+        estimatedRoadCondition: RoadConditionEstimate.packedSnow,
+      ),
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 9),
+        tempCelsius: -1,
+        precipitationMmPerHour: 0.0,
+        visibilityMeters: 2000,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
+      ),
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 10),
+        tempCelsius: 0,
+        precipitationMmPerHour: 0.0,
+        visibilityMeters: 5000,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
+      ),
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 11),
+        tempCelsius: 1,
+        precipitationMmPerHour: 0.0,
+        visibilityMeters: 8000,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
+      ),
+    ],
+  );
 
   /// The live location state fed to the 3D scene — `null` until a real fix
   /// arrives (honest floor), never a simulated fix.
@@ -384,6 +447,11 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                     icon: Icon(Icons.landscape_outlined, size: 16),
                     label: Text('Forward'),
                   ),
+                  ButtonSegment<_ViewMode>(
+                    value: _ViewMode.pretrip,
+                    icon: Icon(Icons.checklist_outlined, size: 16),
+                    label: Text('Pre-trip'),
+                  ),
                 ],
                 selected: {_viewMode},
                 onSelectionChanged: (selection) {
@@ -443,6 +511,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       body: switch (_viewMode) {
         _ViewMode.map => _buildMapView(),
         _ViewMode.forward => _buildForwardView(),
+        _ViewMode.pretrip => _buildPretripView(),
       },
     );
   }
@@ -491,6 +560,44 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// The pre-trip "Before you drive" briefing — the upstream safety surface
+  /// the JAF driver voice argues matters most. Computed deterministically by
+  /// [SnowAwarePretripAdvisor] from the simulated demo forecast; the
+  /// "trip required" switch demonstrates the contract's honesty rule live.
+  Widget _buildPretripView() {
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: _pretripDeparture,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo-commute'],
+      flexibility: _pretripTripRequired
+          ? CommuteFlexibility.required
+          : CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: _pretripForecast,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: PretripBriefingCard(
+          briefing: briefing,
+          commute: commute,
+          forecastIssuedAt: _pretripForecast.issuedAt,
+          tripRequired: _pretripTripRequired,
+          onTripRequiredChanged: (v) =>
+              setState(() => _pretripTripRequired = v),
+          sourceCaption: 'Simulated forecast (demo) — offline, deterministic',
+        ),
+      ),
     );
   }
 
