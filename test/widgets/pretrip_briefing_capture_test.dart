@@ -32,10 +32,12 @@ void main() {
   final dep = DateTime(2026, 1, 1, 7, 15);
   final issued = DateTime(2026, 1, 1, 6, 0);
 
-  HourlyForecast slot(int hour, {double? vis, double? precip}) =>
+  // Hazard fixtures stay subzero; the clear fixture sits above the frost
+  // band (subzero dry air is caution class since the 2026-06-12 quant fix).
+  HourlyForecast slot(int hour, {double temp = -3, double? vis, double? precip}) =>
       HourlyForecast(
         hour: DateTime(2026, 1, 1, hour),
-        tempCelsius: -3,
+        tempCelsius: temp,
         precipitationMmPerHour: precip,
         visibilityMeters: vis,
       );
@@ -46,12 +48,22 @@ void main() {
     slot(9, vis: 5000),
     slot(10, vis: 8000),
   ];
-  final clear = [slot(7, vis: 8000), slot(8, vis: 8000)];
+  final clear = [
+    slot(7, temp: 3, vis: 8000),
+    slot(8, temp: 3, vis: 8000),
+  ];
+  // Dry subzero air — caution class with the frost/black-ice chip (the
+  // 2026-06-12 quant fix: 70/620 real winter slots used to render "clear").
+  final frostDry = [
+    slot(7, temp: -8),
+    slot(8, temp: -8),
+  ];
 
   final cases = <String, (List<HourlyForecast>, CommuteFlexibility)>{
     'wait_advised': (whiteoutThenClear, CommuteFlexibility.discretionary),
     'required_honesty': (whiteoutThenClear, CommuteFlexibility.required),
     'clear_depart': (clear, CommuteFlexibility.discretionary),
+    'frost_caution': (frostDry, CommuteFlexibility.discretionary),
   };
 
   for (final entry in cases.entries) {

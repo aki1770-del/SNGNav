@@ -34,7 +34,8 @@ enum HourHazard {
   /// No winter hazard signal in this slot.
   clear,
 
-  /// Slush, light reduced visibility, or cold rain — drive with care.
+  /// Slush, light reduced visibility, cold rain, or subzero air temperature
+  /// (frost / black-ice risk) — drive with care.
   caution,
 
   /// Packed snow, near-whiteout visibility (< 200 m), or icing conditions
@@ -111,6 +112,16 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// At or below this air temperature, precipitation is treated as an icing
   /// surface (freezing rain / refreeze band).
   static const double icingTempCelsius = 0.5;
+
+  /// At or below this air temperature, even a dry forecast is caution class
+  /// (frost / black-ice risk). Matches the in-trip MET Norway adapter's
+  /// "Subzero forecast" moderate-advisory threshold so pre-trip and in-trip
+  /// never disagree about what subzero means. Quantified motivation
+  /// (2026-06-12, 620 real winter forecast slots): 70 dry-subzero slots down
+  /// to −11.7 °C rendered "No winter hazard signals" under the old rule —
+  /// temperature is REAL data here, not a null field, so flagging it is not
+  /// fabrication.
+  static const double frostTempCelsius = 0.0;
 
   /// A forecast older than this at the planned departure gets a staleness
   /// chip — conditions may have changed since it was issued.
@@ -311,7 +322,8 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     final coldRain = precip != null && precip > 0 && slot.tempCelsius <= 2.0;
     if (road == RoadConditionEstimate.slush ||
         coldRain ||
-        (vis != null && vis < 500)) {
+        (vis != null && vis < 500) ||
+        slot.tempCelsius <= frostTempCelsius) {
       return HourHazard.caution;
     }
     return HourHazard.clear;
@@ -396,6 +408,10 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     }
     if (vis != null && vis < 500) {
       return 'Reduced visibility (~${vis.round()} m) around $at.';
+    }
+    if (slot.tempCelsius <= frostTempCelsius) {
+      return 'Freezing air (${slot.tempCelsius.round()} °C) around $at — '
+          'frost or black ice possible.';
     }
     return 'Winter conditions possible around $at.';
   }

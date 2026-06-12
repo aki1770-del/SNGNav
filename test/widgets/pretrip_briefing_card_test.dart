@@ -8,10 +8,12 @@ void main() {
   final dep = DateTime(2026, 1, 1, 7, 15);
   final issued = DateTime(2026, 1, 1, 6, 0);
 
-  HourlyForecast slot(int hour, {double? vis, double? precip}) =>
+  // Hazard fixtures stay subzero; clear fixtures pass a temp above the frost
+  // band (subzero dry air is caution class since the 2026-06-12 quant fix).
+  HourlyForecast slot(int hour, {double temp = -3, double? vis, double? precip}) =>
       HourlyForecast(
         hour: DateTime(2026, 1, 1, hour),
-        tempCelsius: -3,
+        tempCelsius: temp,
         precipitationMmPerHour: precip,
         visibilityMeters: vis,
       );
@@ -59,7 +61,7 @@ void main() {
       (tester) async {
     await pumpCard(
       tester,
-      hourly: [slot(7, vis: 8000), slot(8, vis: 8000)],
+      hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
       flexibility: CommuteFlexibility.discretionary,
     );
     expect(
@@ -112,7 +114,7 @@ void main() {
     bool? toggled;
     await pumpCard(
       tester,
-      hourly: [slot(7, vis: 8000), slot(8, vis: 8000)],
+      hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
       flexibility: CommuteFlexibility.discretionary,
       onChanged: (v) => toggled = v,
     );

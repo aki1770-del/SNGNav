@@ -58,7 +58,10 @@ void main() {
   group('clear and caution', () {
     test('clear window recommends departing now', () {
       final b = advisor.brief(
-        forecast: forecast([slot(7, vis: 8000, precip: 0), slot(8, vis: 8000)]),
+        forecast: forecast([
+          slot(7, temp: 3, vis: 8000, precip: 0),
+          slot(8, temp: 3, vis: 8000),
+        ]),
         commute: commute(),
         profile: profile,
       );
@@ -83,13 +86,37 @@ void main() {
     test('null fields never fabricate a hazard', () {
       final b = advisor.brief(
         forecast: forecast([
+          HourlyForecast(hour: DateTime(2026, 1, 1, 7), tempCelsius: 5),
+          HourlyForecast(hour: DateTime(2026, 1, 1, 8), tempCelsius: 5),
+        ]),
+        commute: commute(),
+        profile: profile,
+      );
+      expect(b.verdict, PretripVerdict.clear);
+    });
+
+    test(
+        'subzero dry air is caution, never clear — frost/black-ice risk, '
+        'consistent with the in-trip Subzero advisory class', () {
+      // Temperature is REAL data (the one required field), not a null field:
+      // a −10 °C forecast reading "no winter hazard signals" was the
+      // measured failure (70/620 real winter slots, 2026-06-12 quant run).
+      final b = advisor.brief(
+        forecast: forecast([
           HourlyForecast(hour: DateTime(2026, 1, 1, 7), tempCelsius: -10),
           HourlyForecast(hour: DateTime(2026, 1, 1, 8), tempCelsius: -10),
         ]),
         commute: commute(),
         profile: profile,
       );
-      expect(b.verdict, PretripVerdict.clear);
+      expect(b.verdict, PretripVerdict.caution);
+      // Caution never urges a delay — prepare-and-go, not wait.
+      expect(b.recommendation!.suggestedDelay, Duration.zero);
+      expect(
+        b.chips.any((c) => c.contains('frost or black ice')),
+        isTrue,
+        reason: 'the chip must name the frost risk: ${b.chips}',
+      );
     });
   });
 
