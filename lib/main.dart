@@ -31,6 +31,7 @@ import 'bloc/location_event.dart';
 import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
+import 'providers/digitraffic_visibility.dart';
 import 'providers/kuksa_condition_provider.dart';
 import 'providers/met_norway_hourly_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
@@ -229,6 +230,23 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   WeatherForecast? _pretripLiveForecast;
   DateTime? _pretripLiveDeparture;
 
+  // MEASURED VISIBILITY (additive opt-in on top of the live forecast):
+  // `--dart-define=PRETRIP_VISIBILITY=digitraffic` fetches the nearest fresh
+  // visibility sensor on Finland's Digitraffic road-weather network (measured
+  // 2026-06-12: 453/526 stations report visibility) and merges it into the
+  // departure-hour slot ONLY. This is the one channel that can light the
+  // severe band on live data — the 2026-06-12 quant run confirmed forecast
+  // data alone can never reach it (0/620 slots; the compact product carries
+  // no visibility, and we refuse to estimate it). Real sensor or nothing.
+  // Applied only when the LIVE forecast is also present: merging a real
+  // observation into the fixed demo timeline would be fabrication.
+  // Data © Fintraffic / digitraffic.fi, CC BY 4.0 — caption carries it.
+  static const String _pretripVisibilitySource =
+      String.fromEnvironment('PRETRIP_VISIBILITY');
+
+  DigitrafficVisibilityProvider? _pretripVisibilityProvider;
+  VisibilityObservation? _pretripVisibility;
+
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
   static final WeatherForecast _pretripForecast = WeatherForecast(
@@ -313,6 +331,30 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _initKuksaConditions();
     _initLocation();
     _initPretripForecast();
+    _initPretripVisibility();
+  }
+
+  /// Fetches the nearest MEASURED visibility for the pre-trip briefing, but
+  /// ONLY when the edge developer has opted in via
+  /// `--dart-define=PRETRIP_VISIBILITY=digitraffic`. Honest floor on every
+  /// failure path: no station in range, stale sensor, or fetch error →
+  /// [_pretripVisibility] stays null and the briefing simply has no measured
+  /// visibility — never an estimated one.
+  Future<void> _initPretripVisibility() async {
+    if (_pretripVisibilitySource != 'digitraffic') return; // not selected
+    final provider = DigitrafficVisibilityProvider();
+    _pretripVisibilityProvider = provider;
+    try {
+      final obs = await provider.fetchNearestVisibility(
+        latitude: _pretripLat,
+        longitude: _pretripLon,
+      );
+      if (!mounted || obs == null) return;
+      setState(() => _pretripVisibility = obs);
+    } catch (_) {
+      // Network unreachable / API failure → honest floor: no measured
+      // visibility, nothing estimated in its place.
+    }
   }
 
   /// Fetches a LIVE hourly forecast for the pre-trip briefing, but ONLY when
@@ -477,6 +519,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _locationSub?.cancel();
     _locationBloc?.close();
     _pretripForecastProvider?.close();
+    _pretripVisibilityProvider?.close();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -639,14 +682,28 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   Widget _buildPretripView() {
     const advisor = SnowAwarePretripAdvisor();
     final live = _pretripLiveForecast;
-    final forecast = live ?? _pretripForecast;
+    var forecast = live ?? _pretripForecast;
     final departure =
         live != null ? _pretripLiveDeparture! : _pretripDeparture;
+
+    // Real measured visibility merges into the departure hour ONLY, and only
+    // on top of a live forecast (never the fixed demo timeline).
+    final obs = live != null ? _pretripVisibility : null;
+    if (obs != null) {
+      forecast = mergeObservedVisibility(forecast, obs, departure);
+    }
+
+    final visCaption = obs != null
+        ? ' Departure-hour visibility MEASURED: ${obs.meters.round()} m at '
+            '${obs.stationName} (${obs.distanceKm.toStringAsFixed(0)} km '
+            'away) — data: Fintraffic / digitraffic.fi (CC BY 4.0).'
+        : '';
     final caption = live != null
         ? 'LIVE forecast — data: MET Norway (CC BY 4.0), '
             'lat $_pretripLat lon $_pretripLon. '
             'No visibility/surface data in this product — hazard signal from '
-            'temperature + precipitation only.'
+            'temperature + precipitation${obs == null ? ' only' : ''}.'
+            '$visCaption'
         : 'Simulated forecast (demo) — offline, deterministic'
             '${_pretripForecastSource == 'met_norway' ? ' (live fetch unavailable)' : ''}';
     final commute = CommuteShape(

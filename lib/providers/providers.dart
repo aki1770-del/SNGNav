@@ -2,6 +2,7 @@
 library;
 
 export 'package:fleet_hazard/fleet_hazard.dart' show FleetProvider;
+export 'digitraffic_visibility.dart';
 export 'geoclue_location_provider.dart';
 export 'kuksa_condition_provider.dart';
 export 'met_norway_hourly_forecast.dart';

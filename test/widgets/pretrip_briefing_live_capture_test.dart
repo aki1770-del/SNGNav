@@ -20,6 +20,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+import 'package:sngnav_snow_scene/providers/digitraffic_visibility.dart';
 import 'package:sngnav_snow_scene/providers/met_norway_hourly_forecast.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
@@ -69,8 +70,17 @@ Map<String, dynamic> _winterShaped() => {
       },
     };
 
+// The caption main.dart composes when a measured visibility observation is
+// merged (Digitraffic, departure-hour only).
+const _measuredCaption = 'LIVE forecast — data: MET Norway (CC BY 4.0), '
+    'lat 60.2 lon 24.6. '
+    'No visibility/surface data in this product — hazard signal from '
+    'temperature + precipitation. '
+    'Departure-hour visibility MEASURED: 80 m at vt1_Espoo_Nupuri (3 km '
+    'away) — data: Fintraffic / digitraffic.fi (CC BY 4.0).';
+
 void main() {
-  final cases = <String, (WeatherForecast, DateTime)>{};
+  final cases = <String, (WeatherForecast, DateTime, String)>{};
 
   setUpAll(() {
     final real = mapLocationForecastToWeatherForecast(
@@ -79,15 +89,37 @@ void main() {
     )!;
     final winter = mapLocationForecastToWeatherForecast(_winterShaped())!;
     cases['live_real_nagoya'] =
-        (real, DateTime.utc(2026, 6, 12, 9, 15).toLocal());
+        (real, DateTime.utc(2026, 6, 12, 9, 15).toLocal(), _liveCaption);
     cases['live_winter_shaped'] =
-        (winter, DateTime.utc(2026, 1, 1, 7, 15).toLocal());
+        (winter, DateTime.utc(2026, 1, 1, 7, 15).toLocal(), _liveCaption);
+    // Measured 80 m visibility merged into the departure hour: the severe
+    // band a forecast alone can never reach (0/620, 2026-06-12 quant run).
+    final dep = DateTime.utc(2026, 1, 1, 7, 15).toLocal();
+    cases['live_winter_measured_vis'] = (
+      mergeObservedVisibility(
+        winter,
+        VisibilityObservation(
+          meters: 80,
+          stationId: 1001,
+          stationName: 'vt1_Espoo_Nupuri',
+          measuredAt: dep.subtract(const Duration(minutes: 5)),
+          distanceKm: 3.1,
+        ),
+        dep,
+      ),
+      dep,
+      _measuredCaption,
+    );
   });
 
-  for (final name in ['live_real_nagoya', 'live_winter_shaped']) {
+  for (final name in [
+    'live_real_nagoya',
+    'live_winter_shaped',
+    'live_winter_measured_vis',
+  ]) {
     testWidgets('capture: $name', (tester) async {
       await _loadRealFont();
-      final (forecast, departure) = cases[name]!;
+      final (forecast, departure, caption) = cases[name]!;
       const advisor = SnowAwarePretripAdvisor();
       final commute = CommuteShape(
         plannedDeparture: departure,
@@ -125,7 +157,7 @@ void main() {
                     forecastIssuedAt: forecast.issuedAt,
                     tripRequired: false,
                     onTripRequiredChanged: (_) {},
-                    sourceCaption: _liveCaption,
+                    sourceCaption: caption,
                   ),
                 ),
               ),
