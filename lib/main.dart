@@ -32,6 +32,7 @@ import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
 import 'providers/kuksa_condition_provider.dart';
+import 'providers/met_norway_hourly_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
 import 'widgets/pretrip_briefing_card.dart';
@@ -187,14 +188,46 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // a SIMULATED demo forecast (a morning where visibility collapses to
   // whiteout class around departure and clears two hours later) so the
   // surface renders immediately with zero network. The caption tells the
-  // truth about the source. Live forecast wiring (e.g. a condition_aggregator
-  // hourly source) is a future, additive arc — same pattern as the
-  // Digitraffic / KUKSA opt-ins above.
+  // truth about the source.
+  //
+  // LIVE FORECAST (additive opt-in, same pattern as the Digitraffic / KUKSA
+  // opt-ins above): `--dart-define=PRETRIP_FORECAST=met_norway` fetches the
+  // MET Norway locationforecast hourly timeseries (a GLOBAL product — it
+  // covers a Nagoya commute as well as a Nordic one) for PRETRIP_LAT /
+  // PRETRIP_LON (defaulting to the app's Nagoya map center) and replaces the
+  // demo forecast, with departure = the moment the briefing is computed
+  // ("should I leave now?"). Data © MET Norway, CC BY 4.0 — the caption
+  // carries the attribution.
+  //
+  // HONEST FALLBACK (no fabrication): on any fetch/parse failure the demo
+  // forecast stays, the caption keeps saying "demo", and nothing live is
+  // claimed. The compact product carries no visibility/surface fields, so
+  // the live briefing's hazard signal comes from temperature + precipitation
+  // alone (the advisor's icing rule) — fields the publisher did not forecast
+  // are null, never estimated.
   //
   // The "trip required" switch is the contract's honesty rule made visible:
   // when on, the advisor never urges a delay — it names the hazard, helps her
   // prepare, and leaves the decision with her.
   bool _pretripTripRequired = false;
+
+  static const String _pretripForecastSource =
+      String.fromEnvironment('PRETRIP_FORECAST');
+  // Forecast point — defaults to the app's Nagoya map center. Unparseable
+  // overrides fall back to the default rather than guessing a location.
+  static final double _pretripLat = double.tryParse(
+          const String.fromEnvironment('PRETRIP_LAT')) ??
+      35.1709;
+  static final double _pretripLon = double.tryParse(
+          const String.fromEnvironment('PRETRIP_LON')) ??
+      136.8815;
+
+  MetNorwayHourlyForecastProvider? _pretripForecastProvider;
+
+  /// Live forecast + the departure it was fetched for; null until a real
+  /// fetch succeeds (the demo forecast below stays the offline default).
+  WeatherForecast? _pretripLiveForecast;
+  DateTime? _pretripLiveDeparture;
 
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
@@ -279,6 +312,39 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _initLiveWeather();
     _initKuksaConditions();
     _initLocation();
+    _initPretripForecast();
+  }
+
+  /// Fetches a LIVE hourly forecast for the pre-trip briefing, but ONLY when
+  /// the edge developer has opted in via
+  /// `--dart-define=PRETRIP_FORECAST=met_norway`. On every other path this is
+  /// a no-op and the briefing keeps its simulated demo forecast
+  /// (offline-first preserved).
+  ///
+  /// All failures degrade honestly: on fetch/parse error or an empty hourly
+  /// timeseries, [_pretripLiveForecast] stays null, the briefing stays on the
+  /// demo forecast, and the caption keeps saying "demo" — a live source is
+  /// never claimed that did not actually deliver.
+  Future<void> _initPretripForecast() async {
+    if (_pretripForecastSource != 'met_norway') return; // not selected
+    final provider = MetNorwayHourlyForecastProvider();
+    _pretripForecastProvider = provider;
+    try {
+      final forecast = await provider.fetchForecast(
+        latitude: _pretripLat,
+        longitude: _pretripLon,
+      );
+      if (!mounted || forecast == null) return;
+      setState(() {
+        _pretripLiveForecast = forecast;
+        // Live mode answers "should I leave now?" — departure is the moment
+        // the real forecast arrived, not the demo's fixed clock.
+        _pretripLiveDeparture = DateTime.now();
+      });
+    } catch (_) {
+      // Publisher unreachable / malformed → honest floor: demo forecast
+      // stays, nothing live is claimed.
+    }
   }
 
   /// Subscribes the held [_assessment] to the LIVE in-vehicle KUKSA condition
@@ -410,6 +476,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _kuksaClient?.dispose();
     _locationSub?.cancel();
     _locationBloc?.close();
+    _pretripForecastProvider?.close();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -565,12 +632,25 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   /// The pre-trip "Before you drive" briefing — the upstream safety surface
   /// the JAF driver voice argues matters most. Computed deterministically by
-  /// [SnowAwarePretripAdvisor] from the simulated demo forecast; the
-  /// "trip required" switch demonstrates the contract's honesty rule live.
+  /// [SnowAwarePretripAdvisor] from the simulated demo forecast, or from a
+  /// LIVE MET Norway hourly forecast when the edge developer opted in via
+  /// `--dart-define=PRETRIP_FORECAST=met_norway` AND the fetch succeeded;
+  /// the "trip required" switch demonstrates the contract's honesty rule.
   Widget _buildPretripView() {
     const advisor = SnowAwarePretripAdvisor();
+    final live = _pretripLiveForecast;
+    final forecast = live ?? _pretripForecast;
+    final departure =
+        live != null ? _pretripLiveDeparture! : _pretripDeparture;
+    final caption = live != null
+        ? 'LIVE forecast — data: MET Norway (CC BY 4.0), '
+            'lat $_pretripLat lon $_pretripLon. '
+            'No visibility/surface data in this product — hazard signal from '
+            'temperature + precipitation only.'
+        : 'Simulated forecast (demo) — offline, deterministic'
+            '${_pretripForecastSource == 'met_norway' ? ' (live fetch unavailable)' : ''}';
     final commute = CommuteShape(
-      plannedDeparture: _pretripDeparture,
+      plannedDeparture: departure,
       plannedDuration: const Duration(minutes: 30),
       routeIdentifiers: const ['demo-commute'],
       flexibility: _pretripTripRequired
@@ -578,7 +658,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           : CommuteFlexibility.discretionary,
     );
     final briefing = advisor.brief(
-      forecast: _pretripForecast,
+      forecast: forecast,
       commute: commute,
       profile: const DriverProfileSpec(
         profileTag: 'demo',
@@ -591,11 +671,11 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
         child: PretripBriefingCard(
           briefing: briefing,
           commute: commute,
-          forecastIssuedAt: _pretripForecast.issuedAt,
+          forecastIssuedAt: forecast.issuedAt,
           tripRequired: _pretripTripRequired,
           onTripRequiredChanged: (v) =>
               setState(() => _pretripTripRequired = v),
-          sourceCaption: 'Simulated forecast (demo) — offline, deterministic',
+          sourceCaption: caption,
         ),
       ),
     );
