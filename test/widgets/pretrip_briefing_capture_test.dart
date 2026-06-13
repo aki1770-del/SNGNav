@@ -16,6 +16,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+import 'package:sngnav_snow_scene/providers/jma_briefing_merge.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
 
@@ -136,4 +137,85 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('capture: jp_jma_snow', (tester) async {
+    await _loadRealFont();
+    // Japan-shaped live forecast: temperature only (the MET Norway compact
+    // product gives Nagoya no visibility and no road state), with an official
+    // JMA heavy-snow warning merged onto the departure window. Without the
+    // merge this renders "no winter hazard"; with it the driver sees the snow.
+    final jpForecast = WeatherForecast(
+      hourly: [slot(7, temp: -2), slot(8, temp: -2)],
+      issuedAt: issued,
+    );
+    final merged = mergeJmaWinterAdvisory(
+      jpForecast,
+      jmaEventName: '大雪警報',
+      windowStart: dep,
+      windowDuration: const Duration(minutes: 30),
+    );
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: merged,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+
+    final boundaryKey = GlobalKey();
+    tester.view.physicalSize = const Size(620, 760);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 600,
+                height: 740,
+                child: PretripBriefingCard(
+                  briefing: briefing,
+                  commute: commute,
+                  forecastIssuedAt: issued,
+                  tripRequired: false,
+                  onTripRequiredChanged: (_) {},
+                  sourceCaption:
+                      'MET Norway forecast + JMA heavy-snow warning (official)',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      expect(bytes, isNotNull);
+      final dir = Directory('test/widgets/_capture')..createSync();
+      final file = File('${dir.path}/pretrip_jp_jma_snow.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.lengthSync(), greaterThan(0));
+      // ignore: avoid_print
+      print('CAPTURE jp_jma_snow: ${file.path} ${file.lengthSync()} bytes');
+    });
+
+    expect(tester.takeException(), isNull);
+  });
 }
