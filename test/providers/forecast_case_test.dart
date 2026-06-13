@@ -14,6 +14,16 @@ void main() {
         forecastCaseForLocation(latitude: 43.06, longitude: 141.35),
         ForecastCase.japanSnowZone,
       );
+      // Akita city (050000) — a heavy-snow prefecture and a load-bearing
+      // served-driver case; it must resolve to the Japan case.
+      expect(
+        forecastCaseForLocation(latitude: 39.72, longitude: 140.10),
+        ForecastCase.japanSnowZone,
+      );
+      expect(
+        japanPrefectureCodeForLocation(latitude: 39.72, longitude: 140.10),
+        '050000',
+      );
     });
 
     test('Nagoya is the MET Norway case — it is south of the snow belt', () {
