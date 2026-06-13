@@ -1,0 +1,113 @@
+# ARM64 Scene Render — the honest "stand-in" layer-5 rung + regression guard
+#
+# Renders the SNGNav Snow Scene on a GENUINE aarch64 Linux host (GitHub's
+# arm64 hosted runner — real ARM silicon, NOT x86 emulating ARM like QEMU),
+# headless via Xvfb + software rendering, and uploads the captured PNG as an
+# artifact so a human can GO AND LOOK at it.
+#
+# Two purposes: (1) prove the scene renders on genuine aarch64; (2) stand as a
+# regression guard so a change cannot silently break the aarch64 render path.
+# For edge developers: this is a working template for building + rendering a
+# Flutter Linux app on real arm64.
+#
+# Honest scope: server CPU + software GL (llvmpipe / Skia-CPU), NOT a physical
+# IVI board with a real GPU on the dashboard. One real rung above QEMU
+# emulation; never "on her board".
+
+name: ARM64 Scene Render
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'packages/**'
+      - '.github/workflows/arm64_scene_render.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'  # weekly Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render Snow Scene on genuine aarch64
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prove this is real aarch64 (not emulation)
+        run: |
+          echo "uname -m: $(uname -m)"
+          lscpu 2>/dev/null | grep -iE 'architecture|model name|vendor' || true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git curl unzip xz-utils zip \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev libblkid-dev liblzma-dev libsqlite3-dev \
+            xvfb scrot imagemagick x11-utils mesa-utils libgl1-mesa-dri
+
+      - name: Install Flutter (git clone — official tarball has no linux-arm64)
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b 3.41.4 "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Flutter bring-up (precache arm64 artifacts)
+        run: |
+          flutter --version
+          flutter config --enable-linux-desktop
+          flutter precache --linux
+          flutter doctor -v || true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build Snow Scene (release, native arm64 host build, simulated profile)
+        run: |
+          flutter build linux --release -t lib/snow_scene.dart \
+            --dart-define=WEATHER_PROVIDER=simulated \
+            --dart-define=LOCATION_PROVIDER=simulated \
+            --dart-define=ROUTING_ENGINE=mock \
+            --dart-define=DEAD_RECKONING=true \
+            --dart-define=DR_MODE=kalman
+
+      - name: Locate the built bundle + executable
+        id: locate
+        run: |
+          BUNDLE=$(find build/linux -type d -name bundle | head -1)
+          echo "Bundle dir: $BUNDLE"
+          ls -la "$BUNDLE" || true
+          EXE=$(find "$BUNDLE" -maxdepth 1 -type f -executable | head -1)
+          echo "Executable: $EXE"
+          echo "exe=$EXE" >> "$GITHUB_OUTPUT"
+
+      - name: Render scene headless and capture PNG
+        run: |
+          export LIBGL_ALWAYS_SOFTWARE=1
+          EXE="${{ steps.locate.outputs.exe }}"
+          echo "Launching: $EXE"
+          xvfb-run -a -s "-screen 0 1280x800x24" bash -c '
+            "'"$EXE"'" --enable-software-rendering &
+            APP_PID=$!
+            sleep 30
+            xwininfo -root -tree 2>/dev/null | head -20 || true
+            scrot /tmp/scene_arm64.png 2>/dev/null \
+              || import -window root /tmp/scene_arm64.png 2>/dev/null \
+              || xwd -root -silent | convert xwd:- /tmp/scene_arm64.png
+            kill $APP_PID 2>/dev/null || true
+          '
+          ls -la /tmp/scene_arm64.png
+          file /tmp/scene_arm64.png || true
+
+      - name: Upload scene PNG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snow-scene-arm64-png
+          path: /tmp/scene_arm64.png
+          if-no-files-found: warn

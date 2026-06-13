@@ -197,7 +197,37 @@ Use this sequence when bringing up a new ARM target.
 | Local OSRM curl check | Route API returns `"code": "Ok"` |
 | `flutter build linux --release -t lib/snow_scene.dart` | Release bundle created successfully |
 
-## 9. Known Tradeoffs
+## 9. GPU Rendering And Embedder Selection (embedded ARM)
+
+If you are taking this beyond a desktop ARM box (Raspberry Pi) toward a real
+in-vehicle / IVI target, the scene's own demands and the embedder's GPU path are
+two separate questions. Score them separately.
+
+**The scene is light.** SNGNav's Snow Scene — including the perspective
+"road-ahead" view — is **2D CPU/Skia** (a `CustomPainter` over a Skia `Canvas`:
+paths, gradients, raster map tiles, widgets). It is **not** GPU-3D — no Impeller,
+no Vulkan, no Filament. Any embedded GPU at GLES 2.0/3.1 over-serves it, and
+software-Skia remains a working degraded fallback if the GPU path is unavailable.
+A genuine-aarch64 render (software GL) is verified — see
+`docs/evidence_arm64_render.md`.
+
+**The embedder/driver bring-up is the real work.** Recommendations:
+
+| Choice | Recommendation | Why |
+|--------|----------------|-----|
+| Rendering backend | **Skia / OpenGL ES — not Impeller** | Skia/GLES is the production embedded path; Impeller's embedded GLES backend has known shader-link issues on Mali / VideoCore GPUs. |
+| First de-risk board | **Raspberry Pi 5** (VideoCore VII) | Fully open, mature Mesa `v3d` (GLES 3.1 / Vulkan 1.2); known-good with `flutter-pi` and `flutter-elinux`. The cheapest way to prove a real GPU context before committing to an IVI board. |
+| IVI-class SoC | Rockchip RK3588 (Mali-G610, open Mesa Panthor/PanVK) or NXP i.MX8M Plus | RK3588 has mature open drivers; i.MX is the production-authentic Toyota path (`ivi-homescreen`, Wayland, EGL/GLESv2) but harder to bring up. |
+| Embedder | `flutter-pi` (DRM/KMS, lowest overhead) or `flutter-elinux` (Wayland or DRM-GBM) | Both handle EGL-context creation against Mesa/vendor drivers. |
+| Display path | DRM/KMS-direct for simplicity, Wayland for production IVI | DRM/KMS is fewest moving parts; Wayland is what production IVI ships. |
+
+**What needs real silicon (cannot be emulated):** a real EGL context on the real
+GPU driver (the #1 bring-up risk), actual frame-pacing / fps / thermals on the
+SoC, and driver-specific GLES quirks. The arm64 *build* and the scene's *draw
+path* are already provable without hardware (host, QEMU-aarch64, and the verified
+software-GL render above).
+
+## 10. Known Tradeoffs
 
 | Topic | Current position |
 |-------|------------------|
@@ -206,7 +236,7 @@ Use this sequence when bringing up a new ARM target.
 | Routing choice | OSRM is the safer default on Pi 4; Valhalla is heavier but richer |
 | Demo profile | Simulated weather + simulated location + mock routing is the most reliable first-run path |
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
