@@ -40,6 +40,8 @@ dependencies:
     path: packages/adaptive_reroute
   pretrip_decision_advisor:
     path: packages/pretrip_decision_advisor
+  condition_aggregator:
+    path: packages/condition_aggregator
   condition_aggregator_jma:
     path: packages/condition_aggregator_jma
   flutter_map: ^8.2.2

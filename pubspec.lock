@@ -105,7 +105,7 @@ packages:
     source: hosted
     version: "1.19.1"
   condition_aggregator:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "packages/condition_aggregator"
       relative: true

@@ -16,6 +16,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -34,6 +35,7 @@ import 'fluorite/snow_scene_3d_view.dart';
 import 'providers/digitraffic_visibility.dart';
 import 'providers/kuksa_condition_provider.dart';
 import 'providers/met_norway_hourly_forecast.dart';
+import 'providers/pretrip_live_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
 import 'widgets/pretrip_briefing_card.dart';
@@ -230,6 +232,15 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   WeatherForecast? _pretripLiveForecast;
   DateTime? _pretripLiveDeparture;
 
+  // Per-location live-source resolution (MET Norway global vs JMA Japan
+  // snow-zone) and the HONEST status the caption switches on. JMA only ever
+  // ADDS a road-condition band to the MET base; on ANY JMA failure the base
+  // is kept and the caption says the warning check was UNAVAILABLE.
+  PretripLiveStatus? _pretripLiveStatus;
+  String? _pretripJmaEventName;
+  String? _pretripJmaPrefecture;
+  static const Duration _pretripWindow = Duration(minutes: 30);
+
   // MEASURED VISIBILITY (additive opt-in on top of the live forecast):
   // `--dart-define=PRETRIP_VISIBILITY=digitraffic` fetches the nearest fresh
   // visibility sensor on Finland's Digitraffic road-weather network (measured
@@ -369,24 +380,40 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// never claimed that did not actually deliver.
   Future<void> _initPretripForecast() async {
     if (_pretripForecastSource != 'met_norway') return; // not selected
-    final provider = MetNorwayHourlyForecastProvider();
-    _pretripForecastProvider = provider;
-    try {
-      final forecast = await provider.fetchForecast(
-        latitude: _pretripLat,
-        longitude: _pretripLon,
-      );
-      if (!mounted || forecast == null) return;
-      setState(() {
-        _pretripLiveForecast = forecast;
-        // Live mode answers "should I leave now?" — departure is the moment
-        // the real forecast arrived, not the demo's fixed clock.
-        _pretripLiveDeparture = DateTime.now();
-      });
-    } catch (_) {
-      // Publisher unreachable / malformed → honest floor: demo forecast
-      // stays, nothing live is claimed.
-    }
+    final met = MetNorwayHourlyForecastProvider();
+    _pretripForecastProvider = met;
+    final jma = JmaAdvisoryProvider();
+    final result = await resolvePretripLiveForecast(
+      latitude: _pretripLat,
+      longitude: _pretripLon,
+      now: DateTime.now(),
+      window: _pretripWindow,
+      fetchMetForecast: () =>
+          met.fetchForecast(latitude: _pretripLat, longitude: _pretripLon),
+      fetchJmaAdvisories: () async {
+        // init() is idempotent; close() releases the client after the fetch.
+        await jma.init();
+        try {
+          return await jma.fetchActiveAdvisoriesAtPoint(
+            latitude: _pretripLat,
+            longitude: _pretripLon,
+          );
+        } finally {
+          jma.close();
+        }
+      },
+    );
+    // Honest floor: the orchestrator never throws, and a null forecast means
+    // no live source delivered → the offline demo forecast stays, nothing live
+    // is claimed.
+    if (!mounted || result.forecast == null) return;
+    setState(() {
+      _pretripLiveForecast = result.forecast; // already JMA-merged when applicable
+      _pretripLiveDeparture = result.departure;
+      _pretripLiveStatus = result.status;
+      _pretripJmaEventName = result.jmaEventName;
+      _pretripJmaPrefecture = result.prefectureCode;
+    });
   }
 
   /// Subscribes the held [_assessment] to the LIVE in-vehicle KUKSA condition
@@ -699,16 +726,21 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             'away) — data: Fintraffic / digitraffic.fi (CC BY 4.0).'
         : '';
     final caption = live != null
-        ? 'LIVE forecast — data: MET Norway (CC BY 4.0), '
-            'lat $_pretripLat lon $_pretripLon. '
-            'No visibility/surface data in this product — hazard signal from '
-            'temperature + precipitation${obs == null ? ' only' : ''}.'
-            '$visCaption'
+        ? pretripLiveSourceCaption(
+            status: _pretripLiveStatus ?? PretripLiveStatus.metNorway,
+            latitude: _pretripLat,
+            longitude: _pretripLon,
+            prefectureCode: _pretripJmaPrefecture,
+            eventGloss: _pretripJmaEventName == null
+                ? null
+                : jmaEventEnglishGloss(_pretripJmaEventName!),
+            visCaption: visCaption,
+          )
         : 'Simulated forecast (demo) — offline, deterministic'
             '${_pretripForecastSource == 'met_norway' ? ' (live fetch unavailable)' : ''}';
     final commute = CommuteShape(
       plannedDeparture: departure,
-      plannedDuration: const Duration(minutes: 30),
+      plannedDuration: _pretripWindow,
       routeIdentifiers: const ['demo-commute'],
       flexibility: _pretripTripRequired
           ? CommuteFlexibility.required

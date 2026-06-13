@@ -218,4 +218,165 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('capture: jp_live_akita', (tester) async {
+    await _loadRealFont();
+    // The Akita (Japan snow-zone) live-briefing case: a MET Norway temp-only
+    // base merged with an OFFICIAL JMA heavy-snow warning on the departure
+    // window. The verbatim 大雪警報 lives in the merge DATA driving the road
+    // band; the on-card Text is English ONLY (DejaVuSans has no CJK glyphs, so
+    // CJK on the card would render as tofu boxes).
+    final base = WeatherForecast(
+      hourly: [slot(7, temp: -2), slot(8, temp: -2)],
+      issuedAt: issued,
+    );
+    final merged = mergeJmaWinterAdvisory(
+      base,
+      jmaEventName: '大雪警報',
+      windowStart: dep,
+      windowDuration: const Duration(minutes: 30),
+    );
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: merged,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+
+    final boundaryKey = GlobalKey();
+    tester.view.physicalSize = const Size(620, 760);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 600,
+                height: 740,
+                child: PretripBriefingCard(
+                  briefing: briefing,
+                  commute: commute,
+                  forecastIssuedAt: issued,
+                  tripRequired: false,
+                  onTripRequiredChanged: (_) {},
+                  sourceCaption:
+                      'MET Norway forecast + JMA heavy-snow warning '
+                      '(Akita, official)',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      expect(bytes, isNotNull);
+      final dir = Directory('test/widgets/_capture')..createSync();
+      final file = File('${dir.path}/pretrip_jp_live_akita.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.lengthSync(), greaterThan(0));
+      // ignore: avoid_print
+      print('CAPTURE jp_live_akita: ${file.path} ${file.lengthSync()} bytes');
+    });
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('capture: jp_live_akita_unavailable', (tester) async {
+    await _loadRealFont();
+    // The honest-degradation surface: same Akita temp-only base, but NO merge —
+    // the JMA winter-warning check was UNAVAILABLE, so the card briefs on
+    // temperature + precipitation only and SAYS SO. An official snow warning
+    // may exist that is not reflected; the caption never claims "all clear".
+    final base = WeatherForecast(
+      hourly: [slot(7, temp: -2), slot(8, temp: -2)],
+      issuedAt: issued,
+    );
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: base,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+
+    final boundaryKey = GlobalKey();
+    tester.view.physicalSize = const Size(620, 760);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 600,
+                height: 740,
+                child: PretripBriefingCard(
+                  briefing: briefing,
+                  commute: commute,
+                  forecastIssuedAt: issued,
+                  tripRequired: false,
+                  onTripRequiredChanged: (_) {},
+                  sourceCaption:
+                      'MET Norway forecast (Akita). JMA winter-warning check '
+                      'UNAVAILABLE — temperature + precipitation only; an '
+                      'official snow warning may exist that is not shown here.',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      expect(bytes, isNotNull);
+      final dir = Directory('test/widgets/_capture')..createSync();
+      final file = File('${dir.path}/pretrip_jp_live_akita_unavailable.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.lengthSync(), greaterThan(0));
+      // ignore: avoid_print
+      print('CAPTURE jp_live_akita_unavailable: ${file.path} '
+          '${file.lengthSync()} bytes');
+    });
+
+    expect(tester.takeException(), isNull);
+  });
 }
