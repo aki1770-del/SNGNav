@@ -1,6 +1,6 @@
 /// Pure Dart navigation-safety domain enums.
 ///
-/// This package re-exports four enum types that constitute the
+/// This package re-exports five enum types that constitute the
 /// stable domain-vocabulary baseline shared across navigation-safety
 /// consumers:
 ///
@@ -13,6 +13,11 @@
 /// - [DriverProfile] — driver-class trait axis (ageingRural /
 ///   snowZoneExperienced / noviceUrban / professional /
 ///   agriculturalForestry / foreignTouristSnowZone).
+/// - [HapticCuePattern] — tactile hazard-cue grammar (none / warning /
+///   critical) for the accessibility channel, with a pure
+///   [hapticCueForSeverity] mapping that mirrors the audio severity gate
+///   one-for-one so a deaf driver's cue set equals the hearing driver's
+///   warning set.
 ///
 /// No Flutter dependency. No transitive dependencies. Each source
 /// file is byte-identical to the corresponding file in
@@ -25,3 +30,4 @@ export 'src/alert_severity.dart';
 export 'src/circadian_phase.dart';
 export 'src/driver_profile.dart';
 export 'src/driver_state.dart';
+export 'src/haptic_cue_pattern.dart';

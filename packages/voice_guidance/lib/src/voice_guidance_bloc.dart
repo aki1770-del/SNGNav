@@ -5,7 +5,13 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:navigation_safety/navigation_safety.dart';
+// The pure haptic-cue grammar + severity mapping live in the pure-Dart
+// enums package. Aliased because it declares its own `AlertSeverity` (a
+// byte-identical copy of the core enum); the bloc bridges core -> enums
+// via the exhaustive `_hapticPatternFor` switch below.
+import 'package:navigation_safety_enums/navigation_safety_enums.dart' as nse;
 
+import 'haptic_engine.dart';
 import 'maneuver_speech_formatter.dart';
 import 'tts_engine.dart';
 import 'voice_guidance_config.dart';
@@ -20,11 +26,13 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     ManeuverSpeechFormatter formatter = const ManeuverSpeechFormatter(),
     DriverProfile? profile,
     GlanceBudgetTracker? glanceBudgetTracker,
+    HapticEngine? hapticEngine,
   }) : _ttsEngine = ttsEngine,
        _config = config,
        _formatter = formatter,
        _profile = profile,
        _glanceBudgetTracker = glanceBudgetTracker,
+       _hapticEngine = hapticEngine,
        super(
          config.enabled
              ? const VoiceGuidanceState.idle()
@@ -79,6 +87,18 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   /// consumed. Caution-add-only: the modulation can only SLOW speech
   /// (pace ≤ 1.0× baseline); never speeds up.
   final GlanceBudgetTracker? _glanceBudgetTracker;
+
+  /// Optional tactile (haptic) engine for the accessibility hazard channel
+  /// (0.7.0). When supplied, the bloc fires a tactile cue ADDITIVELY beside
+  /// the existing TTS speak in the hazard dispatch — off the SAME severity
+  /// gate — so a deaf / hard-of-hearing driver (or HER in a roaring-wind
+  /// whiteout where speech cannot carry) receives the same hazard warning a
+  /// hearing driver gets, via a tactile channel.
+  ///
+  /// The haptic channel is additive-only: it NEVER gates, delays, or
+  /// silences the audio channel. Null preserves pre-0.7.0 back-compat: with
+  /// no haptic engine the audio path is byte-for-byte identical.
+  final HapticEngine? _hapticEngine;
 
   StreamSubscription<NavigationState>? _navigationSub;
   StreamSubscription<GlanceBudgetEvent>? _glanceBudgetSub;
@@ -272,6 +292,18 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   ) async {
     if (!_voiceEnabled) return;
 
+    // Accessibility (0.7.0): fire the tactile cue ADDITIVELY beside the
+    // audio, off the SAME severity gate the audio uses, so a deaf /
+    // hard-of-hearing driver (or HER in a roaring-wind whiteout) receives
+    // the same hazard warning. Fire-and-forget so the haptic channel can
+    // NEVER delay, gate, or silence audio; the engine's cue() never throws
+    // (honest degradation), so the unawaited future cannot surface an
+    // unhandled async error.
+    final hapticEngine = _hapticEngine;
+    if (hapticEngine != null) {
+      unawaited(hapticEngine.cue(_hapticPatternFor(event.severity)));
+    }
+
     // Hazard announcements interrupt maneuver speech for safety priority.
     await _ttsEngine.stop();
 
@@ -288,6 +320,25 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     emit(state.copyWith(status: VoiceGuidanceStatus.idle));
   }
 
+  /// Bridge the core [AlertSeverity] the hazard event carries to the pure
+  /// enums-package severity, then to its tactile [nse.HapticCuePattern].
+  ///
+  /// The two `AlertSeverity` declarations (core's and the enums package's)
+  /// are byte-identical today but are distinct types; this switch is the
+  /// honest bridge. It is exhaustive and compile-checked: if the core enum
+  /// ever gains a value this fails to BUILD — fail-loud, never a silent
+  /// mismap into the wrong cue. The mapping mirrors the audio severity gate
+  /// exactly, so the deaf driver's cue set equals the hearing driver's
+  /// warning set.
+  nse.HapticCuePattern _hapticPatternFor(AlertSeverity severity) {
+    final mapped = switch (severity) {
+      AlertSeverity.info => nse.AlertSeverity.info,
+      AlertSeverity.warning => nse.AlertSeverity.warning,
+      AlertSeverity.critical => nse.AlertSeverity.critical,
+    };
+    return nse.hapticCueForSeverity(mapped);
+  }
+
   void _cacheNavigationMarkers(NavigationState state) {
     _lastManeuverIndex = state.currentManeuverIndex;
     _lastNavigationStatus = state.status;
@@ -300,6 +351,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
     await _navigationSub?.cancel();
     await _glanceBudgetSub?.cancel();
     await _ttsEngine.dispose();
+    await _hapticEngine?.dispose();
     return super.close();
   }
 }

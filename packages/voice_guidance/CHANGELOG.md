@@ -1,5 +1,115 @@
 # Changelog
 
+## 0.7.0 — 2026-06-14 — add the tactile (haptic) accessibility hazard channel
+
+Adds an opt-in tactile hazard channel so a deaf / hard-of-hearing
+driver — or HER in a roaring-wind whiteout where speech cannot
+carry — receives the **same hazard warning** a hearing driver gets,
+off the **same severity gate**, via a tactile channel, with a
+grammar that **distinguishes severity** (a single undifferentiated
+buzz is worse than honest). Disabled by default; preserves 0.6.x
+back-compat byte-for-byte on the audio path.
+
+### Added
+
+- **`HapticEngine`** (`lib/src/haptic_engine.dart`) — abstract
+  tactile engine: `isAvailable()` / `cue(HapticCuePattern)` /
+  `stop()` / `dispose()`. Additive + advisory by contract; `cue`
+  must not throw (honest degradation), so it can never gate, delay,
+  or silence the audio channel.
+- **`NoOpHapticEngine`** (`lib/src/noop_haptic_engine.dart`) —
+  silent engine that records the cues it is asked to render
+  (`cues` / `tactileCues`). For tests and headless / motor-less
+  hosts. Never throws.
+- **`FlutterHapticEngine`** (`lib/src/flutter_haptic_engine.dart`) —
+  wraps flutter/services `HapticFeedback`. Renders the pure
+  `HapticCuePattern.pulseCount` grammar: warning → a measured
+  double-pulse (2 medium impacts), critical → an urgent triple-pulse
+  (3 heavier impacts), doubly distinguishable by count (2 vs 3) and
+  intensity (medium vs heavy). Guarded with the **same
+  `MissingPluginException` → unavailable** honest-degradation
+  pattern as `FlutterTtsEngine`: `pluginAvailable` flips false and
+  `isAvailable()` returns false once the platform reports missing;
+  any other haptic error is swallowed. Injectable impact seam for
+  tests.
+- **`VoiceGuidanceBloc({HapticEngine? hapticEngine})`** — new
+  optional constructor parameter. Defaults to null preserving 0.6.x
+  back-compat. When supplied, the bloc fires a tactile cue
+  ADDITIVELY beside the existing TTS speak in the hazard dispatch
+  (`_onHazardAnnounced`), fire-and-forget so the haptic channel
+  never affects audio timing. The cue is derived from the hazard
+  event's `AlertSeverity` via `navigation_safety_enums`
+  `hapticCueForSeverity` (bridged from the core severity through an
+  exhaustive, compile-checked switch). No event-shape change.
+
+### Why this exists
+
+The audio channel is not a universal channel. An audio-only hazard
+warning reaches nothing to a deaf or hard-of-hearing driver, and
+nothing to a hearing driver inside a roaring-wind whiteout where
+speech cannot carry. The tactile channel carries the same warning
+off the same severity gate. Grounded in recorded driver voices (see
+`DRIVER_VOICES.md`, the deaf / hard-of-hearing entry: SafeDrive4Deaf
+n=25/100%, Bauman 2009, Gaffary & Lécuyer 2018): differentiated
+cues are both wanted and effective — a single static buzz a driver
+cannot act on is worse than honest.
+
+### Discipline
+
+- **Same-gate / set-parity invariant** (load-bearing, locked by
+  test): the haptic fires off the same `AlertSeverity` gate the
+  audio uses; the deaf driver's cue SET equals the hearing driver's
+  warning SET `{warning, critical}` — no reduced subset that
+  silently drops the most serious warnings for the driver who can
+  least afford to miss them.
+- **Severity-not-profile invariant**: the cue is a pure function of
+  severity via `hapticCueForSeverity`. It takes no `DriverProfile`
+  by construction. Severity decides whether/what; a profile only
+  ever decides how.
+- **Additive-only**: the haptic NEVER gates, delays, or silences
+  audio. It is fired fire-and-forget; `cue` never throws. An
+  integrator supplying no haptic engine sees the 0.6.x audio path
+  unchanged.
+- **Advisory-not-control**: QM / advisory / severity-gated /
+  non-fabricating. No actuator authority. See the
+  `SAFETY_BOUNDARY.md` §10 addendum.
+
+### Honesty bound
+
+A haptic pattern is FELT, not asserted. This release is verified by
+logic / widget tests + `NoOpHapticEngine` recording + injectable
+impact-seam tests of the Flutter engine's degradation and pulse
+grammar. It is **NOT** verified by feel: on this host the Flutter
+impl resolves to no sensation (desktop / motor-less). The
+motor-less-device gap — that "available" cannot guarantee a felt
+physical motor — is documented in `KNOWN_LIMITATIONS.md`. No
+desktop haptic is fabricated.
+
+### Tests
+
+- New `test/flutter_haptic_engine_test.dart`: pulse grammar
+  (warning → 2 / critical → 3 / none → 0); `MissingPluginException`
+  → `pluginAvailable` false + `isAvailable()` false; other errors
+  swallowed (no throw); dispose prevents further cues.
+- New `test/noop_haptic_engine_test.dart`: records cues; tactile
+  subset; dispose clears + reports unavailable.
+- New `test/voice_guidance_bloc_haptic_test.dart`: severity-coupling
+  lock (warning hazard → warning cue; critical hazard → critical
+  cue); **deaf-cue-set == hearing-warning-set** off the same gate;
+  haptic fired ADDITIVELY beside the TTS speak (audio unchanged);
+  back-compat (no haptic engine → no behaviour change).
+
+### Bumped
+
+- New dependency `navigation_safety_enums: ^0.1.3` (the pure-Dart
+  home of `HapticCuePattern` + `hapticCueForSeverity`).
+
+### Unchanged (back-compat)
+
+- All 0.6.x audio surface unchanged. `VoiceGuidanceBloc` with no
+  `hapticEngine` runs the 0.6.x code path identically.
+- `TtsEngine` interface unchanged. Hazard event shape unchanged.
+
 ## 0.6.3
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

@@ -1,8 +1,8 @@
 # voice_guidance — Safety-Class Boundary Record
 
 **Package**: `voice_guidance`
-**Version**: 0.6.0 (DEPLOY)
-**Boundary record version**: 1.2 (0.6.0 addendum: BudgetAwarePaceProfile glance-budget-aware pacing)
+**Version**: 0.7.0 (DEPLOY)
+**Boundary record version**: 1.3 (0.7.0 addendum §10: tactile/haptic accessibility hazard channel)
 **Authoring skill**: AAA (automotive-adas-analyst)
 **Date**: 2026-05-06
 **Anchor**: driver-facing-loom-as-default architectural discipline
@@ -140,14 +140,90 @@ glance event source (integrator) -> GlanceBudgetTracker.budgetEvents
 
 **Audible-to-edge-developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `glanceBudgetTracker` parameter — defaults to null preserving 0.5.0 back-compat. An integrator that supplies neither the tracker nor a non-null `config.budgetAwarePace` runs the 0.5.0 code path identically. The opt-in is integrator-class.
 
+## 10 — Tactile (haptic) accessibility hazard channel (new in 0.7.0)
+
+**Class**: **QM / advisory / severity-gated / non-fabricating.** The haptic
+channel adds no functional-safety scope. It renders a tactile cue beside the
+audio hazard announcement; the driver feels it, the driver decides. No
+actuator authority, no control loop, no automation.
+
+**Why it exists** — the audio channel is not a universal channel. A deaf or
+hard-of-hearing driver receives nothing from an audio-only hazard warning,
+and neither does a hearing driver inside a roaring-wind whiteout where speech
+cannot carry. The tactile channel carries the **same hazard warning** off the
+**same severity gate**, so the driver who cannot hear is not silently served a
+lesser warning. Grounded in the recorded deaf / hard-of-hearing driver voice
+(`DRIVER_VOICES.md`: SafeDrive4Deaf n=25/100%, Bauman 2009, Gaffary & Lécuyer
+2018).
+
+**Same-gate / set-parity invariant** (load-bearing, locked by test): the
+haptic cue is derived from the hazard event's `AlertSeverity` via the pure
+`hapticCueForSeverity` mapping in `navigation_safety_enums`, which returns a
+tactile (non-`none`) cue for exactly the set `{warning, critical}` that the
+audio gate (`shouldAnnounceAlert`: `severity.index >= warning.index`)
+announces. The deaf driver's tactile-cue **set equals** the hearing driver's
+warning **set** — no reduced subset that silently drops the most serious
+warnings for the driver who can least afford to miss them. Locked by
+`test/voice_guidance_bloc_haptic_test.dart` and
+`navigation_safety_enums/test/haptic_cue_pattern_test.dart`.
+
+**Differentiated-grammar discipline**: a single undifferentiated buzz is
+*worse than honest* — a driver who feels one generic vibration cannot tell
+"reduce speed" from "consider turning back". The grammar therefore
+distinguishes severity: warning renders as a measured double-pulse (2 medium
+impacts), critical as an urgent triple-pulse (3 heavier impacts) — doubly
+distinguishable by count (2 vs 3) and intensity (medium vs heavy).
+
+**Severity-not-profile invariant preserved**: the cue is a pure function of
+`AlertSeverity` only (`hapticCueForSeverity` takes no `DriverProfile` by
+construction). Severity decides whether/what; a profile only ever decides
+how. The haptic channel introduces no profile coupling.
+
+**Additive-only / driver-always-drives preserved**: the haptic NEVER gates,
+delays, or silences the audio channel. It is fired fire-and-forget in
+`_onHazardAnnounced` beside the existing TTS speak; the engine's `cue`
+contract forbids throwing (honest degradation), so a haptic failure cannot
+propagate into or delay the audio path. The package still emits no control
+signal and holds no actuator authority.
+
+**Honest-degradation discipline (non-fabricating)**: `FlutterHapticEngine`
+guards every platform call with the same `MissingPluginException` →
+unavailable pattern as `FlutterTtsEngine`; once the haptic platform reports
+missing, `isAvailable()` returns false and cues become no-ops. Crucially,
+the package does NOT fabricate a desktop haptic and does NOT claim
+"verified by feel": "available" means the platform channel did not report
+missing, not that a physical motor is present and felt. The motor-less-device
+gap is documented in `KNOWN_LIMITATIONS.md`. On a host with no motor the
+Flutter impl resolves to no sensation; the integrator selects
+`NoOpHapticEngine` for such hosts.
+
+**Back-compat**: the channel is opt-in via the optional
+`VoiceGuidanceBloc({HapticEngine? hapticEngine})` parameter (null default).
+An integrator supplying no haptic engine runs the 0.6.x audio path
+identically; no event-shape change.
+
+**Driver-impact chain (≤4 hops)**:
+```
+navigation state stream + alert severity (integrator)
+  -> VoiceGuidanceBloc (this package; same severity gate as audio)
+    -> HapticEngine -> device vibration motor
+      -> deaf / hard-of-hearing driver (or HER in a whiteout) feels the warning
+```
+Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
+
 ## 9 — Cross-references
 
 - `lib/src/voice_guidance_config.dart` (per-profile speakingRate + multiplier table; 0.4.0)
 - `lib/src/voice_guidance_bloc.dart` (`_initializeTts` calls `setSpeechRate`; hazard preempts maneuver)
 - `lib/src/tts_engine.dart` (`setSpeechRate` interface method; 0.4.0)
 - `lib/src/flutter_tts_engine.dart` / `linux_tts_engine.dart` / `noop_tts_engine.dart` (engine implementations of `setSpeechRate`)
-- `pubspec.yaml` `version: 0.6.0` (DEPLOY)
+- `pubspec.yaml` `version: 0.7.0` (DEPLOY)
 - `lib/src/budget_aware_pace_profile.dart` (0.6.0 `BudgetAwarePaceProfile` value class + `InterpolationCurve` enum)
+- `lib/src/haptic_engine.dart` (0.7.0 `HapticEngine` interface — tactile accessibility hazard channel)
+- `lib/src/noop_haptic_engine.dart` / `lib/src/flutter_haptic_engine.dart` (0.7.0 engine implementations)
+- `lib/src/voice_guidance_bloc.dart` `_onHazardAnnounced` haptic cue fired additively beside TTS speak; `_hapticPatternFor` core→enums severity bridge (0.7.0)
+- `navigation_safety_enums` 0.1.3 `HapticCuePattern` + `hapticCueForSeverity` (pure-Dart cue grammar + severity mapping)
+- `KNOWN_LIMITATIONS.md` (0.7.0 motor-less-device gap; feel-verification is integrator/on-device)
 - `lib/src/voice_guidance_config.dart` `budgetAwarePace` field (0.6.0)
 - `lib/src/voice_guidance_bloc.dart` `_glanceBudgetSub` + `_effectiveSpeakingRate()` (0.6.0)
 - LICENSE: BSD-3-Clause (matches the rest of SNGNav)
