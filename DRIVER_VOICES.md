@@ -165,4 +165,22 @@ The same source records that drivers without winter driving experience are expli
 
 ---
 
+### [Public corpus] Deaf / hard-of-hearing driver — the hazard warning that arrives as sound only
+
+**Source**:
+- https://hearinglosshelp.com/blog/driving-safely-with-hearing-loss/ (Neil Bauman, Ph.D., "Driving Safely with Hearing Loss"; first-person account, first published in *Hearing Health*, Spring 2009)
+- https://nafath.mada.org.qa/nafath-article/mcn2904/ (Ahmed Zayen & Daniel Groessing, "SafeDrive4Deaf: A Mixed-Methods Study on Emergency Sound Awareness and Assistive Technology Needs Among Deaf and Hard-of-Hearing Drivers," *Nafath* periodical by Mada)
+- https://www.frontiersin.org/journals/ict/articles/10.3389/fict.2018.00005/full (Yoren Gaffary & Anatole Lécuyer, "The Use of Haptic and Tactile Information in the Car to Improve Driving Safety: A Review of Current Technologies," 2018)
+**Speaker context** (anonymized): A deaf hearing-health author writing first-person about driving entirely by vision; a mixed-methods study of 25 deaf and hard-of-hearing drivers (Tunisia + Germany; ages 25–61; 5–40 years' driving experience); and a peer-reviewed review of in-vehicle haptic/tactile alerting.
+**Substance** (paraphrased + verbatim attributed quotes):
+> A deaf driver describes navigating entirely by sight: *"I use my eyes when I drive. What do you use?"* and *"It is the rare emergency vehicle that can get close to me without my seeing its flashing lights."* (Bauman, 2009).
+
+This is not anecdotal. In the SafeDrive4Deaf study of 25 deaf and hard-of-hearing drivers, **100% reported difficulty detecting approaching emergency vehicles regardless of 5–40 years' experience, and 100% expressed a need for enhanced alert systems.** Thematic analysis found participants valued *tactile feedback integrated into seats or steering wheels* and *color-coded* urgency (red = immediate threat; yellow = distant siren). A review of in-car haptics (Gaffary & Lécuyer, 2018) reports the tactile channel stays available when visual and auditory channels are overloaded, that haptic cues localize risk far better than sound (one study: spatial localization 32% → 84%), and that **dynamic, patterned vibration — not a single static buzz — differentiates urgency and shortens reaction time.**
+
+*Need-grounded composite (labeled — not a real named testimony):* a deaf driver, or any driver inside a roaring-wind whiteout where speech cannot carry, receives nothing from an audio-only hazard warning.
+
+**Structural takeaway**: The audio channel is not a universal channel. A deaf or hard-of-hearing driver receives nothing from an audio-only alert; neither does a hearing driver in a roaring-wind whiteout. Therefore the haptic (tactile) hazard channel SNGNav builds must carry the **same warning set** as the audio channel, fired off the **same severity gate** — not a reduced subset that silently drops the most serious warnings for the driver who can least afford to miss them (a D4 dignity floor; OPS-RULE-059 accessibility). A single undifferentiated buzz is worse than honest: a deaf driver who feels one generic vibration cannot act on it — they cannot tell *reduce speed* from *consider turning back*. The cited evidence shows differentiated cues are both wanted (SafeDrive4Deaf color-coding) and effective (Gaffary & Lécuyer: dynamic patterns beat a static buzz). So the haptic grammar must distinguish severity, mapping one-for-one onto the existing `RecommendedResponse` tiers (proceed / reduceSpeed / considerTurningBack). **Honesty note on evidence strength**: the deaf-driver visual-reliance and emergency-detection gap is both research-documented (SafeDrive4Deaf, n=25, 100% finding) and first-person-attested (Bauman). First-person *snow-specific* deaf-driver accounts are sparse; the whiteout framing above is therefore a labeled need-grounded composite drawn from the cited deaf-driver evidence plus this file's own whiteout voices (Sapporo turn-around; "if you can't see the next arrow, you're in a real whiteout") — it is not overclaimed as a real named snow testimony.
+
+---
+
 (Future voices recorded as encountered; the corpus grows with what we hear, not with what we hide.)
