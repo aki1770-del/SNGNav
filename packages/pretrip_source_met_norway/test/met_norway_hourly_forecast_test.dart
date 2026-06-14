@@ -18,15 +18,14 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
-import 'package:sngnav_snow_scene/providers/met_norway_hourly_forecast.dart';
-import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
+import 'package:pretrip_source_met_norway/pretrip_source_met_norway.dart';
+import 'package:test/test.dart';
 
 const _fixturePath =
-    'test/providers/fixtures/met_norway_compact_nagoya_2026_06_12.json';
+    'test/fixtures/met_norway_compact_nagoya_2026_06_12.json';
 
 Map<String, dynamic> _loadFixture() =>
     jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, dynamic>;

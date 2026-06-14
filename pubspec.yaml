@@ -44,6 +44,12 @@ dependencies:
     path: packages/condition_aggregator
   condition_aggregator_jma:
     path: packages/condition_aggregator_jma
+  pretrip_source_met_norway:
+    path: packages/pretrip_source_met_norway
+  pretrip_source_digitraffic:
+    path: packages/pretrip_source_digitraffic
+  pretrip_source_jma:
+    path: packages/pretrip_source_jma
   flutter_map: ^8.2.2
   flutter_libserialport: ^0.6.0
   latlong2: ^0.9.1
@@ -96,6 +102,12 @@ dependency_overrides:
     path: packages/condition_aggregator
   condition_aggregator_digitraffic:
     path: packages/condition_aggregator_digitraffic
+  # The 3 pretrip_source_* packages declare pretrip_decision_advisor from
+  # hosted (^0.2.0) so they stay standalone-verifiable / publishable; the app
+  # consumes the local path copy. Unify the source to the local path here
+  # (same pattern as snow_rendering / routing_bloc / offline_tiles above).
+  pretrip_decision_advisor:
+    path: packages/pretrip_decision_advisor
 
 # Embedded ARM IVI Blocker 2 closure — BDE-CANDIDATE-1 SHAPE A-PRIME component 2 (2026-05-23).
 # sqlite3 ^3.2.0 uses Dart code-asset hooks; on the embedded ARM IVI target the

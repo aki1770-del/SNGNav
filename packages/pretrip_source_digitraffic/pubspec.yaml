@@ -1,0 +1,28 @@
+name: pretrip_source_digitraffic
+description: >-
+  Fintraffic Digitraffic measured road-visibility source for the
+  pretrip_decision_advisor briefing. Fetches the nearest fresh
+  NÄKYVYYS_M road-weather sensor and emits a source-neutral
+  VisibilityObservation. Pure Dart.
+version: 0.1.0
+license: BSD-3-Clause
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - pretrip
+  - visibility
+  - digitraffic
+  - finland
+  - winter-driving
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  http: ^1.3.0
+  pretrip_decision_advisor: ^0.2.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

@@ -6,12 +6,11 @@ library;
 
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
-import 'package:sngnav_snow_scene/providers/digitraffic_visibility.dart';
-import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
+import 'package:pretrip_source_digitraffic/pretrip_source_digitraffic.dart';
+import 'package:test/test.dart';
 
 // Helsinki-ish query point.
 const _lat = 60.2;
@@ -124,7 +123,7 @@ void main() {
           MockClient((req) async {
             requests.add(req.url.path);
             if (req.url.path.endsWith('/stations')) {
-              expect(req.headers['User-Agent'], contains('sngnav'));
+              expect(req.headers['User-Agent'], contains('pretrip_source'));
               expect(req.headers['Accept-Encoding'], contains('gzip'));
               return http.Response(
                 _metadata(),

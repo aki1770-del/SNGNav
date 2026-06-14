@@ -1,0 +1,28 @@
+name: pretrip_source_jma
+description: >-
+  Japan Meteorological Agency (AMeDAS) measured-visibility source for the
+  pretrip_decision_advisor pre-trip "Before you drive" briefing. Emits a real
+  surface-visibility observation (metres) the advisor merges into the departure
+  hour. Pure Dart.
+version: 0.1.0
+license: BSD-3-Clause
+
+repository: https://github.com/aki1770-del/sngnav
+issue_tracker: https://github.com/aki1770-del/sngnav/issues
+topics:
+  - navigation
+  - safety
+  - weather
+  - visibility
+  - winter-driving
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  http: ^1.3.0
+  pretrip_decision_advisor: ^0.2.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1

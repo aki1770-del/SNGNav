@@ -117,14 +117,14 @@ packages:
       path: "packages/condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.4"
+    version: "0.0.5"
   condition_aggregator_jma:
     dependency: "direct main"
     description:
       path: "packages/condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.1.4"
   convert:
     dependency: transitive
     description:
@@ -201,7 +201,7 @@ packages:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.4.1"
+    version: "0.4.2"
   dylib:
     dependency: transitive
     description:
@@ -708,7 +708,28 @@ packages:
       path: "packages/pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.2.0"
+  pretrip_source_digitraffic:
+    dependency: "direct main"
+    description:
+      path: "packages/pretrip_source_digitraffic"
+      relative: true
+    source: path
+    version: "0.1.0"
+  pretrip_source_jma:
+    dependency: "direct main"
+    description:
+      path: "packages/pretrip_source_jma"
+      relative: true
+    source: path
+    version: "0.1.0"
+  pretrip_source_met_norway:
+    dependency: "direct main"
+    description:
+      path: "packages/pretrip_source_met_norway"
+      relative: true
+    source: path
+    version: "0.1.0"
   proj4dart:
     dependency: transitive
     description:

@@ -7,12 +7,11 @@ library;
 
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
-import 'package:sngnav_snow_scene/providers/jma_visibility.dart';
-import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
+import 'package:pretrip_source_jma/pretrip_source_jma.dart';
+import 'package:test/test.dart';
 
 // HER mother's anchor: 秋田 / Akita.
 const _lat = 39.72;
