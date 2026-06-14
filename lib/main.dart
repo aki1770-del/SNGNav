@@ -33,6 +33,7 @@ import 'bloc/location_state.dart';
 import 'config/provider_config.dart';
 import 'fluorite/snow_scene_3d_view.dart';
 import 'providers/digitraffic_visibility.dart';
+import 'providers/jma_visibility.dart';
 import 'providers/kuksa_condition_provider.dart';
 import 'providers/met_norway_hourly_forecast.dart';
 import 'providers/pretrip_live_forecast.dart';
@@ -252,10 +253,16 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // Applied only when the LIVE forecast is also present: merging a real
   // observation into the fixed demo timeline would be fabrication.
   // Data © Fintraffic / digitraffic.fi, CC BY 4.0 — caption carries it.
+  //
+  // `--dart-define=PRETRIP_VISIBILITY=jma` is the Japan equivalent: the nearest
+  // fresh visibility sensor on JMA's AMeDAS network (probed 2026-06-14:
+  // 151/1286 stations report visibility, incl. 秋田/Akita) — same merge, same
+  // departure-hour-only rule, same real-sensor-or-nothing honesty. Data: 気象庁
+  // / Japan Meteorological Agency (open data) — caption carries it.
   static const String _pretripVisibilitySource =
       String.fromEnvironment('PRETRIP_VISIBILITY');
 
-  DigitrafficVisibilityProvider? _pretripVisibilityProvider;
+  void Function()? _pretripVisibilityClose;
   VisibilityObservation? _pretripVisibility;
 
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
@@ -347,25 +354,34 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   /// Fetches the nearest MEASURED visibility for the pre-trip briefing, but
   /// ONLY when the edge developer has opted in via
-  /// `--dart-define=PRETRIP_VISIBILITY=digitraffic`. Honest floor on every
-  /// failure path: no station in range, stale sensor, or fetch error →
-  /// [_pretripVisibility] stays null and the briefing simply has no measured
-  /// visibility — never an estimated one.
+  /// `--dart-define=PRETRIP_VISIBILITY=digitraffic` (Finland) or `=jma`
+  /// (Japan / AMeDAS). Honest floor on every failure path: no station in range,
+  /// stale sensor, or fetch error → [_pretripVisibility] stays null and the
+  /// briefing simply has no measured visibility — never an estimated one.
   Future<void> _initPretripVisibility() async {
-    if (_pretripVisibilitySource != 'digitraffic') return; // not selected
-    final provider = DigitrafficVisibilityProvider();
-    _pretripVisibilityProvider = provider;
+    VisibilityObservation? obs;
     try {
-      final obs = await provider.fetchNearestVisibility(
-        latitude: _pretripLat,
-        longitude: _pretripLon,
-      );
-      if (!mounted || obs == null) return;
-      setState(() => _pretripVisibility = obs);
+      switch (_pretripVisibilitySource) {
+        case 'digitraffic':
+          final p = DigitrafficVisibilityProvider();
+          _pretripVisibilityClose = p.close;
+          obs = await p.fetchNearestVisibility(
+              latitude: _pretripLat, longitude: _pretripLon);
+        case 'jma':
+          final p = JmaVisibilityProvider();
+          _pretripVisibilityClose = p.close;
+          obs = await p.fetchNearestVisibility(
+              latitude: _pretripLat, longitude: _pretripLon);
+        default:
+          return; // not selected
+      }
     } catch (_) {
       // Network unreachable / API failure → honest floor: no measured
       // visibility, nothing estimated in its place.
+      return;
     }
+    if (!mounted || obs == null) return;
+    setState(() => _pretripVisibility = obs);
   }
 
   /// Fetches a LIVE hourly forecast for the pre-trip briefing, but ONLY when
@@ -546,7 +562,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _locationSub?.cancel();
     _locationBloc?.close();
     _pretripForecastProvider?.close();
-    _pretripVisibilityProvider?.close();
+    _pretripVisibilityClose?.call();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -720,10 +736,13 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       forecast = mergeObservedVisibility(forecast, obs, departure);
     }
 
+    final visAttribution = _pretripVisibilitySource == 'jma'
+        ? 'Japan Meteorological Agency / AMeDAS (気象庁)'
+        : 'Fintraffic / digitraffic.fi (CC BY 4.0)';
     final visCaption = obs != null
         ? ' Departure-hour visibility MEASURED: ${obs.meters.round()} m at '
             '${obs.stationName} (${obs.distanceKm.toStringAsFixed(0)} km '
-            'away) — data: Fintraffic / digitraffic.fi (CC BY 4.0).'
+            'away) — data: $visAttribution.'
         : '';
     final caption = live != null
         ? pretripLiveSourceCaption(

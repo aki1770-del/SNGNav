@@ -32,7 +32,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
-import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+
+import 'visibility_observation.dart';
+
+// The measured-visibility observation type and its departure-hour merge are
+// source-neutral (shared with the JMA AMeDAS provider); re-exported so existing
+// importers of this file keep resolving `VisibilityObservation` and
+// `mergeObservedVisibility` unchanged.
+export 'visibility_observation.dart';
 
 /// Default Digitraffic road-weather API base.
 const String kDigitrafficWeatherApiBase =
@@ -45,32 +52,6 @@ const Duration _kFetchBudget = Duration(seconds: 30);
 /// ~600 KB decoded JSON (526 stations, 2026-06-12); 8 MB bounds memory
 /// while leaving headroom.
 const int _kMaxResponseBytes = 8 * 1024 * 1024;
-
-/// One real visibility measurement near a requested point.
-class VisibilityObservation {
-  const VisibilityObservation({
-    required this.meters,
-    required this.stationId,
-    required this.stationName,
-    required this.measuredAt,
-    required this.distanceKm,
-  });
-
-  /// Measured visibility in metres.
-  final double meters;
-
-  /// Digitraffic station id the measurement came from.
-  final int stationId;
-
-  /// Station name as published (e.g. `vt1_Espoo_Nupuri`).
-  final String stationName;
-
-  /// When the sensor measured this value (from the publisher, UTC→local).
-  final DateTime measuredAt;
-
-  /// Great-circle distance from the requested point to the station.
-  final double distanceKm;
-}
 
 /// Fetches the nearest fresh measured visibility on the Finnish road network.
 class DigitrafficVisibilityProvider {
@@ -267,36 +248,6 @@ DateTime? _parseIsoOrNull(Object? raw) {
   } on FormatException {
     return null;
   }
-}
-
-/// Merges a NOW visibility observation into the single forecast slot that
-/// covers [departure] — and no other. A station measurement is valid for the
-/// hour she is leaving in; projecting it into later forecast hours would
-/// fabricate forecast visibility the publisher never issued. The measured
-/// value takes precedence over any forecast visibility for that hour (a real
-/// sensor beats a forecast for "now"). Returns the forecast unchanged when
-/// no slot covers the departure.
-WeatherForecast mergeObservedVisibility(
-  WeatherForecast forecast,
-  VisibilityObservation observation,
-  DateTime departure,
-) {
-  final hourly = [
-    for (final s in forecast.hourly)
-      if (!s.hour.isAfter(departure) &&
-          s.hour.add(const Duration(hours: 1)).isAfter(departure))
-        HourlyForecast(
-          hour: s.hour,
-          tempCelsius: s.tempCelsius,
-          humidityRH: s.humidityRH,
-          precipitationMmPerHour: s.precipitationMmPerHour,
-          visibilityMeters: observation.meters,
-          estimatedRoadCondition: s.estimatedRoadCondition,
-        )
-      else
-        s,
-  ];
-  return WeatherForecast(hourly: hourly, issuedAt: forecast.issuedAt);
 }
 
 /// Raised on HTTP or parse failure of a Digitraffic fetch.

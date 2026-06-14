@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:sngnav_snow_scene/providers/jma_briefing_merge.dart';
+import 'package:sngnav_snow_scene/providers/jma_visibility.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
 
@@ -297,6 +298,93 @@ void main() {
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
       print('CAPTURE jp_live_akita: ${file.path} ${file.lengthSync()} bytes');
+    });
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('capture: jp_akita_measured_whiteout', (tester) async {
+    await _loadRealFont();
+    // The NEW Japan path: an Akita temp-only MET base with a REAL measured
+    // AMeDAS visibility (80 m) merged into the departure hour. This is the only
+    // channel that lights the WHITEOUT band for HER mother — the JMA warning
+    // merge deliberately never writes a visibility number, so without a real
+    // sensor the Japan briefing could never reach severe on measured data.
+    final base = WeatherForecast(
+      hourly: [slot(7, temp: -6), slot(8, temp: -6)],
+      issuedAt: issued,
+    );
+    final obs = VisibilityObservation(
+      meters: 80,
+      stationId: 32402,
+      stationName: 'Akita',
+      measuredAt: dep,
+      distanceKm: 0.4,
+    );
+    final merged = mergeObservedVisibility(base, obs, dep);
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: merged,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+
+    final boundaryKey = GlobalKey();
+    tester.view.physicalSize = const Size(620, 760);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 600,
+                height: 740,
+                child: PretripBriefingCard(
+                  briefing: briefing,
+                  commute: commute,
+                  forecastIssuedAt: issued,
+                  tripRequired: false,
+                  onTripRequiredChanged: (_) {},
+                  sourceCaption:
+                      'LIVE forecast — base: MET Norway (Akita). Departure-hour '
+                      'visibility MEASURED: 80 m at Akita (0 km away) — data: '
+                      'Japan Meteorological Agency / AMeDAS.',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      expect(bytes, isNotNull);
+      final dir = Directory('test/widgets/_capture')..createSync();
+      final file = File('${dir.path}/pretrip_jp_akita_measured_whiteout.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.lengthSync(), greaterThan(0));
+      // ignore: avoid_print
+      print('CAPTURE jp_akita_measured_whiteout: ${file.path} '
+          '${file.lengthSync()} bytes');
     });
 
     expect(tester.takeException(), isNull);
