@@ -3,7 +3,7 @@ description: >-
   JMA (気象庁) adapter for the condition_aggregator interface. Maps
   JMA disaster-info XML feeds to source-neutral Advisory typed events.
   Pure Dart.
-version: 0.1.3
+version: 0.1.4
 
 # 0.1.0 deploys via the direct-Dart-XML-parse path (no jmaxml binding
 # in transit). The jmaxml engagement-shape election (alpha/beta/gamma)
@@ -23,7 +23,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  condition_aggregator: ^0.0.4
+  condition_aggregator: ^0.0.5
   # xml is the canonical Dart XML parser; used for atom-feed +
   # per-prefecture report parsing on the direct-parse path.
   xml: ^6.5.0

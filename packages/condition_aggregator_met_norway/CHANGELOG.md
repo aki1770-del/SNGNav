@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.2 — 2026-06-14 — Dependency hygiene
+
+- Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).
+- No source or behaviour change.
+
+
 ## 0.0.1 — 2026-05-24 — Initial scaffold
 
 - Initial release of the MET Norway (Meteorologisk institutt) adapter

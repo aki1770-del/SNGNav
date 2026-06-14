@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.5 — 2026-06-14 — Dependency hygiene
+
+- Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).
+- No source or behaviour change.
+
+
 ## 0.0.4 — 2026-05-30 — Defect fix: large live response no longer throws (graceful degradation)
 
 - **Defect (shipped in v0.0.2/v0.0.3)**: `fetchActiveAdvisoriesAtPoint`

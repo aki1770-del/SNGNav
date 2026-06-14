@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6 — 2026-06-14 — Dependency hygiene
+
+- Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`) + `noaa_nws_adapter` (`^0.0.3`→`^0.0.5`).
+- No source or behaviour change.
+
+
 ## 0.0.5
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

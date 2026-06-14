@@ -3,7 +3,7 @@ description: >-
   OpenWeatherMap Road Risk adapter for the condition_aggregator
   interface. Maps OWM Road Risk alerts to source-neutral Advisory
   events. Pure Dart.
-version: 0.1.2
+version: 0.1.3
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 
@@ -19,7 +19,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  condition_aggregator: ^0.0.4
+  condition_aggregator: ^0.0.5
   equatable: ^2.0.7
   http: ^1.0.0
 

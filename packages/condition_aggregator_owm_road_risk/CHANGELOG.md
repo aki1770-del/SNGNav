@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 — 2026-06-14 — Dependency hygiene
+
+- Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).
+- No source or behaviour change.
+
+
 ## 0.1.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale
