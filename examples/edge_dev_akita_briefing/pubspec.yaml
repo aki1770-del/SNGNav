@@ -1,0 +1,39 @@
+name: edge_dev_akita_briefing
+description: >-
+  Standalone EDGE-DEVELOPER example: assemble HER mother's Akita pre-trip
+  winter-safety briefing from ONLY the published-shaped packages
+  (pretrip_decision_advisor + pretrip_source_jma) and render it in the edge
+  developer's OWN minimal UI. Depends on NOTHING from the SNGNav app — proving
+  "edge developers build their own UI/XI for HER".
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.0
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The ONLY two product dependencies. The edge developer pub-adds these and
+  # nothing else from us — no app, no app widgets.
+  pretrip_decision_advisor:
+    path: ../../packages/pretrip_decision_advisor
+  pretrip_source_jma:
+    path: ../../packages/pretrip_source_jma
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+# pretrip_source_jma declares pretrip_decision_advisor from hosted (^0.2.0) so
+# it stays standalone-publishable; here we consume the local path copy. Unify
+# the source to the local path (same pattern the SNGNav app pubspec uses).
+dependency_overrides:
+  pretrip_decision_advisor:
+    path: ../../packages/pretrip_decision_advisor
+
+flutter:
+  uses-material-design: true
