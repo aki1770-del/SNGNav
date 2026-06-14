@@ -1,11 +1,13 @@
 # pretrip_decision_advisor
 
-> **Deploy-phase 0.1.0. Interface-only contract.**
+> **0.2.0. Contract + working reference advisor.**
 >
-> This package ships an abstract contract and data shapes only. There is no
-> concrete advisor implementation in this package; reference implementations
-> compose this contract with their own weather data source, route data, and
-> driver-profile bridge.
+> This package ships an abstract contract, its data shapes, **and** a working
+> pure-Dart reference advisor (`SnowAwarePretripAdvisor`) plus a source-neutral
+> measured-visibility merge. `pub add`-ing it gives you a usable advisor, not
+> just types. It does not fetch weather or integrate a route engine — a
+> source-specific fetcher (which owns any HTTP dependency) stays outside this
+> package, so the package itself remains pure Dart.
 
 ## Aspiration
 
@@ -20,7 +22,7 @@ a common interface.
 
 ## Cohorts served
 
-The interface-only contract serves several distinct downstream cohorts:
+The package serves several distinct downstream cohorts:
 
 - **Integrator developers** building parallel navigation products on top
   of common interfaces.
@@ -52,11 +54,23 @@ The interface-only contract serves several distinct downstream cohorts:
 - `DriverProfileSpec` — a small profile spec, decoupled from any
   specific full driver-profile package, so consumers can adopt this
   advisor without taking on a full safety-core dependency.
+- `SnowAwarePretripAdvisor` — a deterministic, pure-Dart reference
+  implementation of the contract. No LLM, no network, no clock: the same
+  typed inputs always produce the same recommendation, so the worst-case
+  path stays offline. Null forecast fields never fabricate a hazard, and it
+  returns `null` when the forecast does not cover the departure window.
+- `PretripBriefing`, `PretripVerdict`, and `HourHazard` — the richer typed
+  verdict the reference advisor exposes via `brief(...)`, for UIs that want
+  the structured result alongside the contract-shaped recommendation.
+- `VisibilityObservation` and `mergeObservedVisibility` — a source-neutral
+  measured-visibility observation and its departure-hour merge (a real sensor
+  value overrides forecast visibility for the departure hour only, and is
+  never projected into later forecast hours).
 
 ## What is NOT in the package
 
-- No concrete advisor implementation.
-- No weather data fetching.
+- No weather data fetching (no HTTP dependency — a source-specific fetcher
+  produces the typed inputs and stays outside this package).
 - No route engine integration.
 
 ## Quick start
@@ -91,5 +105,5 @@ because the cost of doing so is borne by the driver, not the advisor.
 
 ## Status
 
-Deploy-phase 0.1.0. Interface stability is committed at this version
-within the bounds described in `KNOWN_LIMITATIONS.md`.
+0.2.0. Contract + working reference advisor. Interface stability is committed
+at this version within the bounds described in `KNOWN_LIMITATIONS.md`.

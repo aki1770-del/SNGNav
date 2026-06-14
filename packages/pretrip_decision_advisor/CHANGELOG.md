@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.0
+
+The package is no longer interface-only. It now ships a working reference
+advisor and the visibility-merge logic, so `pub add`-ing the package gives a
+consumer a usable advisor — not just types.
+
+- Add `SnowAwarePretripAdvisor` — a deterministic, pure-Dart reference
+  implementation of `PretripAdvisor`. No LLM, no network, no clock: the same
+  typed inputs always produce the same recommendation, so the worst-case path
+  stays offline. Null forecast fields contribute nothing to hazard scoring;
+  the advisor returns `null` when the forecast does not cover the departure
+  window, and honours the contract's honesty rule (required/unknown commutes
+  are never urged to delay — `honestyMode`).
+- Add `PretripBriefing`, `PretripVerdict`, and `HourHazard` — the richer typed
+  verdict the reference advisor exposes via `brief(...)` for UIs that want the
+  structured result alongside the contract-shaped `PretripRecommendation`.
+- Add `VisibilityObservation` + `mergeObservedVisibility(...)` — a
+  source-neutral measured-visibility observation and its departure-hour merge
+  (the measured value overrides forecast visibility for the departure hour
+  only; it is never projected into later hours). Pure Dart; a source-specific
+  fetcher that owns the HTTP dependency stays outside this package.
+- The package remains pure Dart (no `http`, no Flutter dependency). The
+  numerical thresholds the reference advisor uses are documented at their
+  declaration site; consumers may still implement `PretripAdvisor` themselves.
+
 ## 0.1.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale
