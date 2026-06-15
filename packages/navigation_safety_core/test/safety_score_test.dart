@@ -171,4 +171,70 @@ void main() {
       expect(score.toAlertSeverity(config), isNull);
     });
   });
+
+  // GAP-1 (conservative-on-uncertain invariant): a non-finite (NaN / Infinity) score must be
+  // treated as the worst-case/uncertain value and ALERT conservatively,
+  // never silently pass. NaN compares false to both clamp bounds (so it
+  // would slip through unclamped), and in toAlertSeverity every `<`
+  // against NaN is false → null (no alert). +Infinity clamps to 1 → no
+  // alert. Both invert the "if uncertain, alert conservatively" intent
+  // The invariant the guard enforces: non-finite → 0 → critical.
+  group('non-finite inputs alert conservatively (GAP-1)', () {
+    test('NaN components clamp to 0 (worst-case), never remain NaN', () {
+      final score = SafetyScore(
+        overall: double.nan,
+        gripScore: double.nan,
+        visibilityScore: double.nan,
+        fleetConfidenceScore: double.nan,
+      );
+
+      expect(score.overall, 0);
+      expect(score.gripScore, 0);
+      expect(score.visibilityScore, 0);
+      expect(score.fleetConfidenceScore, 0);
+      expect(score.overall.isNaN, isFalse);
+    });
+
+    test('NaN overall → critical (alerts, never silently passes)', () {
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: double.nan,
+        gripScore: 0.5,
+        visibilityScore: 0.5,
+        fleetConfidenceScore: 0.5,
+      );
+
+      // Pre-fix: NaN slips through clamp and toAlertSeverity returns null
+      // (no alert). Post-fix: NaN → 0 → critical.
+      expect(score.toAlertSeverity(config), AlertSeverity.critical);
+    });
+
+    test('+Infinity overall → critical (not clamped to 1 / no-alert)', () {
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: double.infinity,
+        gripScore: 0.5,
+        visibilityScore: 0.5,
+        fleetConfidenceScore: 0.5,
+      );
+
+      // Pre-fix: +Infinity clamps to 1 → null (no alert).
+      // Post-fix: +Infinity → 0 → critical.
+      expect(score.overall, 0);
+      expect(score.toAlertSeverity(config), AlertSeverity.critical);
+    });
+
+    test('-Infinity overall → critical (worst-case)', () {
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: double.negativeInfinity,
+        gripScore: 0.5,
+        visibilityScore: 0.5,
+        fleetConfidenceScore: 0.5,
+      );
+
+      expect(score.overall, 0);
+      expect(score.toAlertSeverity(config), AlertSeverity.critical);
+    });
+  });
 }
