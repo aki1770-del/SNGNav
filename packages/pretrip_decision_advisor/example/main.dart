@@ -1,22 +1,64 @@
-// Minimal example for pretrip_decision_advisor.
+// End-to-end pre-trip briefing from this package, offline + deterministic.
 //
-// 0.1.0 ships interface-only — abstract PretripAdvisor + DTOs + enums.
-// This example demonstrates the typed surface; reference
-// implementations compose with the contract.
-
+// A pretrip_source_* provider (JMA / MET Norway / Digitraffic) gives you a
+// measured VisibilityObservation and a WeatherForecast; here we construct them
+// inline so the example is reproducible with no network. See those packages to
+// fetch real measurements.
+//
+// HONESTY (binding): visibility is NEVER estimated; a warning never produces a
+// number; an observation is valid for the DEPARTURE HOUR only; null = the
+// driver's own judgment (a real source returns null, never a fabricated value).
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
 void main() {
-  print(
-    'CommuteFlexibility values: '
-    '${CommuteFlexibility.values.map((v) => v.name).toList()}',
+  // 1. A winter-morning forecast — temperature only, NO visibility (exactly the
+  //    shape a compact global forecast gives; this is why a MEASURED visibility
+  //    source is needed to reach the whiteout band).
+  final forecast = WeatherForecast(
+    issuedAt: DateTime(2026, 1, 1, 6),
+    hourly: [
+      for (var h = 7; h <= 11; h++)
+        HourlyForecast(hour: DateTime(2026, 1, 1, h), tempCelsius: -6),
+    ],
   );
-  print(
-    'RoadConditionEstimate values: '
-    '${RoadConditionEstimate.values.map((v) => v.name).toList()}',
+
+  // 2. A MEASURED visibility observation, exactly as a pretrip_source_* provider
+  //    emits it. 80 m is the labelled whiteout case; a real provider returns
+  //    null (never a fabricated number) when no fresh reading is in range.
+  final observed = VisibilityObservation(
+    meters: 80,
+    stationId: 32402,
+    stationName: 'Akita',
+    measuredAt: DateTime(2026, 1, 1, 7, 10),
+    distanceKm: 0.4,
   );
-  print(
-    'RecommendationStrength values: '
-    '${RecommendationStrength.values.map((v) => v.name).toList()}',
+
+  final commute = CommuteShape(
+    plannedDeparture: DateTime(2026, 1, 1, 7, 15),
+    plannedDuration: const Duration(minutes: 30),
+    routeIdentifiers: const ['akita-morning-errand'],
+    flexibility: CommuteFlexibility.discretionary,
   );
+
+  // 3. Merge the NOW measurement into the DEPARTURE-HOUR slot only (never
+  //    projected forward), then brief.
+  final merged =
+      mergeObservedVisibility(forecast, observed, commute.plannedDeparture);
+  final briefing = const SnowAwarePretripAdvisor().brief(
+    forecast: merged,
+    commute: commute,
+    profile: const DriverProfileSpec(
+        profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
+  );
+
+  // 4. Read the typed result out — this is what an edge dev renders in their UI.
+  print('Verdict : ${briefing.verdict.name}');
+  print('Strength: ${briefing.recommendation?.strength.name ?? "(none)"}');
+  print('Delay   : ${briefing.recommendation?.suggestedDelay ?? Duration.zero}');
+  print('Chips   :');
+  for (final c in briefing.chips) {
+    print('  - $c');
+  }
+  print('Measured: ${observed.meters} m at ${observed.stationName} '
+      '(${observed.distanceKm.toStringAsFixed(1)} km away)');
 }

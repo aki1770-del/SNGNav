@@ -79,21 +79,114 @@ The package serves several distinct downstream cohorts:
 dart pub add pretrip_decision_advisor
 ```
 
+## End-to-end: measured source → briefing
+
+This package is pure Dart, offline, and deterministic. A `pretrip_source_*`
+provider gives you a measured `VisibilityObservation` and a `WeatherForecast`;
+you merge the measurement into the **departure hour**, call `brief(...)`, and
+render the typed result in your own UI. The snippet below constructs its inputs
+inline so it runs with **no network** — see "Pair with a measured source" to
+fetch real measurements. (This is also the package's `example/main.dart`.)
+
 ```dart
+// End-to-end pre-trip briefing from this package, offline + deterministic.
+//
+// A pretrip_source_* provider (JMA / MET Norway / Digitraffic) gives you a
+// measured VisibilityObservation and a WeatherForecast; here we construct them
+// inline so the example is reproducible with no network. See those packages to
+// fetch real measurements.
+//
+// HONESTY (binding): visibility is NEVER estimated; a warning never produces a
+// number; an observation is valid for the DEPARTURE HOUR only; null = the
+// driver's own judgment (a real source returns null, never a fabricated value).
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
-String describeStrength(RecommendationStrength s) => switch (s) {
-      RecommendationStrength.advisoryWeak => 'advisory (weak)',
-      RecommendationStrength.advisoryStrong => 'advisory (strong)',
-      RecommendationStrength.honestyMode => 'honesty (driver decides)',
-    };
+void main() {
+  // 1. A winter-morning forecast — temperature only, NO visibility (exactly the
+  //    shape a compact global forecast gives; this is why a MEASURED visibility
+  //    source is needed to reach the whiteout band).
+  final forecast = WeatherForecast(
+    issuedAt: DateTime(2026, 1, 1, 6),
+    hourly: [
+      for (var h = 7; h <= 11; h++)
+        HourlyForecast(hour: DateTime(2026, 1, 1, h), tempCelsius: -6),
+    ],
+  );
 
-String describeFlexibility(CommuteFlexibility f) => switch (f) {
-      CommuteFlexibility.required => 'required commute',
-      CommuteFlexibility.discretionary => 'discretionary commute',
-      CommuteFlexibility.unknown => 'unknown flexibility',
-    };
+  // 2. A MEASURED visibility observation, exactly as a pretrip_source_* provider
+  //    emits it. 80 m is the labelled whiteout case; a real provider returns
+  //    null (never a fabricated number) when no fresh reading is in range.
+  final observed = VisibilityObservation(
+    meters: 80,
+    stationId: 32402,
+    stationName: 'Akita',
+    measuredAt: DateTime(2026, 1, 1, 7, 10),
+    distanceKm: 0.4,
+  );
+
+  final commute = CommuteShape(
+    plannedDeparture: DateTime(2026, 1, 1, 7, 15),
+    plannedDuration: const Duration(minutes: 30),
+    routeIdentifiers: const ['akita-morning-errand'],
+    flexibility: CommuteFlexibility.discretionary,
+  );
+
+  // 3. Merge the NOW measurement into the DEPARTURE-HOUR slot only (never
+  //    projected forward), then brief.
+  final merged =
+      mergeObservedVisibility(forecast, observed, commute.plannedDeparture);
+  final briefing = const SnowAwarePretripAdvisor().brief(
+    forecast: merged,
+    commute: commute,
+    profile: const DriverProfileSpec(
+        profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
+  );
+
+  // 4. Read the typed result out — this is what an edge dev renders in their UI.
+  print('Verdict : ${briefing.verdict.name}');
+  print('Strength: ${briefing.recommendation?.strength.name ?? "(none)"}');
+  print('Delay   : ${briefing.recommendation?.suggestedDelay ?? Duration.zero}');
+  print('Chips   :');
+  for (final c in briefing.chips) {
+    print('  - $c');
+  }
+  print('Measured: ${observed.meters} m at ${observed.stationName} '
+      '(${observed.distanceKm.toStringAsFixed(1)} km away)');
+}
 ```
+
+Running it (`dart run example/main.dart`) prints the typed result an edge
+developer renders — the measured 80 m lights the whiteout/severe band a
+temperature-only forecast alone could never reach:
+
+```text
+Verdict : waitAdvised
+Strength: advisoryStrong
+Delay   : 1:00:00.000000
+Chips   :
+  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
+  - Conditions improve by about 08:15.
+Measured: 80.0 m at Akita (0.4 km away)
+```
+
+## Pair with a measured source
+
+This package is pure Dart and fetches nothing. Pair it with a source package
+that produces the typed inputs — all emit the SAME `VisibilityObservation` /
+`WeatherForecast`, so you can swap region without changing your UI code:
+
+| Region / network | `pub add` | Emits |
+|---|---|---|
+| Japan — JMA / AMeDAS | [`pretrip_source_jma`](https://pub.dev/packages/pretrip_source_jma) | measured `VisibilityObservation` (metres) |
+| Finland — Fintraffic Digitraffic | [`pretrip_source_digitraffic`](https://pub.dev/packages/pretrip_source_digitraffic) | measured `VisibilityObservation` (metres) |
+| Global — MET Norway locationforecast | [`pretrip_source_met_norway`](https://pub.dev/packages/pretrip_source_met_norway) | hourly `WeatherForecast` |
+
+## Full reference integration (Flutter)
+
+A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
+pre-trip briefing from `pretrip_decision_advisor` + `pretrip_source_jma` — no
+SNGNav app widgets — lives at
+[`examples/edge_dev_akita_briefing/`](https://github.com/aki1770-del/SNGNav/tree/main/examples/edge_dev_akita_briefing).
 
 ## Honesty
 

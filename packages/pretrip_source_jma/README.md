@@ -47,6 +47,26 @@ A warning never produces a number; a measurement never produces a warning. Use
 the measurement source (this package) to reach the advisor's measured
 whiteout/severe band; use the warning sibling for categorical advisory events.
 
+## Sibling sources — same contract, pick by region
+
+The `pretrip_source_*` family all feed the same
+[`pretrip_decision_advisor`](https://pub.dev/packages/pretrip_decision_advisor)
+and emit the SAME typed inputs, so you can swap region without changing your UI
+code:
+
+| Region / network | `pub add` | Emits |
+|---|---|---|
+| Japan — JMA / AMeDAS | `pretrip_source_jma` (this package) | measured `VisibilityObservation` (metres) |
+| Finland — Fintraffic Digitraffic | [`pretrip_source_digitraffic`](https://pub.dev/packages/pretrip_source_digitraffic) | measured `VisibilityObservation` (metres) |
+| Global — MET Norway locationforecast | [`pretrip_source_met_norway`](https://pub.dev/packages/pretrip_source_met_norway) | hourly `WeatherForecast` |
+
+## Full reference integration (Flutter)
+
+A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
+pre-trip briefing from `pretrip_decision_advisor` + `pretrip_source_jma` — no
+SNGNav app widgets — lives at
+[`examples/edge_dev_akita_briefing/`](https://github.com/aki1770-del/SNGNav/tree/main/examples/edge_dev_akita_briefing).
+
 ## Service trace (driver in unexpected snow; ≤4 hops)
 
 ```

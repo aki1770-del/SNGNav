@@ -67,6 +67,26 @@ Both speak the same publisher endpoint. This package maps the **full** hourly
 timeseries so the advisor can search for a better departure window; the
 sibling maps a slice into a single in-trip advisory.
 
+## Sibling sources — same contract, pick by region
+
+The `pretrip_source_*` family all feed the same
+[`pretrip_decision_advisor`](https://pub.dev/packages/pretrip_decision_advisor)
+and emit the SAME typed inputs, so you can swap region without changing your UI
+code:
+
+| Region / network | `pub add` | Emits |
+|---|---|---|
+| Japan — JMA / AMeDAS | [`pretrip_source_jma`](https://pub.dev/packages/pretrip_source_jma) | measured `VisibilityObservation` (metres) |
+| Finland — Fintraffic Digitraffic | [`pretrip_source_digitraffic`](https://pub.dev/packages/pretrip_source_digitraffic) | measured `VisibilityObservation` (metres) |
+| Global — MET Norway locationforecast | `pretrip_source_met_norway` (this package) | hourly `WeatherForecast` |
+
+## Full reference integration (Flutter)
+
+A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
+pre-trip briefing from `pretrip_decision_advisor` + `pretrip_source_jma` — no
+SNGNav app widgets — lives at
+[`examples/edge_dev_akita_briefing/`](https://github.com/aki1770-del/SNGNav/tree/main/examples/edge_dev_akita_briefing).
+
 ## Service trace (driver in unexpected weather; ≤4 hops)
 
 ```

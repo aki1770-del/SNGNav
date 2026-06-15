@@ -74,6 +74,26 @@ Rule of thumb: a **number you measured** → this package; a **human-facing
 warning** → the sibling. Per the honesty rules, never let a warning invent a
 number — keep the two paths distinct.
 
+## Sibling sources — same contract, pick by region
+
+The `pretrip_source_*` family all feed the same
+[`pretrip_decision_advisor`](https://pub.dev/packages/pretrip_decision_advisor)
+and emit the SAME typed inputs, so you can swap region without changing your UI
+code:
+
+| Region / network | `pub add` | Emits |
+|---|---|---|
+| Japan — JMA / AMeDAS | [`pretrip_source_jma`](https://pub.dev/packages/pretrip_source_jma) | measured `VisibilityObservation` (metres) |
+| Finland — Fintraffic Digitraffic | `pretrip_source_digitraffic` (this package) | measured `VisibilityObservation` (metres) |
+| Global — MET Norway locationforecast | [`pretrip_source_met_norway`](https://pub.dev/packages/pretrip_source_met_norway) | hourly `WeatherForecast` |
+
+## Full reference integration (Flutter)
+
+A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
+pre-trip briefing from `pretrip_decision_advisor` + `pretrip_source_jma` — no
+SNGNav app widgets — lives at
+[`examples/edge_dev_akita_briefing/`](https://github.com/aki1770-del/SNGNav/tree/main/examples/edge_dev_akita_briefing).
+
 ## The contract this serves condition-general
 
 This source is **not snow-specific**. It emits visibility **in metres** for the

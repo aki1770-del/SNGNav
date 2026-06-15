@@ -64,7 +64,7 @@ SNGNav takes the opposite approach:
 | Connectivity | Required for full experience | Works fully offline |
 | Data model | Proprietary, platform-locked | Open-source, BSD-3-Clause |
 | Driver data | Platform-controlled collection | Consent-first, deny-by-default |
-| Extensibility | Closed API, vendor decides features | 4 provider interfaces, 11 packages, pub.dev |
+| Extensibility | Closed API, vendor decides features | 4 provider interfaces, open pub.dev catalog (incl. the `pretrip_*` pre-trip briefing family) |
 | Weather awareness | Not a design concern | Origin story — built for unexpected snow |
 | Safety boundary | Rich visuals during driving | Display-only, ASIL-QM, advisory alerts |
 

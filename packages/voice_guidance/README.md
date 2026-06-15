@@ -66,8 +66,11 @@ degrades silently when it is not installed.
 - [driving_weather](https://pub.dev/packages/driving_weather) — Weather conditions that trigger hazard speech
 - [offline_tiles](https://pub.dev/packages/offline_tiles) — Offline tile management with MBTiles
 
-Part of [SNGNav](https://github.com/aki1770-del/SNGNav) — 11 packages for
-offline-first navigation on Flutter.
+Part of the [SNGNav](https://github.com/aki1770-del/SNGNav) package family for
+offline-first navigation on Flutter — which also includes the `pretrip_*`
+pre-trip "Before you drive" briefing family
+([`pretrip_decision_advisor`](https://pub.dev/packages/pretrip_decision_advisor)
++ its measured sources), a separate capability from this voice/TTS package.
 
 ## License
 
