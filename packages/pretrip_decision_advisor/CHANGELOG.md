@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.1
+
+Documentation + example only — no API or behaviour change.
+
+- Replace the example with a runnable end-to-end snippet: a measured
+  `VisibilityObservation` + `WeatherForecast` → `mergeObservedVisibility` →
+  `SnowAwarePretripAdvisor.brief(...)` → the typed verdict/chips an edge
+  developer renders in their own UI (the real captured output is shown in the
+  README, not hand-written).
+- README: add an "End-to-end: measured source → briefing" section, and a
+  "Pair with a measured source" table linking `pretrip_source_jma` /
+  `pretrip_source_digitraffic` / `pretrip_source_met_norway` (all emit the same
+  `VisibilityObservation` / `WeatherForecast`, so you swap region without
+  changing UI code). Point to the standalone Flutter reference integration that
+  assembles and renders the briefing from the published packages alone.
+- Honesty rules unchanged and preserved verbatim: visibility is never
+  estimated; a warning never produces a number; an observation is valid for the
+  departure hour only; null = the driver's own judgment.
+
 ## 0.2.0
 
 The package is no longer interface-only. It now ships a working reference
