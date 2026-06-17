@@ -38,6 +38,7 @@ import 'providers/kuksa_condition_provider.dart';
 import 'providers/met_norway_hourly_forecast.dart';
 import 'providers/pretrip_live_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
+import 'providers/winter_knowledge.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
 import 'widgets/pretrip_briefing_card.dart';
 
@@ -126,6 +127,11 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // caption can tell the truth about whether the scene reflects live severity
   // or the simulated default.
   bool _liveConditionReceived = false;
+
+  // Offline winter-driving guidance cards (λ-RLM-baked, loaded once via a pure
+  // asset read — no network/LLM). Null until loaded; the pre-trip briefing
+  // omits the guidance block until then, or for a surface state with no card.
+  WinterKnowledge? _winter;
 
   // LIVE IN-VEHICLE CONDITION SOURCE (D3 worst-case — network AND GPS gone).
   //
@@ -350,6 +356,15 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _initLocation();
     _initPretripForecast();
     _initPretripVisibility();
+    _initWinterKnowledge();
+  }
+
+  /// Loads the offline winter-driving guidance cards once (pure asset read,
+  /// no network/LLM). On any failure the lookup is empty, so the briefing
+  /// simply omits the guidance block — honest degradation, never a crash.
+  Future<void> _initWinterKnowledge() async {
+    final wk = await WinterKnowledge.fromAsset();
+    if (mounted) setState(() => _winter = wk);
   }
 
   /// Fetches the nearest MEASURED visibility for the pre-trip briefing, but
@@ -784,6 +799,10 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           onTripRequiredChanged: (v) =>
               setState(() => _pretripTripRequired = v),
           sourceCaption: caption,
+          // Grounded offline guidance for the surface state the assessment
+          // expects; null (omitted) until the asset loads or for a benign
+          // surface with no baked card.
+          winterCard: _winter?.cardFor(_assessment.surfaceState),
         ),
       ),
     );
