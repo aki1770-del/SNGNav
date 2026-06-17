@@ -1,5 +1,10 @@
 # edge_dev_akita_briefing — full reference integration
 
+> **New here? → [QUICKSTART.md](QUICKSTART.md)** walks you from an empty
+> `flutter create` to a working offline winter-safety briefing in **~15 minutes**,
+> using the two hosted pub.dev packages. This README is the reference description
+> of the finished app.
+
 A standalone, **edge-developer-shaped** Flutter app that assembles and RENDERS
 HER mother's Akita pre-trip winter-safety briefing using **only two
 published-shaped packages** and the developer's **own** minimal UI widget —
