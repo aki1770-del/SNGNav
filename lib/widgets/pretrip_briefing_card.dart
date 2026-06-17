@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
+import '../providers/winter_knowledge.dart';
 import '../services/snow_aware_pretrip_advisor.dart';
 
 /// JAF-grounded preparation checklist (DRIVER_VOICES.md, JAF voices):
@@ -36,7 +37,16 @@ class PretripBriefingCard extends StatelessWidget {
     required this.tripRequired,
     required this.onTripRequiredChanged,
     required this.sourceCaption,
+    this.winterCard,
   });
+
+  /// Optional grounded winter-driving guidance for the surface state expected
+  /// on this trip (from [WinterKnowledge.cardFor]). When `null` — no card was
+  /// baked for the state, or the surface is benign — the section is omitted
+  /// entirely (honest degradation; the typed checklist still stands). The
+  /// text was λ-RLM-synthesised offline from an open winter-driving corpus and
+  /// is read here by a pure offline lookup.
+  final WinterCard? winterCard;
 
   /// The computed briefing this card renders.
   final PretripBriefing briefing;
@@ -150,6 +160,11 @@ class PretripBriefingCard extends StatelessWidget {
                 ),
               ),
 
+            if (winterCard != null) ...[
+              const Divider(),
+              ..._buildWinterCard(theme, winterCard!),
+            ],
+
             const SizedBox(height: 8),
             Text(
               '$sourceCaption · forecast issued ${_hhmm(forecastIssuedAt)}',
@@ -160,6 +175,84 @@ class PretripBriefingCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Render the grounded winter-driving guidance as a glanceable block:
+  /// an "If the road is `<state>`" header, then the action bullets. The card
+  /// text is light markdown (`#`, `**`, `•`); we strip the markup rather
+  /// than pull in a renderer, keeping the surface offline and dependency-light.
+  List<Widget> _buildWinterCard(ThemeData theme, WinterCard card) {
+    final actions = _actionLines(card.guidance);
+    return [
+      Text('If the road is ${_humanState(card.state)}',
+          style: theme.textTheme.titleSmall),
+      const SizedBox(height: 6),
+      for (final line in actions)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 3),
+                child: Icon(Icons.snowing, size: 14),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(line, style: theme.textTheme.bodySmall),
+              ),
+            ],
+          ),
+        ),
+      const SizedBox(height: 2),
+      Text(
+        'Offline winter-driving guidance · open sources (CC BY-SA)',
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.outline),
+      ),
+    ];
+  }
+
+  /// Extract the action bullets from the markdown guidance, stripping markup.
+  /// Falls back to the non-empty prose lines if the card has no bullets, so a
+  /// differently-shaped card still renders something legible.
+  static List<String> _actionLines(String guidance) {
+    final lines = guidance
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    final bullets = <String>[];
+    for (final l in lines) {
+      if (l.startsWith('•') || l.startsWith('- ') || l.startsWith('* ')) {
+        bullets.add(_stripMarkup(l.substring(1).trim()));
+      }
+    }
+    if (bullets.isNotEmpty) return bullets;
+    // No bullets — show the prose lines that aren't headings.
+    return lines
+        .where((l) => !l.startsWith('#'))
+        .map(_stripMarkup)
+        .where((l) => l.isNotEmpty)
+        .toList();
+  }
+
+  static String _stripMarkup(String s) =>
+      s.replaceAll('**', '').replaceAll('#', '').trim();
+
+  static String _humanState(String state) {
+    switch (state) {
+      case 'blackIce':
+        return 'black ice';
+      case 'compactedSnow':
+        return 'compacted snow';
+      case 'slush':
+        return 'slush';
+      case 'wet':
+        return 'wet';
+      default:
+        return state;
+    }
   }
 
   _VerdictStyle _verdictStyle(ThemeData theme) {

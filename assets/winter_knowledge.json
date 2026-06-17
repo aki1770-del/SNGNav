@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "generator": "\u03bb-RLM (lambda-calculus-LLM/lambda-RLM) long-context single-pass synthesis (context_window_chars >= corpus so the action-grounded source is reasoned over whole, not split \u2014 forced splitting starved the per-state questions and produced refusals in v1-v3), model claude-haiku-4-5",
+    "purpose": "OFFLINE build-time synthesis; drive-time lookup is deterministic, no LLM/network in vehicle",
+    "corpus": "corpus_v4 (CC BY-SA 4.0): Wikivoyage 'Winter driving' + 'Driving in Norway'; Wikipedia 'Black ice', 'Aquaplaning', 'Skid (automobile)', 'Cadence braking', 'Threshold braking'. Action-focused driver-guidance paragraphs; see tool/winter_knowledge/corpus_v4_manifest.json",
+    "grounding": "source-grounded; refusals excluded (no fabricated driver guidance)",
+    "approx_cost_usd_at_haiku45_rates": 0.1282,
+    "states_included": [
+      "blackIce",
+      "compactedSnow",
+      "slush",
+      "wet"
+    ],
+    "states_excluded": {}
+  },
+  "cards": {
+    "blackIce": {
+      "guidance": "# Black Ice: In-Car Reference Card\n\n**WHAT IT IS:**\nBlack ice is a transparent layer of ice on road surfaces that looks like wet pavement, making it nearly invisible to drivers.\n\n**ACTIONABLE STEPS:**\n\n\u2022 **Reduce speed significantly** \u2014 Test the road surface with gentle braking to determine how slippery it is; drive at least 3\u20134 times slower than normal stopping distance would suggest\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) between your vehicle and the car ahead, versus the normal 3-second rule in summer\n\n\u2022 **Avoid braking and steering inputs** \u2014 If you begin to skid, avoid sudden braking or abrupt turns; instead, disengage the clutch to regain traction, and steer gently to counteract rear-wheel skids\n\n\u2022 **Be extra cautious on bridges, overpasses, and ramps** \u2014 Black ice forms first on these elevated structures since air circulates above and below, causing rapid temperature drops"
+    },
+    "compactedSnow": {
+      "guidance": "# Driving on Compacted Snow\n\n**What it is:** Compacted snow requires reduced speed, increased following distance, and gentle vehicle control to maintain traction.\n\n\u2022 **Tyres:** Use winter tires (especially Nordic-type studded or unstudded) with adequate tread depth; narrow tires perform better on snow than wide tires\n\n\u2022 **Speed:** Reduce speed significantly and test the surface frequently with gentle braking to know how slippery it is; corner at less than 30 km/h (18 mph)\n\n\u2022 **Braking:** Avoid hard braking; use gentle braking to test conditions; on downhill stretches, downshift to reduce speed rather than brake, as braking can cause the vehicle to fishtail\n\n\u2022 **Distance:** Increase following distance from the standard 3 seconds to 5\u20136 seconds or more behind the vehicle ahead"
+    },
+    "slush": {
+      "guidance": "# Slush (Melting/Mixed Snow): Aquaplaning-Like Risk\n\n**Slush is soft, melting snow that is more slippery than ice and presents aquaplaning-like hazards due to reduced handling and traction.**\n\n\u2022 **Reduce speed significantly** \u2014 Steering (handling) is particularly difficult on slush; approach at cautious speeds and test braking gently to assess surface grip\n\n\u2022 **Avoid sudden maneuvers** \u2014 Do not make sharp turns or hard acceleration/braking; any abrupt control input risks loss of traction similar to aquaplaning\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) behind the vehicle ahead, as braking distance increases dramatically on slush\n\n\u2022 **Stay in plowed/traveled lanes** \u2014 Keep to the main traffic path where the surface has been compacted; avoid moving suddenly across uncleared slush between lanes, as it can \"grab\" a wheel with disastrous consequences"
+    },
+    "wet": {
+      "guidance": "# Avoiding Aquaplaning and Loss of Grip on Wet Roads\n\n**Reduce speed and increase following distance to maintain control on slippery surfaces.**\n\n\u2022 **Slow down significantly** \u2014 Reduce your speed well below normal; aquaplaning typically begins above 72\u201393 km/h (45\u201358 mph), so slower speeds give tires time to disperse water\n\n\u2022 **Increase distance to the car ahead** \u2014 Extend your following distance from the standard 3 seconds to 5\u20136 seconds or more to allow extra stopping distance on wet pavement\n\n\u2022 **Avoid sudden steering or braking inputs** \u2014 Make smooth, gradual control adjustments; sudden maneuvers or hard braking can trigger loss of traction or skidding\n\n\u2022 **Do not use cruise control** \u2014 Maintain manual speed control to respond smoothly to changing road conditions and pooled water"
+    }
+  }
+}

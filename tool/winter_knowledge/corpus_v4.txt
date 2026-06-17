@@ -1,0 +1,982 @@
+=== SOURCE: Wikivoyage — Winter driving (CC BY-SA 4.0) ===
+Anyone who's going to drive at high latitudes or over mountain passes should consider the possibility of snow, ice, or freezing temperatures. On icy and snowy roadways, friction is low and you cannot drive as if you were on bare asphalt. Sliding off the road and collisions are much more likely than in good conditions.
+
+On the other hand, icy and snowy conditions are normal in many countries, and traffic goes on mostly uninterrupted all year round.
+During blizzards, enough snow to get you stuck can fall in very little time. Visibility may also be restricted by falling or blowing snow or by condensation or ice on vehicle windows.
+Cold weather is hard work for the car. A weak battery, ice on electrical parts or in fuel, frozen diesel, or a frozen cooling system may cause your car to break down. If you get stuck, you may be at risk for frostbite or hypothermia; see cold weather, snow safety and ice safety for discussion.
+
+
+== Understand ==
+
+
+=== Winter driving conditions ===
+
+If you have never driven in freezing conditions before, it's easy to underestimate the variety of driving challenges that winter weather can throw at you. Consider taking an advanced drivers education course, especially if you have no or little experience driving on snow or never learned how to recover from a skid or similar conditions.
+
+Heavy snowfall — Heavily falling snow can greatly reduce visibility, in some cases down to just one or two meters (a few feet). Also, road maintenance equipment may not be able to remove the snow quickly enough, which may cause motorists to become stuck in snow and stranded. This can happen even on good, heavily-travelled roads with a high priority for snow removal.
+
+Blowing snow — Wind can blow snow across a road that was bare, making those sections more slippery. Blowing snow can also reduce visibility and tall snowdrifts may suddenly block the road ahead.
+Blizzard — A blizzard is falling snow together with a strong wind, which may greatly reduce visibility and cause snow to blow across the road.
+Flash freeze (cold snap) — In fall and spring, roadways can be wet with rain or melting snow. If the temperature suddenly drops below freezing, the meltwater turns into a very treacherous coating of ice.
+Freezing drizzle or freezing rain — Rain or light showers that quickly freeze when hitting the ground or other surfaces, coating roadways with ice. When the rain is supercooled (below freezing) the surface does not even have to be cold. In some situations, freezing drizzle can freeze to windshields, and the only way to clear it is to repeatedly spray the windshield with washer fluid containing antifreeze.
+Black ice — Ice that freezes in a transparent layer over a roadway, creating the illusion that the road is ice-free. Black ice is most often found on bridge decks, ramps, and overpasses, but can also occur on other road sections. Frequently encountered just before and after sunrise, before the road surface warms.
+Low light levels in daytime — Heavy winter cloud cover can sometimes make daytime driving more like driving at dusk. Be alert to low light conditions, and turn on your headlights so that your taillights will go on, and increase your visibility to drivers behind you. Some countries (Canada, Nordic countries, Russia, Iceland, Baltic states, most of Eastern Europe, Switzerland, Italy) require vehicles to be equipped with daytime running lights for greater visibility; these usually activate headlamps (or at least the fog lights) whenever the vehicle is in motion but do not activate tail lights or other markers. At high latitudes in winter, the sun is also low on the horizon for a long period of time. Visibility can be very poor due to glare, so wear sunglasses.
+Few hours of daylight — In high latitudes there are few hours of daylight in midwinter. In places such as northern Scandinavia, the sun may not rise at all, with only an hour or two of dusk in midday. In practice, you must drive in darkness or dusk.
+Be extremely cautious on bridges and overpasses. Because they do not have earth under them, they may be colder than other parts of the road and may have ice when other areas do not. Also, sliding off one of these is often worse than just sliding into a ditch.
+
+
+=== Risks of winter driving ===
+
+Collisions / skidding. Roads slippery with snow or ice can cause vehicles to go out of control easily. As always, cautious and experienced drivers can be the victims of careless drivers. Braking distance increases dramatically on ice or snow. Handling is seriously impaired on ice, slush and snow. Animal collisions are more probable at winter, as animals tend to approach valleys and human settlements in search for food – or just use the road to avoid deep snow.
+Stuck vehicles. Slippery roads make it easy to slide right off the road into a ditch or a snowbank. A minor collision can also push your car off the road. If you end up in deep snow, it can be very difficult to get your car back on the road, especially if you don't have the right equipment such as shovels and traction mats.
+Stalled vehicle / vehicle won't start. Cold weather is hard on cars, especially car batteries. An interior light left on while your car is parked for several hours may mean that your car won't start when you return. If you are lucky a fellow motorist may be able to jump start (boost) your car using jumper cables. Automobile association members (or anybody, at a higher cost) may obtain roadside assistance from the club. Cars with a manual transmission can also be started by pushing and engaging the transmission at speed – but this will break the gearbox on other cars. Engine oil in diesel engines may thicken when too cold, preventing the car from starting or stopping the engine even when already running. Drivers in cold areas often have mains-powered engine heaters fitted, to warm up the engine before the start.
+Stranded in your vehicle. Sudden severe weather conditions can lead to you being stranded in your vehicle for several hours or overnight, even on a busy, well-maintained roadway. If your vehicle gets stuck on a quiet road, you may be stranded much longer.
+Hypothermia. If you end up stranded in your vehicle in cold weather, hypothermia is possible. You need to carry spare warm clothing and blankets.
+
+
+== Prepare ==
+
+
+=== Choosing the right vehicle ===
+If you have more than one car to choose from, then think about the points below. If your own car is not equipped for winter conditions, it may be cheaper and easier to rent a car at the destination. Then you are able to choose and hopefully get one suitable and already equipped for the local conditions.
+
+A four-wheel-drive (4WD, 4x4) vehicle is more capable at winter driving than a two-wheel-drive (2WD) car, especially in climbing slippery hills and getting out of snow drifts. However, they do not allow higher speed around corners and braking distance is the same. In fact, they are much more prone to accidents on snowy or icy roads, probably as they give less early warnings. 2WD cars are perfectly adequate on most maintained roads.
+Regarding 2WD cars, front-wheel-drive (FWD) is generally preferable to rear-wheel-drive; traction may be better and skids during cornering are easier to control. Nearly all post-1990 small and medium-sized cars are front-wheel-drive – if you are unsure, check the owner's manual.
+Anti-lock (ABS) brakes prevent wheels from locking on slippery roads, thus allowing the driver to steer the vehicle while braking. This comes at a price – increased stopping distances and higher costs for brake repair and maintenance due to the added complexity of the system. All cars made since 2004 in Europe and Japan have ABS, as do all cars in the USA made since 2012.
+A vehicle with a limited-slip differential or traction control is recommended for driving on snow and ice. The differential (diff for short) distributes power evenly to both left and right wheels while allowing each wheel to turn at different rates (slip) while cornering. If one wheel is on ice or buried in snow, that wheel will spin freely wheel with very little power, while the opposite wheel will receive insufficient power to move the vehicle. With a limited-slip differential, the diff will lock the two wheels together if the slip between the two is excessive, transferring power to the non-slipping wheel.
+Conversely, if you do find yourself stuck, turning off traction control may actually help you rock the vehicle free.
+A small, lightweight 4WD vehicle with good ground clearance is preferable to a SUV or large 4WD, especially on mountain roads. Narrow tires perform better on snow than wide tires. Heavy vehicles are more likely to slip on steep roads, and are also more difficult to rescue by pushing. Also, if your car has a low road clearance, that bucket-sized piece of ice you might encounter on the highway will in the worst case damage the oil pan, exhaust pipe or something else under your car.
+The same rule applies to two-wheel-drive vehicles: A small car is better for snowy conditions than a large car.
+Be aware that "all wheel drive" is not four-wheel drive. AWD is a computerized system that attempts to compensate for road conditions as they occur. While this can be helpful in some conditions for persons with limited winter driving experience, it is not a substitute for knowing how to handle your vehicle and should not be taken as equivalent to 4WD.
+Pickup trucks, vans, and SUVs all have a greater tendency to slide on slippery roads, particularly on turns. People who routinely drive these vehicles in winter conditions often put weight (sand bags) in the vehicle near the rear axle to reduce this behaviour.
+Pickups with "dualies" (four wheels on the rear axle) handle extremely poorly in winter conditions and are not recommended.
+100% electric cars might not be suitable for long-distance winter driving as battery charge is greatly diminished in cold weather. Some experience with electric cars and charging is useful. Planning should account for busy or unavailable charging stations, and take into account the reduced range and longer charging times in winter conditions.
+In electric cars, cabin heating uses battery power, decreasing range even more (while cabins of combustion engine vehicles are heated using waste engine heat). If the battery of an electric car loses its charge, towing might be the only option. Some electric cars save battery power by using heat pumps (reversible air conditioners, which heat as well as cool), but these degrade in performance in below-freezing temperatures and typically stop working completely at −15 to −25°C. Hybrids (e.g. Toyota Prius) will overcome these problems by using their combustion engine more, so for them the cold just affects the fuel economy.
+
+In Europe, you can buy cars with self-powering block heaters (which use the fuel of the vehicle). These will preheat the car at a predetermined time or via remote control. Although this can add considerably to the purchase price, there is payback over the vehicle's life, with somewhat reduced fuel consumption and less engine wear at start-up, in addition to the added comfort.
+Seat heaters are standard in cars produced for the Nordic market. They make getting into a cold car more comfortable. After-market heated seat pads, which plug into the car's power port, are also available. Note, however, that adding many electricity consumers strains the car's generator and battery.
+If possible, rent a coloured car if you're planning to drive outside of populated areas. White cars are harder to see in snowy conditions. However, this is a minor issue compared to finding a vehicle equipped for winter conditions.
+For extreme conditions, such as expeditions to remote uninhabited areas, the vehicle should be equipped with a winch to pull itself out when stuck. It is also usually advisable to travel in a convoy with several vehicles; this greatly improves your chance of survival if one car breaks down or crashes.
+
+
+=== Preparing your vehicle ===
+
+Have a good mechanic check over your vehicle with a view to winter, or do it yourself. Among the things it may need:
+
+Winter tires, or at least "all weather (all season)" tires depending on how much winter you expect to drive in; see Tires below.
+Antifreeze in the cooling system (ice can destroy the engine). Check the levels and change out if the coolant is old (two to four years, depending on type used). The typical 50/50 mix of radiator antifreeze has a freezing point of about −34 °F (−37°C), which may be insufficient in some areas, such as northern parts of Alaska, Canada and Scandinavia, where temperatures can drop below that in a typical winter. A solution of 70% antifreeze and 30% water can prevent freezing down to −84°F (−64°C).
+Replace worn wiper blades. Wipers designed specifically for winter are heavier than the standard blades.
+Non-freezing windshield washer fluid.  Don't use plain water for your washer fluid as it will freeze.  Do not use antifreeze intended for the radiator either, as it may damage your vehicle's paint.  Look for the winter-type washer fluid at auto parts stores. Winter washer fluid is also readily available from gas stations in winter weather destinations. It has a freezing point of about −20F/−30°C.  Even though it's on the other side of the windshield, using the defroster also helps prevent the washer fluid from freezing. It's good to have an extra bottle of windshield washer fluid, particularly when travelling on salted roads or in spring when the snow is melting.
+Lower-weight thinner engine oil, since a higher summer weight oil may become thick enough at low temperatures to prevent starting.
+A checkup for the battery, charging and starting systems; batteries perform poorly at low temperatures, and a cold engine is harder to start. Have the battery replaced if it's near or over the pro-rated warranty period. On an older vehicle, check the belts, and an alternator test is also a good idea. Fill an older, unsealed battery with distilled water (but don't overfill).
+A checkup for the exhaust system; in a stuck car, you may need to run the engine to keep warm, and an exhaust leak could be fatal.
+Check the heater and defroster, and make sure they heat with no smell.
+An engine block heater is recommended at least if you are expecting the weather to reach below −25°F (−30°C).
+Automotive rustproofing protects the vehicle from corrosion, a common issue in areas where salt or sand is applied heavily to icy winter roads.
+Make sure brakes and ABS system are in good condition.
+On older vehicles, consider replacing the dome light with a compatible LED. LEDs use much less power, and it takes a lot longer to drain the battery if it's accidentally left on or needed for rescue.
+If your car has traditional locks that are opened by regular keys (including the fuel tank cap), you should have a bottle or can of lock antifreeze fluid at hand. In some cases some water might have gotten into the lock and frozen, preventing normal operation. Keys old enough not to have electronics in them can also be heated with a cigarette lighter and put into the lock, but you shouldn't attempt this with modern keys. Use body heat or some suitable key substitute instead. If trying to force the key into or around a lock that has frozen in place, you may in the worst case end up with one half of the key in your hand and the rest in the lock.
+For outdoor parking when it's snowing or cold enough for ice to stick to the car's windows, a tarpaulin can be useful to reduce the time and effort needed to remove snow and ice when it's time to get going again. Big tarpaulins can be used to cover the whole car, and then there are smaller ones that only cover the windshield and are fastened by magnets.
+
+
+=== Tires ===
+
+In many northern countries, and mountainous countries elsewhere, such as Armenia and some Balkan countries, winter tires are mandatory in winter and possibly in winter conditions outside the set dates. The definition of "winter tires" varies; enough tread depth may suffice legally, but you will want to have enough traction. Proper winter tires are often studded, but they don't need to be. "All-weather" tires may be enough, but unstudded "Nordic" winter tires are much better when it is cold.
+If renting a vehicle, in some countries you must specifically ask for winter tires.
+
+Check the condition of the tires and their pressure. Don't forget the spare tire and jack.
+Check that the tires are proper winter tires, and not just "all-weather" or "mud & snow" (M&S) tires. Although these satisfy the legal requirements in some countries, they leave much to be desired in cold conditions. In some areas you could get away with normal tires, using cables or chains as needed.  Look for the winter tire three-peak mountain snowflake symbol which indicates a tire has been designed and tested for traction in severe snow conditions.
+Studded winter tires are good for most winter driving conditions, particularly on icy roads around 0°C. However, it is important for you to know the local regulations, as some places prohibit them, year round or except winter or wintry conditions. The regulations can be on country, state, province or city level, or even for some part of city centres.
+Unstudded "Nordic" winter tires are good in general winter conditions such as slush or hard snow, but not as good as studded ones on smooth ice. They are legal any time, but less good in warm weather, just as all-weather tires are not good when it is cold.
+Without winter tires, you should always bring tire chains or cable chains, but note that chains are not useful for long distances (use over a mountain pass, but no further). Winter tires are enough in most conditions. Sometimes chains are needed (legally or otherwise) even if you have winter tires.
+For AWD/4WD vehicles, all four tires should be of the same size and tread pattern (i.e. usually the same model number of tire) with a similar thread depth. This applies to both all-weather and studded tires. The more recent and "computerized" the AWD/4WD vehicle is, the more this holds true. Failure to do so may result in costly damage to the differential, and leave you stranded in the cold. In some vehicles, a smaller-sized spare tire may be temporarily used for a limited number of miles at moderate speed. Unfortunately, if just one tire is damaged and the overall tread wear is below about 70% remaining, all four tires will need to be replaced. Even if it's above 70%, the tire may have been discontinued and unavailable. Getting a fifth new tire as a full-sized spare (and including it with the others in routine tire rotation) is a good idea.
+
+
+=== Tire and cable chains ===
+
+In the most difficult winter conditions winter tires may not be enough. Especially in mountains and on less maintained roads, chains or cables should be considered. Note however that for instance in Finland, Norway, Sweden, and Canada, on public roads good quality winter tires are generally sufficient for light vehicles. Chains are not an alternative to good quality winter tires for longer distances, nor should they be used when driving at highway speed. Rental car companies may not permit you to put chains on their vehicles, because improperly attached chains may damage the vehicle's paint or dent the body.
+Tire chains give better traction than cables, but are more difficult to install and remove. Cleated chains provide maximum traction but are very rough to drive on. Know your tire size (e.g. P195/60R-15) before purchasing. When needed, install on the drive wheels (i.e. front for front-wheel-drive, rear for rear-wheel-drive). For 4WD/AWD the front is usually best, but check the owner's manual. Only use chains or cables in snow or icy conditions, and remove them as soon as they're no longer needed. Don't even try them on for size on a hard, bare surface such as concrete. They might spin out and damage the chains, concrete, and/or wheel well of the vehicle, and possibly injure someone.
+
+
+=== Fuel ===
+If your car has a diesel engine, make sure you've filled up with the appropriate variant of diesel. In countries with freezing temperatures during the winter, winter diesel, sometimes known as alpine diesel (diesel with additives to prevent it from gelling) is sold at gas stations during the winter months. However if you don't drive often, have filled up in a warmer country or area, or the temperature has unexpectedly dropped to freezing overnight, you might find that the "summer" diesel in your fuel tank has turned into a tacky gel which will clog the fuel lines and starve the engine. Also, if you have a spare can of "summer diesel", you should not use it in cold weather. In areas like Finnish Lapland where the weather gets really cold (under −30°C), arctic diesel with an even lower cold filter plugging point is usually available.
+There might be small amounts of water in your fuel, which freezes to small ice crystals that can block your fuel lines. There are additives (gas-line antifreeze) available that can prevent this. It also helps to keep your gas tank at least half-full at all times, to reduce condensation.
+
+
+=== Bring ===
+Satellite navigation units (GPS; Garmin, Magellan, TomTom, etc.) and smartphone navigation apps have become ubiquitous and are invaluable for winter driving. Ensure your unit is updated and ready to go before you embark on your trip, and that you are familiar with how it works. Regions can be downloaded in smartphone navigation apps so that you don't have to rely on your smartphone having data reception. Be aware that the device may act strangely in special situations (such as a road ending at a ferry quay) and may lose satellite contact in heavy snowfall. Make sure that using the app won't take your concentration off the road. For rented cars, check what you get if the device is included in the deal, and how to use your own. Make certain any hand-held unit is suitable for navigation while driving, with spoken turn-by-turn prompts, and get a mount for it.
+In addition to the above, these things can be helpful for any winter trip, even a short drive in the city:
+
+Warm winter clothing, including ski caps, mittens, scarves, etc. appropriate for the conditions outside, even if you are going on a short drive from one heated parking garage to another. A minor collision could change your plans. If you live in a mild climate and can't find winter clothing where you normally shop, try a sporting goods store or outdoor sports shop. Shops for farmers' and lumberjacks' equipment often offer solid winter clothes at a modest price.
+Leather driving gloves, or warm winter gloves with leather palms for gripping the steering wheel. The steering wheel can take a long time to warm up once you start the car.
+Sunglasses. Although winter weather is often cloudy and dull, on a sunny winter day, the glare on the road from snow (or even water) can be quite bad. The midday sun is much lower in the sky at high latitudes and slower to rise and set than at the lower latitudes. This means it's more likely to get in your eyes while driving, especially in the morning and evening. Sunrise and sunset may be the only times in the day that the sun drops below the cloud layer.
+Ice scraper with a brush (the latter especially for cold powder snow). De-icing spray. Extra scraper.
+Jumper (booster) cables. At extremely cold temperatures (under −30°C) it can be a good idea to have a charged spare battery that you keep indoors overnight.
+Starting fluid, a spray that can be bought at gas stations and car spare part stores in countries that experience cold winters. This diethyl ether based stuff has a low ignition point which means a lesser burden for the car battery (which holds less charge at cold temperatures) when starting the engine. In cold weather, spray some in the air intake and try starting the car immediately afterwards while pressing the gas pedal slightly. To avoid engine damage, don't use too much of it; just spray for a second or two before each start attempt.
+Road maps.
+Emergency road flares or a warning light, to mark the location of your vehicle at night in case of breakdown.
+Cell phone and its in-vehicle charger.
+If you take medication, don't leave them in a parked car, where they could deteriorate by freezing. Keep your medication on you if you need to take it regularly or in a hurry.
+Modern cars have USB outlets for charging your devices. For older cars, buy an inexpensive adapter that plugs into the car's cigarette lighter and turns it into USB outlets for charing.
+If you're planning to upgrade or replace your cell phone, look for a model that includes GPS (most do) and perhaps the option of using it for satellite emergency messages (read the fine print, as there are limitations and restrictions). The GPS in a simple flip-phone can report your position to emergency services to locate you, but are otherwise not useful for navigation. Smartphones may be able to download apps with OpenStreepMap-like data and use GPS for navigation. Keeping a spare cell phone in the car (off, charged; preferably also its in-vehicle charger) is always a good idea no matter the weather. In the U.S. and EU, 9-1-1 and 112 calls (respectively) will still be connected even if the account is inactive and has no funds, in most countries even without a SIM card.
+Cellphone service may not be available in rural areas; in truly remote locations (like the Trans-Labrador Highway) only a satellite phone may receive signal. CB, PMR or ham radio and similar may be useful if other users of the same roads are monitoring and if your vehicle's battery is OK; users on some remote logging roads still monitor CB 19 (especially in USA and Canada, but also some other countries) as mobile telephones have limited range from the base station. All these alternative radios have issues for international travellers, as satellite phones may rely on satellites covering only some regions and regulation of CB, PMR and similar two-way radios varies between countries,
+
+
+=== Winter emergency kit ===
+For trips outside of cities, put together a winter emergency kit. It will help you stay safe or even recover from many winter road emergencies, including being stranded in your car for several hours or overnight. Here are some of the things that you should consider putting in your emergency winter kit:
+
+Extra non-perishable ready-to-eat food. Always have high energy snacks, such as chocolate or cereal bars, and drinking water in the car.
+First aid kit. Consider including a "space blanket" (heat-reflecting thin cloth to wrap around a person).
+If you take medications which are essential or cannot be interrupted, make sure you take extra medication with you.
+Blankets or sleeping bags. If possible, keep them in the passenger compartment, not in the trunk, so they won't be freezing cold.
+Lighter and matches, or similar.
+Candle placed inside a deep tin can: if possible, use the candle for heat rather than the car heater, should you get stuck. Open a window slightly on the side of the car sheltered from the wind to let in fresh air.
+Portable radio with AM band and batteries, or a wind-up radio, in case your car battery goes flat.
+Flashlight (torch) with batteries, or a wind-up flashlight. Batteries should be reversed so that they won't be drained if the flashlight is accidentally switched on.
+Spare batteries for radio and flashlight, if they use batteries. Warming the batteries in your pocket or hand before use will extend their capacity.
+A lightweight snow shovel (or any shovel, if you can't buy a snow shovel locally).
+Bucket or bag of sand or similar to get traction in case your vehicle gets stuck, especially if your car is 2WD. Sand is useful also to add weight (and thus traction) on driving rear wheels. Other options include non-clumping cat litter and commercial traction mats (or a strip of carpet) to be slipped under the driving wheels.
+Tire chains or cables (see separate section, above).
+Fluorescent banner to make your vehicle easier to spot in the daytime. Reflecting vests are also good to have in case you must stand or walk on a trafficked road – in many European countries, it's actually mandatory to have one in your car.
+10 metres of light (parachute) cord or rope, to use as a homing line (see below).
+Things to keep your spirits up, preferably without need of electricity. You could write a list of games you'd enjoy and that don't have physical requirements and keep that handy. Story telling? A deck of cards and a portable chess board could also come handy. Snacks and drinks can play a role, but use those sparingly, at the pace you'd need them. An Arctic night can be quite long, and you won't be rescued at first light.
+For really difficult winter driving – off-road or in isolated areas – you may need more serious equipment. In some areas the minimum safe vehicle has four-wheel drive, a winch, and a roll cage. You also need a two-way communication system – radio or satellite phone – to call for help if needed and equipment like a good tent and propane heater to survive until help arrives.
+
+
+== Go ==
+
+
+=== Weather and road conditions ===
+Check the weather forecast for all areas you're planning to drive through, in order to avoid driving in severe winter weather conditions (heavy snowfall, blizzard). Winter weather can turn bad very quickly. If at all possible, allow for a couple days of flexibility so you can wait out a winter storm (preferably before leaving home). If you know the forecast before departing, you can try to avoid the worst of it. Weather can be much colder or harsher in areas that you are passing through than it is at your departure point or destination, particularly if you are driving from coastal to inland areas, or from lowlands to highlands.
+Check the road conditions for the roads you're planning to use. Many places have online road reports, news reports may include coverage of road conditions in the area, or there may be a phone number (such as 5-1-1 in much of North America) that you can call for a road report. In the USA, include the word "state" (i.e. "Montana state") in your search; the term "road report" or "road conditions" may also be helpful. Road reports can tell you if roads are closed due to heavy snow, blizzard, or avalanche control; if road conditions are so poor that driving is not recommended; or if there is convoy driving only. Road authorities also operate online webcams that offer real-time images of road surface at select points along each route. Note particularly the conditions in mountainous or steep parts of your route.
+Always get advice from locals beforehand about conditions off the main highways. The best route may not be obvious to you, or even be shown on a paper map.
+
+
+=== Itinerary ===
+Sunset is early at high latitudes. Some examples from the northern hemisphere at the winter solstice on 21 December: Anchorage, Alaska 3:41PM; Fairbanks, Alaska 2:40PM; Banff, Alberta 4:37PM; Boston, Massachusetts 4:15PM; Chicago, Illinois 4:23PM; Irkutsk, Russia 4:52PM; Yakutsk, Russia 2:53PM; Stockholm, Sweden 2:48PM; Nordkapp, Norway no sunrise at all, twilight ends 12:49PM. And for the southern hemisphere, where the winter solstice is on 21 June: Christchurch, South Island 4:59PM; Hobart, Tasmania 4:42PM; Invercargill, South Island 5:06PM; Punta Arenas, Chile 5:31PM.
+
+If using a GPS device, mapping software, or websites to plan your route, always double-check with a reliable detailed map, such as printed maps of  Rand McNally, AAA/CAA or Michelin. Always select the "fastest" (never "shortest") route, as this will help keep it to the main highways. Of course, you shouldn't drive faster than conditions permit. Selecting "shortest route" or otherwise taking short cuts in wintertime could easily get you stranded, and can be deadly in remote enough areas. Keep in mind that the GPS may suggest temporarily closed roads, or roads that are difficult to drive in winter conditions. Real-time updates have become quite common, but this varies by model and area; get last minute information from local road authorities.
+Avoid anything below a state/provincial route except for the last few miles/kilometres to your destination, where necessary. On some minor roads, there might not be another vehicle for days, weeks, or even months. Software maps are not as good as paper maps in showing how "minor" a less-used road is. Some aren't even paved, but look as good on a computer screen or GPS device as a well-paved, busy thoroughfare. That said, some government maps may have all state/provincial routes printed with equally bold lines, regardless of how well maintained and frequently travelled they are. Commercially produced maps are often much better at distinguishing major highways from minor ones.
+
+
+=== Other ===
+Leave a travel plan with a friend or family member if you are planning a long drive, driving in an unfamiliar area, or know that the weather or road conditions will be a challenge for you. Your travel plan should include the route that you plan to take, where you are going, and when you will check in with the person holding your travel plan. Tell them a hard deadline when the person holding the travel plan must alert authorities if you haven't checked in (but allow for unplanned stops somewhere without mobile phone coverage). The travel plan will let them know where to search. A travel plan may feel like it limits your spontaneity, but with modern communications, it is easy to let people know about a change of plans even if you make it at short notice. If you are somewhere without communications, better safe than sorry.
+A particularly difficult combination is blizzard conditions (where visibility is reduced by blowing snow) combined with early sunset (so headlights are on and being reflected back into the driver's eyes). This accompanies dangerously snow-covered roads (with reduced traction and inability to see any painted lane markings on snow-covered asphalt). While the first obvious advice is to slow down for conditions, on busy highways operators of large trucks often refuse to decelerate, instead repeatedly passing other vehicles. This dumps more snow and slush onto windscreens, making an already-bad visibility problem worse for drivers of small cars. At some point, the road becomes unsafe at any speed. Leave the highway at the next exit.
+Finally, be prepared to alter, delay, or cancel your travel plans if weather conditions require it. This is especially important for those who have little winter driving experience. Mixing a tight itinerary with winter driving conditions is almost always a bad idea; you'll be tempted to drive faster than is safe, or to drive instead of waiting out bad weather, in order to keep on schedule. If the hard deadline is approaching, don't race to keep it, but rather try to get somewhere where you can tell about the delay. If connections are unreliable or your battery is low, text messages often still work. Even if you cannot reach your friend, you might be able to call the emergency services, telling that you are safe. Even if you cannot, an unneeded search operation is better than a deadly accident.
+
+
+== Drive ==
+
+
+=== Controlling your car ===
+
+
+==== Stopping distance and speed ====
+Reducing your speed is the best way to compensate for a slippery surface. If you can remember only one thing about winter driving, it should be slow down. Start carefully and test the surface by gentle braking until you know how slippery it is. Test frequently as conditions can change during a trip.
+Driving on snow, and especially ice, requires extra stopping distance: 3–4 times greater than on dry asphalt is common. If your minimum distance to the next car is 3 seconds in summer, 5 or 6 seconds should be the absolute minimum on snowy or icy roads. Use extreme caution when going downhill.
+Approach all intersections at a speed slow enough (20–30 km/h or about 15 mph) to be able to stop if there are other cars or pedestrians. Intersections are often more slippery. Turn lanes, or where one lane becomes two, may have had less traffic, resulting in more unmelted ice. Never try to run through yellow light traffic signals—especially when turning. Likewise, always check that other drivers are able to stop before proceeding through an intersection.
+Corner at less than 30 km/h (18 mph). Practice this and find the speed where the car starts skidding, if necessary (but conditions vary).
+When driving downhill, no amount of technical gadgetry (ABS, 4x4, ESP,...) will protect you against skidding. Gentle speed and high quality winter tires or snow chains are the only remedy. In really slippery conditions, it is better to downshift to reduce speed rather than to brake, as braking can cause the vehicle to move sideways (fishtail). Especially for large vehicles, do not drive in neutral or depress the clutch when going downhill: when the clutch/gear is reconnected, the wheels may have uneven traction and start sliding on one wheel, leading to a spin.
+Even though a 4x4 is great for providing forward traction, it will not improve stopping distance.
+
+
+==== Skidding ====
+Skidding (sideways) is most likely to start with the driving wheels. So when driving a car with front wheel drive, a front wheel skid is most likely, rear wheel skid on a rear wheel drive, and on a 4x4 don't be surprised if all four wheels lose their grip at the same time!
+A rear wheel skid is most difficult to control as the car tends to rotate, while a front wheel skid usually appears as straight ahead movement when you try to turn.
+Avoid braking. You want to get your traction back. Braking with non-ABS brakes while skidding will easily cause the rest of the wheels to skid as well. For vehicles with ABS anti-locking brakes, do not pump the brake pedal if you start to skid.
+It is very easy to panic and overcompensate, abruptly turning the wheels further when the vehicle initially fails to respond. This will quickly put you off the road, into a ditch or in the way of oncoming vehicles.
+Disengaging the clutch is usually the best way to stop a skid in progress. A rear wheel skid can be counteracted by steering. If a front wheel skid started when trying to turn, you probably turned too sharply, try to get back the grip and then turn more smoothly.
+
+
+=== Dangers ===
+
+
+==== Especially slippery conditions ====
+Temperatures around 0°C (freezing point) are generally the most slippery. The colder the road, the less slippery. Changes in temperature also make the road slippery.
+When the ice and snow are melting or there is fresh snowfall on refrozen ice, the road surface is much more slippery than usual in the winter. Soft, melting snow (slush) is more slippery than ice. Steering (handling) is particularly difficult on slush, although braking distance is not unusually long. Cold snow is the least slippery.
+Rain on a frozen surface, or rain in freezing temperatures, will form very slippery, invisible "black ice". Black ice can also form from the moisture in the air.
+Watch out for the slippery ice or built-up snow between lanes.
+Ice is more likely to form on bridges, overpasses, and ramps. Slow down when going over them, especially on the highway/motorway.
+Ice on an otherwise dry road is also possible when there has been morning mist, such as in the shade of a forest. Be alert everywhere where there is likely to have been temperature differences.
+Try to anticipate when you will need to use extreme measures, such as low-range four wheel drive, and shift before you are in trouble. Stopping entirely in a "traction condition" is the fastest way to get yourself stuck. If you see snow drifts, wet ice, etc ahead, take action in advance and you have a better chance of getting through it.
+Be aware that in northern areas, late winter or early spring can be the most hazardous time, in particular on less heavily trafficked roads. In many places, roads are not cleared "down to the pavement" and there may be layered ice still on top of the road surface. The sun can glaze the ice, making it extra slick, or rain may puddle up on it if snow berms are preventing proper drainage. Wet ice is basically the slickest thing you will ever drive on and is extremely dangerous.
+
+
+==== Deep snow ====
+Deep snow – especially at just a couple of degrees under freezing – affects your ability to control your car, as the wheels have no direct traction against the road itself. It can be as dangerous as ice.
+When driving through snow, the tires need to plow their way through the snow in addition to moving the vehicle forward. Often the surface is slippery as well, and all this might be too much for the tires and leave you skidding when driving uphill or stranded if on an even surface. A combination of rear wheel drive, an empty trunk and bad tires will pretty much guarantee your getting into trouble when driving in snow. This is where snow chains are useful.
+If you're driving on a highway where only the lanes themselves are plowed and there is snow or slush between them, move slowly when changing lanes. Suddenly moving across even a thin layer of snow or slush at highway speed can lead to the snow "grabbing hold" of one wheel, with disastrous consequences. This is why that uncleared area between lanes is called "the devil's strip" in some places.
+It can be hard to know how wide the road is. Sometimes there are markings for the snowplow, but otherwise you have to be careful, especially when giving way for meeting traffic on minor roads, not to find yourself in the ditch.
+If your vehicle becomes high centred on snow (meaning the wheels are no longer supporting the full weight of the vehicle), there is nothing you can do to simply drive out of the situation, so don't waste your time. You either need to dig out the snow beneath the vehicle, or pull it out with another vehicle or a winch. Digging may be of limited usefulness as well if the entire area has equally heavy snow, you'll just be stuck again moments after freeing it.
+
+
+==== White-outs ====
+
+In blizzard/white-out conditions, you may not be able to see anything through the windshield. Try rolling down the window and sticking your head outside. Then, find a safe place to get off the road and stay there until conditions improve.
+In snowfall, main beam (headlamps full beam; high beam) may not be useful as the driver is blinded by light reflected from big snowflakes. Dipped beam (low beam), front fog lamps or even parking lamps may be better than main beam. But make sure full strength rear lights are used.  If your vehicle has automatic headlamps that turn on in the dark, do not rely on them. Turn your headlamps on manually; these systems tend not to activate early enough in snowy weather, leaving it almost impossible for other drivers to see you.
+Some areas are affected by snowsqualls – heavy snow that suddenly starts, stops, and changes in intensity, often accompanied by gusty winds – typically on the leeward side of bodies of water.  Be aware that visibility can go from clear to almost nil in these regions with very little notice.
+
+
+=== Things you may encounter ===
+
+
+==== Change of route ====
+If you miss your freeway exit, get off at the next one that has a re-entry ramp and turn around. Continuing on to a less-used alternate route in winter is foolish. Depending on region, there may be alternative usable highways, but stop off the freeway to evaluate the situation and plan your route.
+If a road is closed due to the weather, there's a good reason for it. Don't even think of using local roads to get around the closure. Even if they aren't closed, they are probably in even worse condition. Waiting out the situation is the safest option.
+
+
+==== Winter road maintenance ====
+
+Trying to pass a snowplow or snow grader is almost always a bad idea. The blades can cast a ridge of wet snow or slush even on the overtaking (non-plowing) side, and hitting it at speed can make you skid. Besides, the road surface behind the snowplow is almost certainly better than in front.
+For clearing freeways and other multi-lane roadways, echelon plowing is sometimes used: a fleet of snowplows clears all lanes simultaneously.  It may be frustrating to be stuck behind an army of snowplows as they crawl down the highway, but trying to pass by cutting in between them is almost certain to result in a crash.
+On undivided roads, snowplows often need to cross slightly over the centre line to clear the entire roadway. When meeting a plow, be mindful of where the edge of the plow blade is and stay well clear.
+Salt is applied to roadways to melt ice and snow, but it loses its effectiveness when roadway temperatures drop below −12 °C (10 °F) or so. If a flash freeze happens, salt can actually backfire and make roads worse – it melts the ice and snow, which then refreezes when temperatures plummet. Be aware of this possibility.
+Depending on road conditions, a mixture of salt and sand, grit, or gravel may be applied to the roads by specially-equipped sanding trucks to increase traction. Stay 10 m back from sanding trucks, as flying rock chips could crack or break your windshield. Sanding trucks often apply sand only to slippery areas, such as ramps, bridge decks and intersections, so you may get the impression that it's safe to follow more closely – until the sander is turned on.
+Different jurisdictions or administrations may have wildly differing ideas about what constitutes adequate winter road maintenance. Also, different categories of highway usually receive differing amounts of attention. Watch for a change in conditions when entering or leaving a city or moving from one route to another.
+
+
+==== Convoy driving ====
+Convoy driving is used routinely in Norway and some other countries in difficult weather, particularly through mountain passes but also on other roads exposed to strong wind. Convoy driving means that drivers have to wait for a number of vehicles to line up and then follow a snow plow across the particularly difficult stretch of road. Only a limited number of cars are allowed, and each driver must never lose sight of the car ahead and never leave the convoy. In particularly difficult conditions only heavy vehicles (above 3.5 or 7 tons) are permitted. Waiting and slow driving means an hour or more is added to the trip. Convoys may run on a fixed timetable or departure may depend on the number of cars waiting.
+
+
+==== Ice roads ====
+
+In some regions there are roads made over the ice of lakes and rivers, even the sea, in the winter. Some provide road access to places otherwise inaccessible by car and some replace ferry connections. Locals may drive on the ice just for fun, although this is not without danger. Driving on ice by snowmobile is common, but not safe unless you know the waterway well.
+Official ice roads are usually well maintained and secure at least in good weather, if speed and weight restrictions are followed. Speeding will cause cracks in the ice. Stopping on the ice is often a bad idea, as the weight of the car causes a local depression. In the worst case you will have water flow in and too steep a grade to easily get out. Check instructions for using the roads, there may even be peculiarities such as self service ferries over shipping lanes.
+For unofficial ice roads, always get local advice. There will probably not be any obvious warning signs.
+Driving on the ice where there is no road at all requires judgment and knowledge of local conditions. Having a ship open a lane between you and the mainland is no fun (and wind or a raise in water level can cause similar situations). Have a good big scale map and a compass. Snowfall or snowdrift can cause you to see nothing but snow.
+Vehicles falling through the ice can routinely result in death of drivers or passengers, particularly at the beginning or end of the season where ice conditions are unstable.
+
+
+=== Other advice ===
+You need time in the morning to clean the car from snow and ice and have the cabin heated to avoid (or clear) misting on the windshield. In some countries police can issue a substantial fine if windows are not sufficiently cleaned. Mind the lights, mirrors and the air intakes below the windshield. Do not leave snow on the roof, as it can land on the windshield of the vehicle behind once you speed up, or on your windshield when braking.
+Start the engine a few minutes before you are ready to go, especially if you have no engine heater (though this might be illegal in some countries, e.g., Germany).
+You cannot drive at highway speeds with chains on. For most chains, the limit is 50 km/h (30 mph).
+Check your rear lights regularly: you often need them also in daytime, as snow from the road reduces visibility, and the lights themselves may become covered. The check is especially important if you have LEDs, which don't melt even minor amounts of accumulated snow.
+Pay more attention to signs – the road markings are obscured by the snow.
+During snowfall at low temperatures, snowflakes may freeze onto heated car windows (notably the windshield). One solution to this problem is to switch off or reduce inside heating in the car, while still running the ventilation fan at high speed.
+Although driving slower than usual is often advised, watch the locals and keep a keen attitude. Deliberately driving 10–20 km/h slower than traffic annoys other drivers and invites risky overtakes.
+
+
+== Survive ==
+
+
+=== Accidents on trafficked roads ===
+
+If an accident happens and the car is on a lane and cannot be moved, it might get hit by other cars. Remember that other cars will not be able to stop as quickly as on a dry road and the worse the visibility, the more likely it is that someone will collide with your car — this is how freeway pile-ups come into being. Depending on circumstances, you might want to get everybody out of the car and off the road. Having an injured person in the cold outside the car is often a bad idea, but you need to weigh that against the possibility of sustaining even more injuries if staying in a vehicle that oncoming vehicles might crash into. That said, sole cars very seldom catch fire and explode like in the movies.
+A warning triangle (mandatory in many countries) should be placed 50–100 m behind the car so that other drivers have time to notice you and slow down. Especially if you have none, somebody should be placed to warn the traffic, if this can be done safely.
+Fluorescent vests (also mandatory in some countries) are a very good way to make yourself noticed by other drivers in time, and they're usually cheap, so it's a good idea to have one or several of them in your car. At dark, you should at the very least have a safety reflector, otherwise you are almost invisible to other vehicles. If there isn't too much snow, stay next to the road.
+If someone is more than lightly injured, call an ambulance (note that somebody seriously injured might feel OK). If somebody is unconscious, secure their breathing. The first aid kit should have a tool to cut the safety belt.
+In case other vehicles are involved in the accident, check if there is someone who needs help. Every involved party will almost certainly need to contact their insurance company (though this varies between countries). In more serious collisions you should also call the police to at least direct the traffic and if needed investigate the accident.
+You need to call a tow truck to tow your vehicle away if it can't be moved otherwise. Check beforehand whether your insurance covers this.
+
+
+=== Stranded in a remote location ===
+
+Advice for situations where you can anticipate a long wait:
+
+Keep calm. Think. When the winter storm ends, you will be found.
+Stay in your vehicle.  It can provide enough shelter to save your life, better than any igloo or snow cave that you could make. Also, it's much easier for rescuers to see and to find, since cars are large and are always on or near roads.
+If you must go outside for a few minutes (for example to clear the tailpipe), do not overexert. Wet, sweaty clothes cannot keep you warm. Clearing heavy snow is a common cause of heart attack.
+If you must go outside in low-visibility conditions, use a line to tie yourself to the vehicle. Reeling in the line will lead you to the vehicle even in zero visibility.
+Crack a window slightly, on the side away from the wind. Better to be cold and alert than warm and sleepy. There may also be toxic gases from the heater, if you are using it.
+Make yourself easy to spot. Hang a fluorescent banner or traffic vest from the antenna or out a window during the day. At night, remove the cover from the dome light and turn it on; searchers can see it from a long distance. Do not turn on your emergency flashers unless you see or hear someone, as they are a much larger drain on the car battery. If there may be traffic on the road, you may have to use the emergency flashers, especially if you cannot trust your warning triangle (e.g. because of snowfall).
+The vehicle will get cold when you shut off the engine or heater, and if you anticipate a long wait, you will want to save fuel. Even if you have a full tank of fuel (always advisable), you want to make it last for as long as possible. Using the cabin heater depletes the battery, so you will need to run the engine now and then if using the heater (or lights, or charging electronics). As starting the engine also eats battery, you should do this seldom and for longer times. Make sure drifting snow doesn't block the exhaust pipe. Check each time before restarting engine (unless obvious: not snowing and no wind), and shovel any snow out from the rear end as needed. Keep the radiator clear of snow so that the engine does not overheat.
+You had those warm clothes handy, hadn't you? Perhaps also sleeping bags or blankets. Take them on before you get cold; it is much harder to regain all that warmth you lost. Don't have so much clothes that you sweat though.
+To warm up, move around while inside the vehicle. This will also improve blood circulation. Loosen tight clothing. Put your hands in your armpits, between your legs, or rub hands together to warm them. Huddle together with other people in the car for warmth.
+Protect any critical liquid medications such as insulin from becoming frozen. If there is no more heat from your vehicle, keep it next to your body.
+Assuming no cell phone service, turn your phone on for 15 minutes every hour. Then turn it completely off to help save its battery. Don't waste the battery trying to dial numbers where there's no service. Rescuers can use portable receivers and direction finders to pick up its signal. However, even if they do, it's not possible to communicate with you over the phone. If battery power has become critical, leave the phone off after dark, as rescue efforts are often suspended sunset to sunrise. You should be able to charge the phone from the car battery by the round power outlet in the front panel.
+When there is cell phone service, but the signal is poor or there is little battery, use text messages instead of calling or using the internet. SMS uses less power and does not need a continuous connection. Most land lines cannot receive SMS, so choose whom to text at which phone number carefully. Keep the internet connection off, as it uses much more power (and any Wi-Fi, bluetooth and whatever you may be used to having active).
+Take care of toilet visits, eating and drinking and keeping spirits up. All practical matters are uncomfortable in the cramped car or the cold snowy environment, but ignoring your needs will not make them go away, and taking care of them sooner rather than later pays off.
+Take turns sleeping so that there is always somebody watching and listening for rescuers.
+If you absolutely must go outside, write your name, address, phone number, and where you are going on a sheet of paper. Leave the paper on the dash of the car.
+Don't expect to be comfortable. Your goal is simply to survive until you are found.
+
+=== SOURCE: Wikivoyage — Driving in Norway (CC BY-SA 4.0) ===
+Driving around Norway takes you to places outside the cities and where public transport is limited or infrequent. This is a good way to travel if you are interested in seeing Norway's natural scenery. Traffic is safe, speed is modest and most roads have little traffic. Drivers should allow plenty of time for the drive and for frequent sightseeing stops. Long distances, particularly in the south-north direction and through the complicated fjord landscape, means that driving takes time. A drive for instance along the full extent of road E6, Norway's main road, takes about a full week. Visitors should not underestimate the difficulties of driving in Norway during the winter.
+Norway offers a range of scenic drives and the road authorities have selected a number of national tourist routes that are particularly recommended. Along these routes facilities are installed to make the trip more enjoyable and practical for visitors.
+Svalbard and Jan Mayen are mainly roadless, and are not included in this article.
+
+
+== Understand ==
+
+In the cities there is generally no need for a car, due to the robust public transit network. Also, parking is a challenge in the larger cities, and can be expensive. Further, some city centres (such as Bergen and Oslo) may be confusing to navigate for the first time visitor due to many one-way streets. Despite traffic rarely being heavy, congestion generally happens in and around cities (during rush hour around Oslo [roads E18 and E6], as well as Friday afternoon out of Oslo, around Easter holiday).
+However, Norway's top attractions are outside the main cities. A car will get you to remote corners without railway and with limited or no public transport, affording the flexibility to stop at will, visit less crowded places, and change plans. The ever-changing rugged landscape, Norway's top attraction, is best experienced by moving around at a leisurely pace; captivating natural scenery is in general not limited to predetermined places. While some towns are widely known as cruise ports, other areas are equally nice. Most roads offer a good or excellent view of the surrounding landscape through the car windows. There are few motorways and most roads are ordinary two-lane undivided where one can easily pull over for a break. Outside cities traffic is often light even on main roads. During summer there is almost 24 hour daylight anywhere, and in the north the sun never sets, allowing visitors to do sightseeing drives at any time.
+Driving rules and conventions are relatively well-observed in Norway, with the traffic being (statistically) among the safest in the world. Driving is generally easy as traffic is calm, and most drivers are disciplined and law abiding, although moderate speeding is common on highways. Fatality rates have been steadily falling for 50 years, 2020 had the lowest number of traffic-related deaths since second world war despite ten-fold traffic. There are many winding and narrow mountain roads in Norway, and wild animals and winter weather demand attention from the driver, but there are relatively few accidents even under difficult conditions.
+
+
+=== Distances ===
+
+Visitors frequently underestimate distances and driving time in the Norwegian landscape. This is not helped by online map services and satellite navigation (GPS) apps sometimes underestimating driving times as well (they at least provide accurate distances). Norway is wider than Britain and has about the same area as Germany, but distances between the north and the south are much greater. Finnmark, Norway's northernmost county, is wider than Denmark and the drive through Finnmark is longer than from London to Glasgow. E6, Norway's main road, is more than 2600 km long, and is the longest road within any single country in Europe outside Russia. Finnmark in fact lies east of Sweden and the shortest drives to/from these most eastern parts of Norway are through Sweden and Finland. During an ordinary 1- to 2-week in Norway, one usually has enough time to drive around only a single section of the country. 
+In some parts of Norway, the next petrol station could be more than 100 km away; a small village may not have a gas station even if it's at a remote point itself. Fill up the tank in time, and consider bringing a jerry can, when travelling in the sparsely populated northernmost areas.
+
+In addition to distance, transport in Norway is all about topography. The landscape is unusually fragmented, particularly around the coast, with a myriad of islands, deep fjords cutting into the mainland, steep mountains, glaciers, lakes, and long valleys. Car ferries are usually needed to cross fjords and are often needed to reach islands. Norway has well over 1200 road tunnels, some very long and some subsea. Except in a few small flat areas, roads are largely confined to valleys or shores. Travel between the valleys often involves tunnels, mountain passes, or long detours. Road engineering with bold bridges, long tunnels and airy hairpin roads is a sight in itself, along the Norway's scenic drives. Extra time for ferry crossings, breaks, and photo sessions should be added to the approximate times suggested in the following table:
+
+
+== Road network ==
+
+
+=== Road designation ===
+
+Norway's road numbering system (road designations):
+
+E-roads. Main roads, numbered as part of the international E-road network that connects Europe's cities, regions and countries. They are excellent for navigation. Indicated with an "E" in front of the number (for example, E6) with no national number in addition, signs are white on green: 
+National roads. Other main roads ("green roads", "riksvei") in addition to E-roads, low one- or two-digit numbers, signs white on green: 
+Numbered roads. Regional numbered roads (shown on road signs), signs black on white: 
+Other roads. Regional and local roads.
+
+
+=== Road hierarchy ===
+
+Norwegian roads vary in quality. Most roads are two-lane undivided, and there is a limited motorway network around Oslo. A typical speed limit is 80 km/h and speed is often slower due to road conditions (for many parts of Norway visitors should not expect to do more than 60 km/h on average). Norway's road hierarchy:
+
+
+=== Important roads ===
+
+Visitors should know about a handful of key roads for planning and navigation:
+
+E6 is clearly the most important as it runs 2600 km, through 10 of 19 counties, and acts as the main north-south corridor from Sweden via Oslo to Kirkenes in the very east of Northern Norway. The E6 is the longest road in Europe. E6 varies considerably in quality and traffic, from 4 or 6 lane high speed road around Oslo to ordinary two-lane undivided in remote areas (sometimes narrow). North of Trondheim it is the only main road south-north, in some areas in fact the only road such that traffic has to be diverted through Sweden/Finland when closed. North of Oslo (passed Hamar) the E6 has been notably upgraded until year 2020 (now four lane motorway) and through Gudbrandsdalen upgrade completed in 2017 (semi-motorway). Still, the E6 also serves local traffic between Sjoa and Trondheim as well as some stretches around Ringebu.
+E39 is the western fjords main road from Kristiansand via Stavanger, Bergen and Ålesund to Trondheim. This is a very complex road with highly varying quality (mostly two-lane undivided), some 100 tunnels, floating bridges and 8 ferries crossing several of Norway's iconic fjords - still the shortest Stavanger-Bergen-Ålesund. Only short stretches of narrow road remains between Sognefjord and Førde, and these are expected to be upgraded in a few years (per 2022). This road has long scenic stretches, although alternative routes are even more scenic. Between Skei and Byrkjelo there is no practical alternative route except through road 55 (into East Norway). Some of the alternative routes (roads 51, 55 and 63) are scenic but closed in winter until April or May.
+E18 connects Kristiansand and towns in South Norway to Oslo and Sweden, and acts as the east-west artery through the capital and other population centres in the East/South. Constructed mostly as wide and fast motorway except in Oslo eastern suburbs where the E6 is faster. Intersects twice with the E6.
+E16 connects Bergen to Oslo (via Flåm and Voss), Oslo airport (Gardermoen), Kongsvinger and further to Gävle in Sweden.
+For more information on these and other important roads, refer to the below table:
+
+
+==== Oslo-Bergen ====
+The trip from Oslo to Bergen takes between seven and nine hours, depending on the route, the driving conditions and stops along the drive. Be prepared to add some hours driving time in the winter - and remember that the daylight will be scarce for many months. All routes Oslo to Bergen run through mountain passes. It might be a good idea to use two days on the tour in the winter if you're not accustomed to these conditions. A 12 or even 14 hour drive on icy, dark roads in bad weather is not very nice. Keep in mind that many roads in Norway are often of narrow and slow due to relatively low traffic and difficult weather conditions. The most direct roads between Oslo and Bergen run through difficult yet scenic landscapes and are often affected by rough weather November through April.
+
+
+==== Bergen-Trondheim ====
+The Bergen-Trondheim either go along the coast with five time consuming ferries to catch, or through mountain passes.
+
+
+=== Tunnels ===
+
+No driving experience in Norway is complete without tunnels. There are thousands of them, and they are fascinating to those unfamiliar with them. Most tunnels are in Western Norway and Nordland county. Road E16 has over 60 tunnels, making up 15% of the entire road. E6 has over 80 tunnels, E39 has over 100 tunnels. The longest is 24 km, but 1–3 km is more common. Length of tunnel is indicated at the entrance and for the longer tunnels kilometers to exit is also indicated inside the tunnel. Each tunnel has a name and drivers should use the name to inform police or fire brigade in emergencies.
+Almost all are lit with "street" lighting, but may be narrower than the regular roads. Driving out from a tunnel, over a bridge spanning a deep gorge, back into a tunnel, then down a 12% gradient is something to be remembered. Some tunnels, particularly underwater tunnels, are relatively steep. Tunnels are generally safe and Norwegian drivers keep the same speed in tunnels as in the open, the main challenge is adapting to the darker tunnel during bright sunshine. Temperatures inside tunnels are usually different than outside, causing ice taps to form on road surface and in ceiling; condense on car windows may also be a problem. Animals may seek shelter inside tunnels. 
+Note that overtaking in a two-lane (undivided) tunnel is dangerous and forbidden in many tunnels.
+
+
+==== Tunnel fire safety ====
+In case of fire or smoke in the tunnel note the following: Use the emergency phones inside the tunnel (rather than your mobile phone) as this will inform traffic control exactly where you are. In case of fire, use the fire extinguisher inside the tunnel as this will alert traffic control and the fire brigade.
+Never enter a tunnel if there is a red light. Keep radio on inside tunnels as traffic control can send emergency messages. Long tunnels have signs indicating distance to exit in either direction. People inside the tunnel are expected to try to get out of the tunnel on their own. In case of fire or accident traffic control should be notified immediately via emergency telephones inside the tunnel. Use fire extinguisher to kill small fires and leave if not possible.
+In case of fire in a one-way tunnel:
+
+Do not turn the car around; this is extremely dangerous.
+Leave the car with emergency lights on.
+Go to the nearest emergency exit.
+In case of fire in a two-way tunnel:
+
+If possible, turn the car around, drive out and alert oncoming traffic.
+If it is difficult or dangerous to turn around, leave the car with emergency lights on and walk to the exit.
+Walk in the opposite direction of the smoke.
+
+
+=== Ferries ===
+
+There are now well over 100 ferry crossings on public roads in Norway. In Norwegian terminology boats carrying cars and passengers are called car ferries or usually just ferries (ferje), whereas boats carrying foot passengers only are called boats or fast boats (båt or hurtigbåt). 
+Car ferries are an integral part of the road system such that the ferry crossing is included in the road number and roads lead to the dock. Ferry docks are often located in remote areas at the point of shortest possible crossing. Car ferries are operated by private companies on behalf of the national road authority. Prices are administered by the Department of transport and might be 50–300 kr for an ordinary car, depending on route length, but double or more for a motor home. Car ferries on main roads depart 2 to 4 times every hour at day time, less frequent late in the evening. Some important ferries run through the night, others operate until 23:00 or 00:00 (11PM or midnight). Crossings usually take 10–30 minutes only, a small number of ferry crossings are about 1 hour or more. 
+Booking is generally not possible for private vehicles, nor is it needed. Cars arrive at the dock and wait in line on a first-come-first-serve basis. Ferries usually have enough capacity to take all waiting cars. On rare occasions travelers have to wait for the next departure and on popular crossings used during vacations there can be more waiting time. Travelers are well advised to add generous time for ferries in planning. 
+Ferry crossings typically appear on maps as dotted lines across fjords. Ferries can in general not be avoided or can be avoided only through (extremely) long detours. For the leisure traveler ferries add to the experience as calm breaks and pleasant trips across the fjords. Most ferries run in sheltered waters and are not affected by ocean waves. Ferries often have a cafeteria on board serving coffee and snacks, and in some cases full dinners.
+
+
+== Scenic drives ==
+Norway offers a large number of scenic drives and virtually every road (particularly in West Norway, in the mountains and in North Norway) is scenic. Some of these have been named National Tourist Routes and are particularly recommended.
+
+
+=== National tourist routes ===
+National Tourist Routes are eighteen highways in Norway designated for their picturesque scenery and tourist-friendly infrastructure, such as rest stops and viewpoints. These routes cover in total 1,850 kilometers (1,150 mi) and are located along the West Coast, in the Western Fjords, in Northern Norway and in the mountains of Southern Norway. Two routes constitute part of the International E-road network: E10 through Lofoten and E75 through Varanger. Mountain pass roads, such as Sognefjellsvegen, Valdresflye and Trollstigen, are closed during winter. Some sections are narrow and/or steep, drivers are adviced to plan ahead and use a low gear downhill.
+
+
+=== Other scenic routes ===
+
+Other routes with significant scenic stretches:
+
+
+=== Corniches ===
+Many roads run along Norway's endless coastline and countless lakes. Because of the rugged landscape there are often long corniche drives with great panoramas, similar to the roads along the French and Italian Riviera.
+Some notable corniches
+
+
+=== Hairpin roads ===
+
+Norway has some notable hairpin roads, particularly around the inner part of west Norway's fjords around Åndalsnes-Geiranger-Stryn.
+
+Trollstigen (road 63) - perhaps the most iconic hairpin road, grand surroundings
+Geiranger road (road 63) - less striking design, but more turns than Trollstigen
+Ørnevegen (Eagles road, also 63)
+Lysebotn road at iconic Lysefjord, a striking and airy road, 27 hairpins
+Tindevegen Årdal-Turtagrø (private, toll)
+Øvre Årdal - Tyin (road 53), one of the airiest
+Strynefjell mountain pass (old road, no 258)
+Måbødalen at Vøringsfossen waterfall (road 7), this stretch even has a tunnel with 360 degrees
+Sognefjellet (road 55 Skjolden-Lom), Norway's highest road, climbs from sea level to 1400 meters
+Stalheimskleiva (detour from E16, old road at Stalheim between Voss and Gudvangen), very tight bends and very steep
+Gaularfjell (road 13 Balestrand-Førde)
+
+
+== Road conditions ==
+
+All public roads have asphalt and are generally well maintained, but some popular roads are narrow, with many curves and steep hills. Asphalt cover on Norwegian roads is usually coarse and doesn't get very slippery when wet as can be experienced in some other countries. Note however that studded winter tyres tend to eat asphalt during the winter, leaving deep tracks (or furrows). This can make the car sideways unstable, particularly in high speed, and if filled with water tyres may float on the water making the car difficult to control (as if driving on ice or snow). 
+Visitors should be aware of mountain passes as the road can be steep and narrow. When driving downhill on steep mountain roads, it is best to use a low gear and let the engine control the speed. Brakes can overheat causing the brake fluid to boil. Mountain passes are also exposed to bad weather (and occasionally closed for some hours or a couple of days in winter). Snow may fall on mountain passes even in late April or late September. On rare occasions snow and frost can be encountered at the highest passes even in summer. If temperatures are below 10 °C at sea level, temperatures can be around or below 0 °C at 1500 meters.
+
+
+=== Winter ===
+
+Driving a car in winter conditions may be a real challenge without proper training and experience; this particularly applies to mountain passes all over Norway as well as other roads in Northern Norway. Norway has a long winter season and many roads are covered by ice or hard snow for months – traffic runs largely uninterrupted, but a handful of mountain roads are frequently closed during bad weather. Several main roads, such as E6, E16, road 7 and E134 run through mountain passes or other places exposed to wind/snow, or have stretches that run through the coldest areas in Norway (E6, E16, and road 3). These are often much colder (often 10–20 °C, even 30 °C colder) than departure and destination points – drivers should make sure that the car is prepared for temperatures as low as -20 °C or -30 °C (for instance by filling up the right diesel quality). 
+The golden rule for driving on snow, ice and slush: don't rush. Braking distance increases dramatically, increase distance to the car in front of you from the standard 3 seconds to a 5–6 seconds or more. Inexperienced drivers should drive very carefully until they get used to the conditions and the car; experienced drivers always "feel" the contact between tires and road. Powerful acceleration or hard braking quickly tells you how slippery the road is. Do a "brake test" frequently to get precise information on the road surface.
+During winter (October–April) drivers should plan well and get specific information for critical stretches of road included in the trip. Visitors entering Norway by car during this period should be prepared. Each winter main roads are blocked for hours by foreign drivers without adequate skills and equipment to drive on snow and ice. Each winter police and road authorities deny access to Norwegian roads for a large number of foreign drivers who are not prepared. Authorities routinely issue road information on radio, TV and internet. Always obtain specific information about mountain roads the day and hours before going. Don't hesitate to ask locals or call ☏ +47 815 48 991,  175 for last minute information. Always bring enough clothes and food, always calculate plenty of time. Be prepared to cancel or postpone trips in winter.
+
+
+==== Convoy driving ====
+
+Convoy driving ("kolonnekjøring") is praticed on some roads in heavy weather conditions, such as a blizzard. When convoy driving is in effect, vehicles are only allowed to drive in a line (convoy) behind a heavy snowplow. Drivers are then obliged to wait at a gate or a sign until the snowplough arrives. Convoy driving is slow and waiting times can be several hours.
+Always obtain specific information about mountain roads the day and hours before going. Don't hesitate to ask locals or call the numbers above for last minute information. News reports routinely mention where convoy driving is in operation with road number and name of mountain pass (or other stretch) as key information. There are waiting points with gates and signs at either side of the mountain pass.
+Convoy driving involves certain prerequisites and drivers should bring certain important items:
+
+The vehicle must have valid winter tires – the driver is responsible for having the right tires for the conditions; do not try to drive with poor tires. Nordic type winter tires (studded or un-studded) are strongly recommended; these are much better fitted to Norwegian winter conditions than general winter tires. During winter (after November 1) tires of any type are by law required to have a minimum of 3 mm tread depth, while in summer 1.6 mm is legal. Heavy vehicles (over 3,500 kg) must bring chains in winter and minimum tread depth is 5 mm.
+Make sure to a start out with a full tank, as the waiting time can be hours, and there are no petrol stations on convoy stretches.
+Equip yourself with at least a flashlight or other lamp, a shovel, and tow rope.
+Bring food and warm drink.
+Bring warm clothes and winter boots.
+There are precise rules for convoy driving that must be followed:
+
+The convoy is operated as directed by the driver of the snowplow.
+Turn the hazard warning lights on when the convoy starts moving. Use low beam headlights or fog lights. Don't use rear fog lights.
+Keep close to the car ahead, and keep a steady speed.
+Stay in the convoy (don't leave it or try to turn back).
+Stay in the car if the convoy halts. Don't stray from the car under any circumstance. If you get stuck or the car otherwise stops, wait for help. Leaving your car behind is forbidden and life-threatening.
+
+
+==== Winter closure ====
+Some mountain passes, including popular roads around Geiranger are subject to winter closure (typically November to May), i.e. they are totally closed during the winter. Other mountain roads may be closed for shorter periods (several days or only one night) during bad weather. On the highest mountain passes, such as Sognefjell (road 55), winter closures occasionally occur in May and September. Some exposed mountain passes can be closed for some hours or days in winter during strong wind. Weather forecast about "storm" means whole gale (very strong wind below hurricane strength) and does not refer for instance to snowstorm. Roads are typically closed only for the mountain pass itself (between permanent settlements). Closing time may vary notably depending on weather and snow remaining from winter.
+The Norwegian Public Roads Authority provides up to date information about mountain pass closures online.[1]
+
+
+=== Animal-vehicle collisions ===
+
+Roads are generally not fenced and animals may stray onto all sorts of roads. You need to look out for deer and moose – a moose collision in particular is very dangerous as these are tall and heavy animals. In the north you will also have to watch out for reindeer.
+Moose/elk ("elg") and red deer can run onto the highway particularly at dusk and dawn so take extra care if driving at those times, particularly through forest. Red deer can also jump onto the highway without warning, particularly in Western Norway during late autumn and winter, special "crossing points" have been constructed several places, be aware. Reindeer may happen to walk on the road in Northern Norway. Note the warning signs. The elk, the most dangerous animal on the roads, is most active at full moon, after heavy snow fall and at dusk/dawn.
+Be extra careful to wild animals on the roads under these circumstances:
+
+Dusk/dawn.
+Springtime (as moose reject last year's calves and give birth to new ones).
+Edge of forests.
+Bridges across streams.
+Full moon
+Several roads pass through pastures with grazing livestock and there may not be any fence to the road. Sheep, cows and goats may stroll on the road. A cattle grid ("ferist") or warning sign typically marks the start of such areas.
+
+
+== Vehicle and gear ==
+
+On public roads there is no need for anything special in summer. In winter, a four-wheel drive may be useful to pull up the last snowy road, but is generally not needed on public roads. 
+Manual ("stick-shift") transmission is still somewhat standard in Norway—nearly all cars did traditionally have manual transmission. After 2015 there has been a relatively rapid transition to electrical cars and cars with computerised driver support and automatic transmission—as of 2020 virtually all new cars have automatic transmission. Norway has more electrical plug-in cars than most other countries. Fully electric cars are indicated with an "EL" or "EK" on their license plate. As of 2020, about 10 % of all cars run on battery. 
+Rental companies may still allocate a manual transmission car unless you specifically ask for an automatic when you make a reservation. If you prefer to rent a car with automatic transmission, make sure to order one at the rental company. If you live in Europe, consider bringing your own car. 
+Diesel and other liquids must withstand the low temperatures that can be encountered in winter.
+
+
+=== By motorhome / campervan ===
+Several companies rent motorhomes that are "fully equipped" (beds, small kitchen, fridge, shower, toilet, heating, etc.) and as a rough indication they cost about what one might spend on a reasonable rented car plus reasonable accommodation – but allow a lot more flexibility. Note that the ferry prices are for motorhomes usually more than double those for cars. For large motorhomes over 3½ tonnes, the road tolls are also more than double.
+There are many rest stops on all major and many minor roads, and there's a fantastic system of National Tourist Routes with particularly spectacular rest stops (and facilities). Most of the rest stops have a toilet and picnic table.
+It is common to park overnight on rest areas although on many it is illegal. Look for parkings that are specifically designed for campervans. Don't park on any field or open patch along the road as land is generally private. The right to walk in forests and sleep in a tent ("every man's right") are not valid for vehicle driving and sleeping in motorhomes. There are hundreds of camp grounds that cater to motorhomes (and caravans, or camping with tents – some have huts to rent), and these are well signposted. All have basic facilities (electricity, toilets, hot showers (pay per minute), mostly-flat ground), and some are more equipped (buy fresh food, hire boats, communal kitchens, tourist info, etc.). Some are of the "industrial" variety (hundreds of vans, spotless facilities, very straight paths, gravel, not grass, keypads to enter, lots of strict rules, right beside the highway), and others are more… loose – occasional visitors, honoru system for payment, idyllic surroundings, lots of grass and space. It's impossible to tell from the signs, so a drive-by might be necessary to see if the campground suits your mood and preferences. As a rough guide (August 2011), a night in a campground with electricity costs around 200kr, but ranges from 120 to 300 kr. Showers are usually 10 kr for 4 minutes.
+Be aware that many campervans have relatively small engines and will be slower than other vehicles on the many Norwegian hills. Slow or oversized vehicles are obliged to pull over to let faster vehicles pass – this rule must be applied with some flexibility; check your mirror and pull over if a line of faster cars is gathering and they are otherwise not able to overtake.
+
+
+=== Costs ===
+
+Petrol is heavily taxed and therefore expensive. There are some toll roads, particularly when entering main cities, but most tolls are moderate (for instance 25 kr for entering Bergen; a notable exception is the 150 kr for the new Hardanger bridge on road 13/road 7). Tolls are generally a fraction of the total cost of going around by car.
+Renting a car is expensive, so visitors should consider for how many days and what part of the trip a car is needed. In addition to being much cheaper to rent than a heavy SUV with a big engine, a modestly powered compact car is also more fuel efficient. There is no need for a big 4 wheel drive as driving outside public roads is illegal. Day rates for the vehicle itself are usually the main expense; the price of petrol is comparatively lesser of an issue in this context.
+Car ferries are an additional cost, and unavoidable on several roads (particularly in the western fjords and parts of Northern Norway). Most ferry crossings are relatively short (10–25 minutes) and rates on ferries are moderate compared to the overall cost of renting a car – notable exceptions are the special tourist ferries Gudvangen–Kaupanger and Geiranger–Hellesylt.
+
+
+== Traffic rules ==
+
+Rules and road signs are generally the same as in the rest of Europe. As in most of Europe, Norway has right hand driving and uses the metric system. Virtually all signs use standardised symbols (pictograms), explanatory text in plain Norwegian used occasionally as supplement. 
+Regulations are strictly enforced (notably drinking, speeding and risky overtaking) and speed limits are modest to maintain safe traffic. Speed limits are fine tuned to conditions, so there is always a reason for the chosen speed limit and this is one of the key reasons for the safe traffic in Norway. A restrained driving style is the norm in Norway. Foreign visitors should be aware that police controls are common and that fines are very high. Traffic enforcement cameras are common. Jail sentence and suspension of licence is used for the most serious offences.
+
+
+=== Driving licences ===
+Most driving licences from abroad are valid for three months, for travellers as well as for immigrants, in some circumstances for longer times. Norwegian age requirements apply: 18 years for most vehicles. If your driving licence is not in the format specified in the Geneva (1949) or Vienna (1968) convention on road traffic, it might not be valid. In some cases, such as if your licence is without photo or not written in an accepted language, the licence may need to be accompanied by an International Driving Permit (or an official local translation).
+Driving licences from the European Union, the EEA or the UK are accepted for as long as they are valid, but Norwegian rules on age and health apply.
+
+
+=== Right of way ===
+Traffic from right hand has right of way (unless signs or lights). You must yield to traffic from any road to your right, except from separate areas such as parking lots, market square, pedestrian zone, and petrol stations.
+Turning vehicles must yield to pedestrians and bicycles that proceed straight ahead on road or shoulder.
+ Traffic on roads with the standard "Yellow Diamond" sign has the right of way. This is widely used for main roads. Traffic from connecting roads will then see the give-way (yield) or stop sign.
+ Universal give way (yield) sign.
+ Give way for vehicles located within a roundabout.
+ Buses have right of way when leaving a bus stop where the speed limit is 60 km/h or less.
+  Trains, trams and light rail have right of way even from the left hand side.
+Traffic downhill is expected to yield to traffic uphill if road is too narrow for two cars (important in winter).
+ Pedestrians have the right of way at all marked crossings with no traffic lights. You are required to stop even if the pedestrian is not yet in the crossing, only showing intention to cross. You may be severely fined and your driver's licence may be suspended if you don't. This rule is strictly enforced.
+ Emergency service vehicles with flashing blue light (red light not used) has absolute right of way. Note: Emergency light is blue, silent response very common (no siren).
+ Right turn on red is illegal even if road is clear.
+Opposing traffic must if necessary slow down or pull over on the right hand side (particularly applies to narrow mountain roads).
+Funeral processions have the right of way. People are required to yield, and not interfere or cause an obstruction.
+
+
+=== Use of equipment ===
+Headlights are mandatory even during daylight. If you drive without lights you may find other drivers flashing their headlights at you to inform you.
+An EN standard hazard waistcoat is required in the vehicle, reachable from the driver's seat.
+Using a mobile phone when driving is forbidden; fine is up to 10,000 NOK (the equivalent of €1000, in 2023).
+Wearing a seat belt is mandatory, also in back seats.
+Winter tires must have a minimum depth of tread of 3 mm. Cars (Vehicle group M1) heavier than 7500 kg (Vehicle group N1 over 3500 Kg) are required to carry snow chains during winter and whenever snow or ice can be expected. A minimum of 5 mm depth of tread is recommended for trucks and heavy cars.
+Using a vehicle's horn is considered impolite and may result in a fine unless used for an emergency.
+
+
+=== Speed limits ===
+
+ The general speed limit is 80 km/h in the countryside on highways; the 80-sign is rarely used and 80 is instead implied.
+ 50 km/h in urban/built-up areas, usually indicated with signs.
+Other speed limits are always indicated with signs; for instance, speed limits on motorways (controlled-access highway). The motorway sign does not imply any particular speed limit.
+There are no specific rules for change of speed limit (as in some other countries) when driving conditions change. The driver is by law required to adjust speed downward to a safe level in, for instance, fog, heavy rain, or snow.
+Norway has some of the highest speeding fines in the world, including confiscating your driver's license and/or jail time (even for foreigners). There are speeding cameras frequently on major roads, and it's not uncommon for unmarked police cars to pull you over. It is highly recommended to use your car's cruise control system to stay at the speed limit.
+Vehicles pulling trailers, and vehicles over 3,500 kg, must not drive faster than 80 km/h ( except motorhomes up to 7500 kg that can follow the speed limit up to 110 km/h), even on motorways with a higher speed limit.
+Speed limits are fine-tuned to conditions for maximum safety, so be aware that speed limits may adjusted slightly for a few kilometers only. For instance some good two-lane undivided roads in sparsely populated areas may have 70 km/h speed limit because of moose hazard or frequent icing.
+The highest speed limit is 110 km/h and used only on short stretches of the best motorways.
+
+
+=== Accidents ===
+Every person is by law obliged to help and assist at site of accident, even if not involved or guilty.
+Call the police (emergency 112) if persons are injured or killed, or if animals are.
+Call the police also if the vehicles are blocking parts of the road and can cause dangerous situations.
+If no persons are harmed and both vehicles can pull over out of the way of other traffic, the drivers involved should resolve the situation themselves (exchange full contact information) and should not contact the police.
+
+
+=== Other ===
+Don't drink and drive. Your blood alcohol concentration must not exceed 0.2 ‰. One small beer can be enough. This rule is strictly enforced and violators risk a huge fine, a long (or even indefinite) suspension of the driver's licence, and prison time.
+Since 2013, if you take certain medications (opiates, benzodiazepines or other narcotics) you are NOT allowed to drive unless you are taking them every day for at least 14 days. Even if you have a prescription, you are not allowed to drive if the prescription says "when needed" and they remain in your body to an amount "equivalent" of 0,02% blood alcohol content. If you use e.g. codeine, look up its elimination half-life values and calculate from there, with enough margins.
+On typical Norwegian two-lane road with a narrow shoulder, overtaking is only allowed on long straightaways with plenty of visibility. Drivers are not expected to use the shoulder to facilitate overtaking. Overtake only if really necessary; consider alternatives like taking a short break.
+Overtaking is generally forbidden at crossroads.
+Off-roading is generally forbidden. Motor vehicles must stay on public roads.
+ Where a road is not wide enough for two cars to meet, blue signs with a large M indicate passing points (M for "meeting" point).
+
+
+=== Signs and markings ===
+
+While road markings are informative, they are often covered by snow and ice in winter. Unlike other European countries, in Norway yellow lines separate opposing traffic, and white lines separate traffic in the same direction. In general yellow lines should be on your left hand side, while white lines should be on your right hand side. Caution: Yellow lines on your right hand side means you are heading in the wrong direction!
+
+
+== Parking ==
+
+Parking is generally forbidden if speed limit is over 60 km/h. Parking in inner city is often difficult and usually strictly regulated or expensive. Within downtown Bergen parking is generally forbidden except on parking meters or within parking facilities. Parking on meters in Oslo and Bergen is relatively expensive. Electric cars can park for free on parking meters in public streets (applies to all of Norway), while "hybrid" cars including "plug-in hybrids" must pay (as of 2016). "Mot avgift" means that there is a fee for parking. While parking on public streets in Oslo is generally allowed, gradually fewer places are available as streets are redesigned. Illegally parked cars will be fined and in some cases towed at the expense of owner (clamps are not used). Note the use of parking zones where sign applies until invalidated (unlike the basic rule that signs are in force until next cross road).
+
+
+== Tolls ==
+
+There are toll roads in Norway; most of these are part of AutoPass (automatic number plate recognition). Visitors in their own car can register their numberplate for the duration of their visit only, pre-buy kr. 300 worth of tolls, and directly debit their (European) bank account or credit card for top ups. Any un-used funds are returned within 90 days. For rental cars, follow the rental company procedure. Occasionally, it may be necessary to stop and pay for tolls (notably on the small number of private roads), but most are automated (numberplate is photographed while driving under a gantry over the road).
+Motorhomes up to 7500 Kg has the same toll charge as a car under 3500 Kg on roads using Autopass.
+
+
+== Glossary ==
+For more information on Norwegian glossary, see the Norwegian phrasebook article.
+
+anleggsarbeid
+road works/construction ahead
+beiteområde
+grazing livestock
+bensin
+petrol
+bomvei/bompenger
+toll road/toll
+dekk
+tire/tires
+diesel
+diesel
+fotgjengere
+pedestrians
+gate
+street
+gjelder gjennomkjøring
+applies to through traffic
+gjelder ikke buss
+does not apply to buses
+gjelder høyre felt
+applies to right hand lane
+venstre
+left
+gågate
+pedestrian zone
+høyre/høgre
+right hand (side)
+km/t
+kilometers per hour
+kjettinger
+chains
+kjør forsiktig
+drive carefully
+kjørelys
+headlights
+kolonnekjøring
+convoy driving
+lys
+light
+vent på brøytebil
+wait for snowplow (snow removal vehicle)
+kuldeport
+tunnel closed with gate to keep frost out
+lengde
+length
+olje
+oil
+omkjøring
+diversion, detour
+over 1 time
+more than 1 hour
+opphøyd gangfelt
+raised pedestrian crossing
+piggdekk
+studded tires
+stengt
+closed
+stopp ved rød blink
+stop if red light signal
+særlig stor elgfare
+extraordinary moose hazard
+strekningsmåling
+speed camera for stretch of road
+telehiv, teleskade
+frost bulges, frost heaves, frost cracks
+tele
+frost in ground
+trekkrok
+tow bar, tow hitch, tow hook
+ulykke
+accident
+vei/veg
+road
+vegen
+the road
+ventetid
+waiting time
+vinterdekk
+winter tires, snow tires (same thing)
+
+
+== Itineraries ==
+
+E6 through Sweden and Norway
+Road 63 (Norway)
+European route E39
+
+
+== See also ==
+Driving in Finland
+Driving in Sweden
+
+=== SOURCE: Wikipedia — Black ice (CC BY-SA 4.0) ===
+Black ice, sometimes called clear ice, is a coating of glaze ice on a surface, for example on streets or on lakes. The ice itself is not black, but visually transparent, allowing the often black road below to be seen through it and light to be transmitted. The typically low levels of noticeable ice pellets, snow, or sleet surrounding black ice means that areas of the ice are often next to invisible to drivers, cyclists or people walking on it. Thus, there is a risk of slippage and subsequent accident due to the unexpected loss of traction.
+
+
+== Definitions ==
+The term "black ice" in the United States is defined by the National Weather Service  as "patchy ice on roadways or other transportation surfaces that cannot easily be seen.  It is often clear (not white) with the black road surface visible underneath. It is most prevalent during the early morning hours, especially after snowmelt on the roadways has a chance to refreeze overnight when the temperature drops below freezing. Black ice can also form when roadways are slick from rain and temperatures drop below freezing overnight."
+The World Meteorological Organization definitions of black ice are:
+
+A popular alternative for the term glaze. A thin sheet of ice, relatively dark in appearance, may form when light rain or drizzle falls on a road surface that is at a temperature below freezing point or, alternatively, when water already on the road surface subsequently freezes when its temperature falls below freezing point. It may also be formed when supercooled fog droplets are intercepted by buildings, fences, and vegetation.
+Thin, new ice on freshwater or saltwater, appearing dark in color because of its transparency, a result of its columnar grain structure.
+
+
+== Formation ==
+
+
+=== On roads and pavements ===
+The American Meteorological Society Glossary of Meteorology includes the definition of black ice as "a thin sheet of ice, relatively dark in appearance, [that] may form when light rain or drizzle falls on a road surface that is at a temperature below 0 °C (32 °F)." Because it represents only a thin accumulation, black ice is highly transparent and thus difficult to see compared with snow, frozen slush, or thicker ice layers. In addition, it is often interleaved with wet pavement, which is nearly identical in appearance.
+
+This condition makes driving, cycling or walking on affected surfaces extremely dangerous. Deicing with salt (sodium chloride) is effective down to temperatures of about −18 °C (0 °F).  Other compounds such as magnesium chloride or calcium chloride have been used for extremely cold temperatures since the freezing-point depression of their solutions is lower.
+At lower temperatures (below −18 °C (0 °F)), black ice can form on roadways when the moisture from automobile exhaust, such as motorcycles and cars, condenses on the road surface.  
+Such conditions caused multiple accidents in Minnesota when the temperatures dipped below that point for a prolonged period of time in mid-December 2008.  Salt's ineffectiveness at melting ice at these temperatures compounds the problem. Black ice may form even when the ambient temperature is several degrees above the freezing point of water 0 °C (32 °F), if the air warms suddenly after a prolonged cold spell that has left the surface of the roadway well below the freezing point of water.
+On 1 December 2013, heavy post-Thanksgiving weekend traffic encountered black ice on the westbound I-290 expressway in Worcester, Massachusetts. A chain reaction series of crashes resulted, involving three tractor-trailers and over 60 other vehicles. The ice formed suddenly on a long downward slope, surprising drivers coming over the crest of a hill, who could not see crashed vehicles ahead until it was too late to stop on the slick pavement.
+On 11 February 2021, icing in Dallas and Fort Worth, Texas, contributed to a crash on I-35W which authorities called a "mass casualty event".  Over 100 cars were involved in the pileup and multiple fatalities were reported.
+
+
+=== On bridges ===
+
+Bridges and overpasses can be especially dangerous. Black ice forms first on bridges and overpasses because air can circulate both above and below the surface of the elevated roadway when the ambient temperature drops, causing the pavement temperature on the bridge to fall rapidly.
+
+
+==== Case study in Minnesota ====
+
+The I-35W Mississippi River bridge in Minneapolis, Minnesota, was well known for its black ice before it collapsed in 2007 into the Mississippi River. It had caused several pileups during its 40-year life. The bridge's proximity to the spray of Saint Anthony Falls contributed significantly to the icing problem and the site was noted for frequent spinouts and collisions. On December 19, 1985, the temperature reached −34 °C (−29 °F). Cars crossing the bridge experienced black ice and there was a massive pile up of crashed vehicles on the bridge on the northbound side. In 1996, the bridge was identified as the single most treacherous cold-weather spot in the local freeway system, because of the almost frictionless thin layer of black ice that regularly formed when temperatures dropped below freezing.
+By January 1999, Mn/DOT began testing magnesium chloride solutions and a mixture of magnesium chloride and a corn-processing byproduct to see whether either would reduce the black ice that appeared on the bridge during the winter months. In October 1999, the state embedded temperature-activated nozzles in the bridge deck to spray the bridge with potassium acetate solution to keep the area free of winter black ice. The system came into operation in 2000.
+
+
+=== On water ===
+
+When the temperature is below freezing and the wind is calm, such as under high atmospheric pressure at night in the fall, a thin layer of ice will form over open water of a lake. If the depth of the body of water is large enough, its color is black and can be seen through the ice, thus the name black ice. On lakes, black ice is also commonly overlain by white ice formed from refrozen snow or slush towards spring. Black ice transmits more light than white ice  which can be important for primary producers in lakes, such as phytoplankton. Black ice has a higher bearing capacity than white ice which is important to consider for ice safety reasons when doing recreational activities on lakes, such as ice skating and ice fishing.
+Ice can also be formed by seawater spray and water vapour freezing upon contact with a vessel's superstructure when temperature is low enough. Ice formed in this manner is known as rime. As the formation progress, the aboveboard weight of the vessel increases and may ultimately cause capsizing. Furthermore, rime ice may impede the correct functioning of important navigational instruments on board, such as radar or radio installations. Different strategies for the removal of such ice are employed: chipping away the ice or even using fire hoses in an attempt to remove the ice.
+
+
+=== In mountains ===
+
+Black ice is a significant hazard for climbers and scramblers. Cold weather is common at high altitudes, and black ice quickly forms on rock surfaces. Loss of traction is as sudden and unexpected as on a pavement or road, but can be dangerous if the rock is in an exposed position with a drop below. An ice-axe and crampons are essential use in such circumstances as they will help to prevent a fall, and a belay rope will help to arrest a fall.
+
+
+== See also ==
+
+
+== References ==
+
+
+== External links ==
+
+Is there really such a thing as black ice?, from The Straight Dope staff
+
+=== SOURCE: Wikipedia — Aquaplaning (CC BY-SA 4.0) ===
+Aquaplaning or hydroplaning by the tires of a road vehicle, aircraft or other wheeled vehicle occurs when a layer of water builds between the wheels of the vehicle and the road surface, leading to a loss of traction that prevents the vehicle from responding to control inputs. If it occurs to all wheels simultaneously, the vehicle becomes, in effect, an uncontrolled sled. Aquaplaning is a different phenomenon from when water on the surface of the roadway merely acts as a lubricant. Traction is diminished on wet pavement even when aquaplaning is not occurring.
+
+
+== Causes ==
+Every vehicle function that changes direction or speed relies on friction between the tires and the road surface. The grooves of a rubber tire are designed to disperse water from beneath the tire, providing high friction even in wet conditions. Aquaplaning occurs when a tire encounters more water than it can dissipate. Water pressure in front of the wheel forces a wedge of water under the leading edge of the tire, causing it to lift from the road. The tire then skates on a sheet of water with little, if any, direct road contact, and loss of control results. If multiple tires aquaplane, the vehicle may lose directional control and slide until it either collides with an obstacle, or slows enough that one or more tires contact the road again and friction is regained.
+The risk of aquaplaning increases with the depth of standing water, higher speeds, and the sensitivity of a vehicle to that water depth.
+
+
+=== Water depth factors ===
+
+Depth of compacted wheel tracks and longitudinal depressions: Heavy vehicles can cause ruts in the pavement over time that allow water to pool.
+Pavement micro- and macrotexture: Concrete can be preferable to hotmix asphalt because it offers better resistance to rut formation, though this depends on the age of the surface and the construction techniques employed while paving. Concrete also requires special attention to ensure that it has sufficient texture.
+Pavement cross slope and grade: Cross slope is the extent to which the cross-section of a road resembles an upturned U. Higher cross slopes allow water to drain more easily. Grade is the steepness of the road at a particular point, which affects both drainage and force exerted by the vehicle on the road. Vehicles are less likely to aquaplane while traveling uphill, and far more likely to do so at the trough of two connected hills where water tends to pool. The resultant of cross slope and grade is called drainage gradient or "resulting grade". Most road design manuals require that the drainage gradient in all road sections must exceed 0.5%, in order to avoid a thick water film during and after rainfall. Areas where the drainage gradient may fall below the minimum limit 0.5% are found at the entrance and exit of banked outer curves. These hot spots are typically less than 1% of the road length, but a large share of all skid crashes occur there. One method for the road designer to reduce the crash risk is to move the cross slope transition from the outer curve and to a straight road section, where lateral forces are lower. If possible, the cross slope transition should be placed in a slight up- or downgrade, thereby avoiding that the drainage gradient drops to zero. The UK road design manual actually calls for placement of a cross slope transition in an artificially created slope, if needed. In some cases, permeable asphalt or concrete can be used to improve drainage in the cross slope transitions.
+Width of pavement: Wider roads require a higher cross slope to achieve the same degree of drainage.
+Roadway curvature
+Rainfall intensity and duration
+
+
+=== Vehicle sensitivity factors ===
+The driver's speed, acceleration, braking, and steering
+Tire tread wear: Worn tires will aquaplane more easily for lack of tread depth. Half-worn treads result in aquaplaning about 4.8–6.4 km/h (3–4 mph) lower than with full-tread tires.
+Tire inflation pressure: Underinflation can cause a tire to deflect inward, raising the tire center and preventing the tread from clearing water.
+Tire tread aspect ratio: The longer and thinner the contact patch, the less likely a tire will aquaplane. tires that present the greatest risk are small in diameter and wide. 
+Vehicle weight: More weight on a properly inflated tire lengthens the contact patch, improving its aspect ratio. Weight can have the opposite effect if the tire is underinflated.
+Vehicle type: Combination vehicles like semi-trailers are more likely to experience uneven aquaplaning caused by uneven weight distribution. An unloaded trailer will aquaplane sooner than the cab pulling it. Pickup trucks or SUVs towing trailers also present similar problems.
+There is no precise equation to determine the speed at which a vehicle will aquaplane. Existing efforts have derived rules of thumb from empirical testing. In general, cars start to aquaplane at speeds above 72–93 km/h (45–58 mph).
+
+
+=== Motorcycles ===
+Motorcycles benefit from narrow tires with round, canoe-shaped contact patches. Narrow tires are less vulnerable to aquaplaning because vehicle weight is distributed over a smaller area, and rounded tires more easily push water aside. These advantages diminish on lighter motorcycles with naturally wide tires, like those in the supersport class. Further, wet conditions reduce the lateral force that any tire can accommodate before sliding. While a slide in a four-wheeled vehicle may be corrected, the same slide on a motorcycle will generally cause the rider to fall. Thus, despite the relative lack of aquaplaning danger in wet conditions, motorcycle riders must be even more cautious because overall traction is reduced by wet roadways.
+
+
+== In motor vehicles ==
+
+
+=== Speed ===
+It is possible to approximate the speed at which total hydroplaning occurs, with the following equation:
+
+  
+    
+      
+        
+          V
+          
+            p
+          
+        
+        =
+        10.35
+        
+          
+            p
+          
+        
+      
+    
+    {\displaystyle V_{p}=10.35{\sqrt {p}}}
+  
+
+where 
+  
+    
+      
+        p
+      
+    
+    {\textstyle p}
+  
+ is the tire pressure in psi and the resulting 
+  
+    
+      
+        
+          V
+          
+            p
+          
+        
+      
+    
+    {\textstyle V_{p}}
+  
+ is the speed in mph for when the vehicle will begin to totally hydroplane. Considering an example vehicle with a tire pressure of 35 psi, one can approximate that 61 mph is the speed when the tires would lose contact with the road's surface.
+However, the above equation only gives a very rough approximation. Resistance to aquaplaning is governed by several different factors, chiefly vehicle weight, tire width and tread pattern, as all affect the surface pressure exerted on the road by the tire over a given area of the contact patch - a narrow tire with a lot of weight placed upon it and an aggressive tread pattern will resist aquaplaning at far higher speeds than a wide tire on a light vehicle with minimal tread. Furthermore, the likelihood of aquaplaning drastically increases with water depth.
+
+
+=== Response ===
+What the driver experiences when a vehicle aquaplanes depends on which wheels have lost traction and the direction of travel.
+If the vehicle is traveling straight, it may begin to feel slightly loose. If there was a high level of road feel in normal conditions, it may suddenly diminish. Small correctional control inputs have no effect.
+If the drive wheels aquaplane, there may be a sudden audible rise in engine RPM and indicated speed as they begin to spin. In a broad highway turn, if the front wheels lose traction, the car will suddenly drift towards the outside of the bend. If the rear wheels lose traction, the back of the car will slew out sideways into a skid. If all four wheels aquaplane at once, the car will slide in a straight line, again towards the outside of the bend if in a turn. When any or all of the wheels regain traction, there may be a sudden jerk in whatever direction that wheel is pointed.
+
+
+=== Recovery ===
+Control inputs tend to be counterproductive while aquaplaning. If the car is not in a turn, easing off the accelerator may slow it enough to regain traction. Steering inputs may put the car into a skid from which recovery would be difficult or impossible. If braking is unavoidable, the driver should do so smoothly and be prepared for instability.
+If the rear wheels aquaplane and cause oversteer, the driver should steer in the direction of the skid until the rear tires regain traction, and then rapidly steer in the other direction to straighten the car.
+
+
+=== Prevention by the driver ===
+The best strategy is to avoid contributors to aquaplaning. Proper tire pressure, narrow and unworn tires, and reduced speeds from those judged suitably moderate in the dry will mitigate the risk of aquaplaning, as will avoidance of standing water.
+Electronic stability control systems cannot replace defensive driving techniques and proper tire selection. These systems rely on selective wheel braking, which depends in turn on road contact. While stability control may help recovery from a skid when a vehicle slows enough to regain traction, it cannot prevent aquaplaning.
+Because pooled water and changes in road conditions can require a smooth and timely reduction in speed, cruise control should not be used on wet or icy roads.
+
+
+== In aircraft ==
+Aquaplaning, also known as hydroplaning, is a condition in which standing water, slush or snow, causes the moving wheel of an aircraft to lose contact with the load bearing surface on which it is rolling with the result that braking action on the wheel is not effective in reducing the ground speed of the aircraft.
+Aquaplaning may reduce the effectiveness of wheel braking in aircraft on landing or aborting a takeoff, when it can cause the aircraft to run off the end of the runway. Aquaplaning has been a factor in multiple aircraft accidents, including the destruction of TAM Airlines Flight 3054 which ran off the end of the runway in São Paulo in 2007 during heavy rain. Aircraft which can employ reverse thrust braking have the advantage over road vehicles in such situations, as this type of braking is not affected by aquaplaning, but it requires a considerable distance to operate as it is not as effective as wheel braking on a dry runway.
+Aquaplaning is a condition that can exist when an aircraft is landed on a runway surface contaminated with standing water, slush, and/or wet snow. Aquaplaning can have serious adverse effects on ground controllability and braking efficiency. The three basic types of aquaplaning are dynamic aquaplaning, reverted rubber aquaplaning, and viscous aquaplaning. Any one of the three can render an aircraft partially or totally uncontrollable anytime during the landing roll.
+However this can be prevented by grooves on runways. In 1965, a US delegation visited the Royal Aircraft Establishment at Farnborough to view their grooved runway for reduced aquaplaning and initiated a study by the FAA and NASA. Grooving has since been adopted by most major airports around the world. Thin grooves are cut in the concrete which allows for water to be dissipated and further reduces the potential to aquaplane.
+
+
+=== Types ===
+
+
+==== Viscous ====
+Viscous aquaplaning is due to the viscous properties of water. A thin film of fluid no more than 0.025 mm in depth is all that is needed. The tire cannot penetrate the fluid and the tire rolls on top of the film. This can occur at a much lower speed than dynamic aquaplane, but requires a smooth or smooth-acting surface such as asphalt or a touchdown area coated with the accumulated rubber of past landings. Such a surface can have the same friction coefficient as wet ice.
+
+
+==== Dynamic ====
+Dynamic aquaplaning is a relatively high-speed phenomenon that occurs when there is a film of water on the runway that is at least 2.5 mm (1⁄10 inch) deep. As the speed of the aircraft and the depth of the water increase, the water layer builds up an increasing resistance to displacement, resulting in the formation of a wedge of water beneath the tire. At some speed, termed the aquaplaning speed (Vp), the upward force generated by water pressure equals the weight of the aircraft and the tire is lifted off the runway surface. In this condition, the tires no longer contribute to directional control, and braking action is nil. Dynamic aquaplaning is generally related to tire inflation pressure. Tests have shown that for tires with significant loads and enough water depth for the amount of tread so that the dynamic head pressure from the speed is applied to the whole contact patch, the minimum speed for dynamic aquaplaning (Vp) in knots is about 9 times the square root of the tire pressure in pounds per square inch (PSI). For an aircraft tire pressure of 64 PSI, the calculated aquaplaning speed would be approximately 72 knots. This speed is for a rolling, non-slipping wheel; a locked wheel reduces the Vp to 7.7 times the square root of the pressure. Therefore, once a locked tire starts aquaplaning it will continue until the speed reduces by other means (air drag or reverse thrust).
+
+
+==== Reverted rubber ====
+Reverted rubber (steam) aquaplaning occurs during heavy braking that results in a prolonged locked-wheel skid. Only a thin film of water on the runway is required to facilitate this type of aquaplaning. The tire skidding generates enough heat to change the water film into a cushion of steam which keeps the tire off the runway. A side effect of the heat is it causes the rubber in contact with the runway to revert to its original uncured state. Indications of an aircraft having experienced reverted rubber aquaplaning, are distinctive 'steam-cleaned' marks on the runway surface and a patch of reverted rubber on the tire.
+Reverted rubber aquaplaning frequently follows an encounter with dynamic aquaplaning, during which time the pilot may have the brakes locked in an attempt to slow the aircraft. Eventually the aircraft slows enough to where the tires make contact with the runway surface and the aircraft begins to skid. The remedy for this type of aquaplane is for the pilot to release the brakes and allow the wheels to spin up and apply moderate braking. Reverted rubber aquaplaning is insidious in that the pilot may not know when it begins, and it can persist to very slow groundspeeds (20 knots or less).
+
+
+=== Reducing risk ===
+
+Any aquaplaning tire reduces both braking effectiveness and directional control.
+When confronted with the possibility of aquaplaning, pilots are advised to land on a grooved runway (if available). Touchdown speed should be as slow as possible consistent with safety. After the nosewheel is lowered to the runway, moderate braking should be applied. If deceleration is not detected and aquaplaning is suspected, the nose should be raised and aerodynamic drag utilized to decelerate to a point where the brakes do become effective.
+Proper braking technique is essential. The brakes should be applied firmly until reaching a point just short of a skid. At the first sign of a skid, the pilot should release brake pressure and allow the wheels to spin up. Directional control should be maintained as far as possible with the rudder. In a crosswind, if aquaplaning should occur, the crosswind will cause the aircraft to simultaneously weathervane into the wind (i.e. the nose will turn toward the wind) as well as slide downwind (the plane will tend to slide in the direction the air is moving).  For small aircraft, holding the nose up as if performing a soft field landing and using the rudder to aerodynamically maintain directional control while holding the upwind aileron in the best position to prevent lifting the wing should help. However, avoid landing in heavy rain where the crosswind component of the wind is higher than the maximum demonstrated crosswind listed in the Pilot Operations Handbook.
+To mitigate this risk, maintenance practices focus on restoring surface friction and macrotexture. One widely used method is ultra-high-pressure (UHP) water blasting, which removes rubber deposits and retextures the surface without the use of chemicals or abrasives. This technique uses water at pressures typically above 2,000 bar to clean and roughen the pavement, thereby restoring effective drainage channels and skid resistance. UHP water blasting is commonly used at airports for runway rubber removal and also on roadways to improve surface texture. For example, specialized mobile units can remove rubber, erase road markings, and retexture surfaces in a single operation using only pressurized water. These systems help maintain safe levels of friction and reduce the risk of aquaplaning, particularly in wet conditions.
+
+
+== See also ==
+Road slipperiness
+Traction (engineering), for effects similar to aquaplaning
+Kugel fountain
+
+
+== References ==
+Inline
+
+General
+B. N. J. Persson; U. Tartaglino; O. Albohr & E. Tosatti (2004). "Sealing is at the origin of rubber slipping on wet roads". Nature Materials. 3 (7 November): 882–885. arXiv:cond-mat/0412045. Bibcode:2004NatMa...3..882P. doi:10.1038/nmat1255. PMID 15531886. S2CID 15635210.
+Smart Motorist – Driving in the Rain
+Airplane Flying Handbook, FAA Publication FAA-H-8083-3A, available for download from the Flight Standards Service Web site at http://av-info.faa.gov.
+
+
+== External links ==
+
+NASA paper describing aquaplaning, TN D-2056 'Phenomena of pneumatic tire hydroplaning'.
+
+=== SOURCE: Wikipedia — Skid (automobile) (CC BY-SA 4.0) ===
+An automobile skid is an automobile handling condition where one or more tires are slipping relative to the road, and the overall handling of the vehicle has been affected. For other uses of the term “skid”, see skid-mounted equipment used in firefighting and utility vehicle applications.
+Subtypes of skid include:
+
+fishtailing, where the vehicle yaws back and forth across the direction of motion.
+spin or spinout where a vehicle rotates in one direction during the skid.
+understeer and oversteer where front or rear wheels lose traction during cornering, causing a vehicle to follow a larger or smaller turning radius.
+burnout where a vehicle slips or spins its tires during acceleration.
+lockup where a vehicle skids during braking (with or without directional or yaw changes).
+
+
+== Slip and skid ==
+Tire slip, and related slip angle (angle of motion relative to tire), describe the performance of an individual tire. Important concepts about slip and skid include circle of forces or circle of traction, and cornering force. To a first approximation, the tire can withstand approximately the same absolute force relative to the road surface in any direction.  Graphically represented, a circle (or ellipse) of force magnitude represents the maximum tire traction, and the force vector can be in any direction up to the limit of the circle without tire slip. A tire that can withstand 0.8 G of force in braking can also withstand 0.8 G of force in turning or in acceleration, or for example approximately 0.56 G of cornering and 0.56 G of braking simultaneously, summing to 0.8 G at a 45-degree angle. Once the force exceeds the limit circle, that tire starts to slip.
+Skidding is the vehicle's response to one or more tires slipping. The vehicle dynamics during a skid will depend on whether some or all of the tires are skidding, and whether the car was rotating or turning when the skid began.
+
+
+=== Road conditions ===
+Road surface conditions such as moisture on the road, snow, ice (particularly black ice), debris or sand, oil or other fluids, can cause skidding at much lower force levels or velocities than under normal conditions. Moisture can cause aquaplaning, also known as hydroplaning, where water builds up in front of and under tires and causes loss of tire grip.
+
+
+== Types ==
+
+
+=== Fishtailing ===
+ 
+Fishtailing is a cyclical skid combining alternating oversteer (rear wheel skidding) with overcorrection, leading to oversteer/skidding in the opposite direction.
+
+
+=== Spin out ===
+Spin outs are where the vehicle starts to skid while rotating, or develops significant rotation while skidding, and rotates out of control.
+Once the vehicle is rotating sufficiently rapidly, its angular momentum of rotation can overcome the stabilizing influence of the tires (either braking or skidding), and the rotation will continue even if the wheels are centered or past the point that the vehicle is controlled. This can be caused by some tires locking up in braking while others continue to rotate, or under acceleration where driven tires may lose traction (especially, if they lose traction unevenly), or in combining braking or acceleration with turning.
+
+
+=== Understeer and oversteer ===
+
+
+=== Burnout ===
+A burnout is when a car intentionally locks the front wheels to hold the car in place while spinning the rear wheels. The dynamic friction of the spinning tire against the road causes significant amounts of the tire's rubber to be deposited onto the road surface, and increased temperature from friction usually creates dense white smoke. It is common in drag racing to heat tires to a more desirable temperature in order to increase traction. Burnouts are usually illegal on the street; drivers engaging in them may be considered a hoon.
+
+
+=== Skidding during braking ===
+This is the simplest type of skid, where directional changes are not relevant, and the vehicle merely locks up the tires moving forwards in a straight line.  If all four tires start to skid approximately evenly, then a vehicle will not start rotating due to the skid, and can come to a stop with locked up tires at a somewhat longer distance than threshold braking might have achieved.
+
+
+== Avoiding and managing skid ==
+
+
+=== Manual avoidance ===
+Threshold braking and cadence braking are two manual techniques used to extract maximum deceleration from a vehicle. Threshold braking maintains a steady braking force with slight (10-20%) slip, around or just below the point of maximum tire grip force. Cadence braking accepts that holding the threshold braking limit is exceptionally hard, and relies on manual manipulation of braking force to rapidly go just above and below the skid point, essentially oscillating between unlocked rolling and locked skidding around the point at which threshold braking would be done. This technique is less effective than threshold braking but much easier to learn.
+
+
+==== Lockup ====
+For deceleration straight ahead, where turning or maneuvering are not required, one technique is to simply accept a skid and lock up the brakes. While ABS or ESC brake systems may perform better, and reduce risk of loss of control, many less skilled drivers will stop faster while locked up than any alternative they can realistically perform. This is not true if the vehicle has to be steered while stopping.
+
+
+=== Automated systems ===
+Electronic stability control or ESC systems, and the older anti-lock brake or ABS systems, perform an automated braking (and for ESC, steering) function using wheel-by-wheel rapid brake pumping, similar to a mixture of threshold and cadence braking on a tire by tire basis.
+ABS senses wheel rotation compared to ground velocity, and if the wheel starts to lock up or slip will then rapidly moderate the brakes to let it begin to rotate again. This is done separately for all 4 wheels, and without regard for the rotation of the vehicle.
+ESC does the same, but combines that with sensing the steering and yaw or rotation velocity of the vehicle (for example, rotating as it goes around a corner). ESC will go beyond simply avoiding lockup in each tire, to dynamically braking other tires to maintain the existing path of the vehicle.
+
+
+== See also ==
+Braking distance
+Directional stability
+Road slipperiness
+Vehicle handling
+
+
+== References ==
+
+=== SOURCE: Wikipedia — Cadence braking (CC BY-SA 4.0) ===
+Cadence braking or stutter braking is a driving technique that involves pumping the brake pedal and is used to allow a car to both steer and brake on a slippery surface. It is used to effect an emergency stop where traction is limited to reduce the effect of skidding from road wheels locking up under braking. This can be a particular problem when different tires have different traction, such as on patchy ice for example. Its use in an emergency requires a presence of mind that the situation itself might preclude. Cadence braking is supposed to maximize the time for the driver to steer around the obstacle ahead, as it allows the driver to steer while slowing. It needs to be learned and practiced. For most drivers of modern cars, it has been entirely superseded by ABS, however it is still a valuable skill for drivers of non-ABS equipped vehicles such as classic cars.
+Maximum braking force is obtained when there is approximately 10–20% slippage between the braked wheel's rotational speed and the road surface. Beyond this point, rolling grip diminishes rapidly and sliding friction provides a greater proportion of the force that slows the vehicle. Due to local heating and melting of the tires, the sliding friction can be very low. When braking at, or beyond, the peak braking force the steering is ineffective since the grip of the tire is entirely consumed in braking the vehicle.
+Anti-lock braking system performs these operations automatically many times per second in rapid succession. This frequency is tuned by the brakes engineer to provide the best compromise for local market conditions.
+This is done primarily to maintain steering control, at least in part. In wet, hard surfaces, this is useful to reduce somewhat total braking distance. When ABS is present the best emergency stop will usually be obtained by simply pressing very hard on the brakes, forcing the ABS to perform, and steering to avoid the obstacles ahead.
+Cadence braking (or any other type of braking) will not help much on extremely slippery surfaces such as ice (in theory it would, but in practice the ice can be so slippery that it makes little difference—a winter tire would make more difference). Also, on very loose surfaces, a quicker stop can be achieved by simply locking the wheels, causing a wedge of loose material to build up ahead of the wheels and create a substantial braking force. This is useful only when stopping in a straight line, because locking the wheels means all steering control would be lost. In such conditions, ABS actually increases the stopping distances. On poor surfaces, in the past, rally drivers timed the pulsing of brake application so as to take advantage of the load transfer as the vehicle pitches forwards and backwards in response to the initial braking effort. With modern, over-dampened, and stiffly sprung suspensions this is less likely to be effective.
+While cadence braking is effective on most surfaces, it is less effective at slowing the vehicle than keeping the tires continually at the optimum braking point which is called threshold braking. The latter is an expert driving technique that is even more difficult to learn than cadence braking, and again has been largely superseded by ABS.
+Threshold braking, or a good ABS, generally results in the shortest stopping distance in a straight line. ABS, cadence and interference braking are intended to preserve steering control while braking.
+
+
+== References ==
+
+=== SOURCE: Wikipedia — Threshold braking (CC BY-SA 4.0) ===
+Threshold braking or limit braking is a driving technique most commonly used in motor racing, and in road vehicles to slow a vehicle at the maximum rate using the brakes. The technique involves the driver controlling the brake pedal (or lever) pressure to maximize the braking force developed by the tires. The optimal amount of braking force is applied at the point when the wheel just begins to slip.
+
+
+== Friction ==
+Braking beyond the slipping point causes the tire to slide and reduces the frictional adhesion between the tire and driving surface. The aim of threshold braking is to keep the amount of tire slip at the optimal amount, the value that produces the maximum frictional, and thus braking, force. When wheels are slipping significantly (kinetic friction), the amount of friction available for braking is typically substantially less than when the wheels are not slipping (static friction), thereby reducing the braking force and eliminating steering ability. Peak friction occurs between the static and dynamic endpoints, and this is the point that threshold braking tries to maintain.
+
+
+== Other factors ==
+Because available friction at a given moment depends on many factors, including road surface material, temperature, tire rubber compound and wear, threshold braking is difficult to consistently achieve.
+
+
+== See also ==
+Anti-lock braking system
+Cadence braking
+Circle of forces
+
+
+== References ==
+
+Silvestro, Brian (2 February 2020). "You Haven't Mastered Stopping Until You've Nailed Threshold Braking". Road & Track. Retrieved 2025-10-12.
+Shaw, Jack (8 March 2023). "Threshold Braking: Definition and FAQ". modded.com. Retrieved 2025-10-12.

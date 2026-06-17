@@ -1,0 +1,34 @@
+{
+  "blackIce": {
+    "state": "blackIce",
+    "guidance": "# Black Ice: In-Car Reference Card\n\n**WHAT IT IS:**\nBlack ice is a transparent layer of ice on road surfaces that looks like wet pavement, making it nearly invisible to drivers.\n\n**ACTIONABLE STEPS:**\n\n\u2022 **Reduce speed significantly** \u2014 Test the road surface with gentle braking to determine how slippery it is; drive at least 3\u20134 times slower than normal stopping distance would suggest\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) between your vehicle and the car ahead, versus the normal 3-second rule in summer\n\n\u2022 **Avoid braking and steering inputs** \u2014 If you begin to skid, avoid sudden braking or abrupt turns; instead, disengage the clutch to regain traction, and steer gently to counteract rear-wheel skids\n\n\u2022 **Be extra cautious on bridges, overpasses, and ramps** \u2014 Black ice forms first on these elevated structures since air circulates above and below, causing rapid temperature drops",
+    "in_tokens": 30974,
+    "out_tokens": 233,
+    "cost_usd": null,
+    "seconds": 10.5
+  },
+  "compactedSnow": {
+    "state": "compactedSnow",
+    "guidance": "# Driving on Compacted Snow\n\n**What it is:** Compacted snow requires reduced speed, increased following distance, and gentle vehicle control to maintain traction.\n\n\u2022 **Tyres:** Use winter tires (especially Nordic-type studded or unstudded) with adequate tread depth; narrow tires perform better on snow than wide tires\n\n\u2022 **Speed:** Reduce speed significantly and test the surface frequently with gentle braking to know how slippery it is; corner at less than 30 km/h (18 mph)\n\n\u2022 **Braking:** Avoid hard braking; use gentle braking to test conditions; on downhill stretches, downshift to reduce speed rather than brake, as braking can cause the vehicle to fishtail\n\n\u2022 **Distance:** Increase following distance from the standard 3 seconds to 5\u20136 seconds or more behind the vehicle ahead",
+    "in_tokens": 30984,
+    "out_tokens": 201,
+    "cost_usd": null,
+    "seconds": 5.8
+  },
+  "slush": {
+    "state": "slush",
+    "guidance": "# Slush (Melting/Mixed Snow): Aquaplaning-Like Risk\n\n**Slush is soft, melting snow that is more slippery than ice and presents aquaplaning-like hazards due to reduced handling and traction.**\n\n\u2022 **Reduce speed significantly** \u2014 Steering (handling) is particularly difficult on slush; approach at cautious speeds and test braking gently to assess surface grip\n\n\u2022 **Avoid sudden maneuvers** \u2014 Do not make sharp turns or hard acceleration/braking; any abrupt control input risks loss of traction similar to aquaplaning\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) behind the vehicle ahead, as braking distance increases dramatically on slush\n\n\u2022 **Stay in plowed/traveled lanes** \u2014 Keep to the main traffic path where the surface has been compacted; avoid moving suddenly across uncleared slush between lanes, as it can \"grab\" a wheel with disastrous consequences",
+    "in_tokens": 30986,
+    "out_tokens": 223,
+    "cost_usd": null,
+    "seconds": 7.0
+  },
+  "wet": {
+    "state": "wet",
+    "guidance": "# Avoiding Aquaplaning and Loss of Grip on Wet Roads\n\n**Reduce speed and increase following distance to maintain control on slippery surfaces.**\n\n\u2022 **Slow down significantly** \u2014 Reduce your speed well below normal; aquaplaning typically begins above 72\u201393 km/h (45\u201358 mph), so slower speeds give tires time to disperse water\n\n\u2022 **Increase distance to the car ahead** \u2014 Extend your following distance from the standard 3 seconds to 5\u20136 seconds or more to allow extra stopping distance on wet pavement\n\n\u2022 **Avoid sudden steering or braking inputs** \u2014 Make smooth, gradual control adjustments; sudden maneuvers or hard braking can trigger loss of traction or skidding\n\n\u2022 **Do not use cruise control** \u2014 Maintain manual speed control to respond smoothly to changing road conditions and pooled water",
+    "in_tokens": 30977,
+    "out_tokens": 200,
+    "cost_usd": null,
+    "seconds": 6.8
+  }
+}

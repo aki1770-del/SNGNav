@@ -71,8 +71,14 @@ test/**/_capture/
 # Scratch proof/verification dumps (large raw fetches + ad-hoc captures)
 .sde_realdata_proof/
 
-# Parked λ-RLM winter-knowledge experiment: the offline-baked guidance asset is
-# currently unusable (model returns refusal text), nothing references it, and it
-# is intentionally not shipped. Kept on disk, out of source control until viable.
-tool/winter_knowledge/
-lib/providers/winter_knowledge.dart
+# λ-RLM winter-knowledge: UN-PARKED 2026-06-17 (viability condition met). The
+# offline cards are now grounded (action-focused CC BY-SA corpus + single-pass
+# synthesis — see tool/winter_knowledge/), referenced by the pre-trip briefing
+# card, tested, and render-verified. Heavy/regenerable build intermediates stay
+# out of source control:
+tool/winter_knowledge/corpus.txt
+tool/winter_knowledge/corpus_v2.txt
+tool/winter_knowledge/corpus_v3.txt
+tool/winter_knowledge/cards_raw.json
+tool/winter_knowledge/cards_v3.json
+tool/winter_knowledge/cards_v4_raw.json

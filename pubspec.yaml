@@ -126,3 +126,8 @@ hooks:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Offline winter-driving guidance cards, λ-RLM-synthesised at build time
+    # from a CC BY-SA corpus (tool/winter_knowledge/). Drive-time lookup is a
+    # deterministic, offline read — no LLM/network in the vehicle.
+    - assets/winter_knowledge.json

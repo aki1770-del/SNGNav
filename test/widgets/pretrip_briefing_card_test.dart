@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
+import 'package:sngnav_snow_scene/providers/winter_knowledge.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
 
@@ -120,5 +121,63 @@ void main() {
     );
     await tester.tap(find.byType(Switch));
     expect(toggled, isTrue);
+  });
+
+  // The optional winter-knowledge card renders the grounded action bullets
+  // when present, and is omitted entirely (honest degradation) when absent.
+  Future<void> pumpWithWinter(WidgetTester tester, WinterCard? card) async {
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = commuteOf(CommuteFlexibility.discretionary);
+    final briefing = advisor.brief(
+      forecast: WeatherForecast(
+        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        issuedAt: issued,
+      ),
+      commute: commute,
+      profile: profile,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PretripBriefingCard(
+            briefing: briefing,
+            commute: commute,
+            forecastIssuedAt: issued,
+            tripRequired: false,
+            onTripRequiredChanged: (_) {},
+            sourceCaption: 'Simulated forecast (test)',
+            winterCard: card,
+          ),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('winter card renders grounded action bullets when present',
+      (tester) async {
+    await pumpWithWinter(
+      tester,
+      const WinterCard(
+        state: 'blackIce',
+        guidance: '# Black Ice\n\n**ACTIONABLE STEPS:**\n\n'
+            '• **Reduce speed significantly** — drive well below normal\n'
+            '• **Increase following distance** — 5–6 seconds',
+      ),
+    );
+    expect(find.textContaining('If the road is black ice'), findsOneWidget);
+    expect(find.textContaining('Reduce speed significantly'), findsOneWidget);
+    expect(find.textContaining('Increase following distance'), findsOneWidget);
+    // Markdown markup is stripped, not shown raw.
+    expect(find.textContaining('**'), findsNothing);
+    expect(find.textContaining('CC BY-SA'), findsOneWidget);
+  });
+
+  testWidgets('no winter card → no winter section (honest degradation)',
+      (tester) async {
+    await pumpWithWinter(tester, null);
+    expect(find.textContaining('If the road is'), findsNothing);
+    expect(find.textContaining('CC BY-SA'), findsNothing);
+    // The typed checklist still stands.
+    expect(find.textContaining('Whiteout plan'), findsOneWidget);
   });
 }

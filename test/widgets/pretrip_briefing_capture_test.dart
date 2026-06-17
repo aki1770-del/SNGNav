@@ -14,10 +14,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:driving_conditions/driving_conditions.dart' show RoadSurfaceState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:sngnav_snow_scene/providers/jma_briefing_merge.dart';
 import 'package:sngnav_snow_scene/providers/jma_visibility.dart';
+import 'package:sngnav_snow_scene/providers/winter_knowledge.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
 
@@ -462,6 +464,87 @@ void main() {
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
       print('CAPTURE jp_live_akita_unavailable: ${file.path} '
+          '${file.lengthSync()} bytes');
+    });
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('capture: winter_card_black_ice', (tester) async {
+    await _loadRealFont();
+    // The new λ-RLM offline-guidance surface: a caution briefing that ALSO
+    // carries the grounded black-ice action card baked from the open corpus.
+    // We render with the REAL shipped asset's blackIce card so the PNG shows
+    // exactly what HER would see, not a hand-written fixture.
+    final wk = WinterKnowledge.fromJsonString(
+        File('assets/winter_knowledge.json').readAsStringSync());
+    final card = wk.cardFor(RoadSurfaceState.blackIce);
+    expect(card, isNotNull, reason: 'blackIce card must be baked');
+
+    final base = WeatherForecast(
+      hourly: [slot(7, temp: -4), slot(8, temp: -4)],
+      issuedAt: issued,
+    );
+    const advisor = SnowAwarePretripAdvisor();
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['demo'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = advisor.brief(
+      forecast: base,
+      commute: commute,
+      profile: const DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      ),
+    );
+
+    final boundaryKey = GlobalKey();
+    tester.view.physicalSize = const Size(620, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'Roboto', useMaterial3: true),
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 600,
+                height: 880,
+                child: PretripBriefingCard(
+                  briefing: briefing,
+                  commute: commute,
+                  forecastIssuedAt: issued,
+                  tripRequired: false,
+                  onTripRequiredChanged: (_) {},
+                  sourceCaption: 'Simulated forecast (demo)',
+                  winterCard: card,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.runAsync(() async {
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      expect(bytes, isNotNull);
+      final dir = Directory('test/widgets/_capture')..createSync();
+      final file = File('${dir.path}/pretrip_winter_card_black_ice.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      expect(file.lengthSync(), greaterThan(0));
+      // ignore: avoid_print
+      print('CAPTURE winter_card_black_ice: ${file.path} '
           '${file.lengthSync()} bytes');
     });
 
