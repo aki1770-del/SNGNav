@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.10.4
+
+Conservative-on-uncertain hardening — a non-finite value must never
+silently defeat a conservative alert.
+
+- **SafetyScore (GAP-1):** `SafetyScore` now maps non-finite component
+  inputs (`NaN` / `±Infinity`) to the worst-case `0` so they alert
+  conservatively instead of slipping through unclamped. Without the
+  guard a `NaN` overall compares `false` to every threshold in
+  `toAlertSeverity` (no alert), and `+Infinity` clamped to `1` (no
+  alert) — both inverting the "if uncertain, alert conservatively"
+  intent.
+- **NavigationSafetyConfig (GAP-2):** the constructor now rejects a
+  non-finite score floor (`NaN` / `±Infinity`) with an `ArgumentError`.
+  The previous `floor < 0 || floor > 1` range checks were
+  NaN-permissive (`NaN` compares `false` to both bounds), so a
+  non-finite floor passed construction silently and then poisoned
+  `toAlertSeverity` on the *threshold* operand: `overall < NaN` is
+  always `false`, so even a worst-case `overall == 0` yielded NO alert.
+  This closes the same failure family as GAP-1 on the operand the
+  score-side guard does not reach. Regression tests assert the
+  worst-case score still alerts `critical`.
+
 ## 0.10.3
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

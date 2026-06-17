@@ -557,6 +557,31 @@ class NavigationSafetyConfig extends Equatable {
     this.criticalVisibilityMeters = 50,
     this.alertsPerMinuteCapOverride,
   }) {
+    // Conservative-on-uncertain invariant at the config boundary
+    // (GAP-2, sibling to SafetyScore GAP-1): a non-finite score floor
+    // (NaN / ±Infinity) is NaN-permissive against the `< 0 || > 1`
+    // range checks below — NaN compares false to both bounds, and the
+    // ordering checks (`safeScoreFloor < infoScoreFloor`) are likewise
+    // false against NaN — so it would pass construction silently. It
+    // then poisons `SafetyScore.toAlertSeverity`, where `overall < NaN`
+    // is always false: even overall == 0 (the GAP-1 worst-case value)
+    // yields NO alert, inverting the "if uncertain, alert
+    // conservatively" guarantee on the operand GAP-1's score-side guard
+    // does not reach. Reject it loudly at construction, consistent with
+    // the throw-on-invalid-floor contract — a non-finite threshold is a
+    // programming error, not uncertain runtime data.
+    if (!safeScoreFloor.isFinite) {
+      throw ArgumentError.value(
+        safeScoreFloor, 'safeScoreFloor', 'must be finite');
+    }
+    if (!infoScoreFloor.isFinite) {
+      throw ArgumentError.value(
+        infoScoreFloor, 'infoScoreFloor', 'must be finite');
+    }
+    if (!warningScoreFloor.isFinite) {
+      throw ArgumentError.value(
+        warningScoreFloor, 'warningScoreFloor', 'must be finite');
+    }
     if (safeScoreFloor < 0 || safeScoreFloor > 1) {
       throw RangeError.range(safeScoreFloor, 0, 1, 'safeScoreFloor');
     }
