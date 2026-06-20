@@ -4,6 +4,8 @@
 > `flutter create` to a working offline winter-safety briefing in **~15 minutes**,
 > using the two hosted pub.dev packages. This README is the reference description
 > of the finished app.
+>
+> **Embedded / 32-bit ARM?** → [EMBEDDED_ARMV7.md](EMBEDDED_ARMV7.md) — ship the offline core onto `armv7` car-class hardware (pure-Dart core `armv7`-proven; Flutter render gated on flutter/flutter#188063).
 
 A standalone, **edge-developer-shaped** Flutter app that assembles and RENDERS
 HER mother's Akita pre-trip winter-safety briefing using **only two

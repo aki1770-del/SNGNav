@@ -33,6 +33,8 @@ That is the point: when all of that has gone away, this still helps her decide.
 
 **Prerequisites:** Flutter 3.10+ (`flutter --version`). ~15 minutes.
 
+> **Targeting 32-bit ARM / embedded (Yocto, IVI, car-class hardware)?** → [EMBEDDED_ARMV7.md](EMBEDDED_ARMV7.md). The pure-Dart decision core is proven running on `armv7` today; the Flutter render is staged behind [flutter/flutter#188063](https://github.com/flutter/flutter/pull/188063).
+
 ---
 
 ## Step 1 — New app + the two packages (2 min)

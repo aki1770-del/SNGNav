@@ -1,0 +1,30 @@
+# armv7 (32-bit ARM) runnability proof — pretrip_decision_advisor pure-Dart core
+# Captured (UTC): 2026-06-20T12:05:02Z
+# Harness: docker run --platform linux/arm/v7 dart:stable (qemu-arm user-mode binfmt) on an x86_64 host;
+#          zero-dep advisor; offline deterministic Akita whiteout data (no network).
+# PROVES: the OFFLINE HONEST-DECISION CORE runs on HER's car-class 32-bit ARM hardware, producing HER briefing.
+# DOES NOT PROVE: the Flutter VISUAL render on armv7 — that stays [GATED] on flutter/flutter#188063.
+
+=== ARCH PROOF ===
+uname -m: armv7l
+dart binary: /usr/lib/dart/bin/dart
+ELF header (od -An -tx1 -N20):  7f 45 4c 46 01 01 01 00 00 00 00 00 00 00 00 00
+ 03 00 28 00
+  -> EI_CLASS byte#5 = 01 (ELF 32-bit) ; e_machine bytes#19-20 = 28 00 (0x28 = EM_ARM)
+dart --version: Dart SDK version: 3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on "linux_arm"
+
+=== BRIEFING OUTPUT (HER Akita whiteout - offline, deterministic) ===
+=== HER Akita pre-trip briefing (offline, deterministic) ===
+verdict: PretripVerdict.waitAdvised
+peakHazard: HourHazard.severe
+chips:
+  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
+  - Conditions improve by about 08:15.
+recommendation.strength: RecommendationStrength.advisoryStrong
+recommendation.suggestedDelay: 1:00:00.000000
+recommendation.confidenceWindow: 1:00:00.000000
+recommendation.rationale:
+  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
+  - Conditions improve by about 08:15.
+=== gate2_briefing_end ===
+=== EXIT: 0 ===

@@ -10,7 +10,10 @@ from the JMA AMeDAS open-data network and emits a source-neutral
 source emits — which the advisor merges into the **departure hour** via
 `mergeObservedVisibility`.
 
-Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
+Pure Dart, no FFI — runs wherever the Dart VM runs, including 32-bit ARM
+(`armv7`); only `http` and `pretrip_decision_advisor` runtime dependencies, both
+pure-Dart. The offline advisor core it builds on is `armv7` run-proven (see the
+[advisor's runnability proof](https://github.com/aki1770-del/SNGNav/blob/main/examples/edge_dev_akita_briefing/_capture/armv7_runnability_proof.txt)).
 
 ## ⚠ SAFETY-class — honesty rules (binding)
 
@@ -66,6 +69,8 @@ A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
 pre-trip briefing from `pretrip_decision_advisor` + `pretrip_source_jma` — no
 SNGNav app widgets — lives at
 [`examples/edge_dev_akita_briefing/`](https://github.com/aki1770-del/SNGNav/tree/main/examples/edge_dev_akita_briefing).
+
+Start from its [15-minute QUICKSTART](https://github.com/aki1770-del/SNGNav/blob/main/examples/edge_dev_akita_briefing/QUICKSTART.md); to ship the offline core onto 32-bit ARM (`armv7`), see the [embedded-armv7 on-ramp](https://github.com/aki1770-del/SNGNav/blob/main/examples/edge_dev_akita_briefing/EMBEDDED_ARMV7.md) (pure-Dart core `armv7`-proven; Flutter render gated on [flutter/flutter#188063](https://github.com/flutter/flutter/pull/188063)).
 
 ## Service trace (driver in unexpected snow; ≤4 hops)
 
