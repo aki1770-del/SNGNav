@@ -9,7 +9,7 @@ Pure Dart. Only `http` and `condition_aggregator` runtime dependencies.
 
 ## Status
 
-Phase: explore — v0.0.1. First slice; ships against the public MET
+Published on pub.dev (v0.0.2); early and evolving. Ships against the public MET
 Norway `locationforecast/2.0/compact` endpoint with a heuristic
 mapping from the next-hour forecast slice to a driver-actionable
 `Advisory` typed event.

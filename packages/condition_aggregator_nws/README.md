@@ -5,8 +5,8 @@ NOAA / NWS adapter for the `condition_aggregator` interface. Wraps
 each `WinterAlert` to the source-neutral `Advisory` typed event at the
 adapter boundary.
 
-**Phase**: explore (`publish_to: none` in `pubspec.yaml`).
-Deploy graduation requires the FDD spike-to-package promotion gate.
+**Status**: published on pub.dev (v0.0.6); early and evolving — the
+adapter may still change with a minor version bump.
 
 Pure Dart. No Flutter dependency. Runtime dependencies:
 `condition_aggregator` (interface) + `noaa_nws_adapter` (raw NWS HTTP+

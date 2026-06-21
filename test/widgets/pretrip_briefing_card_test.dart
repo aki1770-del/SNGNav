@@ -180,4 +180,71 @@ void main() {
     // The typed checklist still stands.
     expect(find.textContaining('Whiteout plan'), findsOneWidget);
   });
+
+  testWidgets(
+      'verdict banner announces severity then headline to assistive tech',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    // A whiteout-now, clear-later window → a strong wait/hazard verdict.
+    await pumpCard(
+      tester,
+      hourly: [
+        slot(7, vis: 80, precip: 3),
+        slot(8, vis: 250, precip: 1),
+        slot(9, vis: 5000),
+        slot(10, vis: 8000),
+      ],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    // Severity is carried visually only by colour; for a screen-reader user it
+    // is announced as a word first, then the full headline, so the safety
+    // signal is never colour-only.
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'Pre-trip safety briefing\. Hazard\. Consider waiting'),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
+
+  testWidgets('clear verdict announces the "Clear" severity word to assistive tech',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await pumpCard(
+      tester,
+      hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'Pre-trip safety briefing\. Clear\.')),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
+
+  // Restraint regression: when the forecast does not cover the departure
+  // window, the card must degrade honestly to "use your own judgment" — never
+  // a fabricated all-clear — and announce the honest severity to assistive
+  // tech. Pins the honest-null behaviour so it cannot silently regress.
+  testWidgets('no-coverage forecast degrades to honest noData, not a false clear',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    // Forecast covers only the evening — nothing for the 07:15 departure.
+    await pumpCard(
+      tester,
+      hourly: [slot(20, vis: 8000), slot(21, vis: 8000)],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    expect(find.textContaining('use your own judgment'), findsOneWidget);
+    expect(find.textContaining('Conditions look clear'), findsNothing);
+    // Severity announced as the honest "Information needed", never "Clear".
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'Pre-trip safety briefing\. Information needed\.'),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
 }

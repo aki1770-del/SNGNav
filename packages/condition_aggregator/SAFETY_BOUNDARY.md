@@ -1,9 +1,9 @@
 # condition_aggregator — Safety-Class Boundary Record
 
 **Package**: `condition_aggregator`
-**Version**: 0.0.1 (explore-phase; `publish_to: none`)
+**Version**: 0.0.5 (published; early and evolving)
 **Boundary record version**: 1.0
-**Authoring skill**: FDD (with AAA-class boundary template per sibling adapters)
+**Boundary record template**: shared across the sibling adapter packages
 **Date**: 2026-05-03
 
 ---
@@ -176,8 +176,7 @@ README's "Behaviours worth knowing" section enumerates the
 disciplines so the integrator knows what the aggregator does AND what
 it deliberately does not do. Nothing patronizes the developer.
 
-**Driver-facing-loom field**: this section is the canonical
-driver-facing-loom declaration for `condition_aggregator` 0.0.1
-explore-phase. At deploy graduation (post-FDD-promotion-gate), this
-field is re-audited; subsequent versions update on material changes
-to the driver-experience surface.
+**Driver-facing declaration**: this section is the canonical
+driver-experience declaration for `condition_aggregator` (v0.0.5). It
+is re-audited on material changes to the driver-experience surface in
+subsequent versions.

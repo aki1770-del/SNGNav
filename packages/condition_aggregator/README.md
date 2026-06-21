@@ -5,12 +5,8 @@ aggregation. Defines the typed `Advisory` event, the `AdvisoryProvider`
 adapter contract, and the `AdvisoryAggregator` multi-source fan-out
 primitive consumed by per-source adapter packages.
 
-**Phase**: explore (`publish_to: none` in `pubspec.yaml`).
-Deploy graduation requires the FDD spike-to-package promotion gate
-(clean smoke test, ≥1 test per public class, this README's HER-trace +
-driver-facing-loom + phase declarations, the AAA-class boundary record
-in `SAFETY_BOUNDARY.md`, version + license clean, and explicit
-J3016 / ASIL / SOTIF / WP.29 / JIS-JASO declarations).
+**Status**: published on pub.dev (v0.0.5); early and evolving — the
+`Advisory` interface may still change with a minor version bump.
 
 Pure Dart. No Flutter dependency. Sole runtime dependency: `equatable`.
 
@@ -154,7 +150,7 @@ for (final err in result.providerErrors) {
 
 ## Status
 
-Explore phase. `publish_to: none` until the FDD promotion gate fires.
+Published on pub.dev (v0.0.5); early and evolving — the interface may still change with a minor version bump.
 
 ## License
 

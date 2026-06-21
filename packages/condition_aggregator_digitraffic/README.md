@@ -9,7 +9,7 @@ Pure Dart. Only `http` and `condition_aggregator` runtime dependencies.
 
 ## Status
 
-Phase: explore — v0.0.2. Ships against the open Digitraffic
+Published on pub.dev (v0.0.5); early and evolving. Ships against the open Digitraffic
 traffic-announcements endpoint with point-based bounding-box
 filtering and integrator-overridable CAP-class heuristic mapping by
 `trafficAnnouncementType`.

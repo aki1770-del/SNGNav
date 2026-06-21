@@ -86,26 +86,39 @@ class PretripBriefingCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Verdict banner — the one-glance answer.
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: v.background,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(v.icon, color: v.foreground, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      v.headline,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: v.foreground),
-                    ),
+            // Verdict banner — the one-glance answer. Severity is encoded
+            // visually by colour; for assistive tech (a driver may use a
+            // screen reader, or may not perceive colour) we announce the
+            // severity word followed by the headline as one live-region
+            // utterance, so the safety signal is never colour-only — the
+            // briefing must reach a driver who cannot see the screen just as
+            // fully as one who can.
+            Semantics(
+              container: true,
+              liveRegion: true,
+              label: 'Pre-trip safety briefing. ${v.severity}. ${v.headline}',
+              child: ExcludeSemantics(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: v.background,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(v.icon, color: v.foreground, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          v.headline,
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: v.foreground),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -265,6 +278,7 @@ class PretripBriefingCard extends StatelessWidget {
           icon: Icons.help_outline,
           background: theme.colorScheme.surfaceContainerHighest,
           foreground: theme.colorScheme.onSurface,
+          severity: 'Information needed',
         );
       case PretripVerdict.clear:
         return const _VerdictStyle(
@@ -272,6 +286,7 @@ class PretripBriefingCard extends StatelessWidget {
           icon: Icons.check_circle_outline,
           background: Color(0xFFE3F2E6),
           foreground: Color(0xFF1B5E20),
+          severity: 'Clear',
         );
       case PretripVerdict.caution:
         return const _VerdictStyle(
@@ -279,6 +294,7 @@ class PretripBriefingCard extends StatelessWidget {
           icon: Icons.info_outline,
           background: Color(0xFFFFF8E1),
           foreground: Color(0xFF7A5800),
+          severity: 'Caution',
         );
       case PretripVerdict.waitAdvised:
         final strong =
@@ -292,6 +308,7 @@ class PretripBriefingCard extends StatelessWidget {
               strong ? const Color(0xFFFFE0D6) : const Color(0xFFFFF3E0),
           foreground:
               strong ? const Color(0xFF8B2500) : const Color(0xFF8A4B00),
+          severity: strong ? 'Hazard' : 'Caution',
         );
       case PretripVerdict.hazardPersists:
         return const _VerdictStyle(
@@ -300,6 +317,7 @@ class PretripBriefingCard extends StatelessWidget {
           icon: Icons.warning_amber_outlined,
           background: Color(0xFFFFE0D6),
           foreground: Color(0xFF8B2500),
+          severity: 'Hazard',
         );
       case PretripVerdict.requiredTripHazard:
         return const _VerdictStyle(
@@ -308,6 +326,7 @@ class PretripBriefingCard extends StatelessWidget {
           icon: Icons.front_hand_outlined,
           background: Color(0xFFE3EAF6),
           foreground: Color(0xFF1A3E72),
+          severity: 'Hazard, your decision',
         );
     }
   }
@@ -330,10 +349,15 @@ class _VerdictStyle {
     required this.icon,
     required this.background,
     required this.foreground,
+    required this.severity,
   });
 
   final String headline;
   final IconData icon;
   final Color background;
   final Color foreground;
+
+  /// A short severity word announced first to assistive tech, so the
+  /// colour-encoded severity is never the only carrier of the safety signal.
+  final String severity;
 }
