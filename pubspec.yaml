@@ -12,6 +12,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   kalman_dr:
     path: packages/kalman_dr
   driving_weather:

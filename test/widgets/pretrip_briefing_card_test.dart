@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:sngnav_snow_scene/providers/winter_knowledge.dart';
 import 'package:sngnav_snow_scene/services/snow_aware_pretrip_advisor.dart';
+import 'package:sngnav_snow_scene/widgets/briefing_strings.dart';
 import 'package:sngnav_snow_scene/widgets/pretrip_briefing_card.dart';
 
 void main() {
@@ -34,6 +35,7 @@ void main() {
     required List<HourlyForecast> hourly,
     required CommuteFlexibility flexibility,
     ValueChanged<bool>? onChanged,
+    BriefingStrings strings = BriefingStrings.en,
   }) async {
     const advisor = SnowAwarePretripAdvisor();
     final commute = commuteOf(flexibility);
@@ -46,6 +48,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: PretripBriefingCard(
+            strings: strings,
             briefing: briefing,
             commute: commute,
             forecastIssuedAt: issued,
@@ -246,5 +249,87 @@ void main() {
       findsOneWidget,
     );
     handle.dispose();
+  });
+
+  // Reach-fix for language: HER mother in Akita reads Japanese. The safety
+  // verdict, the checklist, and the assistive-tech announcement must all reach
+  // her in her own language — a verdict she cannot read does not reach her.
+  group('Japanese (ja) localization', () {
+    testWidgets('clear forecast renders the Japanese verdict and checklist',
+        (tester) async {
+      await pumpCard(
+        tester,
+        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        flexibility: CommuteFlexibility.discretionary,
+        strings: BriefingStrings.ja,
+      );
+      expect(find.text('出発前に'), findsOneWidget);
+      expect(find.textContaining('良好な見込み'), findsOneWidget);
+      expect(find.text('出発前の準備'), findsOneWidget);
+      // The JAF whiteout-plan checklist line, in Japanese.
+      expect(find.textContaining('ホワイトアウト'), findsOneWidget);
+      // No English headline leaked through.
+      expect(find.textContaining('Conditions look clear'), findsNothing);
+    });
+
+    testWidgets('hazard headline localizes the delay and the hazard clause',
+        (tester) async {
+      await pumpCard(
+        tester,
+        hourly: [
+          slot(7, vis: 80, precip: 3),
+          slot(8, vis: 250, precip: 1),
+          slot(9, vis: 5000),
+          slot(10, vis: 8000),
+        ],
+        flexibility: CommuteFlexibility.discretionary,
+        strings: BriefingStrings.ja,
+      );
+      // "Consider waiting about 2 h" → "約2時間…待つことを検討してください".
+      expect(find.textContaining('約2時間'), findsOneWidget);
+      expect(find.textContaining('待つことを検討'), findsOneWidget);
+      expect(find.textContaining('Consider waiting'), findsNothing);
+    });
+
+    testWidgets(
+        'assistive tech hears the Japanese severity word then headline',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpCard(
+        tester,
+        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        flexibility: CommuteFlexibility.discretionary,
+        strings: BriefingStrings.ja,
+      );
+      // Severity word first ("良好"), then the headline — colour-encoded
+      // severity is never the only carrier of the signal, in Japanese too.
+      expect(
+        find.bySemanticsLabel(RegExp(r'出発前の安全ブリーフィング。良好。')),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('honest-null degrades to the Japanese "use your own judgment"',
+        (tester) async {
+      // Forecast covers only the evening — nothing for the 07:15 departure.
+      await pumpCard(
+        tester,
+        hourly: [slot(20, vis: 8000), slot(21, vis: 8000)],
+        flexibility: CommuteFlexibility.discretionary,
+        strings: BriefingStrings.ja,
+      );
+      expect(find.textContaining('ご自身の判断で'), findsOneWidget);
+      expect(find.textContaining('良好な見込み'), findsNothing);
+    });
+  });
+
+  // Locale resolution: ja → Japanese table, everything else → English fallback,
+  // and an unsupported language never throws (it degrades to English, never to
+  // no surface).
+  test('BriefingStrings.of resolves locale, falling back to English', () {
+    expect(BriefingStrings.of(const Locale('ja')), same(BriefingStrings.ja));
+    expect(BriefingStrings.of(const Locale('en')), same(BriefingStrings.en));
+    expect(BriefingStrings.of(const Locale('fr')), same(BriefingStrings.en));
   });
 }

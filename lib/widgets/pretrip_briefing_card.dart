@@ -17,17 +17,12 @@ import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
 import '../providers/winter_knowledge.dart';
 import '../services/snow_aware_pretrip_advisor.dart';
+import 'briefing_strings.dart';
 
-/// JAF-grounded preparation checklist (DRIVER_VOICES.md, JAF voices):
-/// equipment → road information → contingency, in JAF's own hierarchy.
-const List<String> pretripChecklist = [
-  'Snow tires or chains fitted — carry chains and a jack even with snow tires',
-  'Check road conditions before leaving (JARTIC / local road information)',
-  'Booster cables and a charged phone on board',
-  'Warm layers and blanket in the car in case of stranding',
-  'Whiteout plan: hazard lamps on, stop at a safe place — do not push on',
-];
-
+/// The JAF-grounded preparation checklist (DRIVER_VOICES.md, JAF voices):
+/// equipment → road information → contingency, in JAF's own hierarchy — now
+/// lives in [BriefingStrings.checklist] so it localizes with the rest of the
+/// surface.
 class PretripBriefingCard extends StatelessWidget {
   const PretripBriefingCard({
     super.key,
@@ -38,7 +33,14 @@ class PretripBriefingCard extends StatelessWidget {
     required this.onTripRequiredChanged,
     required this.sourceCaption,
     this.winterCard,
+    this.strings = BriefingStrings.en,
   });
+
+  /// The localized text the card renders. Defaults to English so existing
+  /// callers and tests are unchanged; the running app resolves it from the
+  /// ambient locale (see `main.dart`), so HER mother in Akita reads the same
+  /// safety verdict in Japanese.
+  final BriefingStrings strings;
 
   /// Optional grounded winter-driving guidance for the surface state expected
   /// on this trip (from [WinterKnowledge.cardFor]). When `null` — no card was
@@ -78,10 +80,12 @@ class PretripBriefingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Before you drive', style: theme.textTheme.titleMedium),
+            Text(strings.beforeYouDrive, style: theme.textTheme.titleMedium),
             Text(
-              'Planned departure ${_hhmm(commute.plannedDeparture)} · '
-              'trip about ${commute.plannedDuration.inMinutes} min',
+              strings.plannedDeparture(
+                _hhmm(commute.plannedDeparture),
+                commute.plannedDuration.inMinutes,
+              ),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -96,7 +100,7 @@ class PretripBriefingCard extends StatelessWidget {
             Semantics(
               container: true,
               liveRegion: true,
-              label: 'Pre-trip safety briefing. ${v.severity}. ${v.headline}',
+              label: strings.semanticsLabel(v.severity, v.headline),
               child: ExcludeSemantics(
                 child: Container(
                   width: double.infinity,
@@ -144,18 +148,16 @@ class PretripBriefingCard extends StatelessWidget {
 
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('This trip is required'),
-              subtitle: const Text(
-                'When on, no delay is urged — you decide, we help you prepare.',
-              ),
+              title: Text(strings.tripRequiredTitle),
+              subtitle: Text(strings.tripRequiredSubtitle),
               value: tripRequired,
               onChanged: onTripRequiredChanged,
             ),
             const Divider(),
 
-            Text('Before you leave', style: theme.textTheme.titleSmall),
+            Text(strings.beforeYouLeave, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
-            for (final item in pretripChecklist)
+            for (final item in strings.checklist)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
@@ -180,7 +182,7 @@ class PretripBriefingCard extends StatelessWidget {
 
             const SizedBox(height: 8),
             Text(
-              '$sourceCaption · forecast issued ${_hhmm(forecastIssuedAt)}',
+              strings.sourceLine(sourceCaption, _hhmm(forecastIssuedAt)),
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: theme.colorScheme.outline),
             ),
@@ -197,7 +199,7 @@ class PretripBriefingCard extends StatelessWidget {
   List<Widget> _buildWinterCard(ThemeData theme, WinterCard card) {
     final actions = _actionLines(card.guidance);
     return [
-      Text('If the road is ${_humanState(card.state)}',
+      Text(strings.winterHeader(card.state),
           style: theme.textTheme.titleSmall),
       const SizedBox(height: 6),
       for (final line in actions)
@@ -219,7 +221,7 @@ class PretripBriefingCard extends StatelessWidget {
         ),
       const SizedBox(height: 2),
       Text(
-        'Offline winter-driving guidance · open sources (CC BY-SA)',
+        strings.winterFooter,
         style: theme.textTheme.bodySmall
             ?.copyWith(color: theme.colorScheme.outline),
       ),
@@ -253,90 +255,64 @@ class PretripBriefingCard extends StatelessWidget {
   static String _stripMarkup(String s) =>
       s.replaceAll('**', '').replaceAll('#', '').trim();
 
-  static String _humanState(String state) {
-    switch (state) {
-      case 'blackIce':
-        return 'black ice';
-      case 'compactedSnow':
-        return 'compacted snow';
-      case 'slush':
-        return 'slush';
-      case 'wet':
-        return 'wet';
-      default:
-        return state;
-    }
-  }
-
   _VerdictStyle _verdictStyle(ThemeData theme) {
     final rec = briefing.recommendation;
     switch (briefing.verdict) {
       case PretripVerdict.noData:
         return _VerdictStyle(
-          headline: 'No forecast for your departure window — '
-              'use your own judgment',
+          headline: strings.headlineNoData,
           icon: Icons.help_outline,
           background: theme.colorScheme.surfaceContainerHighest,
           foreground: theme.colorScheme.onSurface,
-          severity: 'Information needed',
+          severity: strings.severityInformationNeeded,
         );
       case PretripVerdict.clear:
-        return const _VerdictStyle(
-          headline: 'Conditions look clear for your trip window',
+        return _VerdictStyle(
+          headline: strings.headlineClear,
           icon: Icons.check_circle_outline,
-          background: Color(0xFFE3F2E6),
-          foreground: Color(0xFF1B5E20),
-          severity: 'Clear',
+          background: const Color(0xFFE3F2E6),
+          foreground: const Color(0xFF1B5E20),
+          severity: strings.severityClear,
         );
       case PretripVerdict.caution:
-        return const _VerdictStyle(
-          headline: 'Drive with care — no delay suggested',
+        return _VerdictStyle(
+          headline: strings.headlineCaution,
           icon: Icons.info_outline,
-          background: Color(0xFFFFF8E1),
-          foreground: Color(0xFF7A5800),
-          severity: 'Caution',
+          background: const Color(0xFFFFF8E1),
+          foreground: const Color(0xFF7A5800),
+          severity: strings.severityCaution,
         );
       case PretripVerdict.waitAdvised:
         final strong =
             rec?.strength == RecommendationStrength.advisoryStrong;
         final delay = rec?.suggestedDelay ?? Duration.zero;
         return _VerdictStyle(
-          headline: 'Consider waiting about ${_delayText(delay)}'
-              '${strong ? ' — conditions are hazardous now' : ''}',
+          headline:
+              strings.headlineWaitAdvised(strings.delayText(delay), strong),
           icon: Icons.schedule,
           background:
               strong ? const Color(0xFFFFE0D6) : const Color(0xFFFFF3E0),
           foreground:
               strong ? const Color(0xFF8B2500) : const Color(0xFF8A4B00),
-          severity: strong ? 'Hazard' : 'Caution',
+          severity: strong ? strings.severityHazard : strings.severityCaution,
         );
       case PretripVerdict.hazardPersists:
-        return const _VerdictStyle(
-          headline: 'Hazardous through the forecast — '
-              'consider whether this trip is needed today',
+        return _VerdictStyle(
+          headline: strings.headlineHazardPersists,
           icon: Icons.warning_amber_outlined,
-          background: Color(0xFFFFE0D6),
-          foreground: Color(0xFF8B2500),
-          severity: 'Hazard',
+          background: const Color(0xFFFFE0D6),
+          foreground: const Color(0xFF8B2500),
+          severity: strings.severityHazard,
         );
       case PretripVerdict.requiredTripHazard:
-        return const _VerdictStyle(
-          headline: 'Your call — trip is marked required. '
-              'Hazard ahead; prepare well',
+        return _VerdictStyle(
+          headline: strings.headlineRequiredTripHazard,
           icon: Icons.front_hand_outlined,
-          background: Color(0xFFE3EAF6),
-          foreground: Color(0xFF1A3E72),
-          severity: 'Hazard, your decision',
+          background: const Color(0xFFE3EAF6),
+          foreground: const Color(0xFF1A3E72),
+          severity: strings.severityHazardYourDecision,
         );
     }
-  }
-
-  static String _delayText(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes % 60;
-    if (h > 0 && m > 0) return '$h h $m min';
-    if (h > 0) return '$h h';
-    return '$m min';
   }
 
   static String _hhmm(DateTime t) =>

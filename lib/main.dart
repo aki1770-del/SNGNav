@@ -19,6 +19,7 @@ import 'dart:io';
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kalman_dr/kalman_dr.dart';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
@@ -40,6 +41,7 @@ import 'providers/pretrip_live_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
 import 'providers/winter_knowledge.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
+import 'widgets/briefing_strings.dart';
 import 'widgets/pretrip_briefing_card.dart';
 
 void main() {
@@ -59,6 +61,12 @@ class SNGNavGettingStarted extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+      // The pre-trip safety briefing must reach HER mother in Akita, who reads
+      // Japanese — the briefing follows the device locale (ja → Japanese, any
+      // other → the English fallback). The Material/Widgets delegates supply
+      // the framework strings for the same locales.
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('en'), Locale('ja')],
       home: const OfflineMapPage(),
     );
   }
@@ -792,6 +800,9 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: PretripBriefingCard(
+          // The briefing reads in the driver's own language — Japanese for HER
+          // mother in Akita — resolved from the app's active locale.
+          strings: BriefingStrings.of(Localizations.localeOf(context)),
           briefing: briefing,
           commute: commute,
           forecastIssuedAt: forecast.issuedAt,

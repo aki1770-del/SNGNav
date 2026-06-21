@@ -1,0 +1,291 @@
+/// Localized text for the pre-trip "Before you drive" safety surface.
+///
+/// Why this exists: the briefing is the load-bearing safety surface for HER
+/// and her family at the kitchen table — including a mother in Akita who reads
+/// Japanese, not English. A safety verdict she cannot read does not reach her,
+/// exactly as a colour-only verdict does not reach a driver who cannot see
+/// colour (see the `Semantics` block in [PretripBriefingCard]). This table is
+/// the reach-fix for language, sibling to the a11y reach-fix already shipped.
+///
+/// It is a hand-rolled locale table, not a generated `gen-l10n` toolchain, on
+/// purpose: the card already strips markdown by hand rather than pull a
+/// renderer, to stay offline and dependency-light. The safety surface must
+/// render with zero network and zero codegen in the build, on a low-end ARM
+/// head unit. English stays the default so existing callers and tests are
+/// unchanged.
+///
+/// HONEST BOUND (verified by rendering the production-faithful card and
+/// looking, per OPS-066): this localizes the card's OWN structural + safety
+/// strings — verdict headline, severity word, checklist, headers, switch,
+/// assistive-tech announcement, winter-card header/footer. THREE pieces of
+/// text the card DISPLAYS still arrive already-formed in English and are NOT
+/// translated here, so HER mother sees them in English today:
+///   1. `briefing.chips` — the plain-language safety REASONS (e.g. "Visibility
+///      may drop to ~80 m…"), generated inside the `pretrip_decision_advisor`
+///      package. Load-bearing reasons; localizing them needs locale-aware
+///      message generation in that package — a separate, larger change.
+///   2. `WinterCard.guidance` — the winter-driving action BULLETS (the
+///      header/footer around them ARE localized here, but the bullet text
+///      itself is the English `assets/winter_knowledge.json`, λ-RLM-generated
+///      from an English open corpus). These are safety instructions, so a
+///      faithful translation must be re-reviewed per surface state — the most
+///      important follow-on alongside (1).
+///   3. `sourceCaption` — the data-source attribution line, composed upstream
+///      in `main.dart` from MET Norway / JMA / Digitraffic strings.
+/// All three gaps are named here rather than hidden: the VERDICT, checklist,
+/// and whiteout plan reach HER mother in Japanese today; the supporting
+/// reasons and winter-guidance bullets do not yet. English remains a complete
+/// fallback surface for any unsupported locale.
+library;
+
+import 'package:flutter/widgets.dart';
+
+/// The localized strings the briefing card renders. Resolve one with
+/// [BriefingStrings.of] from the ambient [Locale]; [BriefingStrings.en] is the
+/// default and the fallback for any unsupported language.
+abstract class BriefingStrings {
+  const BriefingStrings();
+
+  /// English — the default and the fallback.
+  static const BriefingStrings en = _EnBriefingStrings();
+
+  /// Japanese — for HER mother in Akita and every Japanese-reading driver.
+  static const BriefingStrings ja = _JaBriefingStrings();
+
+  /// Pick the table for [locale], falling back to English for any language we
+  /// do not (yet) carry. Never throws — an unsupported locale degrades to the
+  /// English safety surface rather than to no surface.
+  static BriefingStrings of(Locale locale) =>
+      locale.languageCode == 'ja' ? ja : en;
+
+  // --- Header ---------------------------------------------------------------
+  String get beforeYouDrive;
+  String plannedDeparture(String hhmm, int minutes);
+
+  // --- Verdict (visible headline + assistive-tech severity word) ------------
+  String get severityInformationNeeded;
+  String get headlineNoData;
+  String get severityClear;
+  String get headlineClear;
+  String get severityCaution;
+  String get headlineCaution;
+  String get severityHazard;
+
+  /// Wait-advised headline. [delay] is already localized via [delayText];
+  /// [strong] appends the "hazardous now" clause.
+  String headlineWaitAdvised(String delay, bool strong);
+  String get headlineHazardPersists;
+  String get severityHazardYourDecision;
+  String get headlineRequiredTripHazard;
+
+  /// Localized human-readable duration, e.g. "2 h 30 min" / "2時間30分".
+  String delayText(Duration d);
+
+  // --- Trip-required switch -------------------------------------------------
+  String get tripRequiredTitle;
+  String get tripRequiredSubtitle;
+
+  // --- Checklist ------------------------------------------------------------
+  String get beforeYouLeave;
+  List<String> get checklist;
+
+  // --- Winter-knowledge card ------------------------------------------------
+  /// Header for the grounded winter-driving block, e.g.
+  /// "If the road is black ice" / "路面がブラックアイス(凍結)のとき".
+  String winterHeader(String surfaceState);
+  String get winterFooter;
+
+  // --- Assistive tech + source line -----------------------------------------
+  /// The single live-region utterance: severity word first, then headline, so
+  /// the colour-encoded severity is never the only carrier of the signal.
+  String semanticsLabel(String severity, String headline);
+
+  /// The honesty footline: where the forecast came from + when it was issued.
+  String sourceLine(String sourceCaption, String hhmm);
+}
+
+class _EnBriefingStrings extends BriefingStrings {
+  const _EnBriefingStrings();
+
+  @override
+  String get beforeYouDrive => 'Before you drive';
+  @override
+  String plannedDeparture(String hhmm, int minutes) =>
+      'Planned departure $hhmm · trip about $minutes min';
+
+  @override
+  String get severityInformationNeeded => 'Information needed';
+  @override
+  String get headlineNoData =>
+      'No forecast for your departure window — use your own judgment';
+  @override
+  String get severityClear => 'Clear';
+  @override
+  String get headlineClear => 'Conditions look clear for your trip window';
+  @override
+  String get severityCaution => 'Caution';
+  @override
+  String get headlineCaution => 'Drive with care — no delay suggested';
+  @override
+  String get severityHazard => 'Hazard';
+  @override
+  String headlineWaitAdvised(String delay, bool strong) =>
+      'Consider waiting about $delay'
+      '${strong ? ' — conditions are hazardous now' : ''}';
+  @override
+  String get headlineHazardPersists =>
+      'Hazardous through the forecast — '
+      'consider whether this trip is needed today';
+  @override
+  String get severityHazardYourDecision => 'Hazard, your decision';
+  @override
+  String get headlineRequiredTripHazard =>
+      'Your call — trip is marked required. Hazard ahead; prepare well';
+
+  @override
+  String delayText(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    if (h > 0 && m > 0) return '$h h $m min';
+    if (h > 0) return '$h h';
+    return '$m min';
+  }
+
+  @override
+  String get tripRequiredTitle => 'This trip is required';
+  @override
+  String get tripRequiredSubtitle =>
+      'When on, no delay is urged — you decide, we help you prepare.';
+
+  @override
+  String get beforeYouLeave => 'Before you leave';
+  @override
+  List<String> get checklist => const [
+        'Snow tires or chains fitted — carry chains and a jack even with snow tires',
+        'Check road conditions before leaving (JARTIC / local road information)',
+        'Booster cables and a charged phone on board',
+        'Warm layers and blanket in the car in case of stranding',
+        'Whiteout plan: hazard lamps on, stop at a safe place — do not push on',
+      ];
+
+  @override
+  String winterHeader(String surfaceState) =>
+      'If the road is ${_humanStateEn(surfaceState)}';
+  @override
+  String get winterFooter =>
+      'Offline winter-driving guidance · open sources (CC BY-SA)';
+
+  @override
+  String semanticsLabel(String severity, String headline) =>
+      'Pre-trip safety briefing. $severity. $headline';
+
+  @override
+  String sourceLine(String sourceCaption, String hhmm) =>
+      '$sourceCaption · forecast issued $hhmm';
+
+  static String _humanStateEn(String state) {
+    switch (state) {
+      case 'blackIce':
+        return 'black ice';
+      case 'compactedSnow':
+        return 'compacted snow';
+      case 'slush':
+        return 'slush';
+      case 'wet':
+        return 'wet';
+      default:
+        return state;
+    }
+  }
+}
+
+class _JaBriefingStrings extends BriefingStrings {
+  const _JaBriefingStrings();
+
+  @override
+  String get beforeYouDrive => '出発前に';
+  @override
+  String plannedDeparture(String hhmm, int minutes) =>
+      '出発予定 $hhmm · 所要 約$minutes分';
+
+  @override
+  String get severityInformationNeeded => '情報が必要';
+  @override
+  String get headlineNoData => '出発時間帯の予報がありません — ご自身の判断で';
+  @override
+  String get severityClear => '良好';
+  @override
+  String get headlineClear => '出発時間帯は良好な見込みです';
+  @override
+  String get severityCaution => '注意';
+  @override
+  String get headlineCaution => '注意して運転してください — 遅延の必要はありません';
+  @override
+  String get severityHazard => '危険';
+  @override
+  String headlineWaitAdvised(String delay, bool strong) =>
+      '約$delay待つことを検討してください'
+      '${strong ? ' — 現在危険な状況です' : ''}';
+  @override
+  String get headlineHazardPersists =>
+      '予報期間中ずっと危険 — 本日この移動が必要かご検討ください';
+  @override
+  String get severityHazardYourDecision => '危険・あなたの判断';
+  @override
+  String get headlineRequiredTripHazard =>
+      'あなたの判断です — 必須の移動として設定されています。危険があります。十分な準備を';
+
+  @override
+  String delayText(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    if (h > 0 && m > 0) return '$h時間$m分';
+    if (h > 0) return '$h時間';
+    return '$m分';
+  }
+
+  @override
+  String get tripRequiredTitle => 'この移動は必須';
+  @override
+  String get tripRequiredSubtitle =>
+      'オンの間は遅延を勧めません — 判断はあなた、準備をお手伝いします。';
+
+  @override
+  String get beforeYouLeave => '出発前の準備';
+  @override
+  List<String> get checklist => const [
+        'スタッドレスタイヤまたはチェーンを装着 — スタッドレスでもチェーンとジャッキを携行',
+        '出発前に道路状況を確認(JARTIC・地域の道路情報)',
+        'ブースターケーブルと充電済みの携帯電話を車内に',
+        '立ち往生に備えて防寒着と毛布を車内に',
+        'ホワイトアウト時の対応:ハザードランプを点灯し安全な場所に停車 — 無理に進まない',
+      ];
+
+  @override
+  String winterHeader(String surfaceState) {
+    switch (surfaceState) {
+      case 'blackIce':
+        return '路面がブラックアイス(凍結)のとき';
+      case 'compactedSnow':
+        return '路面が圧雪のとき';
+      case 'slush':
+        return '路面がシャーベット状の雪のとき';
+      case 'wet':
+        return '路面が濡れているとき';
+      default:
+        return '路面が$surfaceStateのとき';
+    }
+  }
+
+  @override
+  String get winterFooter =>
+      'オフライン冬季運転ガイダンス · オープンソース (CC BY-SA)';
+
+  @override
+  String semanticsLabel(String severity, String headline) =>
+      '出発前の安全ブリーフィング。$severity。$headline';
+
+  @override
+  String sourceLine(String sourceCaption, String hhmm) =>
+      '$sourceCaption · 予報発表 $hhmm';
+}
