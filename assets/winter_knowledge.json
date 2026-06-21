@@ -1,30 +1,50 @@
 {
-  "_meta": {
-    "generator": "\u03bb-RLM (lambda-calculus-LLM/lambda-RLM) long-context single-pass synthesis (context_window_chars >= corpus so the action-grounded source is reasoned over whole, not split \u2014 forced splitting starved the per-state questions and produced refusals in v1-v3), model claude-haiku-4-5",
-    "purpose": "OFFLINE build-time synthesis; drive-time lookup is deterministic, no LLM/network in vehicle",
-    "corpus": "corpus_v4 (CC BY-SA 4.0): Wikivoyage 'Winter driving' + 'Driving in Norway'; Wikipedia 'Black ice', 'Aquaplaning', 'Skid (automobile)', 'Cadence braking', 'Threshold braking'. Action-focused driver-guidance paragraphs; see tool/winter_knowledge/corpus_v4_manifest.json",
-    "grounding": "source-grounded; refusals excluded (no fabricated driver guidance)",
-    "approx_cost_usd_at_haiku45_rates": 0.1282,
-    "states_included": [
-      "blackIce",
-      "compactedSnow",
-      "slush",
-      "wet"
-    ],
-    "states_excluded": {}
-  },
-  "cards": {
-    "blackIce": {
-      "guidance": "# Black Ice: In-Car Reference Card\n\n**WHAT IT IS:**\nBlack ice is a transparent layer of ice on road surfaces that looks like wet pavement, making it nearly invisible to drivers.\n\n**ACTIONABLE STEPS:**\n\n\u2022 **Reduce speed significantly** \u2014 Test the road surface with gentle braking to determine how slippery it is; drive at least 3\u20134 times slower than normal stopping distance would suggest\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) between your vehicle and the car ahead, versus the normal 3-second rule in summer\n\n\u2022 **Avoid braking and steering inputs** \u2014 If you begin to skid, avoid sudden braking or abrupt turns; instead, disengage the clutch to regain traction, and steer gently to counteract rear-wheel skids\n\n\u2022 **Be extra cautious on bridges, overpasses, and ramps** \u2014 Black ice forms first on these elevated structures since air circulates above and below, causing rapid temperature drops"
-    },
-    "compactedSnow": {
-      "guidance": "# Driving on Compacted Snow\n\n**What it is:** Compacted snow requires reduced speed, increased following distance, and gentle vehicle control to maintain traction.\n\n\u2022 **Tyres:** Use winter tires (especially Nordic-type studded or unstudded) with adequate tread depth; narrow tires perform better on snow than wide tires\n\n\u2022 **Speed:** Reduce speed significantly and test the surface frequently with gentle braking to know how slippery it is; corner at less than 30 km/h (18 mph)\n\n\u2022 **Braking:** Avoid hard braking; use gentle braking to test conditions; on downhill stretches, downshift to reduce speed rather than brake, as braking can cause the vehicle to fishtail\n\n\u2022 **Distance:** Increase following distance from the standard 3 seconds to 5\u20136 seconds or more behind the vehicle ahead"
-    },
-    "slush": {
-      "guidance": "# Slush (Melting/Mixed Snow): Aquaplaning-Like Risk\n\n**Slush is soft, melting snow that is more slippery than ice and presents aquaplaning-like hazards due to reduced handling and traction.**\n\n\u2022 **Reduce speed significantly** \u2014 Steering (handling) is particularly difficult on slush; approach at cautious speeds and test braking gently to assess surface grip\n\n\u2022 **Avoid sudden maneuvers** \u2014 Do not make sharp turns or hard acceleration/braking; any abrupt control input risks loss of traction similar to aquaplaning\n\n\u2022 **Increase following distance** \u2014 Maintain 5\u20136 seconds (or more) behind the vehicle ahead, as braking distance increases dramatically on slush\n\n\u2022 **Stay in plowed/traveled lanes** \u2014 Keep to the main traffic path where the surface has been compacted; avoid moving suddenly across uncleared slush between lanes, as it can \"grab\" a wheel with disastrous consequences"
-    },
-    "wet": {
-      "guidance": "# Avoiding Aquaplaning and Loss of Grip on Wet Roads\n\n**Reduce speed and increase following distance to maintain control on slippery surfaces.**\n\n\u2022 **Slow down significantly** \u2014 Reduce your speed well below normal; aquaplaning typically begins above 72\u201393 km/h (45\u201358 mph), so slower speeds give tires time to disperse water\n\n\u2022 **Increase distance to the car ahead** \u2014 Extend your following distance from the standard 3 seconds to 5\u20136 seconds or more to allow extra stopping distance on wet pavement\n\n\u2022 **Avoid sudden steering or braking inputs** \u2014 Make smooth, gradual control adjustments; sudden maneuvers or hard braking can trigger loss of traction or skidding\n\n\u2022 **Do not use cruise control** \u2014 Maintain manual speed control to respond smoothly to changing road conditions and pooled water"
-    }
+ "_meta": {
+  "generator": "λ-RLM (lambda-calculus-LLM/lambda-RLM) long-context single-pass synthesis (context_window_chars >= corpus so the action-grounded source is reasoned over whole, not split — forced splitting starved the per-state questions and produced refusals in v1-v3), model claude-haiku-4-5",
+  "purpose": "OFFLINE build-time synthesis; drive-time lookup is deterministic, no LLM/network in vehicle",
+  "corpus": "corpus_v4 (CC BY-SA 4.0): Wikivoyage 'Winter driving' + 'Driving in Norway'; Wikipedia 'Black ice', 'Aquaplaning', 'Skid (automobile)', 'Cadence braking', 'Threshold braking'. Action-focused driver-guidance paragraphs; see tool/winter_knowledge/corpus_v4_manifest.json",
+  "grounding": "source-grounded; refusals excluded (no fabricated driver guidance)",
+  "approx_cost_usd_at_haiku45_rates": 0.1282,
+  "states_included": [
+   "blackIce",
+   "compactedSnow",
+   "slush",
+   "wet"
+  ],
+  "states_excluded": {},
+  "translation_ja": {
+   "method": "faithful translation of the English corpus_v4 cards into Japanese; terminology grounded in authoritative Japanese sources (JAF / 警察庁 NPA / 国土交通省 MLIT); then an AUTOMATED OFFLINE adversarial safety sweep (LLM verifiers, no human native-speaker sign-off yet) — 3 independent verifiers per card (literal back-translation + numbers/omission audit + driver-danger reading), fail-closed on any reversal / number-error / omission",
+   "grounding_glossary_entries": 83,
+   "grounding_cited": 61,
+   "verification_result": "all 4 states passed 3/3 faithful, 0 reversal, 0 number-error, 0 omission",
+   "states_with_ja": [
+    "blackIce",
+    "compactedSnow",
+    "slush",
+    "wet"
+   ],
+   "license": "CC BY-SA 4.0 (derivative translation of the English guidance, same corpus_v4 lineage)",
+   "generated_date": "2026-06-22",
+   "provenance_artifact": "tool/winter_knowledge/ja_translation_provenance_2026_06_22.json",
+   "human_native_review": "pending — verification to date is an automated offline LLM adversarial sweep, not a human native-speaker certification"
   }
+ },
+ "cards": {
+  "blackIce": {
+   "guidance": "# Black Ice: In-Car Reference Card\n\n**WHAT IT IS:**\nBlack ice is a transparent layer of ice on road surfaces that looks like wet pavement, making it nearly invisible to drivers.\n\n**ACTIONABLE STEPS:**\n\n• **Reduce speed significantly** — Test the road surface with gentle braking to determine how slippery it is; drive at least 3–4 times slower than normal stopping distance would suggest\n\n• **Increase following distance** — Maintain 5–6 seconds (or more) between your vehicle and the car ahead, versus the normal 3-second rule in summer\n\n• **Avoid braking and steering inputs** — If you begin to skid, avoid sudden braking or abrupt turns; instead, disengage the clutch to regain traction, and steer gently to counteract rear-wheel skids\n\n• **Be extra cautious on bridges, overpasses, and ramps** — Black ice forms first on these elevated structures since air circulates above and below, causing rapid temperature drops",
+   "guidance_ja": "# ブラックアイスバーン（路面凍結）：車内用早見カード\n\n**これは何か：**\nブラックアイスバーンとは、路面を覆う透明な氷の層で、濡れたアスファルト路面のように見えるため、ドライバーにはほとんど見えません。\n\n**とるべき行動：**\n\n• **速度を十分落とす** — ブレーキを軽く踏んで路面がどれくらい滑りやすいかを確かめる。通常の停止距離が示すよりも、少なくとも3〜4倍遅い速度で走行する\n\n• **車間距離を多めにとる** — 先行車との間に、夏場の通常の「3秒ルール」に対して、5〜6秒（またはそれ以上）の車間時間を保つ\n\n• **ブレーキやハンドル操作を避ける** — 滑り始めたら、急ブレーキや急な方向転換を避ける。代わりに、クラッチを切ってグリップを取り戻し、後輪の横滑り（尻振り）を打ち消すようにハンドルをやさしく切る\n\n• **橋、陸橋、ランプ（傾斜路）では特に注意する** — ブラックアイスバーンはこうした高架構造物に最初にできる。上下に空気が流れて気温が急激に下がるためである"
+  },
+  "compactedSnow": {
+   "guidance": "# Driving on Compacted Snow\n\n**What it is:** Compacted snow requires reduced speed, increased following distance, and gentle vehicle control to maintain traction.\n\n• **Tyres:** Use winter tires (especially Nordic-type studded or unstudded) with adequate tread depth; narrow tires perform better on snow than wide tires\n\n• **Speed:** Reduce speed significantly and test the surface frequently with gentle braking to know how slippery it is; corner at less than 30 km/h (18 mph)\n\n• **Braking:** Avoid hard braking; use gentle braking to test conditions; on downhill stretches, downshift to reduce speed rather than brake, as braking can cause the vehicle to fishtail\n\n• **Distance:** Increase following distance from the standard 3 seconds to 5–6 seconds or more behind the vehicle ahead",
+   "guidance_ja": "# 圧雪路面での運転\n\n**圧雪路面とは：** 圧雪路面では、グリップ（路面とタイヤの食いつき）を保つために、速度を落とし、車間距離を多めにとり、丁寧な車両操作が必要です。\n\n• **タイヤ：** 十分な溝（トレッド深さ）のある冬用タイヤ（特に北欧（Nordic）タイプのスタッド付き、またはスタッドレス）を使用する。雪道では幅広タイヤよりも幅の狭いタイヤの方が食いつきやすい\n\n• **速度：** 速度を十分に落とし、こまめに軽くブレーキを踏んで路面がどれだけ滑りやすいかを確かめる。カーブは30 km/h（18 mph）未満で曲がる\n\n• **ブレーキ：** 急ブレーキを避け、軽くブレーキを踏んで路面状況を確かめる。下り坂ではブレーキをかけるよりもシフトダウンして速度を落とす。ブレーキをかけると車が尻振り（後輪の横滑り）を起こすことがあるため\n\n• **車間距離：** 先行車との車間距離を、通常の3秒から5〜6秒以上に広げる"
+  },
+  "slush": {
+   "guidance": "# Slush (Melting/Mixed Snow): Aquaplaning-Like Risk\n\n**Slush is soft, melting snow that is more slippery than ice and presents aquaplaning-like hazards due to reduced handling and traction.**\n\n• **Reduce speed significantly** — Steering (handling) is particularly difficult on slush; approach at cautious speeds and test braking gently to assess surface grip\n\n• **Avoid sudden maneuvers** — Do not make sharp turns or hard acceleration/braking; any abrupt control input risks loss of traction similar to aquaplaning\n\n• **Increase following distance** — Maintain 5–6 seconds (or more) behind the vehicle ahead, as braking distance increases dramatically on slush\n\n• **Stay in plowed/traveled lanes** — Keep to the main traffic path where the surface has been compacted; avoid moving suddenly across uncleared slush between lanes, as it can \"grab\" a wheel with disastrous consequences",
+   "guidance_ja": "# シャーベット状の雪（解けかけた／混じり雪）：ハイドロプレーニングのような危険\n\n**シャーベット状の雪は、やわらかく解けかけた雪で、氷よりも滑りやすく、ハンドル操作（操縦性）とグリップ（トラクション）が低下するため、ハイドロプレーニングのような危険があります。**\n\n• **速度を十分に落とす** — シャーベット状の雪ではハンドル操作（操縦性）が特に難しくなります。控えめな速度で進入し、ブレーキを軽く踏んで路面のグリップ（食いつき）を確かめましょう。\n\n• **「急」のつく操作を避ける** — 急ハンドルや急加速・急ブレーキはしないこと。急な操作はどれも、ハイドロプレーニングのようにグリップ（トラクション）を失う危険があります。\n\n• **車間距離を多めにとる** — シャーベット状の雪では制動距離が大幅に伸びるため、先行車との間に5〜6秒（またはそれ以上）の車間時間を保ちましょう。\n\n• **除雪された走行車線を走る** — 路面が踏み固められている主要な走行帯を走りましょう。車線の間に残る未除雪のシャーベット状の雪を急に横切るのは避けてください。タイヤを「取られて」しまい、重大な結果につながることがあります。"
+  },
+  "wet": {
+   "guidance": "# Avoiding Aquaplaning and Loss of Grip on Wet Roads\n\n**Reduce speed and increase following distance to maintain control on slippery surfaces.**\n\n• **Slow down significantly** — Reduce your speed well below normal; aquaplaning typically begins above 72–93 km/h (45–58 mph), so slower speeds give tires time to disperse water\n\n• **Increase distance to the car ahead** — Extend your following distance from the standard 3 seconds to 5–6 seconds or more to allow extra stopping distance on wet pavement\n\n• **Avoid sudden steering or braking inputs** — Make smooth, gradual control adjustments; sudden maneuvers or hard braking can trigger loss of traction or skidding\n\n• **Do not use cruise control** — Maintain manual speed control to respond smoothly to changing road conditions and pooled water",
+   "guidance_ja": "# 濡れた路面でのハイドロプレーニング現象とグリップ喪失を防ぐ\n\n**滑りやすい路面で車のコントロールを保つため、速度を落とし、車間距離を多めにとりましょう。**\n\n• **速度を十分に落とす** — 通常よりかなり速度を控える。ハイドロプレーニング現象は一般に72〜93km/h（45〜58mph）を超えると発生しやすくなるため、速度を落とせばタイヤが水を排出する時間を確保できる\n\n• **先行車との車間距離を多めにとる** — 通常の3秒から5〜6秒以上に車間時間を延ばし、濡れた路面で余分な停止距離を確保する\n\n• **急ハンドルや急ブレーキを避ける** — 操作はなめらかに、徐々におこなう。「急」のつく操作や急ブレーキは、グリップ（接地力）の喪失や横滑りを引き起こすおそれがある\n\n• **クルーズコントロールを使用しない** — 自分で速度を調整し、刻々と変わる路面状況や水たまりになめらかに対応できるようにする"
+  }
+ }
 }

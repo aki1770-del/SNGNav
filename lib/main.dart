@@ -812,8 +812,13 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           sourceCaption: caption,
           // Grounded offline guidance for the surface state the assessment
           // expects; null (omitted) until the asset loads or for a benign
-          // surface with no baked card.
-          winterCard: _winter?.cardFor(_assessment.surfaceState),
+          // surface with no baked card. Resolved in the driver's language —
+          // Japanese for HER mother when a verified card exists, else the
+          // grounded English (honest fallback, never blank).
+          winterCard: _winter?.cardFor(
+            _assessment.surfaceState,
+            lang: Localizations.localeOf(context).languageCode,
+          ),
         ),
       ),
     );

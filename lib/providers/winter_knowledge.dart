@@ -21,13 +21,33 @@ import 'package:flutter/services.dart' show rootBundle;
 
 /// One pre-baked, source-grounded guidance card.
 class WinterCard {
-  const WinterCard({required this.state, required this.guidance});
+  const WinterCard({
+    required this.state,
+    required this.guidance,
+    this.guidanceJa,
+  });
 
   /// The [RoadSurfaceState] name this card applies to (e.g. `blackIce`).
   final String state;
 
-  /// Markdown guidance text synthesised offline by λ-RLM from the corpus.
+  /// English markdown guidance synthesised offline by λ-RLM from the corpus.
+  /// This is the default and the fallback for any language without a card.
   final String guidance;
+
+  /// Optional Japanese guidance — a faithful, adversarially-verified
+  /// translation of [guidance] (see the asset `_meta.translation_ja`). `null`
+  /// when no verified Japanese exists for this state, in which case
+  /// [guidanceForLanguage] honestly falls back to the English [guidance]
+  /// rather than show nothing or an unverified translation.
+  final String? guidanceJa;
+
+  /// The guidance text for [lang], falling back to English. HER mother in
+  /// Akita gets Japanese when a verified card exists; otherwise she gets the
+  /// grounded English — never a blank, never an unverified rendering.
+  String guidanceForLanguage(String lang) =>
+      (lang == 'ja' && guidanceJa != null && guidanceJa!.trim().isNotEmpty)
+          ? guidanceJa!
+          : guidance;
 }
 
 /// Deterministic, offline lookup of [WinterCard]s keyed by [RoadSurfaceState].
@@ -37,7 +57,10 @@ class WinterKnowledge {
   final Map<String, WinterCard> _cards;
 
   /// Build from the baked asset JSON string
-  /// (`{ "cards": { "<state>": { "guidance": "..." }, ... } }`).
+  /// (`{ "cards": { "<state>": { "guidance": "...", "guidance_ja": "..." } } }`).
+  /// `guidance` (English) is required per card; `guidance_ja` is optional and
+  /// only present for states whose Japanese passed the offline adversarial
+  /// safety verification.
   factory WinterKnowledge.fromJsonString(String jsonStr) {
     final root = jsonDecode(jsonStr) as Map<String, dynamic>;
     final raw = (root['cards'] as Map<String, dynamic>? ?? const {});
@@ -45,8 +68,13 @@ class WinterKnowledge {
     raw.forEach((state, v) {
       final m = v as Map<String, dynamic>;
       final g = (m['guidance'] as String?)?.trim();
+      final ja = (m['guidance_ja'] as String?)?.trim();
       if (g != null && g.isNotEmpty) {
-        cards[state] = WinterCard(state: state, guidance: g);
+        cards[state] = WinterCard(
+          state: state,
+          guidance: g,
+          guidanceJa: (ja != null && ja.isNotEmpty) ? ja : null,
+        );
       }
     });
     return WinterKnowledge(cards);
@@ -72,11 +100,24 @@ class WinterKnowledge {
 
   /// The pre-baked card for [state], or `null` if none was baked for it
   /// (caller keeps its typed advisory — honest degradation, no fabrication).
-  WinterCard? cardFor(RoadSurfaceState state) => _cards[state.name];
+  ///
+  /// When [lang] is `'ja'` and the state has a verified Japanese card, the
+  /// returned card's [WinterCard.guidance] is the Japanese text (resolved
+  /// here so the rendering surface stays language-oblivious); otherwise the
+  /// English guidance is returned unchanged.
+  WinterCard? cardFor(RoadSurfaceState state, {String lang = 'en'}) {
+    final c = _cards[state.name];
+    if (c == null) return null;
+    final g = c.guidanceForLanguage(lang);
+    return identical(g, c.guidance)
+        ? c
+        : WinterCard(state: c.state, guidance: g, guidanceJa: c.guidanceJa);
+  }
 
   /// Convenience: the card for a live assessment's surface state.
-  WinterCard? cardForAssessment(DrivingConditionAssessment a) =>
-      cardFor(a.surfaceState);
+  WinterCard? cardForAssessment(DrivingConditionAssessment a,
+          {String lang = 'en'}) =>
+      cardFor(a.surfaceState, lang: lang);
 
   /// States that have a baked card.
   Iterable<String> get states => _cards.keys;

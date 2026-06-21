@@ -1,0 +1,710 @@
+{
+ "generated_date": "2026-06-22",
+ "purpose": "Reproducible provenance for the Japanese winter-driving guidance translation + adversarial safety verification (genchi-genbutsu; future-We re-runnable)",
+ "glossary_entries": 83,
+ "glossary_cited": 61,
+ "glossary": [
+  {
+   "concept": "black ice / road icing",
+   "ja": "ブラックアイスバーン（路面凍結）／「一見すると濡れたアスファルト路面のように黒く見えるのに、実は表面が凍りついている路面」",
+   "source_name": "JAF ユーザーテスト「路面は黒いけど、止まれない！ブラックアイスバーンとは…？」",
+   "source_url": "https://jaf.or.jp/common/safety-drive/car-learning/user-test/snow/black-ice-burn",
+   "cited": true
+  },
+  {
+   "concept": "black ice braking distance is far longer (wet 11.0m vs black ice 69.5m)",
+   "ja": "冬用タイヤでも、濡れた路面では11.0mで停止できたのに対し、ブラックアイスバーンでは停止まで69.5m（約6倍）かかる",
+   "source_name": "JAF ユーザーテスト「ブラックアイスバーンとは…？」",
+   "source_url": "https://jaf.or.jp/common/safety-drive/car-learning/user-test/snow/black-ice-burn",
+   "cited": true
+  },
+  {
+   "concept": "compacted snow / polished ice surface (アイスバーン)",
+   "ja": "圧雪路面が磨かれて、ツルツルになっていることがあり、こうした状態をアイスバーンという",
+   "source_name": "JAF クルマ何でも質問箱 faq148（雪道・凍結路の危険ポイント）",
+   "source_url": "https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-snow/faq148",
+   "cited": true
+  },
+  {
+   "concept": "slush (シャーベット状の雪)",
+   "ja": "シャーベット状の雪（解けかけた雪が水分を含んだ状態）",
+   "source_name": "convention (JAF 雪道用語; not fetched verbatim this run)",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "wet road / aquaplaning (hydroplaning)",
+   "ja": "ハイドロプレーニング現象＝「水のたまった道路を高速で走行したとき、タイヤと路面との間に水の膜ができてタイヤが水の上を滑走する現象」。この状態ではハンドルやブレーキが利かなくなる",
+   "source_name": "JAF クルマ何でも質問箱 faq245（雨天時のスリップ事故防止）",
+   "source_url": "https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-heavy_rain/faq245",
+   "cited": true
+  },
+  {
+   "concept": "reduce speed significantly",
+   "ja": "雨天時は速度を控えて走行する／カーブに進入する手前では十分に減速し、直線単路でも速度を控える（雪道は「滑ることを前提にした慎重な運転」）",
+   "source_name": "JAF faq245 / JAF 雪道・アイスバーンでの運転の注意点",
+   "source_url": "https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-heavy_rain/faq245",
+   "cited": true
+  },
+  {
+   "concept": "corner slowly / no sudden actions in curves",
+   "ja": "発進、停止、カーブで「急」のつく動作は厳禁",
+   "source_name": "JAF ユーザーテスト「ブラックアイスバーンとは…？」",
+   "source_url": "https://jaf.or.jp/common/safety-drive/car-learning/user-test/snow/black-ice-burn",
+   "cited": true
+  },
+  {
+   "concept": "test grip with gentle braking / gentle start",
+   "ja": "発進時はアクセルをじわりと踏み込み、ゆっくり発進する（じわりと操作して滑りを確かめる）",
+   "source_name": "JAF 雪道・アイスバーンでの運転の注意点",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "increase following distance",
+   "ja": "先行車との車間距離を多めにとる／車間距離も長めにとることが大切",
+   "source_name": "JAF 雪道・アイスバーンでの運転の注意点 / faq245",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "following-distance time rule (5–6 sec / 3-second rule)",
+   "ja": "車間時間を通常より長くとる（晴天時の倍を目安に）。※「3秒ルール」「5〜6秒」は一般的な目安表現で、JAFページ上で同一数値の明示は本調査では未確認",
+   "source_name": "convention (not fetched verbatim this run)",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "avoid sudden steering/braking/acceleration",
+   "ja": "急な車線変更、急ブレーキは厳禁／「急」のつく動作（急ハンドル・急ブレーキ・急アクセル）は避ける",
+   "source_name": "JAF 雪道・アイスバーンでの運転の注意点",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "skid recovery (fishtail / スリップ立て直し)",
+   "ja": "スリップ（横滑り・尻振り）したら慌てず、ブレーキを強く踏まずアクセルを緩め、滑った方向にハンドルを向けて立て直す",
+   "source_name": "convention (JAF general guidance; not fetched verbatim this run)",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "winter / studded tyres",
+   "ja": "スタッドレスタイヤやチェーンを必ず装着する",
+   "source_name": "JAF 雪道・アイスバーンでの運転の注意点",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "narrow vs wide tyres on snow",
+   "ja": "幅の狭いタイヤの方が接地圧が高く雪道で食いつきやすい（幅広タイヤは雪上で不利）",
+   "source_name": "convention (tyre physics; not on fetched JAF page this run)",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "bridges/overpasses/tunnel entrances freeze first",
+   "ja": "風通しのよい橋の上や陸橋、そしてトンネルの出入り口付近がもっとも危険。他よりも気温が低いため、路面が凍結しやすく、大変危険",
+   "source_name": "JAF クルマ何でも質問箱 faq148",
+   "source_url": "https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-snow/faq148",
+   "cited": true
+  },
+  {
+   "concept": "downshift / engine brake on downhills instead of braking",
+   "ja": "下り坂では細心のハンドル操作とブレーキ操作が必要（速度を抑え、フットブレーキに頼りすぎずエンジンブレーキを併用する）。※「エンジンブレーキ」語の明示は本調査の取得ページ上では未確認",
+   "source_name": "JAF faq148（下り坂の運転）",
+   "source_url": "https://jaf.or.jp/common/kuruma-qa/category-natural/subcategory-snow/faq148",
+   "cited": true
+  },
+  {
+   "concept": "do NOT use cruise control on wet/slippery roads",
+   "ja": "雨・雪・凍結など滑りやすい路面ではクルーズコントロール（オートクルーズ）を使用しない",
+   "source_name": "convention (not fetched verbatim this run)",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "stay in plowed/traveled lanes; intersections polished smooth",
+   "ja": "交差点の停止線手前など圧雪が磨かれてツルツルになりやすい箇所に注意（除雪・轍のある走行帯を走る）",
+   "source_name": "JAF ユーザーテスト「ブラックアイスバーンとは…？」/ faq148",
+   "source_url": "https://jaf.or.jp/common/safety-drive/car-learning/user-test/snow/black-ice-burn",
+   "cited": true
+  },
+  {
+   "concept": "black ice / road icing (treacherous thin ice, hard to see)",
+   "ja": "ブラックアイスバーン（路面凍結）。薄い氷で覆われ、濡れた路面と見分けがつきにくく最も危険。「ブラックアイスバーンがあるかもしれない」という意識を持って運転する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "compacted / packed snow (圧雪)",
+   "ja": "圧雪：急のつく運転を避け、スリップしない様にゆっくり丁寧に走行しましょう（交差点付近では氷状になり特に危険）",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "slush (シャーベット状の雪)",
+   "ja": "シャーベット状の雪：日中の気温上昇で雪がとけた状態。ハンドルを取られやすいので注意が必要",
+   "source_name": "JAF「雪道・アイスバーンでの運転の注意点」/ 国交省 三重河川国道事務所（用語）",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "wet road / aquaplaning (湿潤路面・ハイドロプレーニング/アクアプレーニング現象)",
+   "ja": "ハイドロプレーニング現象（アクアプレーニング現象）：濡れた路面を高速走行するとタイヤと路面の間に水膜ができ、加速・操舵・制動が効かなくなる。雨天時は速度を落とし、十分な車間距離を保つ。タイヤの溝（残溝1.6mm以上）を点検する",
+   "source_name": "（一般通念。タイヤメーカー解説 ダンロップ/ブリヂストン等。政府ページは未取得）",
+   "source_url": "https://tyre.dunlop.co.jp/knowledge/dictionary/hydro/",
+   "cited": false
+  },
+  {
+   "concept": "reduce speed significantly",
+   "ja": "速度を十分落とし（て運転しましょう）",
+   "source_name": "警察庁「雪道などの運転方法」",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": true
+  },
+  {
+   "concept": "corner / drive slowly and carefully to avoid skidding",
+   "ja": "スリップしない様にゆっくり丁寧に走行しましょう",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "gentle / test braking (use foot brake slowly and gently; pumping brake)",
+   "ja": "フットブレーキは、ゆっくりとやさしく踏んで使用しましょう。凍結時は手前から数回に分けて踏む「ポンピングブレーキ」をおこなう",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」（ポンピングは一般通念）",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "increase following distance",
+   "ja": "車間距離を十分とつて運転しましょう／車間距離を普段の2倍以上あける（乾燥時の2倍以上）",
+   "source_name": "警察庁「雪道などの運転方法」＋ 国交省 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": true
+  },
+  {
+   "concept": "following distance in seconds (3-second / 5–6 second rule)",
+   "ja": "（日本の公的資料は「○秒」より「乾燥時の2倍以上」を主指標とする。秒数ルールは欧米由来で、日本の警察庁/国交省では非主流）",
+   "source_name": "（該当する権威的日本語表現なし。慣用的英語ルールの注記）",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": false
+  },
+  {
+   "concept": "avoid sudden steering / braking / acceleration",
+   "ja": "急発進、急ブレーキ、急ハンドルは絶対にやめましょう／「急」のつく運転は避ける",
+   "source_name": "警察庁「雪道などの運転方法」＋ 国交省 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": true
+  },
+  {
+   "concept": "skid / loss of steering (sideslip; steering taken away)",
+   "ja": "横滑りを起こすことが多いので、ハンドルやブレーキの操作は特に慎重にしましょう／（わだち等で）ハンドルを取られる",
+   "source_name": "警察庁「雪道などの運転方法」",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": true
+  },
+  {
+   "concept": "winter / studless tyres (and chains)",
+   "ja": "スタッドレスタイヤやチェーンを必ず装着する／スノータイヤ、スタッドレスタイヤなどの雪路用タイヤを着けましょう",
+   "source_name": "JAF「雪道・アイスバーンでの運転の注意点」＋ 警察庁「雪道などの運転方法」",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "studless tyres still slip on ice (don't over-trust them)",
+   "ja": "スタッドレスタイヤを履いていても滑りやすい",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "narrow vs wide tyres on snow",
+   "ja": "（警察庁/国交省の冬道ページに幅広/細タイヤの優劣に関する明示記述は確認できず。一般通念として細いタイヤの方が接地圧が高く雪を噛みやすいとされる）",
+   "source_name": "（該当する権威的日本語表現は未取得。慣用注記）",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "bridges / overpasses / tunnel entrances freeze first",
+   "ja": "風通しのよい橋の上や陸橋、トンネル出入口付近がもっとも危険",
+   "source_name": "JAF「雪道・アイスバーンでの運転の注意点」",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "use engine brake on downhills instead of foot braking",
+   "ja": "エンジンブレーキを使用して速度を落としてからフットブレーキをやさしく使用する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "smooth pedal control (don't go full throttle/brake)",
+   "ja": "アクセルやブレーキは6分目を意識して、ゆっくりとした運転を心がけるようにしましょう",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "ice surface is far more slippery than dry road",
+   "ja": "アイスバーンは雪道以上に滑るので要注意（乾燥路面の約8倍滑りやすいとされる）",
+   "source_name": "JAF「雪道・アイスバーンでの運転の注意点」",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": true
+  },
+  {
+   "concept": "do NOT use cruise control on wet/slippery roads",
+   "ja": "（警察庁/国交省/JAFの冬道ページに「クルーズコントロールを使わない」旨の明示記述は確認できず。慣用的助言として滑りやすい路面ではクルーズコントロール／オートクルーズを使用しない）",
+   "source_name": "（該当する権威的日本語表現は未取得。慣用注記）",
+   "source_url": "https://jaf.or.jp/common/attention/snow",
+   "cited": false
+  },
+  {
+   "concept": "stay in plowed / traveled lanes; watch ruts (わだち)",
+   "ja": "圧雪路面はわだちや傾斜があり、わだちに逆らうとハンドルを取られたりスピンする恐れがあるため注意（除雪済み・走行跡のある車線を走る）",
+   "source_name": "NEXCO東日本「冬装備を万全に細心の注意で安全運転」(PDF) / 国交省 三重河川国道事務所",
+   "source_url": "https://www.e-nexco.co.jp/rest/road_info/important_info/h24/0524/pdfs/s08.pdf",
+   "cited": false
+  },
+  {
+   "concept": "black ice / road icing (looks merely wet, very slippery)",
+   "ja": "ブラックアイスバーン：道路が薄い氷で覆われた状態。非常に滑りやすい上、特に夜間は濡れているだけの路面と見分けがしづらい。一見すると路面が濡れているだけに見えるため、凍結に気づかず走行して事故につながる。",
+   "source_name": "ソニー損保／おとなの自動車保険「アイスバーンとは？」+ NEXCO中日本 冬の雪道ガイド",
+   "source_url": "https://www.sompo-direct.co.jp/otona/oshiete/car/ice-burn.html",
+   "cited": true
+  },
+  {
+   "concept": "road icing general term (ice-burn) + types",
+   "ja": "アイスバーン（路面凍結）。主な種類：圧雪アイスバーン（雪が踏み固められ硬く圧縮された路面）、ブラックアイスバーン（薄い氷の膜）、ミラーバーン（鏡面圧雪／タイヤで鏡のように磨かれた路面）。",
+   "source_name": "ソニー損保／おとなの自動車保険「アイスバーン（路面凍結）とは？」",
+   "source_url": "https://www.sompo-direct.co.jp/otona/oshiete/car/ice-burn.html",
+   "cited": true
+  },
+  {
+   "concept": "compacted snow (packed snow road)",
+   "ja": "圧雪（圧雪路）：雪がタイヤによって踏み固められて、硬く圧縮された状態の路面。",
+   "source_name": "ソニー損保／おとなの自動車保険「アイスバーンとは？」",
+   "source_url": "https://www.sompo-direct.co.jp/otona/oshiete/car/ice-burn.html",
+   "cited": true
+  },
+  {
+   "concept": "slush (sherbet-like melting snow)",
+   "ja": "シャーベット状の雪（シャーベット路面）：解けかけた雪でハンドルを取られ滑りやすくなる。",
+   "source_name": "NEXCO中日本 雪道ドライブガイド（路面状況の注意点）",
+   "source_url": "https://www.c-nexco.co.jp/en/special/snow/notes.html",
+   "cited": true
+  },
+  {
+   "concept": "wet road / aquaplaning (hydroplaning)",
+   "ja": "ハイドロプレーニング現象（アクアプレーニング現象）：濡れた道路を走行する際に、タイヤと路面の間に水膜が入り込み、タイヤが路面から浮いてしまう現象。一般に80km/h以上で発生しやすく、ハンドルやブレーキが効かなくなる。",
+   "source_name": "ブリヂストン「ハイドロプレーニング現象とは？」",
+   "source_url": "https://tire.bridgestone.co.jp/about/driving/rainy/",
+   "cited": true
+  },
+  {
+   "concept": "reduce speed significantly",
+   "ja": "速度は控えめに（スピードを控える／スピードは控えめに）。凍結しやすい場所に近づいたら、手前で十分に減速し、いつも以上に慎重に運転する。",
+   "source_name": "NEXCO西日本「冬の高速道路の安全・安心について」+ NEXCO中日本 雪道ガイド",
+   "source_url": "https://www.w-nexco.co.jp/safety_drive/snow/",
+   "cited": true
+  },
+  {
+   "concept": "corner slowly (no sudden steering when turning)",
+   "ja": "カーブや交差点では速度を十分に落とし、急ハンドルを避けてゆっくり曲がる。",
+   "source_name": "（慣用表現：NEXCO・損保各社の冬道指針に準拠／このラン中に当該文の単独ページは未取得）",
+   "source_url": "https://www.w-nexco.co.jp/safety_drive/snow/",
+   "cited": false
+  },
+  {
+   "concept": "test grip with gentle braking / pumping brake",
+   "ja": "ブレーキは数回に分けて踏むポンピングブレーキが有効。急ブレーキを避け、軽く踏んで路面の滑りやすさ（グリップ）を確かめる。",
+   "source_name": "ソニー損保／おとなの自動車保険「アイスバーンとは？」",
+   "source_url": "https://www.sompo-direct.co.jp/otona/oshiete/car/ice-burn.html",
+   "cited": true
+  },
+  {
+   "concept": "increase following distance",
+   "ja": "車間距離は通常時より多めにとりましょう（通常よりも車間距離をあける）。積雪・凍結等の路面状態時や悪天候時は十分な車間時間をとる。",
+   "source_name": "NEXCO西日本 冬の高速道路 + NEXCO東日本ドラぷら「前車との間隔を2秒以上あけましょう」",
+   "source_url": "https://www.driveplaza.com/safetydrive/base/2seconds_distance.html",
+   "cited": true
+  },
+  {
+   "concept": "following-distance time rule (2-second / 3-second rule)",
+   "ja": "前車との間隔は2秒以上あける（混雑時は約2秒の車間時間をキープ）。標識柱や照明柱などの目印を前車が通過してから自分の車が通過するまでの時間で確認する。空いている高速道路ではより長く（一般に3秒以上、雨天時は約2倍）。",
+   "source_name": "NEXCO東日本ドラぷら「前車との間隔を2秒以上あけましょう」",
+   "source_url": "https://www.driveplaza.com/safetydrive/base/2seconds_distance.html",
+   "cited": true
+  },
+  {
+   "concept": "avoid sudden steering / braking / acceleration",
+   "ja": "急ハンドル、急加速、急ブレーキは厳禁（『急』のつく操作は行わない）。雪道では路面とタイヤの食いつきが失われ、車が滑りやすくなる。",
+   "source_name": "NEXCO西日本 冬の高速道路 + NEXCO東日本ドラぷら 冬道のドライブ",
+   "source_url": "https://www.driveplaza.com/safetydrive/happening/winter.html",
+   "cited": true
+  },
+  {
+   "concept": "skid / slip accident prevention",
+   "ja": "滑りやすい雪道ではスリップ事故につながる恐れがある。スリップ事故を防ぐには急加速・急ハンドル・急ブレーキをしないことが大切。",
+   "source_name": "NEXCO東日本ドラぷら 冬道のドライブ",
+   "source_url": "https://www.driveplaza.com/safetydrive/happening/winter.html",
+   "cited": true
+  },
+  {
+   "concept": "skid recovery (regain grip, steer straight, ease off accelerator)",
+   "ja": "（ハイドロ／スリップ時）ハンドルをしっかりと握り、アクセルから足を離す。可能な限り直進を保ち、グリップ力が回復したらブレーキを踏む。",
+   "source_name": "ブリヂストン「ハイドロプレーニング現象とは？」",
+   "source_url": "https://tire.bridgestone.co.jp/about/driving/rainy/",
+   "cited": true
+  },
+  {
+   "concept": "winter / studless tyres",
+   "ja": "冬の高速道路は冬用タイヤ（スタッドレスタイヤ）で走る。スタッドレス表記（国内表記）又はスノーフレークマーク（国際表記）が表示されているものを全車輪に装着する。",
+   "source_name": "NEXCO西日本「冬用タイヤ／冬の高速道路の安全・安心について」",
+   "source_url": "https://www.w-nexco.co.jp/safety_drive/snow/tire.html",
+   "cited": true
+  },
+  {
+   "concept": "narrow vs wide tyres on snow (narrow bite better)",
+   "ja": "幅の狭いタイヤの方が雪道では接地圧が高く食いつきやすいとされる（細いタイヤが有利）。",
+   "source_name": "（慣用知識：このラン中に権威ソースを取得できず）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "bridges / overpasses / tunnel entrances freeze first",
+   "ja": "橋の上は地熱が届かず冷たい風も吹きつけやすいため、最もアイスバーンになりやすい場所。トンネルの出入口や日陰も凍結しやすく、橋やトンネル入口は他より気温が低く路面が滑りやすい危険な場所。",
+   "source_name": "ソニー損保／おとなの自動車保険 + NEXCO中日本 雪道ガイド（路面の注意点）",
+   "source_url": "https://www.c-nexco.co.jp/en/special/snow/notes.html",
+   "cited": true
+  },
+  {
+   "concept": "downshift / engine brake on downhills instead of footbrake",
+   "ja": "下り坂ではフットブレーキの多用を避け、エンジンブレーキを活用して減速する。",
+   "source_name": "（慣用表現：NEXCO・損保各社の冬道指針に準拠／このラン中に当該文の単独ページは未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "fishtail (rear-end slide)",
+   "ja": "尻振り（後輪が横に滑る／テールスライド）。",
+   "source_name": "（慣用知識：このラン中に権威ソースを取得できず）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "do NOT use cruise control on wet/slippery roads",
+   "ja": "雨天時や雪道・凍結路ではクルーズコントロール（オートクルーズ）の使用を控える。",
+   "source_name": "（慣用安全指針：このラン中に権威ソースを取得できず）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "stay in plowed / traveled lanes; keep distance from snow-removal vehicles",
+   "ja": "除雪車・凍結防止剤散布車などの雪氷対策車両には十分な車間距離をとり、追い越さず後方を徐行する。除雪された走行車線を走る。",
+   "source_name": "NEXCO西日本 冬の高速道路の安全・安心について",
+   "source_url": "https://www.w-nexco.co.jp/safety_drive/snow/",
+   "cited": true
+  },
+  {
+   "concept": "black ice (road appears wet but is frozen)",
+   "ja": "ブラックアイスバーン（路面が濡れているように見えて実は凍結。雪が止んだ後でも最も危険）",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "road icing / ice-burn (re-frozen melted snow)",
+   "ja": "アイスバーン（積もった雪が解けて、再び凍った状態）／路面凍結",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "compacted snow",
+   "ja": "圧雪（車が通行することで雪が踏み固められた状態で、氷のようにツルツルになり、タイヤが滑る）",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道タイプ別 運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/point.html",
+   "cited": true
+  },
+  {
+   "concept": "compacted-snow ruts (drive in the wadachi)",
+   "ja": "圧雪でできた「わだち」に入って走る",
+   "source_name": "国土交通省 中部地方整備局 高山国道事務所「雪道運転のイロハ」",
+   "source_url": "https://www.cbr.mlit.go.jp/takayama/gaiyou/iroha.html",
+   "cited": true
+  },
+  {
+   "concept": "slush (half-melted snow)",
+   "ja": "シャーベット状の雪（溶けかかった雪のほうが滑りやすい）",
+   "source_name": "（規範的・本実行では逐語ページ未取得）三井住友海上ほか冬道解説の慣用表現",
+   "source_url": "https://www.ms-ins.com/labo/higoro/article/054.html",
+   "cited": false
+  },
+  {
+   "concept": "aquaplaning / hydroplaning on wet or slushy road",
+   "ja": "ハイドロプレーニング現象（アクアプレーニング現象とも。タイヤと路面の間に水膜ができ、ハンドル・ブレーキが効かなくなる）",
+   "source_name": "（規範的・JMA仙台 豆知識ページは文字化けで逐語取得不可）国土交通省 東北地方整備局「ハイドロプレーニング現象」",
+   "source_url": "http://www.thr.mlit.go.jp/sendai/douro/toubu/mame/hido.html",
+   "cited": false
+  },
+  {
+   "concept": "wet road surface",
+   "ja": "湿潤路面（濡れた路面）",
+   "source_name": "規範的・慣用表現（本実行では逐語ページ未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "reduce speed significantly / drive slowly",
+   "ja": "スピードを出さない事が大前提／ゆっくり丁寧に走行する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」「運転ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "corner slowly (slow-in before curves)",
+   "ja": "カーブに入る前に十分減速する「スロー・イン」を心掛ける／カーブの手前等では十分に減速する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「積雪・凍結道路の注意ポイント」/ 高山「雪道運転のイロハ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/caution.html",
+   "cited": true
+  },
+  {
+   "concept": "test grip with gentle braking (engine brake then gentle foot brake)",
+   "ja": "エンジンブレーキを使用して速度を落としてからフットブレーキをやさしく使用する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "increase following distance",
+   "ja": "いつもより車間距離を多めにとる（普段の2倍以上）／車間距離を十分とって運転する",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」/ 警察庁「雪道などの運転方法」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "following distance — '5–6 seconds' / '3-second rule'",
+   "ja": "（注: 日本の公的資料は秒数ではなく「普段の2倍以上の車間距離」で表現。秒数ルールは英語圏由来で日本の権威ある表現ではない）",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」（2倍以上表現を確認）",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "avoid sudden steering / braking / acceleration",
+   "ja": "急発進・急加速・急ハンドル・急ブレーキなど「急」のつく運転は止める（急のつく運転は危険）",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」/ 警察庁「雪道などの運転方法」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "avoid sudden maneuvers (police phrasing)",
+   "ja": "急発進、急ブレーキ、急ハンドルは絶対にやめましょう",
+   "source_name": "警察庁「雪道などの運転方法」",
+   "source_url": "https://www.npa.go.jp/bureau/traffic/seibi2/saigaiji/yukimitiunten.html",
+   "cited": true
+  },
+  {
+   "concept": "avoid sudden maneuvers (tyre-industry phrasing) / no wheel lock",
+   "ja": "急発進、急加速、急制動、急旋回を避け／ホイールロックは禁物",
+   "source_name": "一般社団法人 日本自動車タイヤ協会(JATMA)「冬道走行とタイヤ」",
+   "source_url": "https://www.jatma.or.jp/tyre_user/winterroaddrivingandtyres.html",
+   "cited": true
+  },
+  {
+   "concept": "skid recovery",
+   "ja": "スリップ（横滑り）からの復帰／カウンターステア（注: 本実行で取得した公的ページに逐語の復帰手順記載なし）",
+   "source_name": "規範的・慣用表現（本実行では逐語ページ未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "winter / studless tyres",
+   "ja": "スタッドレスタイヤ／冬用タイヤ／雪路用タイヤ",
+   "source_name": "JATMA「冬道走行とタイヤ」/ 警察庁「雪道などの運転方法」/ 気象庁「大雪に関する情報」",
+   "source_url": "https://www.jatma.or.jp/tyre_user/winterroaddrivingandtyres.html",
+   "cited": true
+  },
+  {
+   "concept": "narrow vs wide tyres on snow",
+   "ja": "（注: 本実行で取得した公的ページに「細いタイヤ／太いタイヤ」の雪道比較の逐語記載なし）",
+   "source_name": "規範的・慣用表現（本実行では逐語ページ未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "bridges / overpasses / tunnel mouths freeze first",
+   "ja": "風通しのよい橋の上、トンネルの出入り口付近は他よりも気温が低いため路面が凍結しやすく大変危険／橋・短いトンネル・洞門・交差点・川沿い・カーブ等は一般構造の所より凍結しやすい",
+   "source_name": "国土交通省 中部地方整備局 三重「積雪・凍結道路の注意ポイント」/ 高山「雪道運転のイロハ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/caution.html",
+   "cited": true
+  },
+  {
+   "concept": "tunnel-exit refreeze / shaded sections stay icy",
+   "ja": "トンネル出入り口付近は、解け出した雪が凍結していることもあり要注意／日陰は氷がいつまでも溶けずに残っていることが多い",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「積雪・凍結道路の注意ポイント」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/caution.html",
+   "cited": true
+  },
+  {
+   "concept": "downshift / use engine brake on downhills instead of foot brake",
+   "ja": "フットブレーキとエンジンブレーキを上手に使い分け、エンジンブレーキで速度を落としてからフットブレーキをやさしく使う",
+   "source_name": "国土交通省 中部地方整備局 三重河川国道事務所「雪道運転のトリセツ」",
+   "source_url": "https://www.cbr.mlit.go.jp/mie/snow/sp/torisetsu.html",
+   "cited": true
+  },
+  {
+   "concept": "fishtail (rear-end skid)",
+   "ja": "尻振り（後輪の横滑り）（注: 本実行で取得した公的ページに逐語記載なし）",
+   "source_name": "規範的・慣用表現（本実行では逐語ページ未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "do NOT use cruise control on wet/slippery roads",
+   "ja": "滑りやすい路面ではクルーズコントロールを使用しない（注: 本実行で取得した日本の公的ページに逐語記載なし。日本では一般的注意として扱われる）",
+   "source_name": "規範的・慣用表現（本実行では逐語ページ未取得）",
+   "source_url": "",
+   "cited": false
+  },
+  {
+   "concept": "stay in plowed / traveled lanes (drive in the ruts)",
+   "ja": "圧雪でできた「わだち」に入って走る",
+   "source_name": "国土交通省 中部地方整備局 高山国道事務所「雪道運転のイロハ」",
+   "source_url": "https://www.cbr.mlit.go.jp/takayama/gaiyou/iroha.html",
+   "cited": true
+  },
+  {
+   "concept": "general winter road danger framing (JMA)",
+   "ja": "スリップ事故など交通障害が発生しやすくなっています／スタッドレスタイヤなどの備えをしてない車両や雪道走行に不慣れなドライバーが多い",
+   "source_name": "気象庁「大雪に関する情報について」",
+   "source_url": "https://www.jma.go.jp/jma/kishou/know/snow/snow.html",
+   "cited": true
+  }
+ ],
+ "passed_states": [
+  "blackIce",
+  "compactedSnow",
+  "slush",
+  "wet"
+ ],
+ "cards": [
+  {
+   "state": "blackIce",
+   "pass": true,
+   "faithful_count": 3,
+   "any_reversal": false,
+   "any_number_error": false,
+   "any_omission": false,
+   "guidance_ja": "# ブラックアイスバーン（路面凍結）：車内用早見カード\n\n**これは何か：**\nブラックアイスバーンとは、路面を覆う透明な氷の層で、濡れたアスファルト路面のように見えるため、ドライバーにはほとんど見えません。\n\n**とるべき行動：**\n\n• **速度を十分落とす** — ブレーキを軽く踏んで路面がどれくらい滑りやすいかを確かめる。通常の停止距離が示すよりも、少なくとも3〜4倍遅い速度で走行する\n\n• **車間距離を多めにとる** — 先行車との間に、夏場の通常の「3秒ルール」に対して、5〜6秒（またはそれ以上）の車間時間を保つ\n\n• **ブレーキやハンドル操作を避ける** — 滑り始めたら、急ブレーキや急な方向転換を避ける。代わりに、クラッチを切ってグリップを取り戻し、後輪の横滑り（尻振り）を打ち消すようにハンドルをやさしく切る\n\n• **橋、陸橋、ランプ（傾斜路）では特に注意する** — ブラックアイスバーンはこうした高架構造物に最初にできる。上下に空気が流れて気温が急激に下がるためである",
+   "back_translations": [
+    "# Black Ice (road surface freezing): In-Car Quick-Reference Card\n\nWHAT IT IS: Black ice is a transparent layer of ice covering the road surface; because it looks like wet asphalt pavement, it is nearly invisible to drivers.\n\nACTIONABLE STEPS:\n- Reduce speed sufficiently — Press the brake gently to check how slippery the road surface is. Drive at a speed at least 3–4 times slower than the normal stopping distance suggests.\n- Take extra following distance — Keep 5–6 seconds (or more) of headway time to the car ahead, versus the normal \"3-second rule\" in summer.\n- Avoid braking and steering operations — When you begin to slip, avoid sudden braking or abrupt direction changes. Instead, disengage the clutch to regain grip, and steer gently to counteract rear-wheel side-slip (fishtailing).\n- Be especially careful on bridges, overpasses, and ramps (inclined roads) — Black ice forms first on these elevated structures, because air flows above and below and the temperature drops sharply.",
+    "# Black Ice (road freezing): In-Car Quick Reference Card\n\nWHAT IT IS: Black ice is a transparent layer of ice covering the road surface; because it looks like wet asphalt pavement, it is nearly invisible to drivers.\n\nACTIONABLE STEPS:\n- Reduce speed sufficiently — Press the brake gently to check how slippery the road surface is. Drive at a speed at least 3–4 times slower than what the normal stopping distance suggests.\n- Take extra following distance — Maintain 5–6 seconds (or more) of headway to the car ahead, versus the normal \"3-second rule\" in summer.\n- Avoid braking and steering inputs — If you begin to slip, avoid sudden braking or abrupt direction changes. Instead, disengage the clutch to regain grip, and steer gently so as to counteract rear-wheel side-slip (fishtailing).\n- Be especially careful on bridges, overpasses, and ramps (inclined roads) — Black ice forms first on these elevated structures, because air flows above and below, causing the temperature to drop rapidly.",
+    "# Black Ice Burn (Road Surface Freezing): In-Car Quick-Reference Card\n\n**WHAT THIS IS:**\nBlack ice burn is a transparent layer of ice covering the road surface that looks like wet asphalt pavement, so it is almost invisible to drivers.\n\n**ACTIONS TO TAKE:**\n\n• **Reduce speed sufficiently** — Press the brake gently to check how slippery the road surface is. Drive at a speed at least 3–4 times slower than what the normal stopping distance suggests.\n\n• **Take a larger following distance** — Keep a following-time of 5–6 seconds (or more) between you and the car ahead, versus the usual summer \"3-second rule.\"\n\n• **Avoid braking and steering inputs** — If you begin to slip, avoid sudden braking or abrupt changes of direction. Instead, disengage (cut) the clutch to regain grip, and steer gently so as to cancel out the rear-wheel side-slip (fishtailing).\n\n• **Be especially careful on bridges, overpasses, and ramps (inclined roads)** — Black ice burn forms first on these elevated structures, because air flows above and below them, causing the temperature to drop rapidly."
+   ],
+   "verifier_issues": [
+    "No issues found. All four safety bullets are present and complete.",
+    "Numbers/units all preserved exactly: '3–4 times slower' (3〜4倍遅い) with 'at least'/'少なくとも'; '5–6 seconds (or more)' (5〜6秒（またはそれ以上）); 'normal 3-second rule in summer' (夏場の通常の「3秒ルール」).",
+    "No safety reversal or dangerous softening: 'avoid sudden braking or abrupt turns' is rendered as 急ブレーキや急な方向転換を避ける (not softened to mere 'brake carefully').",
+    "Clutch instruction ('disengage the clutch to regain traction') and 'steer gently to counteract rear-wheel skids' both preserved accurately, including the rear-wheel skid specificity.",
+    "Minor non-safety additions for clarity only ('路面凍結' gloss in title, '尻振り' gloss for fishtailing, '傾斜路' gloss for ramp) — these aid Japanese readers and do not alter meaning.",
+    "Heading 'Black Ice' rendered as 'ブラックアイスバーン（路面凍結）' adds the clarifier '(road surface freezing)' — a benign, accurate localization, not a safety change.",
+    "Step 1 heading 'Reduce speed significantly' → '速度を十分落とす' (reduce speed sufficiently/fully): a near-equivalent intensity, not a dangerous softening.",
+    "All numbers preserved exactly: 3–4 times slower; 5–6 seconds; 3-second rule. No unit/figure drift.",
+    "Critical skid instruction preserved correctly: 'disengage the clutch to regain traction, steer gently to counteract rear-wheel skids' → 'クラッチを切ってグリップを取り戻し…後輪の横滑りを打ち消すようにハンドルをやさしく切る'. No reversal of avoid-sudden-braking/avoid-abrupt-turns.",
+    "Step 4 elevated-structures rationale (air circulates above and below → rapid temperature drop) fully preserved. No safety point omitted, no instruction reversed or dangerously hardened."
+   ]
+  },
+  {
+   "state": "compactedSnow",
+   "pass": true,
+   "faithful_count": 3,
+   "any_reversal": false,
+   "any_number_error": false,
+   "any_omission": false,
+   "guidance_ja": "# 圧雪路面での運転\n\n**圧雪路面とは：** 圧雪路面では、グリップ（路面とタイヤの食いつき）を保つために、速度を落とし、車間距離を多めにとり、丁寧な車両操作が必要です。\n\n• **タイヤ：** 十分な溝（トレッド深さ）のある冬用タイヤ（特に北欧（Nordic）タイプのスタッド付き、またはスタッドレス）を使用する。雪道では幅広タイヤよりも幅の狭いタイヤの方が食いつきやすい\n\n• **速度：** 速度を十分に落とし、こまめに軽くブレーキを踏んで路面がどれだけ滑りやすいかを確かめる。カーブは30 km/h（18 mph）未満で曲がる\n\n• **ブレーキ：** 急ブレーキを避け、軽くブレーキを踏んで路面状況を確かめる。下り坂ではブレーキをかけるよりもシフトダウンして速度を落とす。ブレーキをかけると車が尻振り（後輪の横滑り）を起こすことがあるため\n\n• **車間距離：** 先行車との車間距離を、通常の3秒から5〜6秒以上に広げる",
+   "back_translations": [
+    "# Driving on Compacted Snow Surface\n\n**What compacted snow surface is:** On compacted snow surface, in order to maintain grip (the bite between road surface and tire), it is necessary to reduce speed, take a larger following distance, and perform careful/gentle vehicle control.\n\n• **Tyres:** Use winter tires with sufficient grooves (tread depth) (especially Nordic-type studded, or studless). On snowy roads, narrow tires bite better than wide tires.\n\n• **Speed:** Reduce speed sufficiently, and frequently press the brake gently to confirm how slippery the road surface is. Take curves at under 30 km/h (18 mph).\n\n• **Braking:** Avoid hard braking, press the brake gently to confirm road conditions. On downhill slopes, rather than applying the brake, downshift to reduce speed — because applying the brake can cause the car to fishtail (rear-wheel sideslip).\n\n• **Following distance:** Widen the following distance to the vehicle ahead from the normal 3 seconds to 5–6 seconds or more.",
+    "# Driving on Compacted Snow\n\n**What compacted snow is:** On compacted snow, in order to maintain grip (the bite between road surface and tyre), you need to reduce speed, take a larger following distance, and operate the vehicle carefully.\n\n• **Tyres:** Use winter tyres with adequate grooves (tread depth) (especially Nordic-type studded, or studless). On snowy roads, narrow tyres bite better than wide tyres.\n\n• **Speed:** Reduce speed sufficiently, and frequently brake gently to check how slippery the road surface is. Take corners at less than 30 km/h (18 mph).\n\n• **Braking:** Avoid hard braking, brake gently to check road conditions. On downhill slopes, shift down rather than braking to reduce speed — because braking can cause the vehicle to fishtail (rear-wheel side-slip).\n\n• **Following distance:** Widen the following distance from the ahead vehicle from the usual 3 seconds to 5–6 seconds or more.",
+    "# Driving on Compacted-Snow Road Surface\n\n**What compacted-snow road surface is:** On compacted-snow road surfaces, in order to maintain grip (the bite between the road surface and the tires), it is necessary to reduce speed, take extra following distance, and operate the vehicle gently.\n\n• **Tyres:** Use winter tires with sufficient grooves (tread depth) — especially Nordic-type studded, or studless. On snowy roads, narrow tires bite better than wide tires.\n\n• **Speed:** Reduce speed sufficiently, and frequently press the brake gently to confirm how slippery the road surface is. Take curves at less than 30 km/h (18 mph).\n\n• **Braking:** Avoid hard braking; press the brake gently to confirm road conditions. On downhill stretches, rather than applying the brake, downshift to reduce speed — because applying the brake can cause the car to fishtail (rear-wheel sideslip).\n\n• **Following distance:** Widen the following distance from the vehicle ahead from the usual 3 seconds to 5–6 seconds or more."
+   ],
+   "verifier_issues": [
+    "No defects found. All four safety bullets present and complete (Tyres/Speed/Braking/Distance).",
+    "High-risk instruction 'Avoid hard braking' correctly rendered as 急ブレーキを避け — NOT softened to mere 'brake carefully'.",
+    "'unstudded' correctly translated as スタッドレス (studless), not omitted or reversed.",
+    "All numbers/units exact: 30 km/h (18 mph), standard 3 seconds, 5–6 seconds or more.",
+    "Downhill downshift-rather-than-brake guidance and fishtail rationale fully preserved.",
+    "Minor non-safety additions (parenthetical glosses for grip and fishtail) aid clarity without altering meaning.",
+    "No issues found. 'Avoid hard braking' is correctly rendered as 急ブレーキを避け (avoid hard braking), not softened to merely 'brake carefully'.",
+    "All numbers/units preserved exactly: 30 km/h (18 mph), 3 seconds, 5-6 seconds.",
+    "All four safety bullets (tyres, speed, braking, distance) fully present with their sub-points (frequent gentle-brake testing, downhill downshift-instead-of-brake, fishtail rationale, narrow>wide tires).",
+    "Added parentheticals (grip definition, fishtail = rear-wheel sideslip) are clarifying aids, not distortions; they do not reverse or weaken any instruction."
+   ]
+  },
+  {
+   "state": "slush",
+   "pass": true,
+   "faithful_count": 3,
+   "any_reversal": false,
+   "any_number_error": false,
+   "any_omission": false,
+   "guidance_ja": "# シャーベット状の雪（解けかけた／混じり雪）：ハイドロプレーニングのような危険\n\n**シャーベット状の雪は、やわらかく解けかけた雪で、氷よりも滑りやすく、ハンドル操作（操縦性）とグリップ（トラクション）が低下するため、ハイドロプレーニングのような危険があります。**\n\n• **速度を十分に落とす** — シャーベット状の雪ではハンドル操作（操縦性）が特に難しくなります。控えめな速度で進入し、ブレーキを軽く踏んで路面のグリップ（食いつき）を確かめましょう。\n\n• **「急」のつく操作を避ける** — 急ハンドルや急加速・急ブレーキはしないこと。急な操作はどれも、ハイドロプレーニングのようにグリップ（トラクション）を失う危険があります。\n\n• **車間距離を多めにとる** — シャーベット状の雪では制動距離が大幅に伸びるため、先行車との間に5〜6秒（またはそれ以上）の車間時間を保ちましょう。\n\n• **除雪された走行車線を走る** — 路面が踏み固められている主要な走行帯を走りましょう。車線の間に残る未除雪のシャーベット状の雪を急に横切るのは避けてください。タイヤを「取られて」しまい、重大な結果につながることがあります。",
+   "back_translations": [
+    "Title: \"Slush snow (melting/mixed snow): Aquaplaning-like danger\". Bold: \"Slush is soft, melting snow that is more slippery than ice, and because handling (maneuverability) and grip (traction) are reduced, it presents aquaplaning-like dangers.\" Bullet 1: \"Reduce speed sufficiently — On slush, steering (handling) becomes particularly difficult. Approach at cautious/modest speeds and press the brake gently to check the road surface grip (bite).\" Bullet 2: \"Avoid 'sudden'-type maneuvers — Do not do sharp steering or hard acceleration/hard braking. Any abrupt control input risks losing grip (traction) like aquaplaning.\" Bullet 3: \"Take a larger following distance — On slush, braking distance increases dramatically, so maintain a following time of 5–6 seconds (or more) behind the vehicle ahead.\" Bullet 4: \"Drive in plowed/traveled lanes — Drive on the main traffic band where the surface is compacted. Avoid suddenly crossing uncleared slush remaining between lanes; it can 'grab' a tire and lead to serious consequences.\"",
+    "# Slush (melting/mixed snow): aquaplaning-like danger\n\n**Slush is soft, melting snow; it is more slippery than ice, and because steering (handling) and grip (traction) are reduced, there is an aquaplaning-like danger.**\n\n• **Reduce speed sufficiently** — On slush, steering (handling) becomes especially difficult. Enter at a modest/restrained speed, and press the brake gently to check the road surface grip (bite).\n\n• **Avoid maneuvers with \"sudden\" in them** — Do not make sharp steering or sudden acceleration/sudden braking. Any sudden input carries the danger of losing grip (traction), like aquaplaning.\n\n• **Take a larger following distance** — On slush the braking distance lengthens greatly, so keep a headway of 5–6 seconds (or more) to the vehicle ahead.\n\n• **Drive in the plowed/traveled lanes** — Drive in the main traffic band where the surface has been compacted. Avoid suddenly crossing the un-cleared slush remaining between lanes; your tire can get \"grabbed/taken,\" which can lead to serious consequences.",
+    "# Slush (Melting/Mixed Snow): Aquaplaning-Like Danger\n\n**Slush is soft, melting snow that is more slippery than ice, and because steering (handling) and grip (traction) are reduced, it presents aquaplaning-like dangers.**\n\n• **Drop your speed sufficiently** — On slush, steering (handling) becomes especially difficult. Enter at a modest speed and press the brake lightly to check the road surface's grip (bite).\n\n• **Avoid maneuvers with \"sudden\" in them** — Do not do sudden steering, sudden acceleration, or sudden braking. Any sudden input carries the risk of losing grip (traction), like aquaplaning.\n\n• **Keep extra following distance** — Because on slush the braking distance increases greatly, keep 5–6 seconds (or more) of following time behind the vehicle ahead.\n\n• **Drive in the plowed/traveled lane** — Drive in the main travel band where the surface has been compacted. Avoid suddenly crossing the uncleared slush remaining between lanes — your tire can be \"grabbed\" and it can lead to serious consequences."
+   ],
+   "verifier_issues": [
+    "No discrepancies found. All four safety bullets are present and complete.",
+    "Critical comparative 'more slippery than ice' is preserved (氷よりも滑りやすく).",
+    "'Reduce speed significantly' rendered as 速度を十分に落とす — intensity preserved, not softened.",
+    "Firm prohibition 'Do not make sharp turns or hard accel/braking' preserved as しないこと — not softened to 'brake carefully'.",
+    "Numbers/units exact: 5–6 seconds (or more) = 5〜6秒（またはそれ以上）.",
+    "'gently test braking' correctly rendered (ブレーキを軽く踏んで確かめる); 'grab a wheel/disastrous consequences' preserved (取られて／重大な結果).",
+    "No discrepancies found. Header, bold lede, and all four bullets are present and rendered. Number preserved exactly: 5–6 seconds (5〜6秒) with '(or more)' = '（またはそれ以上）'. No units to mistranslate (no km/h or km present in source).",
+    "Bullet 1 'test braking gently to assess surface grip' correctly rendered as 'ブレーキを軽く踏んで路面のグリップを確かめる' — gentle braking preserved, not hardened.",
+    "Bullet 2 'Do not make sharp turns or hard acceleration/braking' correctly negated ('しないこと') — no reversal; abrupt-input risk preserved.",
+    "Bullet 4 'grab a wheel with disastrous consequences' rendered 'タイヤを取られて重大な結果につながる' — hazard severity preserved, lane-crossing avoidance preserved.",
+    "No safety-relevant defects found. All four bullets, the bold intro, and the 5-6 second figure are preserved.",
+    "Minor stylistic addition: JA front-loads 'steering and grip reduced' into the intro causal clause; English placed 'reduced handling and traction' there too, so meaning is preserved.",
+    "'Reduce speed significantly' rendered as 速度を十分に落とす (reduce speed sufficiently) — preserves the intensity, not softened.",
+    "'test braking gently' rendered ブレーキを軽く踏んで — faithful, not hardened into firm braking.",
+    "'grab a wheel with disastrous consequences' rendered タイヤを「取られて」しまい、重大な結果につながる — faithful severity preserved."
+   ]
+  },
+  {
+   "state": "wet",
+   "pass": true,
+   "faithful_count": 3,
+   "any_reversal": false,
+   "any_number_error": false,
+   "any_omission": false,
+   "guidance_ja": "# 濡れた路面でのハイドロプレーニング現象とグリップ喪失を防ぐ\n\n**滑りやすい路面で車のコントロールを保つため、速度を落とし、車間距離を多めにとりましょう。**\n\n• **速度を十分に落とす** — 通常よりかなり速度を控える。ハイドロプレーニング現象は一般に72〜93km/h（45〜58mph）を超えると発生しやすくなるため、速度を落とせばタイヤが水を排出する時間を確保できる\n\n• **先行車との車間距離を多めにとる** — 通常の3秒から5〜6秒以上に車間時間を延ばし、濡れた路面で余分な停止距離を確保する\n\n• **急ハンドルや急ブレーキを避ける** — 操作はなめらかに、徐々におこなう。「急」のつく操作や急ブレーキは、グリップ（接地力）の喪失や横滑りを引き起こすおそれがある\n\n• **クルーズコントロールを使用しない** — 自分で速度を調整し、刻々と変わる路面状況や水たまりになめらかに対応できるようにする",
+   "back_translations": [
+    "# Preventing aquaplaning and loss of grip on wet roads\n\n**To maintain control of the car on slippery road surfaces, reduce speed and take ample following distance.**\n\n• **Slow down sufficiently** — Reduce speed considerably below normal. Aquaplaning generally becomes more likely to occur above 72–93 km/h (45–58 mph), so slowing down lets tires secure time to expel water.\n\n• **Take ample following distance from the car ahead** — Extend following time from the standard 3 seconds to 5–6 seconds or more, securing extra stopping distance on wet pavement.\n\n• **Avoid sudden steering or sudden braking** — Make operations smooth and gradual. Operations prefixed with \"sudden,\" or hard braking, can cause loss of grip (traction) or skidding.\n\n• **Do not use cruise control** — Adjust speed yourself, so you can respond smoothly to ever-changing road conditions and puddles.",
+    "# Preventing Hydroplaning and Loss of Grip on Wet Road Surfaces\n\n**To keep control of the car on slippery road surfaces, reduce speed and take extra following distance.**\n\n• **Reduce speed sufficiently** — Hold your speed considerably below normal. Hydroplaning generally tends to occur when you exceed 72–93 km/h (45–58 mph), so reducing speed lets the tires secure time to expel water.\n\n• **Take extra following distance from the car ahead** — Extend your following time from the normal 3 seconds to 5–6 seconds or more, securing extra stopping distance on wet road surfaces.\n\n• **Avoid sudden steering or sudden braking** — Make operations smooth and gradual. Operations with \"sudden\" attached, and sudden braking, can cause loss of grip (road-contact force) or sideslip.\n\n• **Do not use cruise control** — Adjust speed yourself so you can respond smoothly to moment-by-moment changing road conditions and puddles/pooled water.",
+    "# Preventing Hydroplaning (Aquaplaning) Phenomenon and Loss of Grip on Wet Road Surfaces\n\n**In order to keep control of your car on slippery road surfaces, reduce speed and take a generous following distance.**\n\n• **Reduce speed sufficiently** — Hold your speed considerably below normal. The hydroplaning phenomenon generally tends to occur when you exceed 72–93 km/h (45–58 mph), so if you reduce speed the tires can secure time to expel/disperse the water\n\n• **Take a generous following distance from the car ahead** — Extend the following-time from the normal 3 seconds to 5–6 seconds or more, securing extra stopping distance on the wet road surface\n\n• **Avoid sharp steering and sudden braking** — Perform operations smoothly and gradually. Operations with \"sudden\" in them and hard braking can risk causing loss of grip (ground-contact force) or sideways skidding\n\n• **Do not use cruise control** — Adjust the speed yourself, so that you can respond smoothly to the moment-by-moment changing road conditions and pooled water (puddles)"
+   ],
+   "verifier_issues": [
+    "Minor (non-safety): 'aquaplaning typically begins above' is rendered as '発生しやすくなる' (becomes more likely to occur above) rather than a hard onset threshold; this is cautious-equivalent and does not soften any safety instruction.",
+    "All four safety bullets are present; the key 'avoid sudden steering or braking' instruction is NOT softened to mere 'brake carefully' — it is preserved as 急ハンドルや急ブレーキを避ける.",
+    "All numbers/units preserved exactly: 72–93 km/h, 45–58 mph, 3 seconds, 5–6 seconds.",
+    "No instruction reversed; 'Do not use cruise control' correctly rendered as the negative imperative 使用しない.",
+    "No safety-critical issues found. Numbers all preserved exactly: 72-93 km/h (45-58 mph), 3 seconds, 5-6 seconds.",
+    "All four bullet points and the bold summary line are present and rendered faithfully.",
+    "Bullet 3 'avoid sudden steering or braking inputs' is rendered as 急ハンドルや急ブレーキを避ける with the consequence (loss of traction/skidding) preserved — no dangerous softening to mere 'brake carefully'.",
+    "Minor nuance: 'aquaplaning typically begins above X' rendered as '発生しやすくなる' (tends to occur more easily above X), a slight softening from 'begins' but not safety-reversing and consistent with the source's 'typically'.",
+    "'Do not use cruise control' correctly rendered as a prohibition (使用しない), no reversal.",
+    "No safety-relevant issues found. Title, header, and all four bullets are present and faithful.",
+    "Numbers/units preserved exactly: 72–93 km/h (45–58 mph), standard 3 seconds, 5–6 seconds or more.",
+    "Bullet 3 'Avoid sudden steering or braking inputs' rendered as 急ハンドルや急ブレーキを避ける (avoid sharp steering / sudden braking) with smooth-gradual guidance and the loss-of-traction/skidding warning intact — no dangerous softening to merely 'brake carefully'.",
+    "Bullet 4 'Do not use cruise control' rendered as a clear prohibition (使用しない), not softened; manual-control rationale and 'pooled water' (水たまり) preserved.",
+    "Minor: 'maintain control' rendered as コントロールを保つ — accurate, no safety impact."
+   ]
+  }
+ ]
+}

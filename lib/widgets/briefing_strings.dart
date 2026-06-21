@@ -17,25 +17,24 @@
 /// HONEST BOUND (verified by rendering the production-faithful card and
 /// looking, per OPS-066): this localizes the card's OWN structural + safety
 /// strings — verdict headline, severity word, checklist, headers, switch,
-/// assistive-tech announcement, winter-card header/footer. THREE pieces of
-/// text the card DISPLAYS still arrive already-formed in English and are NOT
-/// translated here, so HER mother sees them in English today:
+/// assistive-tech announcement, winter-card header/footer. The winter-driving
+/// action BULLETS are ALSO Japanese now: `assets/winter_knowledge.json` carries
+/// a faithful `guidance_ja` for the four winter states, verified offline by an
+/// automated adversarial LLM sweep (back-translation + numbers/omission audit,
+/// fail-closed) — NOT yet human-native-reviewed (resolved upstream by
+/// `WinterKnowledge.cardFor(lang:)`, English fallback if absent — see the asset
+/// `_meta.translation_ja`). TWO displayed strings still
+/// arrive already-formed in English, so HER mother sees them in English today:
 ///   1. `briefing.chips` — the plain-language safety REASONS (e.g. "Visibility
 ///      may drop to ~80 m…"), generated inside the `pretrip_decision_advisor`
 ///      package. Load-bearing reasons; localizing them needs locale-aware
-///      message generation in that package — a separate, larger change.
-///   2. `WinterCard.guidance` — the winter-driving action BULLETS (the
-///      header/footer around them ARE localized here, but the bullet text
-///      itself is the English `assets/winter_knowledge.json`, λ-RLM-generated
-///      from an English open corpus). These are safety instructions, so a
-///      faithful translation must be re-reviewed per surface state — the most
-///      important follow-on alongside (1).
-///   3. `sourceCaption` — the data-source attribution line, composed upstream
+///      message generation in that package — the most important follow-on.
+///   2. `sourceCaption` — the data-source attribution line, composed upstream
 ///      in `main.dart` from MET Norway / JMA / Digitraffic strings.
-/// All three gaps are named here rather than hidden: the VERDICT, checklist,
-/// and whiteout plan reach HER mother in Japanese today; the supporting
-/// reasons and winter-guidance bullets do not yet. English remains a complete
-/// fallback surface for any unsupported locale.
+/// Both gaps are named here rather than hidden: the verdict, checklist,
+/// whiteout plan, and winter-driving guidance reach HER mother in Japanese
+/// today; the supporting reason chips and the source caption do not yet.
+/// English remains a complete fallback surface for any unsupported locale.
 library;
 
 import 'package:flutter/widgets.dart';

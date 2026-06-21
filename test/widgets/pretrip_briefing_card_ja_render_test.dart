@@ -9,6 +9,7 @@
 // Then open test/widgets/goldens/pretrip_briefing_card_ja.png and LOOK.
 import 'dart:io';
 
+import 'package:driving_conditions/driving_conditions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,30 +101,17 @@ void main() {
               tripRequired: false,
               onTripRequiredChanged: (_) {},
               // PRODUCTION-TRUTHFUL fixture (OPS-066: the scene we look at must
-              // be the scene HER mother gets, not an idealised one). The card's
-              // own chrome is Japanese; the data-source caption and the winter
-              // guidance bullets are the REAL English strings that ship today
-              // (default demo caption; verbatim `assets/winter_knowledge.json`
-              // blackIce guidance). The English here is the honest remaining
-              // gap named in BriefingStrings' HONEST BOUND, made visible — not
-              // papered over with hand-written Japanese.
+              // be the scene HER mother gets, not an idealised one). The winter
+              // guidance is resolved through the REAL loader from the REAL
+              // shipped asset at lang 'ja' — so this PNG shows the verified
+              // Japanese winter-driving guidance exactly as production renders
+              // it, not a hand-written fixture. The data-source caption stays
+              // English (the remaining gap named in BriefingStrings' HONEST
+              // BOUND), shown not hidden.
               sourceCaption: 'Simulated forecast (demo) — offline, deterministic',
-              winterCard: const WinterCard(
-                state: 'blackIce',
-                guidance: '# Black Ice: In-Car Reference Card\n\n'
-                    '**WHAT IT IS:**\n'
-                    'Black ice is a transparent layer of ice on road surfaces '
-                    'that looks like wet pavement, making it nearly invisible '
-                    'to drivers.\n\n'
-                    '**ACTIONABLE STEPS:**\n\n'
-                    '• **Reduce speed significantly** — Test the road surface '
-                    'with gentle braking to determine how slippery it is; drive '
-                    'at least 3–4 times slower than normal stopping distance '
-                    'would suggest\n\n'
-                    '• **Increase following distance** — Maintain 5–6 seconds '
-                    '(or more) between your vehicle and the car ahead, versus '
-                    'the normal 3-second rule in summer',
-              ),
+              winterCard: WinterKnowledge.fromJsonString(
+                File('assets/winter_knowledge.json').readAsStringSync(),
+              ).cardFor(RoadSurfaceState.blackIce, lang: 'ja'),
             ),
           ),
         ),
