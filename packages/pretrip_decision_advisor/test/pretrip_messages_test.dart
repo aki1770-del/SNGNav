@@ -110,6 +110,32 @@ void main() {
     expect(m.noWinterHazard(), 'No winter hazard signals in your trip window.');
   });
 
+  // The JA safety chips are the strings HER mother actually reads — they deserve
+  // the same byte-for-byte drift protection the EN chips have. Pinning also
+  // guards the hazard-strength CALIBRATION: a future edit that reverts a
+  // 可能性があります back to the warning-register おそれがあります (over-warn), drops the
+  // ~ in 約80m, or weakens the honesty-mode deferral would fail here, not pass
+  // green on a CJK-and-digits check alone.
+  test('JA safety chip strings are pinned against silent drift', () {
+    const m = PretripMessages.ja;
+    expect(m.visibilityWhiteout(80, '07:00'),
+        '07:00頃、視界が約80mまで低下する可能性があります — ホワイトアウト状態です。');
+    // caution band renders the mildest hedge 可能性があります (EN "possible"),
+    // never the warning-register おそれがあります.
+    expect(m.slushPossible('07:00'), '07:00頃、シャーベット状の雪の可能性があります。');
+    expect(m.freezingAir(-4, '06:00'),
+        '06:00頃、氷点下の気温(-4°C) — 霜やブラックアイス(見えにくい薄い氷)の可能性があります。');
+    // elevated "likely" sits above caution but below severe "expected".
+    expect(m.precipNearFreezing('07:00'),
+        '07:00頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。');
+    // honesty-mode: names the hazard, urges no delay, defers to the driver.
+    expect(m.requiredNoDelayUrged(),
+        'この移動は必須に設定されています — 出発を遅らせることは勧めません。'
+        '出発前に準備を整えてください。判断はあなたが行います。');
+    expect(m.allowExtraTime(),
+        '時間に余裕をもち、車間距離を保ってください — 出発を遅らせる必要はありません。');
+  });
+
   // Every message method, both locales: the JA must carry Japanese AND preserve
   // every measured number the EN carries. This covers all the _describe and
   // verdict branches that no forecast fixture in the suite reaches.

@@ -28,14 +28,22 @@
 /// `pretrip_decision_advisor` package carries a `PretripMessages` locale table
 /// and `main.dart` resolves it from the active locale, so the same
 /// deterministic logic speaks the driver's language (measured numbers pass
-/// through verbatim). ONE displayed string still arrives already-formed in
-/// English, so HER mother sees it in English today:
-///   - `sourceCaption` — the data-source attribution line, composed upstream
-///     in `main.dart` from MET Norway / JMA / Digitraffic strings.
-/// This last gap is named here rather than hidden: the verdict, checklist,
-/// whiteout plan, winter-driving guidance, AND the reason chips reach HER
-/// mother in Japanese today; only the source-attribution caption does not yet.
-/// English remains a complete fallback surface for any unsupported locale.
+/// through verbatim). The `sourceCaption` line is now PARTLY Japanese — the
+/// offline/demo caption is localized — but its LIVE arms are still English:
+///   - `sourceCaption` (live arms) — composed upstream in `main.dart` from MET
+///     Norway / JMA / Digitraffic strings. It is MORE than attribution: on a
+///     failed JMA check it carries the safety-material caveat "an official snow
+///     warning may exist that is NOT reflected here", the "hazard signal from
+///     temperature + precipitation only" limitation, and any MEASURED
+///     departure-hour visibility reading (e.g. "visibility 80 m at a station").
+///     These clauses are English-only today, so the known-incomplete signal —
+///     and the most concrete measured reason — do not yet reach HER mother.
+///     Localizing them is the next reach-fix and is NOT cosmetic; it needs its
+///     own translation-faithfulness verification, so it is a separate commit.
+/// The gap is named here rather than hidden: the verdict, checklist, whiteout
+/// plan, winter-driving guidance, reason chips, AND the demo source caption
+/// reach HER mother in Japanese today; the live source-caption caveats do not
+/// yet. English remains a complete fallback surface for any unsupported locale.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -102,6 +110,15 @@ abstract class BriefingStrings {
 
   /// The honesty footline: where the forecast came from + when it was issued.
   String sourceLine(String sourceCaption, String hhmm);
+
+  // --- Offline/demo source caption (number-free, fully localizable) ----------
+  /// The caption for the simulated/offline demo forecast (no live data). The
+  /// LIVE-arm captions stay English for now — see this file's HONEST BOUND.
+  String get simulatedForecastCaption;
+
+  /// Appended to [simulatedForecastCaption] when a live fetch was requested but
+  /// unavailable, so the card never implies live data it does not have.
+  String get liveFetchUnavailableSuffix;
 }
 
 class _EnBriefingStrings extends BriefingStrings {
@@ -183,6 +200,12 @@ class _EnBriefingStrings extends BriefingStrings {
   String sourceLine(String sourceCaption, String hhmm) =>
       '$sourceCaption · forecast issued $hhmm';
 
+  @override
+  String get simulatedForecastCaption =>
+      'Simulated forecast (demo) — offline, deterministic';
+  @override
+  String get liveFetchUnavailableSuffix => ' (live fetch unavailable)';
+
   static String _humanStateEn(String state) {
     switch (state) {
       case 'blackIce':
@@ -219,7 +242,7 @@ class _JaBriefingStrings extends BriefingStrings {
   @override
   String get severityCaution => '注意';
   @override
-  String get headlineCaution => '注意して運転してください — 遅延の必要はありません';
+  String get headlineCaution => '注意して運転してください — 出発を遅らせる必要はありません';
   @override
   String get severityHazard => '危険';
   @override
@@ -248,7 +271,7 @@ class _JaBriefingStrings extends BriefingStrings {
   String get tripRequiredTitle => 'この移動は必須';
   @override
   String get tripRequiredSubtitle =>
-      'オンの間は遅延を勧めません — 判断はあなた、準備をお手伝いします。';
+      'オンの間は出発を遅らせることは勧めません — 判断はあなた、準備をお手伝いします。';
 
   @override
   String get beforeYouLeave => '出発前の準備';
@@ -288,4 +311,9 @@ class _JaBriefingStrings extends BriefingStrings {
   @override
   String sourceLine(String sourceCaption, String hhmm) =>
       '$sourceCaption · 予報発表 $hhmm';
+
+  @override
+  String get simulatedForecastCaption => 'シミュレーション予報(デモ)— オフライン・確定的';
+  @override
+  String get liveFetchUnavailableSuffix => ' (ライブ取得不可)';
 }

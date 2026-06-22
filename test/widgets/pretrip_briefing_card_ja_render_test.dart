@@ -108,12 +108,11 @@ void main() {
               // PRODUCTION-TRUTHFUL fixture (OPS-066: the scene we look at must
               // be the scene HER mother gets, not an idealised one). The winter
               // guidance is resolved through the REAL loader from the REAL
-              // shipped asset at lang 'ja' — so this PNG shows the verified
-              // Japanese winter-driving guidance exactly as production renders
-              // it, not a hand-written fixture. The data-source caption stays
-              // English (the remaining gap named in BriefingStrings' HONEST
-              // BOUND), shown not hidden.
-              sourceCaption: 'Simulated forecast (demo) — offline, deterministic',
+              // shipped asset at lang 'ja', and the demo source caption is the
+              // localized one production now renders — so this PNG shows exactly
+              // what production delivers. (The LIVE-arm source captions are the
+              // remaining English gap named in BriefingStrings' HONEST BOUND.)
+              sourceCaption: 'シミュレーション予報(デモ)— オフライン・確定的',
               winterCard: WinterKnowledge.fromJsonString(
                 File('assets/winter_knowledge.json').readAsStringSync(),
               ).cardFor(RoadSurfaceState.blackIce, lang: 'ja'),
@@ -127,6 +126,73 @@ void main() {
     await expectLater(
       find.byType(PretripBriefingCard),
       matchesGoldenFile('goldens/pretrip_briefing_card_ja.png'),
+    );
+  });
+
+  testWidgets('renders the CAUTION-band Japanese briefing so the freezing-air '
+      '/ black-ice chip register is actually seen', (tester) async {
+    // The waitAdvised golden above shows only the whiteout chip. The
+    // caution-band reason chips — freezingAir (black ice) and allowExtraTime —
+    // carry the safety-CALIBRATION register that a single-pass review got wrong
+    // (おそれがあります warning-grade vs the correct 可能性があります "possible"). OPS-066
+    // binds "verified" on an observable surface to going and SEEING it, so this
+    // second golden renders that band with real CJK glyphs.
+    if (!fontLoaded) {
+      markTestSkipped('No Noto CJK font on this host — skipping JA render.');
+      return;
+    }
+    final issued = DateTime(2026, 1, 1, 6, 0);
+    final dep = DateTime(2026, 1, 1, 7, 15);
+    // A subzero, dry morning → caution verdict; worstSlot has no precip / road /
+    // visibility signal, so _describe falls to the freezing-air (black ice) chip.
+    final forecast = WeatherForecast(
+      issuedAt: issued,
+      hourly: [
+        HourlyForecast(hour: DateTime(2026, 1, 1, 7), tempCelsius: -3),
+        HourlyForecast(hour: DateTime(2026, 1, 1, 8), tempCelsius: -2),
+      ],
+    );
+    final commute = CommuteShape(
+      plannedDeparture: dep,
+      plannedDuration: const Duration(minutes: 30),
+      routeIdentifiers: const ['akita-commute'],
+      flexibility: CommuteFlexibility.discretionary,
+    );
+    final briefing = SnowAwarePretripAdvisor(messages: PretripMessages.ja).brief(
+      forecast: forecast,
+      commute: commute,
+      profile:
+          const DriverProfileSpec(profileTag: 'akita', reactionTimeSeconds: 1.5),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'NotoSansCJK', useMaterial3: true),
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: SizedBox(
+            width: 560,
+            child: PretripBriefingCard(
+              strings: BriefingStrings.ja,
+              briefing: briefing,
+              commute: commute,
+              forecastIssuedAt: issued,
+              tripRequired: false,
+              onTripRequiredChanged: (_) {},
+              sourceCaption: 'シミュレーション予報(デモ)— オフライン・確定的',
+              winterCard: WinterKnowledge.fromJsonString(
+                File('assets/winter_knowledge.json').readAsStringSync(),
+              ).cardFor(RoadSurfaceState.blackIce, lang: 'ja'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(PretripBriefingCard),
+      matchesGoldenFile('goldens/pretrip_briefing_card_ja_caution.png'),
     );
   });
 }

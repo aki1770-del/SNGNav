@@ -59,6 +59,21 @@ void main() {
   for (final c in briefing.chips) {
     print('  - $c');
   }
+
+  // The SAME deterministic logic, in Japanese — for a driver who reads
+  // Japanese. The measured numbers (80 m, 07:00, 08:15) survive translation
+  // verbatim; only the surrounding words change.
+  final jaBriefing =
+      const SnowAwarePretripAdvisor(messages: PretripMessages.ja).brief(
+    forecast: merged,
+    commute: commute,
+    profile: const DriverProfileSpec(
+        profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
+  );
+  print('Chips (ja):');
+  for (final c in jaBriefing.chips) {
+    print('  - $c');
+  }
   print('Measured: ${observed.meters} m at ${observed.stationName} '
       '(${observed.distanceKm.toStringAsFixed(1)} km away)');
 }

@@ -34,11 +34,15 @@ abstract class PretripMessages {
   /// Japanese — for a driver who reads Japanese.
   static const PretripMessages ja = _JaPretripMessages();
 
+  /// Locale subtag separator, compiled once (this is hot on the low-end-ARM
+  /// rebuild path, where [forLanguage] is called every frame).
+  static final RegExp _localeSep = RegExp('[_-]');
+
   /// Pick the table for [languageCode] (e.g. `'ja'`, `'ja_JP'`, `'JA'`),
   /// falling back to English for any language not carried. Never throws — an
   /// unsupported language degrades to the English reason, never to no reason.
   static PretripMessages forLanguage(String languageCode) {
-    final base = languageCode.toLowerCase().split(RegExp('[_-]')).first;
+    final base = languageCode.toLowerCase().split(_localeSep).first;
     return base == 'ja' ? ja : en;
   }
 
@@ -185,7 +189,7 @@ class _JaPretripMessages extends PretripMessages {
       '予報は出発時点で$hours時間前のものです — 出発前に最新の状況を再確認してください。';
 
   @override
-  String noWinterHazard() => '移動時間帯に冬季の危険信号はありません。';
+  String noWinterHazard() => '出発時間帯に冬季の危険を示す兆候はありません。';
 
   @override
   String allowExtraTime() =>
@@ -224,14 +228,14 @@ class _JaPretripMessages extends PretripMessages {
 
   @override
   String precipNearFreezing(String at) =>
-      '$at頃、氷点付近での降水 — 部分的な路面凍結が予想されます。';
+      '$at頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。';
 
   @override
   String visibilityReducedNearWhiteout(int meters, String at) =>
       '$at頃、視界が約${meters}mまで低下する可能性があります。';
 
   @override
-  String slushPossible(String at) => '$at頃、シャーベット状の雪のおそれがあります。';
+  String slushPossible(String at) => '$at頃、シャーベット状の雪の可能性があります。';
 
   @override
   String coldRain(String at) =>
@@ -244,7 +248,7 @@ class _JaPretripMessages extends PretripMessages {
   @override
   String freezingAir(int tempCelsius, String at) =>
       '$at頃、氷点下の気温($tempCelsius°C) — '
-      '霜やブラックアイス(見えにくい薄い氷)のおそれがあります。';
+      '霜やブラックアイス(見えにくい薄い氷)の可能性があります。';
 
   @override
   String winterConditionsPossible(String at) =>

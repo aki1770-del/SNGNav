@@ -133,8 +133,10 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
   }
 }
 
-/// English gloss for legible (CJK-font-free) card text. Verbatim JP stays in
-/// the data layer (drives the road band) + [PretripLiveResult.jmaEventName].
+/// English gloss for the en locale only. The card now renders real CJK glyphs,
+/// so the "CJK-font-free" rationale is stale; for a ja caption the verbatim
+/// [PretripLiveResult.jmaEventName] (暴風雪 / 大雪 / 着雪) is more faithful than
+/// re-glossing — that localization is queued with the live-caption reach-fix.
 String jmaEventEnglishGloss(String eventName) {
   if (eventName.contains('暴風雪')) return 'blizzard';
   if (eventName.contains('大雪')) return 'heavy-snow';

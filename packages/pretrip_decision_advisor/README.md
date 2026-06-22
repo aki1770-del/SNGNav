@@ -1,6 +1,6 @@
 # pretrip_decision_advisor
 
-> **0.2.1. Contract + working reference advisor.**
+> **0.3.0. Contract + working reference advisor + localized reason chips.**
 >
 > This package ships an abstract contract, its data shapes, **and** a working
 > pure-Dart reference advisor (`SnowAwarePretripAdvisor`) plus a source-neutral
@@ -71,6 +71,11 @@ The package serves several distinct downstream cohorts:
   measured-visibility observation and its departure-hour merge (a real sensor
   value overrides forecast visibility for the departure hour only, and is
   never projected into later forecast hours).
+- `PretripMessages` — a hand-rolled, pure-Dart locale table for the advisor's
+  reason chips. `PretripMessages.en` (default + fallback) and `PretripMessages.ja`;
+  `PretripMessages.forLanguage(code)` resolves one and falls back to English
+  (never throws). Measured numbers pass through every locale verbatim. Extend it
+  to localize into a language this package does not yet carry.
 
 ## What is NOT in the package
 
@@ -171,6 +176,9 @@ Delay   : 1:00:00.000000
 Chips   :
   - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
   - Conditions improve by about 08:15.
+Chips (ja):
+  - 07:00頃、視界が約80mまで低下する可能性があります — ホワイトアウト状態です。
+  - 08:15頃までに状況は改善します。
 Measured: 80.0 m at Akita (0.4 km away)
 ```
 
@@ -204,6 +212,24 @@ throws). Measured numbers — visibility, temperature, minutes, hours — are
 identical in every locale; only the surrounding words change, so a translation
 can never restate a safety value.
 
+Need a language this package does not carry yet? `PretripMessages` is an
+abstract class — extend it with your own strings (the same pattern as the
+built-in `PretripMessages.ja`) and pass it as `messages:`. You must implement
+every method (the analyzer enforces this — a missing override will not
+compile). The deterministic hazard logic is unchanged and every measured
+number is handed to your method already computed — pass it through verbatim; a
+localization may reorder words but must never restate a measured safety value.
+
+```dart
+class KoPretripMessages extends PretripMessages {
+  const KoPretripMessages();
+  @override
+  String visibilityWhiteout(int meters, String at) => '...';
+  // ...implement the rest of the abstract methods...
+}
+// SnowAwarePretripAdvisor(messages: const KoPretripMessages())
+```
+
 ## Full reference integration (Flutter)
 
 A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a
@@ -223,5 +249,6 @@ because the cost of doing so is borne by the driver, not the advisor.
 
 ## Status
 
-0.2.1. Contract + working reference advisor. Interface stability is committed
-at this version within the bounds described in `KNOWN_LIMITATIONS.md`.
+0.3.0. Contract + working reference advisor, with localized reason chips.
+Interface stability is committed at this version within the bounds described in
+`KNOWN_LIMITATIONS.md`.

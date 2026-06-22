@@ -746,13 +746,14 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// `--dart-define=PRETRIP_FORECAST=met_norway` AND the fetch succeeded;
   /// the "trip required" switch demonstrates the contract's honesty rule.
   Widget _buildPretripView() {
-    // The reason chips read in the driver's own language — Japanese for HER
-    // mother in Akita — resolved from the app's active locale, the same source
-    // the card's structural strings use below.
+    // The whole pre-trip surface reads in the driver's own language — Japanese
+    // for HER mother in Akita — resolved ONCE from the app's active locale so
+    // the chips, the card's structural strings, and the winter card never
+    // diverge on which locale they used.
+    final locale = Localizations.localeOf(context);
+    final strings = BriefingStrings.of(locale);
     final advisor = SnowAwarePretripAdvisor(
-      messages: PretripMessages.forLanguage(
-        Localizations.localeOf(context).languageCode,
-      ),
+      messages: PretripMessages.forLanguage(locale.languageCode),
     );
     final live = _pretripLiveForecast;
     var forecast = live ?? _pretripForecast;
@@ -785,8 +786,10 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                 : jmaEventEnglishGloss(_pretripJmaEventName!),
             visCaption: visCaption,
           )
-        : 'Simulated forecast (demo) — offline, deterministic'
-            '${_pretripForecastSource == 'met_norway' ? ' (live fetch unavailable)' : ''}';
+        : strings.simulatedForecastCaption +
+            (_pretripForecastSource == 'met_norway'
+                ? strings.liveFetchUnavailableSuffix
+                : '');
     final commute = CommuteShape(
       plannedDeparture: departure,
       plannedDuration: _pretripWindow,
@@ -808,8 +811,8 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
         constraints: const BoxConstraints(maxWidth: 560),
         child: PretripBriefingCard(
           // The briefing reads in the driver's own language — Japanese for HER
-          // mother in Akita — resolved from the app's active locale.
-          strings: BriefingStrings.of(Localizations.localeOf(context)),
+          // mother in Akita — resolved once from the app's active locale above.
+          strings: strings,
           briefing: briefing,
           commute: commute,
           forecastIssuedAt: forecast.issuedAt,
@@ -824,7 +827,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           // grounded English (honest fallback, never blank).
           winterCard: _winter?.cardFor(
             _assessment.surfaceState,
-            lang: Localizations.localeOf(context).languageCode,
+            lang: locale.languageCode,
           ),
         ),
       ),

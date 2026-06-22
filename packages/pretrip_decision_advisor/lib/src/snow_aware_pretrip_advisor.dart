@@ -406,6 +406,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     if (slot.tempCelsius <= frostTempCelsius) {
       return messages.freezingAir(slot.tempCelsius.round(), at);
     }
+    // Defensive fallback: unreachable given the current hazardOf ladder (any
+    // slot that reaches _describe is caution+ and matches a branch above), but
+    // kept so a future threshold change cannot return an empty reason chip.
     return messages.winterConditionsPossible(at);
   }
 
