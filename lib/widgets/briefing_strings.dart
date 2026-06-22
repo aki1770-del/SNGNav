@@ -23,17 +23,18 @@
 /// automated adversarial LLM sweep (back-translation + numbers/omission audit,
 /// fail-closed) — NOT yet human-native-reviewed (resolved upstream by
 /// `WinterKnowledge.cardFor(lang:)`, English fallback if absent — see the asset
-/// `_meta.translation_ja`). TWO displayed strings still
-/// arrive already-formed in English, so HER mother sees them in English today:
-///   1. `briefing.chips` — the plain-language safety REASONS (e.g. "Visibility
-///      may drop to ~80 m…"), generated inside the `pretrip_decision_advisor`
-///      package. Load-bearing reasons; localizing them needs locale-aware
-///      message generation in that package — the most important follow-on.
-///   2. `sourceCaption` — the data-source attribution line, composed upstream
-///      in `main.dart` from MET Norway / JMA / Digitraffic strings.
-/// Both gaps are named here rather than hidden: the verdict, checklist,
-/// whiteout plan, and winter-driving guidance reach HER mother in Japanese
-/// today; the supporting reason chips and the source caption do not yet.
+/// `_meta.translation_ja`). The plain-language safety REASONS (`briefing.chips`,
+/// e.g. "Visibility may drop to ~80 m…") are ALSO Japanese now: the
+/// `pretrip_decision_advisor` package carries a `PretripMessages` locale table
+/// and `main.dart` resolves it from the active locale, so the same
+/// deterministic logic speaks the driver's language (measured numbers pass
+/// through verbatim). ONE displayed string still arrives already-formed in
+/// English, so HER mother sees it in English today:
+///   - `sourceCaption` — the data-source attribution line, composed upstream
+///     in `main.dart` from MET Norway / JMA / Digitraffic strings.
+/// This last gap is named here rather than hidden: the verdict, checklist,
+/// whiteout plan, winter-driving guidance, AND the reason chips reach HER
+/// mother in Japanese today; only the source-attribution caption does not yet.
 /// English remains a complete fallback surface for any unsupported locale.
 library;
 

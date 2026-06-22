@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0
+
+Add a localization seam for the reason chips — **non-breaking**. English stays
+the default and existing output is byte-for-byte unchanged.
+
+- Add `PretripMessages` — a hand-rolled, pure-Dart locale table for the
+  advisor's reason chips. `PretripMessages.en` (default + fallback) and
+  `PretripMessages.ja`; `PretripMessages.forLanguage(code)` resolves one and
+  falls back to English for any language not carried (never throws).
+- `SnowAwarePretripAdvisor` gains an optional `messages` parameter
+  (defaults to `PretripMessages.en`), so every existing caller is unchanged.
+  Pass `PretripMessages.ja` to emit the same deterministic logic in Japanese.
+- Measured safety numbers (visibility, temperature, minutes, hours) pass
+  through every locale verbatim — a translation reorders words, never a value.
+- No behaviour change: verdicts, thresholds, and the honesty rule are identical
+  across locales; only the chip wording differs.
+
 ## 0.2.1
 
 Documentation + example only — no API or behaviour change.

@@ -186,6 +186,24 @@ that produces the typed inputs — all emit the SAME `VisibilityObservation` /
 | Finland — Fintraffic Digitraffic | [`pretrip_source_digitraffic`](https://pub.dev/packages/pretrip_source_digitraffic) | measured `VisibilityObservation` (metres) |
 | Global — MET Norway locationforecast | [`pretrip_source_met_norway`](https://pub.dev/packages/pretrip_source_met_norway) | hourly `WeatherForecast` |
 
+## Localized reason chips
+
+The reason chips can speak the driver's language. Pass a `PretripMessages`
+table; English is the default and the fallback for any language not carried, so
+existing callers are unchanged:
+
+```dart
+final advisor = SnowAwarePretripAdvisor(
+  messages: PretripMessages.forLanguage(locale.languageCode), // 'ja' → Japanese
+);
+```
+
+`PretripMessages.en` (default + fallback) and `PretripMessages.ja` ship today;
+`forLanguage` degrades to English for any language not carried (it never
+throws). Measured numbers — visibility, temperature, minutes, hours — are
+identical in every locale; only the surrounding words change, so a translation
+can never restate a safety value.
+
 ## Full reference integration (Flutter)
 
 A standalone, edge-developer-shaped Flutter app that assembles and RENDERS a

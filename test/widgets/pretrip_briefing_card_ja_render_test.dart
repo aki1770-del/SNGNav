@@ -47,7 +47,12 @@ void main() {
     }
     final dep = DateTime(2026, 1, 1, 7, 15);
     final issued = DateTime(2026, 1, 1, 6, 0);
-    const advisor = SnowAwarePretripAdvisor();
+    // The reason chips read in Japanese too now — the same locale resolution
+    // main.dart performs for a `ja` driver, so this PNG shows the whole safety
+    // surface (verdict + reasons + checklist + winter guidance) as HER mother
+    // actually receives it. Only the data-source caption stays English (the
+    // remaining named gap, shown not hidden).
+    final advisor = SnowAwarePretripAdvisor(messages: PretripMessages.ja);
 
     // A whiteout-now, clear-later morning → a wait/hazard verdict with a delay.
     final forecast = WeatherForecast(

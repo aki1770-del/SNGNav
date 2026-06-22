@@ -24,6 +24,7 @@ library;
 import 'commute_shape.dart';
 import 'driver_profile_spec.dart';
 import 'pretrip_advisor.dart';
+import 'pretrip_messages.dart';
 import 'pretrip_recommendation.dart';
 import 'weather_forecast.dart';
 
@@ -101,10 +102,16 @@ class PretripBriefing {
 class SnowAwarePretripAdvisor implements PretripAdvisor {
   const SnowAwarePretripAdvisor({
     this.searchHorizon = const Duration(hours: 6),
+    this.messages = PretripMessages.en,
   });
 
   /// How far past the planned departure a better window is searched for.
   final Duration searchHorizon;
+
+  /// The locale table the reason chips are written in. Defaults to English so
+  /// every existing caller is unchanged; pass [PretripMessages.ja] (or
+  /// [PretripMessages.forLanguage]) to reach a driver in her own language.
+  final PretripMessages messages;
 
   /// Visibility below this is whiteout class — same band as the in-trip
   /// turn-back trigger.
@@ -174,10 +181,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     final staleness = commute.plannedDeparture.difference(forecast.issuedAt);
     void addStalenessChip() {
       if (staleness > staleAfter) {
-        chips.add(
-          'Forecast is ${staleness.inHours} h old at departure — '
-          'check conditions again before leaving.',
-        );
+        chips.add(messages.stalenessChip(staleness.inHours));
       }
     }
 
@@ -191,7 +195,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
     switch (peak) {
       case HourHazard.clear:
-        chips.add('No winter hazard signals in your trip window.');
+        chips.add(messages.noWinterHazard());
         addStalenessChip();
         return PretripBriefing(
           verdict: PretripVerdict.clear,
@@ -207,7 +211,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
       case HourHazard.caution:
         chips.add(_describe(worstSlot));
-        chips.add('Allow extra time and keep distance — no delay suggested.');
+        chips.add(messages.allowExtraTime());
         addStalenessChip();
         return PretripBriefing(
           verdict: PretripVerdict.caution,
@@ -229,16 +233,11 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         if (!delayUrgeable) {
           // Honesty rule: required (or unknown) commute — never urge a delay.
           if (betterDelay != null) {
-            chips.add(
-              'Conditions look better around '
-              '${_hhmm(commute.plannedDeparture.add(betterDelay))}, '
-              'if your schedule allows.',
-            );
+            chips.add(messages.conditionsLookBetterIfAllows(
+              _hhmm(commute.plannedDeparture.add(betterDelay)),
+            ));
           }
-          chips.add(
-            'This trip is marked required — no delay urged. '
-            'Prepare before leaving; your judgment decides.',
-          );
+          chips.add(messages.requiredNoDelayUrged());
           addStalenessChip();
           return PretripBriefing(
             verdict: PretripVerdict.requiredTripHazard,
@@ -255,15 +254,11 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
         if (betterDelay != null) {
           final delay = betterDelay + margin;
-          chips.add(
-            'Conditions improve by about '
-            '${_hhmm(commute.plannedDeparture.add(betterDelay))}.',
-          );
+          chips.add(messages.conditionsImproveBy(
+            _hhmm(commute.plannedDeparture.add(betterDelay)),
+          ));
           if (margin > Duration.zero) {
-            chips.add(
-              'Extra ${margin.inMinutes} min margin added for your '
-              'reaction-time profile.',
-            );
+            chips.add(messages.reactionMargin(margin.inMinutes));
           }
           addStalenessChip();
           return PretripBriefing(
@@ -281,11 +276,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
           );
         }
 
-        chips.add(
-          'No clearly better departure window within the next '
-          '${searchHorizon.inHours} h — consider whether this trip is '
-          'needed today.',
-        );
+        chips.add(messages.noBetterWindow(searchHorizon.inHours));
         addStalenessChip();
         return PretripBriefing(
           verdict: PretripVerdict.hazardPersists,
@@ -388,36 +379,34 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     final at = _hhmm(slot.hour);
     final vis = slot.visibilityMeters;
     if (vis != null && vis < whiteoutVisibilityMeters) {
-      return 'Visibility may drop to ~${vis.round()} m around $at — '
-          'whiteout conditions.';
+      return messages.visibilityWhiteout(vis.round(), at);
     }
     if (slot.estimatedRoadCondition == RoadConditionEstimate.ice) {
-      return 'Icy roads expected around $at.';
+      return messages.icyRoads(at);
     }
     if (slot.estimatedRoadCondition == RoadConditionEstimate.packedSnow) {
-      return 'Packed snow expected around $at.';
+      return messages.packedSnow(at);
     }
     final precip = slot.precipitationMmPerHour;
     if (precip != null && precip > 0 && slot.tempCelsius <= icingTempCelsius) {
-      return 'Precipitation near freezing around $at — icy patches likely.';
+      return messages.precipNearFreezing(at);
     }
     if (vis != null && vis < nearWhiteoutVisibilityMeters) {
-      return 'Visibility may drop to ~${vis.round()} m around $at.';
+      return messages.visibilityReducedNearWhiteout(vis.round(), at);
     }
     if (slot.estimatedRoadCondition == RoadConditionEstimate.slush) {
-      return 'Slush possible around $at.';
+      return messages.slushPossible(at);
     }
     if (precip != null && precip > 0 && slot.tempCelsius <= 2.0) {
-      return 'Cold rain around $at — surfaces may be slick.';
+      return messages.coldRain(at);
     }
     if (vis != null && vis < 500) {
-      return 'Reduced visibility (~${vis.round()} m) around $at.';
+      return messages.reducedVisibility(vis.round(), at);
     }
     if (slot.tempCelsius <= frostTempCelsius) {
-      return 'Freezing air (${slot.tempCelsius.round()} °C) around $at — '
-          'frost or black ice possible.';
+      return messages.freezingAir(slot.tempCelsius.round(), at);
     }
-    return 'Winter conditions possible around $at.';
+    return messages.winterConditionsPossible(at);
   }
 
   String _hhmm(DateTime t) =>

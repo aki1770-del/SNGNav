@@ -746,7 +746,14 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// `--dart-define=PRETRIP_FORECAST=met_norway` AND the fetch succeeded;
   /// the "trip required" switch demonstrates the contract's honesty rule.
   Widget _buildPretripView() {
-    const advisor = SnowAwarePretripAdvisor();
+    // The reason chips read in the driver's own language — Japanese for HER
+    // mother in Akita — resolved from the app's active locale, the same source
+    // the card's structural strings use below.
+    final advisor = SnowAwarePretripAdvisor(
+      messages: PretripMessages.forLanguage(
+        Localizations.localeOf(context).languageCode,
+      ),
+    );
     final live = _pretripLiveForecast;
     var forecast = live ?? _pretripForecast;
     final departure =
