@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.0.3 — 2026-06-22 — License documentation correction
+
+- **Docs/metadata-only; no source, behaviour, or API change.** Corrects the
+  stated MET Norway DATA license in the README and the LICENSE data-note. The
+  freely-available forecast data is **dual-licensed** (unless otherwise
+  specified) under the **Norwegian Licence for Open Government Data (NLOD)
+  2.0** AND **Creative Commons Attribution 4.0 International (CC BY 4.0)** — the
+  previous README/LICENSE under-stated it as CC BY 4.0 only.
+- Uses MET Norway's verbatim suggested credit **"Data from MET Norway"**,
+  credits **The Norwegian Meteorological Institute (MET Norway)**, and adds the
+  appreciated source link <https://api.met.no/>.
+- Fixes the stale **"Phase: explore — v0.0.1"** status label to track the
+  current version.
+- Declares `license: BSD-3-Clause` in `pubspec.yaml`, matching the sibling
+  `pretrip_source_met_norway` metadata (closes a pubspec license-declaration
+  gap).
+- The package CODE license is unchanged: **BSD 3-Clause**. (The DATA license
+  and the CODE license are separate.)
+
 ## 0.0.2 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).

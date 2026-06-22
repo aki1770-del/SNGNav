@@ -4,7 +4,7 @@ description: >-
   pretrip_decision_advisor contract. Maps the global locationforecast
   compact product to a WeatherForecast measurement for the pre-trip
   "Before you drive" briefing. Pure Dart.
-version: 0.1.0
+version: 0.1.1
 license: BSD-3-Clause
 
 repository: https://github.com/aki1770-del/SNGNav

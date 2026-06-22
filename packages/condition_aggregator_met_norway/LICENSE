@@ -34,8 +34,11 @@ This package is software code. The package code itself is released under
 the BSD 3-Clause License above.
 
 The package CONSUMES weather data from MET Norway (Meteorologisk
-institutt) which is licensed CC-BY-4.0. CC-BY-4.0 attribution to MET
-Norway is REQUIRED at the consumer-surface where the data is rendered;
-see README.md "License + attribution" and AdvisorySource.metNorway's
-attributionString in the parent condition_aggregator interface for the
-canonical credit line.
+institutt) which is dual-licensed (unless otherwise specified) under the
+Norwegian Licence for Open Government Data (NLOD) 2.0 AND the Creative
+Commons Attribution 4.0 International (CC BY 4.0) licence. Attribution to
+The Norwegian Meteorological Institute (MET Norway) is REQUIRED at the
+consumer-surface where the data is rendered ("Data from MET Norway"; a
+link to https://api.met.no/ is also appreciated); see README.md "License
++ attribution" and AdvisorySource.metNorway's attributionString in the
+parent condition_aggregator interface for the canonical credit line.

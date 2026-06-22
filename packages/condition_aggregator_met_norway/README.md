@@ -9,10 +9,12 @@ Pure Dart. Only `http` and `condition_aggregator` runtime dependencies.
 
 ## Status
 
-Phase: explore — v0.0.1. First slice; ships against the public MET
-Norway `locationforecast/2.0/compact` endpoint with a heuristic
-mapping from the next-hour forecast slice to a driver-actionable
-`Advisory` typed event.
+Phase: explore — v0.0.3. The first-slice feature set (documented below as
+"v0.0.1") still stands; 0.0.2 was dependency hygiene and 0.0.3 is a
+license-documentation correction — neither changed behaviour. Ships against
+the public MET Norway `locationforecast/2.0/compact` endpoint with a heuristic
+mapping from the next-hour forecast slice to a driver-actionable `Advisory`
+typed event.
 
 This is the **second** adapter under the Nordic-region adapter family
 (first is
@@ -94,15 +96,26 @@ integrator-overridable at construction time.
 
 This package code is licensed under [BSD 3-Clause](LICENSE).
 
-**MET Norway data is licensed CC-BY-4.0.** Attribution is REQUIRED by
-the license at the consumer-facing surface, not optional. The adapter
-emits the parent interface's verbatim attribution string in the
-`Advisory.description` field:
+**MET Norway forecast data is dual-licensed** (unless otherwise specified)
+under the **Norwegian Licence for Open Government Data (NLOD) 2.0** AND the
+**Creative Commons Attribution 4.0 International (CC BY 4.0)** licence; an
+integrator may rely on either. Attribution is REQUIRED at the consumer-facing
+surface, not optional. Per MET Norway: *"Credit should be given to The
+Norwegian Meteorological Institute, shortened MET Norway, as the source of
+data."* The suggested credit is:
+
+> Data from MET Norway
+
+A link to the source where the data can be downloaded is also appreciated:
+<https://api.met.no/>.
+
+For convenience the adapter also emits the parent interface's verbatim
+attribution string in the `Advisory.description` field:
 
 > Source: Norwegian Meteorological Institute (Meteorologisk institutt
 > / MET Norway). CC BY 4.0 — api.met.no.
 
-Integrators MUST surface that line at the HMI layer where the
+Integrators MUST surface a credit line at the HMI layer where the
 advisory is rendered. See
 `AdvisorySource.metNorway.attributionString` in the parent
 `condition_aggregator` interface for the canonical credit line.

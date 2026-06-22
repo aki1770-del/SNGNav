@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.1 — 2026-06-22 — License documentation correction
+
+- **Docs-only; no behaviour, API, or dependency change.** Corrects the stated
+  MET Norway DATA license in the README. The freely-available forecast data is
+  **dual-licensed** (unless otherwise specified) under the **Norwegian Licence
+  for Open Government Data (NLOD) 2.0** AND **Creative Commons Attribution 4.0
+  International (CC BY 4.0)** — the previous README under-stated it as CC BY 4.0
+  only.
+- Uses MET Norway's verbatim suggested credit **"Data from MET Norway"**,
+  credits **The Norwegian Meteorological Institute (MET Norway)** as the source
+  of data, and adds the appreciated source link <https://api.met.no/>.
+- The package CODE license is unchanged: **BSD 3-Clause**. (The DATA license
+  and the CODE license are separate.)
+
 ## 0.1.0 — 2026-06-14 — Initial extraction
 
 - Initial release of the MET Norway hourly-forecast **source** for the
