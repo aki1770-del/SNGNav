@@ -2,8 +2,11 @@
 
 ## 0.3.0
 
-Add a localization seam for the reason chips — **non-breaking**. English stays
-the default and existing output is byte-for-byte unchanged.
+Add a localization seam for the reason chips and an offline daylight clock —
+**non-breaking**. English stays the default and existing output is byte-for-byte
+unchanged; the daylight clock is silent unless a trip opts in via `geo`.
+
+Localization seam:
 
 - Add `PretripMessages` — a hand-rolled, pure-Dart locale table for the
   advisor's reason chips. `PretripMessages.en` (default + fallback) and
@@ -12,10 +15,26 @@ the default and existing output is byte-for-byte unchanged.
 - `SnowAwarePretripAdvisor` gains an optional `messages` parameter
   (defaults to `PretripMessages.en`), so every existing caller is unchanged.
   Pass `PretripMessages.ja` to emit the same deterministic logic in Japanese.
+- Add abstract `PretripMessages.daylightChip(TripDaylight)`, overridden in
+  `en`/`ja`, for the daylight-clock note (below).
 - Measured safety numbers (visibility, temperature, minutes, hours) pass
   through every locale verbatim — a translation reorders words, never a value.
-- No behaviour change: verdicts, thresholds, and the honesty rule are identical
-  across locales; only the chip wording differs.
+
+Offline daylight clock:
+
+- Add `TripGeo` (latitude/longitude/utcOffset value type), `TripDaylight` +
+  `DaylightPhase` (the solar facts for one trip instant — phase, sunrise/sunset
+  HH:MM, reference event, minutes-to-event, deep-dark flag; value-equality DTO),
+  and the top-level `evaluateDaylight(instant, geo)` — pure Dart, no network and
+  no clock, so the answer survives the compound-failure (no GPS / no maps) path.
+  It states only light and time and never infers a road hazard from the clock.
+- `CommuteShape` gains an optional `geo` field (**defaults `null`** = feature
+  absent, fully backward compatible). When set, `brief(...)` adds one daylight
+  note for the darkest of departure/arrival/worst-hazard instant; when `null`,
+  output is unchanged.
+- No behaviour change for existing callers: verdicts, thresholds, and the
+  honesty rule are identical across locales and with no `geo`; only the chip
+  wording differs by locale, and the daylight note is opt-in via `geo`.
 
 ## 0.2.1
 

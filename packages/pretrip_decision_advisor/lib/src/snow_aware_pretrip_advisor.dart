@@ -22,6 +22,7 @@
 library;
 
 import 'commute_shape.dart';
+import 'daylight.dart';
 import 'driver_profile_spec.dart';
 import 'pretrip_advisor.dart';
 import 'pretrip_messages.dart';
@@ -185,6 +186,16 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       }
     }
 
+    // Offline daylight clock: a light/time note when the trip falls in
+    // low-light hours. Stays silent unless the commute carries a [TripGeo], and
+    // never asserts a road hazard from the time of day alone.
+    void addDaylightChip() {
+      final daylight = _selectDaylight(commute);
+      if (daylight != null) {
+        chips.add(messages.daylightChip(daylight));
+      }
+    }
+
     // Calibration-only margin (never strength).
     final margin = profile.reactionTimeSeconds >= slowReactionSeconds
         ? slowReactionMargin
@@ -197,6 +208,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       case HourHazard.clear:
         chips.add(messages.noWinterHazard());
         addStalenessChip();
+        addDaylightChip();
         return PretripBriefing(
           verdict: PretripVerdict.clear,
           chips: List.unmodifiable(chips),
@@ -213,6 +225,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         chips.add(_describe(worstSlot));
         chips.add(messages.allowExtraTime());
         addStalenessChip();
+        addDaylightChip();
         return PretripBriefing(
           verdict: PretripVerdict.caution,
           chips: List.unmodifiable(chips),
@@ -239,6 +252,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
           }
           chips.add(messages.requiredNoDelayUrged());
           addStalenessChip();
+          addDaylightChip();
           return PretripBriefing(
             verdict: PretripVerdict.requiredTripHazard,
             chips: List.unmodifiable(chips),
@@ -261,6 +275,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
             chips.add(messages.reactionMargin(margin.inMinutes));
           }
           addStalenessChip();
+          addDaylightChip();
           return PretripBriefing(
             verdict: PretripVerdict.waitAdvised,
             chips: List.unmodifiable(chips),
@@ -278,6 +293,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
         chips.add(messages.noBetterWindow(searchHorizon.inHours));
         addStalenessChip();
+        addDaylightChip();
         return PretripBriefing(
           verdict: PretripVerdict.hazardPersists,
           chips: List.unmodifiable(chips),
@@ -414,4 +430,32 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
   String _hhmm(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  /// Pick the daylight facts for the darkest of the trip's GENUINE instants —
+  /// departure and arrival (departure + duration) — so a PRE-DAWN departure or
+  /// a dark arrival is covered. The worst-hazard slot is deliberately NOT a
+  /// candidate: its hour-start can fall outside the actual trip window, which
+  /// would make the chip's "your departure/trip" wording name a time the driver
+  /// is not on the road (a wrong clock is worse than no chip). Returns null when
+  /// the commute carries no [TripGeo] or when every candidate is in full
+  /// daylight (no low-light note to make).
+  TripDaylight? _selectDaylight(CommuteShape commute) {
+    final geo = commute.geo;
+    if (geo == null) return null;
+
+    final candidates = <DateTime>[
+      commute.plannedDeparture,
+      commute.plannedDeparture.add(commute.plannedDuration),
+    ];
+
+    TripDaylight? darkest;
+    for (final instant in candidates) {
+      final d = evaluateDaylight(instant, geo);
+      if (darkest == null || d.severity > darkest.severity) {
+        darkest = d;
+      }
+    }
+    if (darkest == null || darkest.severity == 0) return null;
+    return darkest;
+  }
 }

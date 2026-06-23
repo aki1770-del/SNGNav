@@ -281,6 +281,14 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
+  // Route-local civil offset OVERRIDE for the offline daylight clock, in integer
+  // minutes from UTC (e.g. `--dart-define=PRETRIP_UTC_OFFSET_MIN=540` for JST
+  // +9 h). Null (unset) means "derive the offset from the departure instant's
+  // device-local offset" — see [_buildPretripView] for the full rationale and
+  // the cross-timezone limitation this override exists to cover.
+  static final int? _pretripUtcOffsetMin =
+      int.tryParse(const String.fromEnvironment('PRETRIP_UTC_OFFSET_MIN'));
+
   static final WeatherForecast _pretripForecast = WeatherForecast(
     issuedAt: DateTime(2026, 1, 1, 6, 0),
     hourly: [
@@ -757,8 +765,14 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     );
     final live = _pretripLiveForecast;
     var forecast = live ?? _pretripForecast;
+    // Normalize the departure instant ONCE at its single source so the offset
+    // AND the instant handed to [CommuteShape] share the same converted value.
+    // `.toLocal()` is a no-op for the local DateTimes we have today (the demo
+    // literal 07:15 and the live DateTime.now() are both local), but if a
+    // future path stamps the departure UTC, converting here keeps the daylight
+    // clock's raw wall-clock fields and the route offset consistent.
     final departure =
-        live != null ? _pretripLiveDeparture! : _pretripDeparture;
+        (live != null ? _pretripLiveDeparture! : _pretripDeparture).toLocal();
 
     // Real measured visibility merges into the departure hour ONLY, and only
     // on top of a live forecast (never the fixed demo timeline).
@@ -790,6 +804,38 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             (_pretripForecastSource == 'met_norway'
                 ? strings.liveFetchUnavailableSuffix
                 : '');
+    // OFFLINE DAYLIGHT CLOCK — route-local civil offset for the daylight chip.
+    //
+    // The [CommuteShape] departure above is a NAIVE wall-clock time in the
+    // ROUTE's civil timezone (the demo literal 07:15 and the live
+    // DateTime.now() the resolver stamps are both LOCAL DateTimes; `departure`
+    // is `.toLocal()`-normalized at its source). The daylight astronomy needs
+    // that route offset to know when the trip crosses sunset into the refreeze
+    // + 薄暮 (twilight) hours.
+    //
+    // SOURCE OF TRUTH (offline, zero-dep): the local UTC offset of the
+    // already-converted departure instant — `departure.timeZoneOffset`. Because
+    // `departure` was `.toLocal()`-converted at its single source, this offset
+    // and the wall-clock fields the package reads come from the SAME instant, so
+    // a future UTC-stamped departure cannot leave the offset and the clock out
+    // of step. This is EXACTLY correct whenever the device timezone == the route
+    // timezone — HER dominant case (a Japanese device driving in/to Japan,
+    // JST +9, no DST).
+    //
+    // LIMITATION: when the route and the device are in DIFFERENT timezones (a
+    // cross-zone edge developer), the device offset is wrong for the route, so
+    // pass `--dart-define=PRETRIP_UTC_OFFSET_MIN=<minutes>` to override. We
+    // deliberately do NOT guess from longitude/15: a solar guess can mis-place
+    // HER wall clock by up to an hour, and a wrong sunrise time is worse than no
+    // chip at all.
+    final utcOffset = _pretripUtcOffsetMin != null
+        ? Duration(minutes: _pretripUtcOffsetMin!)
+        : departure.timeZoneOffset;
+    final geo = TripGeo(
+      latitude: _pretripLat,
+      longitude: _pretripLon,
+      utcOffset: utcOffset,
+    );
     final commute = CommuteShape(
       plannedDeparture: departure,
       plannedDuration: _pretripWindow,
@@ -797,6 +843,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       flexibility: _pretripTripRequired
           ? CommuteFlexibility.required
           : CommuteFlexibility.discretionary,
+      geo: geo,
     );
     final briefing = advisor.brief(
       forecast: forecast,

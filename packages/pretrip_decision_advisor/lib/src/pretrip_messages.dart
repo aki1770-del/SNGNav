@@ -22,6 +22,8 @@
 /// `HH:MM` clock.
 library;
 
+import 'daylight.dart';
+
 /// The localized chip strings the advisor emits. Resolve one for the active
 /// language; [PretripMessages.en] is the default and the fallback for any
 /// language this package does not (yet) carry.
@@ -103,6 +105,14 @@ abstract class PretripMessages {
 
   /// Generic winter conditions around [at].
   String winterConditionsPossible(String at);
+
+  // --- Daylight-clock chip --------------------------------------------------
+
+  /// A light/time note for a trip that falls in low-light hours. It states only
+  /// light and time — never a road hazard inferred from the clock — branching
+  /// on [d] for pre-dawn vs after-sunset vs polar-night wording. The reference
+  /// time in [TripDaylight.eventHHMM] passes through verbatim.
+  String daylightChip(TripDaylight d);
 }
 
 class _EnPretripMessages extends PretripMessages {
@@ -179,6 +189,31 @@ class _EnPretripMessages extends PretripMessages {
   @override
   String winterConditionsPossible(String at) =>
       'Winter conditions possible around $at.';
+
+  @override
+  String daylightChip(TripDaylight d) {
+    switch (d.phase) {
+      // Darkness wording, NOT the forecast's measured-hazard noun
+      // "visibility" — the daylight clock speaks only of light and time, never
+      // a road/atmospheric condition inferred from the clock. The reference
+      // time and the minutes-to-event pass through verbatim.
+      case DaylightPhase.preDawn:
+        return 'Your departure is about ${d.minutesToEvent} min before sunrise '
+            '(around ${d.eventHHMM}) — it will still be dark.';
+      case DaylightPhase.postDusk:
+        return 'Your trip runs to about ${d.minutesToEvent} min past sunset '
+            '(around ${d.eventHHMM}) — driving in the dark.';
+      case DaylightPhase.polarNight:
+        return d.deepDark
+            ? 'The sun does not rise here today — '
+                'the whole trip is in darkness.'
+            : 'The sun does not rise here today — '
+                'only brief twilight around midday.';
+      case DaylightPhase.daylight:
+      case DaylightPhase.polarDay:
+        return 'Daylight for your whole trip.';
+    }
+  }
 }
 
 class _JaPretripMessages extends PretripMessages {
@@ -253,4 +288,26 @@ class _JaPretripMessages extends PretripMessages {
   @override
   String winterConditionsPossible(String at) =>
       '$at頃、冬季の気象条件となる可能性があります。';
+
+  @override
+  String daylightChip(TripDaylight d) {
+    switch (d.phase) {
+      // 視界(視程)は予報の計測ハザード用の語。日照クロックは「光と時刻」だけを述べ、
+      // 時刻から路面・気象状況を推測しない — だから「暗い」だけを用い、視界には触れない。
+      // 時刻と日の出までの分数はそのまま通す。
+      case DaylightPhase.preDawn:
+        return '出発は日の出(${d.eventHHMM}頃)の約${d.minutesToEvent}分前です。'
+            '暗い中での運転になります。';
+      case DaylightPhase.postDusk:
+        return '移動は日の入り(${d.eventHHMM}頃)の約${d.minutesToEvent}分後に及びます。'
+            '暗い中での運転になります。';
+      case DaylightPhase.polarNight:
+        return d.deepDark
+            ? '本日この地点では日が昇りません。移動は終日暗い中となります。'
+            : '本日この地点では日が昇りません(正午前後にわずかな薄明のみ)。';
+      case DaylightPhase.daylight:
+      case DaylightPhase.polarDay:
+        return '移動中は終日明るい時間帯です。';
+    }
+  }
 }

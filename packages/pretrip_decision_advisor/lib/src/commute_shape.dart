@@ -1,3 +1,5 @@
+import 'trip_geo.dart';
+
 /// How flexible a planned commute is with respect to departure timing.
 enum CommuteFlexibility {
   /// Required commute. Departure delay may incur cost (employer or
@@ -24,6 +26,7 @@ class CommuteShape {
     required this.routeIdentifiers,
     required this.flexibility,
     required this.plannedDeparture,
+    this.geo,
   });
 
   /// Planned trip duration as estimated by the caller.
@@ -38,6 +41,11 @@ class CommuteShape {
   /// Planned departure time.
   final DateTime plannedDeparture;
 
+  /// Where the trip happens, for the offline daylight clock. Null means the
+  /// feature is absent: no daylight chip is emitted and behaviour is exactly as
+  /// before this field existed (fully backward compatible).
+  final TripGeo? geo;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -45,7 +53,8 @@ class CommuteShape {
         other.plannedDuration == plannedDuration &&
         _listEquals(other.routeIdentifiers, routeIdentifiers) &&
         other.flexibility == flexibility &&
-        other.plannedDeparture == plannedDeparture;
+        other.plannedDeparture == plannedDeparture &&
+        other.geo == geo;
   }
 
   @override
@@ -54,6 +63,7 @@ class CommuteShape {
     Object.hashAll(routeIdentifiers),
     flexibility,
     plannedDeparture,
+    geo,
   );
 }
 
