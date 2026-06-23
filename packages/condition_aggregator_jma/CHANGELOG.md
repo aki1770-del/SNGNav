@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 — 2026-06-24 — Public API: jmaPrefectureName
+
+- Add public `jmaPrefectureName(String code)` (exported via the barrel) — maps a JMA
+  prefecture code (e.g. `050000`) to its name, so a consumer UI can show an honest
+  place label instead of a raw numeric code.
+- No behaviour change to the advisory-mapping path.
+
 ## 0.1.4 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).
