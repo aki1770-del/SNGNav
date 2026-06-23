@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.0
+
+Add the destination-AREA condition read (the FAMILY-THREAD section) — a
+PUBLIC-WEATHER-AT-A-PLACE read that watches no person and claims no road.
+
+**BREAKING (source-incompatible for downstream language subclasses):**
+`PretripMessages` gained eight required members — `areaOfficialWarning`,
+`areaNoOfficialWarning`, `areaWarningCheckUnavailable`, `areaHazardChip`,
+`areaHazardBand`, `areaForecastNotCovered`, `areaMeasuredVisibility`,
+`areaNoMeasuredVisibility`. Any downstream `class _Xx extends PretripMessages`
+(e.g. a Korean locale) must add these eight `area*` overrides to compile.
+`PretripMessages.en` / `.ja` carry them; `forLanguage` is unchanged.
+
+Honesty hardening on the area chips:
+
+- `areaOfficialWarning` (en) now frames the verbatim event as "winter warning
+  or advisory" so a JMA 注意報 (advisory) is never upgraded to a "warning" in
+  English. The verbatim event name still carries the precise class.
+- `areaNoOfficialWarning` is scoped to "snow" (en + ja) — it states only the
+  negative actually checked (snow-class), never a wider all-winter negative it
+  did not verify.
+
 ## 0.3.0
 
 Add a localization seam for the reason chips and an offline daylight clock —

@@ -85,6 +85,24 @@ kJmaPrefectureBoundingBoxes =
       ), // Niigata
     };
 
+/// Readable prefecture NAMES for the 0.1.0 snow-zone catalog codes — for a
+/// place LABEL in a driver-facing surface, so a destination area never renders
+/// as a bare numeric office code (e.g. '050000'). Codes mirror
+/// [kJmaPrefectureBoundingBoxes]; any code outside the catalog returns null via
+/// [jmaPrefectureName] (the caller falls back to a localized generic phrase).
+const Map<String, String> kJmaPrefectureNames = <String, String>{
+  '010000': 'Hokkaido',
+  '020000': 'Aomori',
+  '030000': 'Iwate',
+  '050000': 'Akita',
+  '060000': 'Yamagata',
+  '150000': 'Niigata',
+};
+
+/// The readable prefecture name for a JMA prefecture [code], or null when the
+/// code is not in the 0.1.0 catalog (so the caller never renders a bare code).
+String? jmaPrefectureName(String code) => kJmaPrefectureNames[code];
+
 /// Resolves a WGS84 lat/lon to a JMA prefecture code in the 0.1.0
 /// catalog. Returns null if the point falls outside every catalogued
 /// bounding box. Iteration is deterministic over `Map` iteration

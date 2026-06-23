@@ -53,6 +53,8 @@ export 'src/jma_advisory_mapper.dart'
         mapJmaForecastToAdvisory,
         kJmaSnowAdvisoryEventNames,
         kJmaPrefectureBoundingBoxes,
+        kJmaPrefectureNames,
+        jmaPrefectureName,
         prefectureCodeForPoint,
         parseJmaAtomFeed,
         parseJmaReportXml,

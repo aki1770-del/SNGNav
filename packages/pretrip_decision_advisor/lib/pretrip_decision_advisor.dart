@@ -6,6 +6,7 @@
 /// network, no Flutter. See `README.md` and `KNOWN_LIMITATIONS.md`.
 library;
 
+export 'src/area_condition_read.dart';
 export 'src/commute_shape.dart';
 export 'src/daylight.dart';
 export 'src/driver_profile_spec.dart';

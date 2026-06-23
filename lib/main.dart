@@ -42,6 +42,7 @@ import 'providers/serial_nmea_location_provider.dart';
 import 'providers/winter_knowledge.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
 import 'widgets/briefing_strings.dart';
+import 'widgets/family_area_card.dart';
 import 'widgets/pretrip_briefing_card.dart';
 
 void main() {
@@ -279,6 +280,29 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   void Function()? _pretripVisibilityClose;
   VisibilityObservation? _pretripVisibility;
 
+  // DESTINATION-AREA condition read (the FAMILY-THREAD section): the PUBLIC
+  // weather + official advisory at a PLACE — "what conditions will SHE face in
+  // her mother's area if she drives there", so she decides whether/when to go.
+  //
+  // The destination point comes ONLY from these static defines. It NEVER reads
+  // a device location, a presence signal, or any person — and the fetch fires
+  // EXACTLY ONCE from initState (no Timer, no Stream, no scheduled refresh):
+  // background polling of "her area" would be 見守り-by-proxy, and is forbidden.
+  // Unparseable overrides ⇒ the feature is OFF (null), never a guessed point.
+  static final double? _pretripDestLat =
+      double.tryParse(const String.fromEnvironment('PRETRIP_DEST_LAT'));
+  static final double? _pretripDestLon =
+      double.tryParse(const String.fromEnvironment('PRETRIP_DEST_LON'));
+  static const String _pretripDestLabel =
+      String.fromEnvironment('PRETRIP_DEST_LABEL');
+
+  void Function()? _destVisibilityClose;
+  MetNorwayHourlyForecastProvider? _destForecastProvider;
+
+  /// The destination-area read; null until a real fetch delivers (honest floor
+  /// — the section is simply omitted), never a fabricated value.
+  AreaConditionRead? _destAreaRead;
+
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
   // Route-local civil offset OVERRIDE for the offline daylight clock, in integer
@@ -372,6 +396,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _initLocation();
     _initPretripForecast();
     _initPretripVisibility();
+    _initDestAreaCondition();
     _initWinterKnowledge();
   }
 
@@ -461,6 +486,105 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       _pretripJmaEventName = result.jmaEventName;
       _pretripJmaPrefecture = result.prefectureCode;
     });
+  }
+
+  /// Fetches the DESTINATION-AREA condition read (the FAMILY-THREAD section):
+  /// the PUBLIC weather + official advisory at her mother's PLACE, so SHE
+  /// decides whether/when to drive there. ON-DEMAND ONLY — called EXACTLY ONCE
+  /// from [initState]; there is NO Timer, NO Stream, NO scheduled refresh and
+  /// NO notification: polling "her area" in the background would be 見守り-by-
+  /// proxy, which is forbidden. It watches no person — the point comes ONLY
+  /// from the static PRETRIP_DEST_* defines.
+  ///
+  /// Gated on the SAME live-forecast opt-in as the briefing, plus a configured
+  /// destination point. Degrades honestly on every failure path: a null forecast
+  /// (or no opt-in) leaves [_destAreaRead] null and the section is omitted —
+  /// never a fabricated value.
+  Future<void> _initDestAreaCondition() async {
+    if (_pretripForecastSource != 'met_norway' ||
+        _pretripDestLat == null ||
+        _pretripDestLon == null) {
+      return; // feature off — no point or no live source
+    }
+    final destLat = _pretripDestLat!;
+    final destLon = _pretripDestLon!;
+
+    final met = MetNorwayHourlyForecastProvider();
+    _destForecastProvider = met;
+    final jma = JmaAdvisoryProvider();
+    final result = await resolvePretripLiveForecast(
+      latitude: destLat,
+      longitude: destLon,
+      now: DateTime.now(),
+      window: _pretripWindow,
+      fetchMetForecast: () =>
+          met.fetchForecast(latitude: destLat, longitude: destLon),
+      fetchJmaAdvisories: () async {
+        await jma.init();
+        try {
+          return await jma.fetchActiveAdvisoriesAtPoint(
+            latitude: destLat,
+            longitude: destLon,
+          );
+        } finally {
+          jma.close();
+        }
+      },
+    );
+    // Honest floor: no live forecast for the area ⇒ no section.
+    if (!mounted || result.forecast == null) return;
+
+    // Optional REAL measured visibility at the DEST point (real sensor or
+    // nothing — never an estimate), gated on the same visibility opt-in.
+    VisibilityObservation? destObs;
+    try {
+      switch (_pretripVisibilitySource) {
+        case 'digitraffic':
+          final p = DigitrafficVisibilityProvider();
+          _destVisibilityClose = p.close;
+          destObs = await p.fetchNearestVisibility(
+              latitude: destLat, longitude: destLon);
+        case 'jma':
+          final p = JmaVisibilityProvider();
+          _destVisibilityClose = p.close;
+          destObs = await p.fetchNearestVisibility(
+              latitude: destLat, longitude: destLon);
+        default:
+          destObs = null;
+      }
+    } catch (_) {
+      destObs = null; // honest floor: no measured visibility, nothing estimated
+    }
+    if (!mounted) return;
+
+    // A readable PLACE label (never a person, never a raw numeric code): the
+    // edge developer's explicit label if set, else the resolved prefecture
+    // NAME for the JMA code, else a LOCALIZED generic place phrase — never the
+    // bare office code (e.g. '050000') and never an English literal leaking
+    // into the Japanese card.
+    final strings =
+        BriefingStrings.of(WidgetsBinding.instance.platformDispatcher.locale);
+    final areaLabel = _pretripDestLabel.isNotEmpty
+        ? _pretripDestLabel
+        : (jmaPrefectureName(result.prefectureCode ?? '') ??
+            strings.genericDestinationArea);
+
+    final read = summarizeAreaConditions(
+      forecast: result.forecast!,
+      now: result.departure ?? DateTime.now(),
+      areaLabel: areaLabel,
+      warningEventVerbatim: result.jmaEventName,
+      // Honest: the official-warning check was actually performed ONLY on the
+      // arms where a warning source returned (JMA merged or JMA no-advisory).
+      // The non-Japan (MET) arm consults NO official-warning source, and a JMA
+      // failure is a gap — both render "check unavailable", never a fabricated
+      // "no warning" negative for an area no source was queried about.
+      warningCheckAvailable:
+          result.status == PretripLiveStatus.japanJmaMerged ||
+              result.status == PretripLiveStatus.japanJmaNoAdvisory,
+      observed: destObs,
+    );
+    setState(() => _destAreaRead = read);
   }
 
   /// Subscribes the held [_assessment] to the LIVE in-vehicle KUKSA condition
@@ -594,6 +718,8 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     _locationBloc?.close();
     _pretripForecastProvider?.close();
     _pretripVisibilityClose?.call();
+    _destForecastProvider?.close();
+    _destVisibilityClose?.call();
     _offlineTileManager?.dispose();
     super.dispose();
   }
@@ -856,25 +982,40 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
-        child: PretripBriefingCard(
-          // The briefing reads in the driver's own language — Japanese for HER
-          // mother in Akita — resolved once from the app's active locale above.
-          strings: strings,
-          briefing: briefing,
-          commute: commute,
-          forecastIssuedAt: forecast.issuedAt,
-          tripRequired: _pretripTripRequired,
-          onTripRequiredChanged: (v) =>
-              setState(() => _pretripTripRequired = v),
-          sourceCaption: caption,
-          // Grounded offline guidance for the surface state the assessment
-          // expects; null (omitted) until the asset loads or for a benign
-          // surface with no baked card. Resolved in the driver's language —
-          // Japanese for HER mother when a verified card exists, else the
-          // grounded English (honest fallback, never blank).
-          winterCard: _winter?.cardFor(
-            _assessment.surfaceState,
-            lang: locale.languageCode,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PretripBriefingCard(
+                // The briefing reads in the driver's own language — Japanese for
+                // HER mother in Akita — resolved once from the active locale above.
+                strings: strings,
+                briefing: briefing,
+                commute: commute,
+                forecastIssuedAt: forecast.issuedAt,
+                tripRequired: _pretripTripRequired,
+                onTripRequiredChanged: (v) =>
+                    setState(() => _pretripTripRequired = v),
+                sourceCaption: caption,
+                // Grounded offline guidance for the surface state the assessment
+                // expects; null (omitted) until the asset loads or for a benign
+                // surface with no baked card. Resolved in the driver's language —
+                // Japanese for HER mother when a verified card exists, else the
+                // grounded English (honest fallback, never blank).
+                winterCard: _winter?.cardFor(
+                  _assessment.surfaceState,
+                  lang: locale.languageCode,
+                ),
+              ),
+              // The FAMILY-THREAD destination-area section (companion to the
+              // daylight clock) — shown only when a real area read delivered.
+              if (_destAreaRead != null)
+                FamilyAreaCard(
+                  read: _destAreaRead!,
+                  messages: PretripMessages.forLanguage(locale.languageCode),
+                  strings: strings,
+                ),
+            ],
           ),
         ),
       ),

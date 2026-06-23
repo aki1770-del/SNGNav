@@ -23,6 +23,7 @@
 library;
 
 import 'daylight.dart';
+import 'snow_aware_pretrip_advisor.dart' show HourHazard;
 
 /// The localized chip strings the advisor emits. Resolve one for the active
 /// language; [PretripMessages.en] is the default and the fallback for any
@@ -113,6 +114,39 @@ abstract class PretripMessages {
   /// on [d] for pre-dawn vs after-sunset vs polar-night wording. The reference
   /// time in [TripDaylight.eventHHMM] passes through verbatim.
   String daylightChip(TripDaylight d);
+
+  // --- Destination-AREA condition chips -------------------------------------
+  // The subject of every area-* string is the WEATHER AT A PLACE — never a
+  // person, an arrival, a presence, or a road. The claim ceiling is "conditions
+  // / official advisory for the AREA": never a road-passability or route claim.
+
+  /// The publisher's official warning (or advisory) for the area, verbatim
+  /// (e.g. 大雪警報). The verbatim event name carries the precise class; the
+  /// frame says "warning or advisory" so it never upgrades an advisory.
+  String areaOfficialWarning(String eventVerbatim);
+
+  /// No active snow warning or advisory for the area. Scoped to "snow" because
+  /// the wired check is snow-class only — it never claims a wider all-winter
+  /// negative it did not actually verify.
+  String areaNoOfficialWarning();
+
+  /// The official-warning check failed — a warning may be in effect, unshown.
+  String areaWarningCheckUnavailable();
+
+  /// The forecast hazard band for the area (uses [areaHazardBand]).
+  String areaHazardChip(HourHazard band);
+
+  /// The human band word for [band] over {clear, caution, elevated, severe}.
+  String areaHazardBand(HourHazard band);
+
+  /// No forecast available for the area in the hours ahead.
+  String areaForecastNotCovered();
+
+  /// Nearest MEASURED visibility for the area (numbers pass through verbatim).
+  String areaMeasuredVisibility(int meters, String station, int km);
+
+  /// No measured visibility available for the area.
+  String areaNoMeasuredVisibility();
 }
 
 class _EnPretripMessages extends PretripMessages {
@@ -214,6 +248,50 @@ class _EnPretripMessages extends PretripMessages {
         return 'Daylight for your whole trip.';
     }
   }
+
+  @override
+  String areaOfficialWarning(String eventVerbatim) =>
+      'Official winter warning or advisory in effect for this area: '
+      '$eventVerbatim.';
+
+  @override
+  String areaNoOfficialWarning() =>
+      'No active snow warning or advisory for this area.';
+
+  @override
+  String areaWarningCheckUnavailable() =>
+      'Official-warning check unavailable — a warning may be in effect that '
+      'is not shown here.';
+
+  @override
+  String areaHazardChip(HourHazard band) =>
+      'Forecast hazard for this area: ${areaHazardBand(band)}.';
+
+  @override
+  String areaHazardBand(HourHazard band) {
+    switch (band) {
+      case HourHazard.clear:
+        return 'no winter hazard signal';
+      case HourHazard.caution:
+        return 'caution';
+      case HourHazard.elevated:
+        return 'elevated';
+      case HourHazard.severe:
+        return 'severe';
+    }
+  }
+
+  @override
+  String areaForecastNotCovered() =>
+      'No forecast available for this area in the hours ahead.';
+
+  @override
+  String areaMeasuredVisibility(int meters, String station, int km) =>
+      'Nearest measured visibility ~$meters m ($station, ~$km km away).';
+
+  @override
+  String areaNoMeasuredVisibility() =>
+      'No measured visibility available for this area.';
 }
 
 class _JaPretripMessages extends PretripMessages {
@@ -310,4 +388,46 @@ class _JaPretripMessages extends PretripMessages {
         return '移動中は終日明るい時間帯です。';
     }
   }
+
+  @override
+  String areaOfficialWarning(String eventVerbatim) =>
+      'この地域で発表中の警報・注意報: $eventVerbatim。';
+
+  @override
+  String areaNoOfficialWarning() =>
+      'この地域に発表中の雪の警報・注意報はありません。';
+
+  @override
+  String areaWarningCheckUnavailable() =>
+      '警報・注意報の確認ができませんでした — 実際には発表されている可能性があります。';
+
+  @override
+  String areaHazardChip(HourHazard band) =>
+      'この地域の予報ハザード: ${areaHazardBand(band)}。';
+
+  @override
+  String areaHazardBand(HourHazard band) {
+    switch (band) {
+      case HourHazard.clear:
+        return '危険の兆候なし';
+      case HourHazard.caution:
+        return '注意';
+      case HourHazard.elevated:
+        return '警戒';
+      case HourHazard.severe:
+        return '重度';
+    }
+  }
+
+  @override
+  String areaForecastNotCovered() =>
+      'この先の時間帯について、この地域の予報データはありません。';
+
+  @override
+  String areaMeasuredVisibility(int meters, String station, int km) =>
+      '最寄りの計測視程: 約${meters}m($station、約${km}km先)。';
+
+  @override
+  String areaNoMeasuredVisibility() =>
+      'この地域の計測視程データはありません。';
 }

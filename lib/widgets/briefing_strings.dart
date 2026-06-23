@@ -119,6 +119,18 @@ abstract class BriefingStrings {
   /// Appended to [simulatedForecastCaption] when a live fetch was requested but
   /// unavailable, so the card never implies live data it does not have.
   String get liveFetchUnavailableSuffix;
+
+  // --- Destination-AREA section ---------------------------------------------
+  // The companion to the daylight clock: a PLACE's public conditions so SHE
+  // decides whether/when to drive there. Watches no person; claims no road.
+  String get destinationAreaTitle;
+  String destinationAreaPlace(String label);
+  String get areaResolutionNote;
+
+  /// A localized generic PLACE phrase for the destination area, used when no
+  /// explicit label and no resolvable prefecture name is available — so the
+  /// Japanese card never falls back to an English literal or a bare code.
+  String get genericDestinationArea;
 }
 
 class _EnBriefingStrings extends BriefingStrings {
@@ -205,6 +217,20 @@ class _EnBriefingStrings extends BriefingStrings {
       'Simulated forecast (demo) — offline, deterministic';
   @override
   String get liveFetchUnavailableSuffix => ' (live fetch unavailable)';
+
+  @override
+  String get destinationAreaTitle => 'Conditions in the destination area';
+  @override
+  String destinationAreaPlace(String label) => 'Area: $label';
+  @override
+  String get areaResolutionNote =>
+      'Area conditions and official advisory only — not road or route status. '
+      'Warnings are prefecture-level; the forecast hazard band reflects a '
+      'single forecast point, not the whole area; measured visibility is the '
+      'nearest station, or unavailable.';
+
+  @override
+  String get genericDestinationArea => 'destination area';
 
   static String _humanStateEn(String state) {
     switch (state) {
@@ -316,4 +342,17 @@ class _JaBriefingStrings extends BriefingStrings {
   String get simulatedForecastCaption => 'シミュレーション予報(デモ)— オフライン・確定的';
   @override
   String get liveFetchUnavailableSuffix => ' (ライブ取得不可)';
+
+  @override
+  String get destinationAreaTitle => '目的地周辺の状況';
+  @override
+  String destinationAreaPlace(String label) => '地域: $label';
+  @override
+  String get areaResolutionNote =>
+      '地域の気象状況と公式の警報・注意報のみを示します — 道路や経路の状況ではありません。'
+      '警報・注意報は県単位、予報ハザードは単一地点の予報(地域全体ではありません)、'
+      '計測視程は最寄りの観測点(またはデータなし)です。';
+
+  @override
+  String get genericDestinationArea => '目的地周辺';
 }
