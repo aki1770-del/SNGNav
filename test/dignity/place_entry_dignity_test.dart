@@ -184,19 +184,21 @@ void main() {
     });
   });
 
-  // The dest path ALSO runs through lib/main.dart (_loadSavedPlace /
-  // _setDestination / _clearDestination / _initDestAreaCondition + the
-  // DestinationEntryTile/showPlaceEntryDialog wiring) — exactly where a future
-  // regression would wire a person-location plugin. The 3-file feature scan
-  // above would NOT catch it, so encode the binding "zero person-location import"
-  // invariant where the dest path actually lives.
-  group('no person-location signal on the dest path (lib-wide + main.dart)', () {
+  // The dest path now runs through lib/widgets/pretrip_screen.dart
+  // (_loadSavedPlace / _setDestination / _clearDestination /
+  // _initDestAreaCondition + the DestinationEntryTile/showPlaceEntryDialog
+  // wiring) after the pre-trip lift, and is still re-driven by lib/main.dart —
+  // exactly where a future regression would wire a person-location plugin. The
+  // 3-file feature scan above would NOT catch it, so encode the binding "zero
+  // person-location import" invariant where the dest path actually lives.
+  group('no person-location signal on the dest path (lib-wide + dest-path files)',
+      () {
     // Match the PACKAGE-IMPORT shape, not bare tokens: 'location' appears 300+×
     // in the legitimate serial-NMEA vehicle GPS and 'presence' twice in
     // disavowal comments — a blanket substring scan would false-positive on
     // today's clean code.
     final personPackage = RegExp(
-        r'package:(geolocator|flutter_contacts|location_share|geofence|nearby|find_?my)');
+        r'package:(geolocator|flutter_contacts|contacts|location_share|geofence|nearby|find_?my|presence)');
 
     bool isImportLine(String line) {
       final t = line.trimLeft();
@@ -218,10 +220,13 @@ void main() {
               'signal on the dest path; found: $offenders');
     });
 
-    test('main.dart import/export lines carry no person-signal token', () {
+    test('dest-path files import/export lines carry no person-signal token', () {
       // Scan only the import/export DIRECTIVE lines so the legitimate 'presence'
       // disavowal comment (and the 'location' in the vehicle-GPS code) does not
-      // false-positive.
+      // false-positive. Both files matter: the dest path was LIFTED into
+      // lib/widgets/pretrip_screen.dart (where her mother's area read now lives),
+      // and lib/main.dart still re-drives it — a person-location plugin wired in
+      // either would slip the token nets, so scan both.
       const forbidden = <String>[
         'contacts',
         'flutter_contacts',
@@ -233,14 +238,20 @@ void main() {
         'location_share',
         'nearby',
       ];
-      final src = read('lib/main.dart');
-      for (final line in const LineSplitter().convert(src)) {
-        if (!isImportLine(line)) continue;
-        final lower = line.toLowerCase();
-        for (final token in forbidden) {
-          expect(lower.contains(token), isFalse,
-              reason: 'main.dart must not import a person-signal package '
-                  '($token): ${line.trim()}');
+      const destPathFiles = <String>[
+        'lib/main.dart',
+        'lib/widgets/pretrip_screen.dart',
+      ];
+      for (final file in destPathFiles) {
+        final src = read(file);
+        for (final line in const LineSplitter().convert(src)) {
+          if (!isImportLine(line)) continue;
+          final lower = line.toLowerCase();
+          for (final token in forbidden) {
+            expect(lower.contains(token), isFalse,
+                reason: '$file must not import a person-signal package '
+                    '($token): ${line.trim()}');
+          }
         }
       }
     });
@@ -254,7 +265,9 @@ void main() {
   group('no scheduled/background re-read of the area (見守り-by-proxy refusal)',
       () {
     test('the dest-area path has no recurring-read primitive', () {
-      final src = read('lib/main.dart');
+      // The dest-path methods were lifted into the shared PretripScreen; the
+      // dignity claim binds wherever the code lives.
+      final src = read('lib/widgets/pretrip_screen.dart');
       // CODE only: strip line comments so a doc comment that legitimately
       // disavows scheduling ("ONE-SHOT (no Timer/Stream)") is not a false
       // positive — we are asserting the code, not the prose.
@@ -271,7 +284,7 @@ void main() {
         final start = src.indexOf(declStr);
         expect(start, greaterThan(-1),
             reason: 'expected $declStr in lib/main.dart');
-        final next = RegExp(r'\n  (?:Future<[^>]*>|void|Widget)\s+_\w+\(')
+        final next = RegExp(r'\n  (?:Future<[^>]*>|void|Widget)\s+\w+\(')
             .firstMatch(src.substring(start + 1));
         expect(next, isNotNull,
             reason: 'a following method declaration must bound $declStr');

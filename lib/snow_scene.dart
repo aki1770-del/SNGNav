@@ -37,12 +37,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:snow_rendering/snow_rendering.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'bloc/consent_bloc.dart';
@@ -59,6 +61,8 @@ import 'config/provider_config.dart';
 import 'providers/simulated_fleet_provider.dart';
 import 'services/consent_database.dart';
 import 'services/sqlite_consent_service.dart';
+import 'widgets/briefing_strings.dart';
+import 'widgets/pretrip_screen.dart';
 import 'widgets/snow_scene_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -221,7 +225,7 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SNGNav Snow Scene v0.3.1',
+      title: 'SNGNav Snow Scene v0.4.0',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -230,9 +234,26 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
         ),
         useMaterial3: true,
       ),
+      // The pre-trip safety briefing (hosted via the shared [PretripScreen] in
+      // the shell below) must reach HER mother in Akita, who reads Japanese —
+      // it follows the device locale (ja → Japanese, any other → the English
+      // fallback). Without these delegates + locales the Japanese silently falls
+      // back to English (a D4 reach failure).
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('en'), Locale('ja')],
+      // LAZY-DRIVE GUARANTEE (load-bearing): every drive BlocProvider below is
+      // explicitly `lazy: true`. This MultiBlocProvider sits ABOVE the shell, so
+      // it PROVIDES the 7 drive BLoCs regardless of the shell's switch arm — the
+      // promise that they are NOT *constructed* while pre-trip is shown rests
+      // ENTIRELY on these `lazy: true` flags. Flipping any one to `lazy: false`
+      // would construct that bloc (and fire its create-cascade: location feed /
+      // Open-Meteo network / route request) at MultiBlocProvider build time,
+      // ABOVE the shell, while pre-trip is up — which the conditional shell
+      // switch does NOT prevent. Do not remove these flags.
       home: MultiBlocProvider(
         providers: [
           BlocProvider(
+            lazy: true,
             create: (_) => LocationBloc(
               // Provider selected via --dart-define=LOCATION_PROVIDER=...
               // Default: Simulated (Route 19 with tunnel scenario).
@@ -241,6 +262,7 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
             )..add(const LocationStartRequested()),
           ),
           BlocProvider(
+            lazy: true,
             create: (_) => RoutingBloc(
               engine: widget.config.createRoutingEngine() ?? _MockRoutingEngine(),
             )
@@ -251,11 +273,13 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
                 destinationLabel: 'Higashiokazaki Station',
               )),
           ),
-          BlocProvider(create: (_) => NavigationBloc()),
+          BlocProvider(lazy: true, create: (_) => NavigationBloc()),
           BlocProvider(
+            lazy: true,
             create: (_) => MapBloc(),
           ),
           BlocProvider(
+            lazy: true,
             create: (_) => WeatherBloc(
               // Provider selected via --dart-define=WEATHER_PROVIDER=...
               // Default: Open-Meteo (real Nagoya weather, no API key).
@@ -264,18 +288,108 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
             )..add(const WeatherMonitorStarted()),
           ),
           BlocProvider(
+            lazy: true,
             create: (_) => ConsentBloc(
               service: SqliteConsentService(widget.consentDb),
             )..add(const ConsentLoadRequested()),
           ),
           BlocProvider(
+            lazy: true,
             create: (_) => FleetBloc(
               provider: SimulatedFleetProvider(),
             ),
           ),
         ],
-        child: SnowSceneScaffold(tileProvider: widget.tileProvider),
+        child: SnowSceneShell(tileProvider: widget.tileProvider),
       ),
     );
+  }
+}
+
+/// Which surface the snow-scene reference app shows: the pre-trip "Before you
+/// drive" safety briefing FIRST (the JAF load-bearing surface), or the live
+/// drive.
+enum _Destination { pretrip, drive }
+
+/// Hosts the shared [PretripScreen] AHEAD of the live drive in the snow-scene
+/// product demo, so the Direction-B reference app proves the SAME pre-trip
+/// safety arc as `lib/main.dart` — pre-trip before drive.
+///
+/// LAZY-DRIVE GUARANTEE: the default destination is [_Destination.pretrip], and
+/// the body switches CONDITIONALLY (an `if`/`switch` child, NEVER an
+/// [IndexedStack]) — so [SnowSceneScaffold] is NOT created until the driver taps
+/// "Start drive". That keeps the 7 drive BLoCs un-created (and the auto-start
+/// drive Timer un-armed) while the pre-trip surface is shown, which is the
+/// structural pre-trip-before-drive guarantee. An [IndexedStack] would mount the
+/// scaffold eagerly and auto-start the drive behind the pre-trip surface.
+///
+/// The guarantee has TWO legs and they cover different failures:
+///   1. The conditional switch (never IndexedStack) keeps [SnowSceneScaffold]
+///      from building while pre-trip is shown — this gates NavigationStarted +
+///      the 8 s auto-advance Timer (both live inside the scaffold's listener
+///      tree). This leg is IndexedStack-regression-proof.
+///   2. The 7 drive BLoCs being *un-constructed* depends SPECIFICALLY on the
+///      `lazy: true` BlocProviders above (in [SnowSceneApp.build]) staying lazy.
+///      Those providers sit ABOVE this shell and provide the blocs regardless of
+///      the switch arm, so the conditional switch does NOT stop bloc
+///      construction — only the default-lazy flag does. Flipping one to
+///      `lazy: false` would fire that bloc's create-cascade while pre-trip is up.
+///
+/// Exposed as a non-private, [visibleForTesting] widget so the positive
+/// transition (tap "Start drive" → [SnowSceneScaffold] mounts) can be exercised
+/// with mocked BLoCs without spinning up [SnowSceneApp]'s real Open-Meteo feed.
+@visibleForTesting
+class SnowSceneShell extends StatefulWidget {
+  const SnowSceneShell({super.key, this.tileProvider});
+
+  final TileProvider? tileProvider;
+
+  @override
+  State<SnowSceneShell> createState() => _SnowSceneShellState();
+}
+
+class _SnowSceneShellState extends State<SnowSceneShell> {
+  _Destination _destination = _Destination.pretrip;
+
+  @override
+  Widget build(BuildContext context) {
+    // The chrome around the briefing must reach HER mother in Akita too: resolve
+    // the localized strings so the AppBar title + Start-drive label follow the
+    // device locale (ja → Japanese) instead of leaking English above a Japanese
+    // briefing card.
+    final strings = BriefingStrings.of(Localizations.localeOf(context));
+    // CONDITIONAL child (never IndexedStack): on pretrip the drive scaffold and
+    // its 7 BLoCs are never built, so the drive does not auto-start behind the
+    // briefing.
+    switch (_destination) {
+      case _Destination.pretrip:
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(strings.beforeYouDrive),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Center(
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.navigation_outlined, size: 18),
+                    label: Text(strings.startDrive),
+                    onPressed: () =>
+                        setState(() => _destination = _Destination.drive),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // surfaceState is a documented FIXED reference constant for the
+          // snow-scene demo (compacted snow — the winter-driving guidance
+          // surface), NOT a live/fabricated sensor read: the pre-trip path here
+          // deliberately does not wire WeatherBloc/KUKSA.
+          body: const PretripScreen(
+            surfaceState: RoadSurfaceState.compactedSnow,
+          ),
+        );
+      case _Destination.drive:
+        return SnowSceneScaffold(tileProvider: widget.tileProvider);
+    }
   }
 }

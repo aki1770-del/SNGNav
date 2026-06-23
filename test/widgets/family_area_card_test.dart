@@ -209,7 +209,8 @@ void main() {
   // `if (_destAreaRead != null)`.
   test('dest fetch fires ONLY from initState + the single HER-action setter, '
       'never self-scheduled', () {
-    final src = File('lib/main.dart').readAsStringSync();
+    // The dest-path orchestration was lifted into the shared PretripScreen.
+    final src = File('lib/widgets/pretrip_screen.dart').readAsStringSync();
 
     // EXACTLY TWO call sites: initState (first read) + _setDestination (the HER-
     // action re-fetch). Count every `_initDestAreaCondition(` (open-paren — so a
@@ -248,7 +249,7 @@ void main() {
     String bodySliceFrom(String declStr) {
       final start = src.indexOf(declStr);
       expect(start, greaterThan(-1));
-      final nextDecl = RegExp(r'\n  (?:Future<void>|void|Widget)\s+_\w+\(')
+      final nextDecl = RegExp(r'\n  (?:Future<void>|void|Widget)\s+\w+\(')
           .firstMatch(src.substring(start + 1));
       expect(nextDecl, isNotNull,
           reason: 'a following method declaration must bound the body slice');
@@ -276,7 +277,7 @@ void main() {
 
   test('the section render is guarded on a non-null read, built exactly once',
       () {
-    final src = File('lib/main.dart').readAsStringSync();
+    final src = File('lib/widgets/pretrip_screen.dart').readAsStringSync();
     expect(src.contains('if (_destAreaRead != null)'), isTrue,
         reason: 'FamilyAreaCard must only build when a real read delivered — '
             'with DEST defines unset, _destAreaRead is null and it is omitted');

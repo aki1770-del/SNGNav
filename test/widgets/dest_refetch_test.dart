@@ -5,15 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
-import 'package:sngnav_snow_scene/main.dart';
+import 'package:snow_rendering/snow_rendering.dart';
 import 'package:sngnav_snow_scene/providers/met_norway_hourly_forecast.dart';
 import 'package:sngnav_snow_scene/services/saved_place_store.dart';
 import 'package:sngnav_snow_scene/widgets/briefing_strings.dart';
 import 'package:sngnav_snow_scene/widgets/family_area_card.dart';
+import 'package:sngnav_snow_scene/widgets/pretrip_screen.dart';
 
 /// A fully OFFLINE fake forecast provider: returns a canned [WeatherForecast]
 /// and records whether it was closed (leak-hygiene assertion). Subclasses the
-/// real provider so it drops into the [OfflineMapPage.destForecastProviderFactory]
+/// real provider so it drops into the [PretripScreen.destForecastProviderFactory]
 /// seam unchanged.
 class FakeMetProvider extends MetNorwayHourlyForecastProvider {
   FakeMetProvider(this._forecast);
@@ -62,9 +63,11 @@ void main() {
   // This test exercises the live dest-area arm. Rather than gating it behind a
   // `--dart-define=PRETRIP_FORECAST=met_norway` (which made it SKIP under a plain
   // `flutter test` and in CI — leaving the _setDestination contract uncovered),
-  // it injects the forecast source via the runtime [OfflineMapPage.
+  // it injects the forecast source via the runtime [PretripScreen.
   // forecastSourceOverride] seam, so the full leak-hygiene + re-render +
-  // anti-clobber contract is verified on every `flutter test`.
+  // anti-clobber contract is verified on every `flutter test`. The shared
+  // [PretripScreen] mounts directly (no host view-switch), so the dest-area
+  // contract is verified on the lifted widget itself.
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
@@ -146,19 +149,21 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: const [Locale('en'), Locale('ja')],
-          home: OfflineMapPage(
-            savedPlaceStore: store,
-            destForecastProviderFactory: factory,
-            // Runtime seam: exercise the dest-area arm without a dart-define, so
-            // this load-bearing test runs on a plain `flutter test` (not skipped).
-            forecastSourceOverride: 'met_norway',
+          // The shared [PretripScreen] mounts directly — no host view-switch —
+          // so the full _setDestination contract is exercised on the lifted
+          // widget itself.
+          home: Scaffold(
+            body: PretripScreen(
+              savedPlaceStore: store,
+              destForecastProviderFactory: factory,
+              // Runtime seam: exercise the dest-area arm without a dart-define, so
+              // this load-bearing test runs on a plain `flutter test` (not skipped).
+              forecastSourceOverride: 'met_norway',
+              surfaceState: RoadSurfaceState.compactedSnow,
+            ),
           ),
         ),
       );
-      // Switch to the Pre-trip view IMMEDIATELY so the FlutterMap is removed
-      // (disposed) rather than rebuilt — a TileLayer didUpdateWidget throws in
-      // the test environment, but a disposed one does not.
-      await tester.tap(find.text('Pre-trip'));
       await tester.pump();
       drainBenign();
       await flush();

@@ -69,6 +69,10 @@ abstract class BriefingStrings {
 
   // --- Header ---------------------------------------------------------------
   String get beforeYouDrive;
+
+  /// The shell's "start the live drive" action label. Localized so the chrome
+  /// around HER mother's Japanese briefing is also Japanese (no language split).
+  String get startDrive;
   String plannedDeparture(String hhmm, int minutes);
 
   // --- Verdict (visible headline + assistive-tech severity word) ------------
@@ -165,6 +169,8 @@ class _EnBriefingStrings extends BriefingStrings {
 
   @override
   String get beforeYouDrive => 'Before you drive';
+  @override
+  String get startDrive => 'Start drive';
   @override
   String plannedDeparture(String hhmm, int minutes) =>
       'Planned departure $hhmm · trip about $minutes min';
@@ -322,6 +328,8 @@ class _JaBriefingStrings extends BriefingStrings {
 
   @override
   String get beforeYouDrive => '出発前に';
+  @override
+  String get startDrive => '運転を開始';
   @override
   String plannedDeparture(String hhmm, int minutes) =>
       '出発予定 $hhmm · 所要 約$minutes分';

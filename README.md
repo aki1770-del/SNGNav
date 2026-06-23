@@ -264,14 +264,15 @@ flutter run -d linux -t lib/snow_scene.dart \
   --dart-define=TILE_SOURCE=mbtiles \
   --dart-define=WEATHER_PROVIDER=simulated
 
-# Minimal offline map demo (no BLoCs, no routing)
+# Offline-first reference entrypoint (map + pre-trip briefing + 3D snow scene; LocationBloc only, no routing)
 flutter run -d linux -t lib/main.dart
 ```
 
 ### Pre-trip family-thread destination-area card
 
-The `lib/main.dart` demo's Pre-trip view includes an in-app destination **place
-entry** (the driver sets/changes the area herself) and a **family-thread**
+The Pre-trip view (hosted by both `lib/main.dart` and the `lib/snow_scene.dart`
+reference app via a shared `PretripScreen`) includes an in-app destination
+**place entry** (the driver sets/changes the area herself) and a **family-thread**
 *"Conditions in the destination area"* card. By design the demo is **offline-first**:
 the place-entry tile is always visible, but the area card itself reads a **live**
 forecast, so it appears only when the live source is opted in:

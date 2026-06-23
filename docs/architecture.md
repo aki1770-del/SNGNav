@@ -74,16 +74,19 @@ flowchart LR
     Tiles --> MapLayer
 ```
 
-The minimal path is `lib/main.dart`: an offline map demo that proves MBTiles
-loading and online fallback. The full application path is `lib/snow_scene.dart`:
-that entrypoint wires the providers, BLoCs, route engine, and safety overlays.
+The reference entrypoint is `lib/main.dart`: an offline-first app that proves
+MBTiles loading + online fallback, and hosts the pre-trip safety briefing, the
+family-thread destination-area card, place entry, and the 3D snow scene (en/ja).
+The full product demo is `lib/snow_scene.dart`: that entrypoint wires the
+providers, BLoCs, route engine, and safety overlays — and ALSO hosts the same
+pre-trip briefing via the shared `PretripScreen`.
 
 ## Entry Points
 
 | File | When to run it | What it proves |
 |------|----------------|----------------|
-| `lib/main.dart` | Fastest first run | Flutter Linux + `offline_tiles` package + MBTiles fallback logic |
-| `lib/snow_scene.dart` | Main product demo | Full navigation stack with weather, safety, routing, and consent |
+| `lib/main.dart` | Fastest first run | Offline-first reference entrypoint: Flutter Linux + `offline_tiles` MBTiles fallback + the pre-trip safety briefing (shared `PretripScreen`) + 3D snow scene (en/ja) |
+| `lib/snow_scene.dart` | Main product demo | Full navigation stack with weather, safety, routing, and consent + the pre-trip safety briefing via the shared `PretripScreen` |
 | `lib/demo_routing.dart` | Routing-focused work | Routing engine behavior in isolation |
 | `lib/demo_weather.dart` | Weather-focused work | Weather provider integration and hazard display |
 | `lib/demo_navigation.dart` | Navigation UX work | Turn-by-turn and route progress surfaces |
