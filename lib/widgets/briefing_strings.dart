@@ -46,6 +46,7 @@
 /// yet. English remains a complete fallback surface for any unsupported locale.
 library;
 
+import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 import 'package:flutter/widgets.dart';
 
 /// The localized strings the briefing card renders. Resolve one with
@@ -131,6 +132,32 @@ abstract class BriefingStrings {
   /// explicit label and no resolvable prefecture name is available — so the
   /// Japanese card never falls back to an English literal or a bare code.
   String get genericDestinationArea;
+
+  // --- In-app place ENTRY (typed-place destination area) --------------------
+  // The driver sets the destination AREA herself. All strings frame a PLACE,
+  // never a person; English is the complete fallback.
+  String get setDestinationAreaButton;
+  String get editDestinationAreaButton;
+  String get placeEntryTitle;
+  String get placeEntryModePrefecture;
+  String get placeEntryModeCoordinates;
+  String get placeEntryPrefectureHint;
+  String get placeEntryLatLabel;
+  String get placeEntryLonLabel;
+  String get placeEntryLabelLabel;
+  String get placeEntryLabelHint;
+  String get placeEntrySave;
+  String get placeEntryCancel;
+  String get placeEntryClear;
+  String get placeEntryCoarseNote;
+  String get placeEntryInvalidCoords;
+  String get placeEntryForecastOffNote;
+  String get placeEntryLocalOnlyNote;
+
+  /// A readable PLACE name for a JMA prefecture [code]. English uses the
+  /// catalog's English name (or the bare code as last resort); Japanese uses the
+  /// 県名 — so the Japanese surface never leaks an English literal.
+  String prefectureName(String code);
 }
 
 class _EnBriefingStrings extends BriefingStrings {
@@ -231,6 +258,48 @@ class _EnBriefingStrings extends BriefingStrings {
 
   @override
   String get genericDestinationArea => 'destination area';
+
+  @override
+  String get setDestinationAreaButton => 'Set destination area';
+  @override
+  String get editDestinationAreaButton => 'Change destination area';
+  @override
+  String get placeEntryTitle => 'Destination area';
+  @override
+  String get placeEntryModePrefecture => 'Pick a prefecture';
+  @override
+  String get placeEntryModeCoordinates => 'Type coordinates';
+  @override
+  String get placeEntryPrefectureHint => 'Choose a prefecture';
+  @override
+  String get placeEntryLatLabel => 'Latitude';
+  @override
+  String get placeEntryLonLabel => 'Longitude';
+  @override
+  String get placeEntryLabelLabel => 'Place name (optional)';
+  @override
+  String get placeEntryLabelHint => 'e.g. a place name you choose';
+  @override
+  String get placeEntrySave => 'Save';
+  @override
+  String get placeEntryCancel => 'Cancel';
+  @override
+  String get placeEntryClear => 'Remove saved area';
+  @override
+  String get placeEntryCoarseNote =>
+      'Prefecture-level area — not a specific town.';
+  @override
+  String get placeEntryInvalidCoords =>
+      'Enter a valid latitude (−90 to 90) and longitude (−180 to 180).';
+  @override
+  String get placeEntryForecastOffNote =>
+      'Area conditions need the live forecast enabled for this build.';
+  @override
+  String get placeEntryLocalOnlyNote =>
+      'This is a place, saved only on this device.';
+
+  @override
+  String prefectureName(String code) => kJmaPrefectureNames[code] ?? code;
 
   static String _humanStateEn(String state) {
     switch (state) {
@@ -355,4 +424,53 @@ class _JaBriefingStrings extends BriefingStrings {
 
   @override
   String get genericDestinationArea => '目的地周辺';
+
+  @override
+  String get setDestinationAreaButton => '目的地エリアを設定';
+  @override
+  String get editDestinationAreaButton => '目的地エリアを変更';
+  @override
+  String get placeEntryTitle => '目的地エリア';
+  @override
+  String get placeEntryModePrefecture => '都道府県から選ぶ';
+  @override
+  String get placeEntryModeCoordinates => '座標を入力';
+  @override
+  String get placeEntryPrefectureHint => '都道府県を選択';
+  @override
+  String get placeEntryLatLabel => '緯度';
+  @override
+  String get placeEntryLonLabel => '経度';
+  @override
+  String get placeEntryLabelLabel => '場所の名前（任意）';
+  @override
+  String get placeEntryLabelHint => '例：自分で決めた場所の名前';
+  @override
+  String get placeEntrySave => '保存';
+  @override
+  String get placeEntryCancel => 'キャンセル';
+  @override
+  String get placeEntryClear => '保存したエリアを削除';
+  @override
+  String get placeEntryCoarseNote => '都道府県レベルのエリアです（特定の市町村ではありません）。';
+  @override
+  String get placeEntryInvalidCoords =>
+      '緯度（−90〜90）と経度（−180〜180）を正しく入力してください。';
+  @override
+  String get placeEntryForecastOffNote =>
+      'エリアの状況表示には、このビルドでライブ予報を有効にする必要があります。';
+  @override
+  String get placeEntryLocalOnlyNote => 'これは場所の情報で、この端末にのみ保存されます。';
+
+  @override
+  String prefectureName(String code) =>
+      const <String, String>{
+        '010000': '北海道',
+        '020000': '青森県',
+        '030000': '岩手県',
+        '050000': '秋田県',
+        '060000': '山形県',
+        '150000': '新潟県',
+      }[code] ??
+      (kJmaPrefectureNames[code] ?? code);
 }

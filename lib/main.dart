@@ -40,9 +40,11 @@ import 'providers/met_norway_hourly_forecast.dart';
 import 'providers/pretrip_live_forecast.dart';
 import 'providers/serial_nmea_location_provider.dart';
 import 'providers/winter_knowledge.dart';
+import 'services/saved_place_store.dart';
 import 'services/snow_aware_pretrip_advisor.dart';
 import 'widgets/briefing_strings.dart';
 import 'widgets/family_area_card.dart';
+import 'widgets/place_entry_dialog.dart';
 import 'widgets/pretrip_briefing_card.dart';
 
 void main() {
@@ -78,7 +80,28 @@ class SNGNavGettingStarted extends StatelessWidget {
 enum _ViewMode { map, forward, pretrip }
 
 class OfflineMapPage extends StatefulWidget {
-  const OfflineMapPage({super.key});
+  const OfflineMapPage({
+    super.key,
+    this.savedPlaceStore,
+    this.destForecastProviderFactory,
+    this.forecastSourceOverride,
+  });
+
+  /// Optional test seam: the store for the driver-chosen destination area.
+  /// Production defaults to [openDefaultSavedPlaceStore] when null.
+  final SavedPlaceStore? savedPlaceStore;
+
+  /// Optional test seam: a factory for the destination-area forecast provider,
+  /// so a fake offline provider can be injected. Production defaults to a real
+  /// [MetNorwayHourlyForecastProvider] when null.
+  final MetNorwayHourlyForecastProvider Function()? destForecastProviderFactory;
+
+  /// Optional test seam: overrides the compile-time `PRETRIP_FORECAST` define
+  /// for the destination-area gate, so the full _setDestination contract (leak
+  /// hygiene + re-render + anti-clobber) is exercised by a plain `flutter test`
+  /// without a `--dart-define`. Null in production ⇒ the compile-time source is
+  /// used. Consumed ONLY on the dest path in [_initDestAreaCondition].
+  final String? forecastSourceOverride;
 
   @override
   State<OfflineMapPage> createState() => _OfflineMapPageState();
@@ -296,12 +319,32 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   static const String _pretripDestLabel =
       String.fromEnvironment('PRETRIP_DEST_LABEL');
 
+  // LIVE (in-app) destination AREA: the dart-define values above are kept as the
+  // initial SEED, but the driver (HER) can now set/change the area herself in
+  // the app — the family-thread reach-fix. These instance fields are the live
+  // source of truth (seeded from the defines); a saved place from
+  // [SavedPlaceStore] overwrites them on load. The point is still a PLACE only;
+  // it watches no person, and the fetch is still ONE-SHOT (initState + the
+  // single HER-action setter), never a background poll.
+  double? _destLat = _pretripDestLat;
+  double? _destLon = _pretripDestLon;
+  String _destLabel = _pretripDestLabel;
+  SavedPlaceStore? _savedPlaceStore;
+  bool _savedPlaceLoaded = false;
+
   void Function()? _destVisibilityClose;
   MetNorwayHourlyForecastProvider? _destForecastProvider;
 
   /// The destination-area read; null until a real fetch delivers (honest floor
   /// — the section is simply omitted), never a fabricated value.
   AreaConditionRead? _destAreaRead;
+
+  /// The JMA prefecture code resolved for the current dest read (or null). Kept
+  /// as a locale-INDEPENDENT input so the human-readable area label is resolved
+  /// at RENDER time from the app's Localizations locale (see [_buildPretripView])
+  /// — never baked from the raw platform locale (which would split the card's
+  /// locale) and never as an English literal leaking into the Japanese card.
+  String? _destAreaPrefCode;
 
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
@@ -488,6 +531,87 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     });
   }
 
+  /// Loads the driver-saved destination PLACE once (guarded by
+  /// [_savedPlaceLoaded] so the HER-action setter's re-fetch never re-loads and
+  /// clobbers the just-set fields). On a non-null saved place the live instance
+  /// fields are overwritten; on any failure the dart-define seed is kept (honest
+  /// floor). It loads a PLACE only — never a person.
+  Future<void> _loadSavedPlace() async {
+    if (_savedPlaceLoaded) return;
+    _savedPlaceLoaded = true;
+    try {
+      _savedPlaceStore =
+          widget.savedPlaceStore ?? await openDefaultSavedPlaceStore();
+      final result = await _savedPlaceStore!.load();
+      if (result.place != null) {
+        _destLat = result.place!.lat;
+        _destLon = result.place!.lon;
+        _destLabel = result.place!.label;
+      } else if (result.cleared) {
+        // The driver DELIBERATELY removed the place: suppress the build-time
+        // PRETRIP_DEST_* seed so a cleared place does not resurrect on restart.
+        _destLat = null;
+        _destLon = null;
+        _destLabel = '';
+      }
+      // else: never written (fresh) ⇒ keep the dart-define seed already in the
+      // fields as the one-time bootstrap.
+    } catch (_) {
+      // Keep the dart-define defaults on any store failure (honest floor).
+    }
+  }
+
+  /// HER-action setter: the driver chose a new destination AREA in the app.
+  /// ONE-SHOT (no Timer/Stream) — closes prior providers (leak hygiene), hides
+  /// the stale card, persists the single record, then re-fetches + re-renders.
+  Future<void> _setDestination(SavedPlace place) async {
+    // Leak hygiene: release the prior dest providers before a re-fetch.
+    _destForecastProvider?.close();
+    _destForecastProvider = null;
+    _destVisibilityClose?.call();
+    _destVisibilityClose = null;
+    setState(() {
+      _destLat = place.lat;
+      _destLon = place.lon;
+      _destLabel = place.label;
+      _destAreaRead = null; // hide the stale area card until the re-fetch lands
+    });
+    // Persist the ONE record (best-effort; a save failure must not block the read).
+    try {
+      _savedPlaceStore ??=
+          widget.savedPlaceStore ?? await openDefaultSavedPlaceStore();
+      await _savedPlaceStore!.save(place);
+    } catch (_) {
+      // Honest floor: the in-session place still drives the read even if the
+      // write failed; nothing is fabricated.
+    }
+    // Re-fetch + re-render for the new place. _loadSavedPlace is guarded, so this
+    // re-entry will NOT re-load and clobber the just-set fields.
+    await _initDestAreaCondition();
+  }
+
+  /// HER-action: remove the saved destination AREA. Closes providers, clears the
+  /// fields + card, and deletes the single record.
+  Future<void> _clearDestination() async {
+    _destForecastProvider?.close();
+    _destForecastProvider = null;
+    _destVisibilityClose?.call();
+    _destVisibilityClose = null;
+    setState(() {
+      _destLat = null;
+      _destLon = null;
+      _destLabel = '';
+      _destAreaRead = null;
+    });
+    try {
+      _savedPlaceStore ??=
+          widget.savedPlaceStore ?? await openDefaultSavedPlaceStore();
+      await _savedPlaceStore!.clear();
+    } catch (_) {
+      // Honest floor: removal best-effort.
+    }
+  }
+
   /// Fetches the DESTINATION-AREA condition read (the FAMILY-THREAD section):
   /// the PUBLIC weather + official advisory at her mother's PLACE, so SHE
   /// decides whether/when to drive there. ON-DEMAND ONLY — called EXACTLY ONCE
@@ -501,15 +625,21 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// (or no opt-in) leaves [_destAreaRead] null and the section is omitted —
   /// never a fabricated value.
   Future<void> _initDestAreaCondition() async {
-    if (_pretripForecastSource != 'met_norway' ||
-        _pretripDestLat == null ||
-        _pretripDestLon == null) {
+    // Load any driver-saved place FIRST (guarded so re-entry from the HER-action
+    // setter won't clobber the just-set fields). Seeds _destLat/_destLon/_destLabel.
+    await _loadSavedPlace();
+    final forecastSource =
+        widget.forecastSourceOverride ?? _pretripForecastSource;
+    if (forecastSource != 'met_norway' ||
+        _destLat == null ||
+        _destLon == null) {
       return; // feature off — no point or no live source
     }
-    final destLat = _pretripDestLat!;
-    final destLon = _pretripDestLon!;
+    final destLat = _destLat!;
+    final destLon = _destLon!;
 
-    final met = MetNorwayHourlyForecastProvider();
+    final met = (widget.destForecastProviderFactory ??
+        MetNorwayHourlyForecastProvider.new)();
     _destForecastProvider = met;
     final jma = JmaAdvisoryProvider();
     final result = await resolvePretripLiveForecast(
@@ -557,22 +687,15 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     }
     if (!mounted) return;
 
-    // A readable PLACE label (never a person, never a raw numeric code): the
-    // edge developer's explicit label if set, else the resolved prefecture
-    // NAME for the JMA code, else a LOCALIZED generic place phrase — never the
-    // bare office code (e.g. '050000') and never an English literal leaking
-    // into the Japanese card.
-    final strings =
-        BriefingStrings.of(WidgetsBinding.instance.platformDispatcher.locale);
-    final areaLabel = _pretripDestLabel.isNotEmpty
-        ? _pretripDestLabel
-        : (jmaPrefectureName(result.prefectureCode ?? '') ??
-            strings.genericDestinationArea);
-
+    // The human-readable PLACE label is resolved at RENDER time from the app's
+    // Localizations locale (see [_buildPretripView]) so the area label and the
+    // rest of the card never split locales, and no English literal leaks into
+    // the Japanese card. Here we carry only the locale-INDEPENDENT inputs: the
+    // driver's explicit label (raw, may be empty) and the prefecture code.
     final read = summarizeAreaConditions(
       forecast: result.forecast!,
       now: result.departure ?? DateTime.now(),
-      areaLabel: areaLabel,
+      areaLabel: _destLabel,
       warningEventVerbatim: result.jmaEventName,
       // Honest: the official-warning check was actually performed ONLY on the
       // arms where a warning source returned (JMA merged or JMA no-advisory).
@@ -584,7 +707,10 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
               result.status == PretripLiveStatus.japanJmaNoAdvisory,
       observed: destObs,
     );
-    setState(() => _destAreaRead = read);
+    setState(() {
+      _destAreaRead = read;
+      _destAreaPrefCode = result.prefectureCode;
+    });
   }
 
   /// Subscribes the held [_assessment] to the LIVE in-vehicle KUKSA condition
@@ -1007,6 +1133,31 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                   lang: locale.languageCode,
                 ),
               ),
+              // In-app TYPED-PLACE ENTRY: the driver (HER) sets/changes the
+              // destination AREA herself. ALWAYS visible — she must be able to
+              // set the place the FIRST time, when _destAreaRead is still null.
+              // It is a PLACE entry; it watches no person.
+              DestinationEntryTile(
+                strings: strings,
+                hasPlace: _destLat != null && _destLon != null,
+                placeLabel: _destLabel,
+                forecastEnabled: _pretripForecastSource == 'met_norway',
+                onEdit: () async {
+                  final r = await showPlaceEntryDialog(
+                    context,
+                    strings: strings,
+                    initial: (_destLat != null && _destLon != null)
+                        ? SavedPlace(
+                            lat: _destLat!,
+                            lon: _destLon!,
+                            label: _destLabel,
+                          )
+                        : null,
+                  );
+                  if (r != null) await _setDestination(r);
+                },
+                onClear: _clearDestination,
+              ),
               // The FAMILY-THREAD destination-area section (companion to the
               // daylight clock) — shown only when a real area read delivered.
               if (_destAreaRead != null)
@@ -1014,6 +1165,19 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                   read: _destAreaRead!,
                   messages: PretripMessages.forLanguage(locale.languageCode),
                   strings: strings,
+                  // Resolve the area label from the SINGLE Localizations-locale
+                  // `strings` (above) so it never splits locale with the rest of
+                  // the card and never leaks an English literal into the Japanese
+                  // card: the driver's explicit label, else the LOCALIZED
+                  // prefecture name (秋田県 for ja, Akita for en) when the code is
+                  // in the catalog, else a localized generic phrase — never a
+                  // bare office code.
+                  areaLabelOverride: _destLabel.isNotEmpty
+                      ? _destLabel
+                      : (_destAreaPrefCode != null &&
+                              jmaPrefectureName(_destAreaPrefCode!) != null
+                          ? strings.prefectureName(_destAreaPrefCode!)
+                          : strings.genericDestinationArea),
                 ),
             ],
           ),

@@ -201,17 +201,19 @@ void main() {
   });
 
   // No-background guard (by source structure): the dest fetch must be invoked
-  // EXACTLY ONCE from initState, with NO Timer/Stream/scheduled refresh in its
-  // body — background polling of "her area" would be 見守り-by-proxy. And the
-  // section must be guarded by `if (_destAreaRead != null)`, so with the
-  // PRETRIP_DEST_* defines unset (compile-time, as in this test run) the read
-  // stays null and no FamilyAreaCard is built.
-  test('dest fetch is invoked EXACTLY ONCE, from initState, never self-scheduled',
-      () {
+  // ONLY from initState AND from the single HER-action setter (_setDestination),
+  // with NO Timer/Stream/scheduled refresh — background polling of "her area"
+  // would be 見守り-by-proxy. The HER-action setter is the in-app typed-place
+  // entry that lets the driver set/change the destination area herself; it is a
+  // ONE-SHOT user action, not a schedule. The section is still guarded by
+  // `if (_destAreaRead != null)`.
+  test('dest fetch fires ONLY from initState + the single HER-action setter, '
+      'never self-scheduled', () {
     final src = File('lib/main.dart').readAsStringSync();
 
-    // EXACTLY ONE call site. Count every `_initDestAreaCondition(` (open-paren
-    // — so a closure-wrapped re-invocation such as
+    // EXACTLY TWO call sites: initState (first read) + _setDestination (the HER-
+    // action re-fetch). Count every `_initDestAreaCondition(` (open-paren — so a
+    // closure-wrapped re-invocation such as
     // `Timer.periodic(d, (_) => _initDestAreaCondition())` is also counted) and
     // subtract the single declaration; the remainder is the invocation count.
     final all = RegExp(r'_initDestAreaCondition\(').allMatches(src).length;
@@ -219,42 +221,56 @@ void main() {
         .allMatches(src)
         .length;
     expect(decl, 1, reason: 'exactly one method declaration expected');
-    expect(all - decl, 1,
-        reason: 'the dest read must have exactly ONE invocation site — a '
-            'second scheduled caller would be 見守り-by-proxy');
+    expect(all - decl, 2,
+        reason: 'the dest read must have exactly TWO invocation sites — '
+            'initState + the single HER-action setter; a scheduled caller '
+            'would be 見守り-by-proxy');
 
-    // That one invocation is inside initState.
+    // One invocation is inside initState.
     final initStart = src.indexOf('void initState()');
     expect(initStart, greaterThan(-1));
     final initEnd = src.indexOf('\n  }', initStart);
     expect(initEnd, greaterThan(initStart));
     expect(
-        src
-            .substring(initStart, initEnd)
-            .contains('_initDestAreaCondition('),
+        src.substring(initStart, initEnd).contains('_initDestAreaCondition('),
         isTrue,
         reason: 'the dest read must be invoked from initState');
 
-    // The method body itself must not self-schedule a background refresh.
-    // Slice from the declaration to the NEXT top-level method declaration (a
-    // STRUCTURAL boundary, not a hard-coded sibling name), failing loudly if no
-    // following declaration is found rather than silently expanding to EOF.
-    final start = src.indexOf('Future<void> _initDestAreaCondition()');
-    expect(start, greaterThan(-1));
-    final nextDecl = RegExp(r'\n  (?:Future<void>|void|Widget)\s+_\w+\(')
-        .firstMatch(src.substring(start + 1));
-    expect(nextDecl, isNotNull,
-        reason: 'a following method declaration must bound the body slice');
-    final body = src.substring(start, start + 1 + nextDecl!.start);
-    for (final bg in const [
-      'Timer',
-      '.periodic',
-      'Stream',
-      '.listen(',
-      'Notification',
+    // The other invocation is inside the HER-action setter _setDestination.
+    final setStart = src.indexOf('Future<void> _setDestination(');
+    expect(setStart, greaterThan(-1),
+        reason: 'the single HER-action setter must exist');
+
+    // Neither the read method NOR the HER-action setter may self-schedule a
+    // background refresh. Slice each body from its declaration to the NEXT
+    // top-level method declaration (a STRUCTURAL boundary, not a hard-coded
+    // sibling name), failing loudly if no following declaration is found.
+    String bodySliceFrom(String declStr) {
+      final start = src.indexOf(declStr);
+      expect(start, greaterThan(-1));
+      final nextDecl = RegExp(r'\n  (?:Future<void>|void|Widget)\s+_\w+\(')
+          .firstMatch(src.substring(start + 1));
+      expect(nextDecl, isNotNull,
+          reason: 'a following method declaration must bound the body slice');
+      return src.substring(start, start + 1 + nextDecl!.start);
+    }
+
+    for (final declStr in const [
+      'Future<void> _initDestAreaCondition()',
+      'Future<void> _setDestination(',
     ]) {
-      expect(body.contains(bg), isFalse,
-          reason: 'the dest path must have no background scheduling ($bg)');
+      final body = bodySliceFrom(declStr);
+      for (final bg in const [
+        'Timer',
+        '.periodic',
+        'Stream',
+        '.listen(',
+        'Notification',
+      ]) {
+        expect(body.contains(bg), isFalse,
+            reason: 'the dest path must have no background scheduling ($bg) '
+                'in $declStr');
+      }
     }
   });
 

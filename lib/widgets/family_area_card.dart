@@ -29,6 +29,7 @@ class FamilyAreaCard extends StatelessWidget {
     required this.read,
     required this.messages,
     this.strings = BriefingStrings.en,
+    this.areaLabelOverride,
   });
 
   /// The computed area read this section renders.
@@ -40,6 +41,12 @@ class FamilyAreaCard extends StatelessWidget {
 
   /// The localized structural text (title, place line, honesty note).
   final BriefingStrings strings;
+
+  /// Optional render-time area label, resolved by the caller from the SAME
+  /// Localizations locale as [strings] (so the label never splits locale with
+  /// the card and no English literal leaks into the Japanese card). When null,
+  /// the baked [AreaConditionRead.areaLabel] is used.
+  final String? areaLabelOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +64,7 @@ class FamilyAreaCard extends StatelessWidget {
             Text(strings.destinationAreaTitle,
                 style: theme.textTheme.titleMedium),
             Text(
-              strings.destinationAreaPlace(read.areaLabel),
+              strings.destinationAreaPlace(areaLabelOverride ?? read.areaLabel),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),

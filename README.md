@@ -268,6 +268,29 @@ flutter run -d linux -t lib/snow_scene.dart \
 flutter run -d linux -t lib/main.dart
 ```
 
+### Pre-trip family-thread destination-area card
+
+The `lib/main.dart` demo's Pre-trip view includes an in-app destination **place
+entry** (the driver sets/changes the area herself) and a **family-thread**
+*"Conditions in the destination area"* card. By design the demo is **offline-first**:
+the place-entry tile is always visible, but the area card itself reads a **live**
+forecast, so it appears only when the live source is opted in:
+
+```bash
+flutter run -d linux -t lib/main.dart \
+  --dart-define=PRETRIP_FORECAST=met_norway \
+  # optional seed for the destination point (the driver can also set it in-app;
+  # a deliberate in-app clear is durable and is NOT resurrected by this seed):
+  --dart-define=PRETRIP_DEST_LAT=39.69 \
+  --dart-define=PRETRIP_DEST_LON=140.34 \
+  --dart-define=PRETRIP_DEST_LABEL=Akita
+```
+
+Without `PRETRIP_FORECAST=met_norway` the place-entry tile still works and shows
+an honest *"Area conditions need the live forecast enabled for this build"* note;
+the area card stays hidden. This is intentional — the live source is **opt-in**,
+never a default network dependency in the offline demo build.
+
 ---
 
 ## Platform
