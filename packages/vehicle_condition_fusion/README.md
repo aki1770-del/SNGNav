@@ -13,6 +13,132 @@ that drives road-surface classification, grip, and visibility, so an edge
 developer can turn raw vehicle telemetry into a glanceable, safety-calibrated
 hazard picture and **unit-test it with a one-line mock**.
 
+## Try it in 2 minutes (no databroker, no vehicle)
+
+You can drive the fusion through a full **Akita heavy-snow / low-visibility
+drive** with just a laptop — the package ships an opt-in `scenarios.dart`
+library of hand-authored **synthetic** winter traces and a one-line replay
+helper. Two ways to run it:
+
+### A. From your own project (`pub add`)
+
+```console
+$ dart pub add vehicle_condition_fusion
+```
+
+`pub add` installs the package as a dependency — it does **not** copy this
+repo's `example/` into your project. So drop this self-contained snippet into
+`bin/demo.dart` and run it with `dart run bin/demo.dart`:
+
+```dart
+import 'package:vehicle_condition_fusion/scenarios.dart';
+import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
+
+Future<void> main() async {
+  // Replay the bundled SYNTHETIC Akita whiteout through the published fusion.
+  // Swap replayWinterDrive() for your own Stream<VehicleConditionSignals>
+  // (a KUKSA adapter, a CAN reader, a test) — same fusion.
+  final fusion = VehicleConditionFusion.fromPartialFrames(
+    partialFrames: replayWinterDrive(akitaWhiteoutDrive),
+  );
+  await for (final update in fusion.conditions) {
+    if (update.isAvailable) {
+      final a = update.assessment!;
+      print('${a.surfaceState.name.padRight(13)} ${a.advisoryMessage}');
+    } else {
+      print('— drive ended (${update.unavailableReason}) —');
+      break;
+    }
+  }
+  await fusion.dispose();
+}
+```
+
+It replays the bundled synthetic drive, printing the surface verdict and
+advisory as the hazard escalates and clears:
+
+```text
+dry           Conditions normal
+dry           Conditions normal
+dry           Conditions normal
+compactedSnow Compacted snow — use winter tyres, reduce speed
+compactedSnow Compacted snow — use winter tyres, reduce speed
+blackIce      Black ice risk — reduce speed significantly
+blackIce      Black ice risk — reduce speed significantly
+blackIce      Black ice risk — reduce speed significantly
+slush         Slushy conditions — maintain safe following distance
+slush         Slushy conditions — maintain safe following distance
+wet           Wet road — increased stopping distance
+wet           Wet road — increased stopping distance
+— drive ended (vehicle signal stream ended) —
+```
+
+### B. Run the shipped example (from a repo clone)
+
+The richer example — per-step inputs, the debounced surface verdict, grip, a
+visibility cue, and a `(held)` marker on debounce-held steps — runs from a
+clone of this repository (it is also what appears on the pub.dev **Example**
+tab). `pub add` does **not** install it, so:
+
+```console
+$ git clone https://github.com/aki1770-del/SNGNav
+$ cd SNGNav/packages/vehicle_condition_fusion
+$ dart pub get
+$ dart run example/main.dart
+```
+
+You will see the hazard escalate and clear, step by step (the whole
+assessment is debounced, so fresh inputs sit beside a `(held)` verdict while
+the surface state has not yet persisted):
+
+```text
+step  1  fric= 0.95 temp= -1°C tcs=off wiper=0 → dry           grip=1.00
+    vis: clear   (~10 km)  Conditions normal
+step  2  fric= 0.95 temp= -1°C tcs=off wiper=0 → dry           grip=1.00
+    vis: clear   (~10 km)  Conditions normal
+step  3  fric= 0.45 temp= -3°C tcs=off wiper=3 → dry           grip=1.00 (held)
+    vis: clear   (~10 km)  Conditions normal
+step  4  fric= 0.45 temp= -3°C tcs=off wiper=4 → compactedSnow grip=0.30
+    vis: reduced (~800 m)  Compacted snow — use winter tyres, reduce speed
+step  5  fric= 0.18 temp= -6°C tcs=ON  wiper=5 → compactedSnow grip=0.30 (held)
+    vis: reduced (~800 m)  Compacted snow — use winter tyres, reduce speed
+step  6  fric= 0.18 temp= -6°C tcs=ON  wiper=5 → blackIce      grip=0.15
+    vis: LOW     (~300 m)  Black ice risk — reduce speed significantly
+step  7  fric= 0.18 temp= -6°C tcs=ON  wiper=5 → blackIce      grip=0.15
+    vis: LOW     (~300 m)  Black ice risk — reduce speed significantly
+step  8  fric= 0.55 temp= -2°C tcs=off wiper=2 → blackIce      grip=0.15 (held)
+    vis: LOW     (~300 m)  Black ice risk — reduce speed significantly
+step  9  fric= 0.55 temp= -1°C tcs=off wiper=1 → slush         grip=0.50
+    vis: clear   (~5 km)   Slushy conditions — maintain safe following distance
+step 10  fric= 0.85 temp=  3°C tcs=off wiper=2 → slush         grip=0.50 (held)
+    vis: clear   (~5 km)   Slushy conditions — maintain safe following distance
+step 11  fric= 0.85 temp=  4°C tcs=off wiper=2 → wet           grip=0.70
+    vis: clear   (~5 km)   Wet road — increased stopping distance
+step 12  fric= 0.85 temp=  4°C tcs=off wiper=2 → wet           grip=0.70
+    vis: clear   (~5 km)   Wet road — increased stopping distance
+
+— drive ended — fusion now reports: vehicle signal stream ended
+  (no live signals → honest "unavailable", never a fabricated road)
+```
+
+Then swap in **your own** signal source. The fusion's input seam is a plain
+`Stream<VehicleConditionSignals>`, so replace `replayWinterDrive(...)` with your
+KUKSA databroker adapter, your CAN reader, or any source that produces
+`VehicleConditionSignals`:
+
+```dart
+final fusion = VehicleConditionFusion.fromPartialFrames(
+  partialFrames: myKuksaAdapter.signals, // your real source — same fusion
+);
+```
+
+> ⚠️ **The bundled traces are ILLUSTRATIVE / SYNTHETIC** — hand-authored
+> plausible values chosen to exercise the hazard rules, **not** recordings of any
+> real vehicle, drive, or storm. They are a teaching fixture to lower the floor;
+> they are not evidence about real roads. The `scenarios.dart` library is a
+> separate, opt-in import and is intentionally **not** part of the main barrel, so
+> the safety-calibrated fusion is untouched — the traces only *feed* it.
+
 ## What it does
 
 - `VehicleConditionSignals` — a typed, all-nullable snapshot of the snow-safety
@@ -68,7 +194,12 @@ source.add(const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5));
 - **The visibility value is a DOCUMENTED PROXY, not a measurement.** A vehicle
   has no meteorological visibility sensor; the visibility metres here are
   derived from precipitation intensity (wiper / rain-sensor) as an explicit,
-  typed cue. Treat it as a glanceable hint, not a sensor reading.
+  typed cue. Treat it as a glanceable hint, not a sensor reading. Because it is
+  a **precipitation-intensity proxy only** — there is no wind signal in the set,
+  so `windSpeedKmh` is hard-set to `0.0` — it **cannot** represent a wind-driven
+  whiteout (地吹雪 / ground blizzard), where blowing snow collapses visibility
+  with little or no falling precipitation. The bundled severe phase is therefore
+  a heavy-snow, low-visibility drive (~300 m proxy), **not** a true whiteout.
 - **Reads only — never commands.** This package only *interprets* signals; it
   never writes to or commands the vehicle.
 - **Offline / vehicle-local.** No network, no GPS, no cloud weather — just the

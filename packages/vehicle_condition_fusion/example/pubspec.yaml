@@ -1,0 +1,16 @@
+name: vehicle_condition_fusion_example
+description: >-
+  Runnable, laptop-only demo for vehicle_condition_fusion: replays an
+  ILLUSTRATIVE SYNTHETIC Akita-whiteout signal trace through the published
+  fusion and prints the evolving hazard assessment. No databroker, no vehicle.
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  # Direct: the demo re-derives the FRESH candidate assessment (to mark
+  # debounce-held steps) via DrivingConditionAssessment.fromCondition.
+  driving_conditions: ^0.5.2
+  vehicle_condition_fusion:
+    path: ../
