@@ -52,6 +52,8 @@ dependencies:
     path: packages/pretrip_source_digitraffic
   pretrip_source_jma:
     path: packages/pretrip_source_jma
+  vehicle_condition_fusion:
+    path: packages/vehicle_condition_fusion
   flutter_map: ^8.2.2
   flutter_libserialport: ^0.6.0
   latlong2: ^0.9.1
@@ -110,6 +112,10 @@ dependency_overrides:
   # (same pattern as snow_rendering / routing_bloc / offline_tiles above).
   pretrip_decision_advisor:
     path: packages/pretrip_decision_advisor
+  # Unpublished sibling — the safety-calibrated in-vehicle fusion, deduped out
+  # of the app provider (now a thin KUKSA adapter). Pin to the local path.
+  vehicle_condition_fusion:
+    path: packages/vehicle_condition_fusion
 
 # Embedded ARM IVI Blocker 2 closure — BDE-CANDIDATE-1 SHAPE A-PRIME component 2 (2026-05-23).
 # sqlite3 ^3.2.0 uses Dart code-asset hooks; on the embedded ARM IVI target the

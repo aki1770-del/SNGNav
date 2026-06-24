@@ -17,6 +17,10 @@ import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 // ignore: implementation_imports
 import 'package:kuksa_dart_sdk/src/generated/kuksa/val/v2/types.pb.dart' as pb;
 import 'package:sngnav_snow_scene/providers/kuksa_condition_provider.dart';
+// The calibrated fusion now lives ONCE in the package; the app file is a thin
+// KUKSA adapter (vehicleSignalsFromDatapoints) over it. The types and the
+// deterministic mapping under test come from the package.
+import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
 
 // --- mock Datapoint builders (the only place that touches generated types) ---
 
@@ -32,9 +36,9 @@ Datapoint _intDp(String path, int v) =>
 Datapoint _valuelessDp(String path) => Datapoint(raw: pb.Datapoint(), path: path);
 
 void main() {
-  group('VehicleConditionSignals.fromDatapoints (decode)', () {
+  group('vehicleSignalsFromDatapoints (KUKSA decode adapter)', () {
     test('decodes mock Datapoints to typed fields', () {
-      final signals = VehicleConditionSignals.fromDatapoints({
+      final signals = vehicleSignalsFromDatapoints({
         kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
         kTcsIsEngaged: _boolDp(kTcsIsEngaged, true),
         kAbsIsEngaged: _boolDp(kAbsIsEngaged, false),
@@ -55,7 +59,7 @@ void main() {
     });
 
     test('absent / value-less signals decode to null (never guessed)', () {
-      final signals = VehicleConditionSignals.fromDatapoints({
+      final signals = vehicleSignalsFromDatapoints({
         kRoadFrictionMostProbable: _valuelessDp(kRoadFrictionMostProbable),
         // everything else simply absent from the map
       });
