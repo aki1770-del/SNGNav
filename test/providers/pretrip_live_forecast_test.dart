@@ -284,4 +284,164 @@ void main() {
       }
     }
   });
+
+  test('T10 JA caption arms: exact approved strings + verbatim numbers', () {
+    // The English default is byte-identical to passing lang:'en' explicitly,
+    // and unchanged from the legacy literal (the en arms must not move).
+    expect(
+      pretripLiveSourceCaption(
+        status: PretripLiveStatus.metNorway,
+        latitude: nagoyaLat,
+        longitude: nagoyaLon,
+        lang: 'en',
+      ),
+      pretripLiveSourceCaption(
+        status: PretripLiveStatus.metNorway,
+        latitude: nagoyaLat,
+        longitude: nagoyaLon,
+      ),
+    );
+
+    // metNorway ja, no measured visibility ⇒ のみ ("only") present.
+    expect(
+      pretripLiveSourceCaption(
+        status: PretripLiveStatus.metNorway,
+        latitude: nagoyaLat,
+        longitude: nagoyaLon,
+        lang: 'ja',
+      ),
+      'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+      '緯度 $nagoyaLat 経度 $nagoyaLon。'
+      'この予報には視程・路面データはありません — '
+      '危険の判断材料は気温と降水のみです。',
+    );
+
+    // metNorway ja WITH a measured-visibility clause ⇒ のみ DROPS, exactly as
+    // the source ${visCaption.isEmpty ? 'のみ' : ''} conditional dictates.
+    final visJa = pretripMeasuredVisibilityCaption(
+      meters: 80,
+      stationName: '青森空港',
+      km: '45',
+      attribution: 'Japan Meteorological Agency / AMeDAS (気象庁)',
+      lang: 'ja',
+    );
+    final metWithVis = pretripLiveSourceCaption(
+      status: PretripLiveStatus.metNorway,
+      latitude: nagoyaLat,
+      longitude: nagoyaLon,
+      visCaption: visJa,
+      lang: 'ja',
+    );
+    expect(metWithVis.contains('気温と降水のみです'), isFalse);
+    expect(metWithVis.contains('気温と降水です。'), isTrue);
+    expect(metWithVis.endsWith(visJa), isTrue);
+
+    // japanJmaMerged ja — VERBATIM JMA classification relayed (warning stays a
+    // warning; never softened/escalated).
+    expect(
+      pretripLiveSourceCaption(
+        status: PretripLiveStatus.japanJmaMerged,
+        latitude: akitaLat,
+        longitude: akitaLon,
+        prefectureCode: '050000',
+        jmaEventName: '大雪警報',
+        lang: 'ja',
+      ),
+      'ライブ予報 — ベース:MET Norway (CC BY 4.0)、'
+      '緯度 $akitaLat 経度 $akitaLon。'
+      '出発時間帯の路面状況は気象庁の正式な大雪警報'
+      '(都道府県 050000)に基づきます — 出典:気象庁。'
+      'この警報・注意報からは視程の数値は示されません。',
+    );
+
+    // hazard-direction lock: an ADVISORY-class event stays an advisory in JA
+    // (着雪注意報 must NOT escalate to 着雪警報).
+    final advCap = pretripLiveSourceCaption(
+      status: PretripLiveStatus.japanJmaMerged,
+      latitude: akitaLat,
+      longitude: akitaLon,
+      prefectureCode: '050000',
+      jmaEventName: '着雪注意報',
+      lang: 'ja',
+    );
+    expect(advCap.contains('正式な着雪注意報('), isTrue);
+    expect(advCap.contains('着雪警報'), isFalse);
+
+    // merged ja with a null event name ⇒ the 冬季の警報 fallback.
+    expect(
+      pretripLiveSourceCaption(
+        status: PretripLiveStatus.japanJmaMerged,
+        latitude: akitaLat,
+        longitude: akitaLon,
+        prefectureCode: '050000',
+        lang: 'ja',
+      ).contains('正式な冬季の警報('),
+      isTrue,
+    );
+
+    // japanJmaNoAdvisory ja — the all-clear is held to WARNINGS only (it must
+    // NOT widen to "no warning OR advisory", which would hide an active 注意報).
+    final noAdvJa = pretripLiveSourceCaption(
+      status: PretripLiveStatus.japanJmaNoAdvisory,
+      latitude: akitaLat,
+      longitude: akitaLon,
+      prefectureCode: '050000',
+      lang: 'ja',
+    );
+    expect(
+      noAdvJa,
+      'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+      '緯度 $akitaLat 経度 $akitaLon。'
+      '気象庁を確認(都道府県 050000、気象庁):'
+      '発表中の冬季の警報はありません。'
+      'この予報には視程・路面データはありません — '
+      '危険の判断材料は気温と降水のみです。',
+    );
+    expect(noAdvJa.contains('注意報はありません'), isFalse);
+
+    // japanJmaFailed ja — the SAFETY-CRITICAL caveat preserved at full strength
+    // (both halves: 可能性があり + ここには反映されていません; 警報 not downgraded).
+    final failJa = pretripLiveSourceCaption(
+      status: PretripLiveStatus.japanJmaFailed,
+      latitude: akitaLat,
+      longitude: akitaLon,
+      prefectureCode: '050000',
+      lang: 'ja',
+    );
+    expect(
+      failJa,
+      'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+      '緯度 $akitaLat 経度 $akitaLon。'
+      '気象庁の冬季警報の確認ができませんでした(取得失敗) — '
+      '気温と降水のみに基づくブリーフィングです。'
+      '実際には正式な雪の警報が発表されている可能性があり、'
+      'ここには反映されていません。',
+    );
+
+    // measured-visibility ja — verbatim number + station + 0-decimal km + the
+    // canonical (never-translated) attribution token.
+    expect(
+      visJa,
+      ' 出発時間帯の計測視程:80 m(青森空港、45 km先) — '
+      'データ:Japan Meteorological Agency / AMeDAS (気象庁)。',
+    );
+    // measured-visibility en stays byte-identical to the legacy clause.
+    expect(
+      pretripMeasuredVisibilityCaption(
+        meters: 80,
+        stationName: 'vt1_Espoo_Nupuri',
+        km: '3',
+        attribution: 'Fintraffic / digitraffic.fi (CC BY 4.0)',
+      ),
+      ' Departure-hour visibility MEASURED: 80 m at vt1_Espoo_Nupuri '
+      '(3 km away) — data: Fintraffic / digitraffic.fi (CC BY 4.0).',
+    );
+
+    // verbatim-number lock: the ja arms carry lat/lon + the measured figure
+    // through unchanged.
+    expect(advCap.contains('緯度 $akitaLat 経度 $akitaLon'), isTrue);
+    expect(failJa.contains('緯度 $akitaLat 経度 $akitaLon'), isTrue);
+    expect(metWithVis.contains('緯度 $nagoyaLat 経度 $nagoyaLon'), isTrue);
+    expect(visJa.contains('80 m(青森空港、45 km先)'), isTrue);
+  });
 }

@@ -28,22 +28,27 @@
 /// `pretrip_decision_advisor` package carries a `PretripMessages` locale table
 /// and `main.dart` resolves it from the active locale, so the same
 /// deterministic logic speaks the driver's language (measured numbers pass
-/// through verbatim). The `sourceCaption` line is now PARTLY Japanese — the
-/// offline/demo caption is localized — but its LIVE arms are still English:
-///   - `sourceCaption` (live arms) — composed upstream in `main.dart` from MET
-///     Norway / JMA / Digitraffic strings. It is MORE than attribution: on a
-///     failed JMA check it carries the safety-material caveat "an official snow
-///     warning may exist that is NOT reflected here", the "hazard signal from
-///     temperature + precipitation only" limitation, and any MEASURED
-///     departure-hour visibility reading (e.g. "visibility 80 m at a station").
-///     These clauses are English-only today, so the known-incomplete signal —
-///     and the most concrete measured reason — do not yet reach HER mother.
-///     Localizing them is the next reach-fix and is NOT cosmetic; it needs its
-///     own translation-faithfulness verification, so it is a separate commit.
-/// The gap is named here rather than hidden: the verdict, checklist, whiteout
-/// plan, winter-driving guidance, reason chips, AND the demo source caption
-/// reach HER mother in Japanese today; the live source-caption caveats do not
-/// yet. English remains a complete fallback surface for any unsupported locale.
+/// through verbatim). The `sourceCaption` line is now Japanese on BOTH the
+/// offline/demo arm AND the LIVE arms:
+///   - `sourceCaption` (live arms) — composed in the pre-trip screen from MET
+///     Norway / JMA / Digitraffic strings (`pretripLiveSourceCaption` +
+///     `pretripMeasuredVisibilityCaption`, locale-resolved). It is MORE than
+///     attribution: on a failed JMA check it carries the safety-material caveat
+///     "an official snow warning may exist that is NOT reflected here", the
+///     "hazard signal from temperature + precipitation only" limitation, and
+///     any MEASURED departure-hour visibility reading (e.g. "visibility 80 m at
+///     a station"). These clauses now reach HER mother in Japanese too — the
+///     merged arm relays the VERBATIM JMA classification (大雪警報 / 着雪注意報 …)
+///     rather than re-glossing, so a 警報 is never softened to a 注意報 (or the
+///     reverse), and the measured NUMBERS pass through verbatim. Each Japanese
+///     string passed an adversarial back-translation + numbers/omission +
+///     hazard-direction audit, fail-closed (any reversal/number-error/omission/
+///     hazard-flip kept that string English). English stays the default +
+///     fallback for any unsupported locale.
+/// The verdict, checklist, whiteout plan, winter-driving guidance, reason
+/// chips, the demo source caption, AND the live source-caption caveats +
+/// measured readings all reach HER mother in Japanese today. English remains a
+/// complete fallback surface for any unsupported locale.
 library;
 
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';

@@ -574,10 +574,16 @@ class _PretripScreenState extends State<PretripScreen> {
     final visAttribution = _pretripVisibilitySource == 'jma'
         ? 'Japan Meteorological Agency / AMeDAS (気象庁)'
         : 'Fintraffic / digitraffic.fi (CC BY 4.0)';
+    // The measured-visibility clause reaches HER mother in Japanese too now
+    // (locale-resolved, English fallback); the figure passes through verbatim.
     final visCaption = obs != null
-        ? ' Departure-hour visibility MEASURED: ${obs.meters.round()} m at '
-            '${obs.stationName} (${obs.distanceKm.toStringAsFixed(0)} km '
-            'away) — data: $visAttribution.'
+        ? pretripMeasuredVisibilityCaption(
+            meters: obs.meters.round(),
+            stationName: obs.stationName,
+            km: obs.distanceKm.toStringAsFixed(0),
+            attribution: visAttribution,
+            lang: locale.languageCode,
+          )
         : '';
     final caption = live != null
         ? pretripLiveSourceCaption(
@@ -585,10 +591,15 @@ class _PretripScreenState extends State<PretripScreen> {
             latitude: _pretripLat,
             longitude: _pretripLon,
             prefectureCode: _pretripJmaPrefecture,
+            // English gloss for the en arm; the ja arm instead relays the
+            // VERBATIM jmaEventName (大雪警報 …) — both passed so the builder
+            // picks the faithful one per locale, never softening 警報↔注意報.
             eventGloss: _pretripJmaEventName == null
                 ? null
                 : jmaEventEnglishGloss(_pretripJmaEventName!),
+            jmaEventName: _pretripJmaEventName,
             visCaption: visCaption,
+            lang: locale.languageCode,
           )
         : strings.simulatedForecastCaption +
             (_pretripForecastSource == 'met_norway'

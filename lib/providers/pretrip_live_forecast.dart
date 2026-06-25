@@ -153,8 +153,53 @@ String pretripLiveSourceCaption({
   required double longitude,
   String? prefectureCode,
   String? eventGloss,
+  String? jmaEventName,
   String visCaption = '',
+  String lang = 'en',
 }) {
+  // Japanese reach-fix for HER mother in Akita: the live-arm caveats + the
+  // measured-number clause now reach her in her own language. English stays
+  // the default + fallback (any non-`ja` locale renders the English arms
+  // below, byte-for-byte unchanged). The merged arm carries the VERBATIM JMA
+  // classification ([jmaEventName], e.g. 大雪警報 / 着雪注意報) rather than the
+  // English gloss — relaying the official 警報/注意報 byte-for-byte is more
+  // faithful than re-glossing, and never softens a 警報 to a 注意 (or the
+  // reverse). The honesty caveats (no-visibility-number, fetch-UNAVAILABLE,
+  // a-real-warning-may-be-unseen) are preserved at full strength; measured
+  // NUMBERS pass through verbatim via the same interpolations.
+  if (lang == 'ja') {
+    switch (status) {
+      case PretripLiveStatus.metNorway:
+        return 'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+            '緯度 $latitude 経度 $longitude。'
+            'この予報には視程・路面データはありません — '
+            '危険の判断材料は気温と降水${visCaption.isEmpty ? 'のみ' : ''}です。'
+            '$visCaption';
+      case PretripLiveStatus.japanJmaMerged:
+        return 'ライブ予報 — ベース:MET Norway (CC BY 4.0)、'
+            '緯度 $latitude 経度 $longitude。'
+            '出発時間帯の路面状況は気象庁の正式な${jmaEventName ?? '冬季の警報'}'
+            '(都道府県 ${prefectureCode ?? '?'})に基づきます — 出典:気象庁。'
+            'この警報・注意報からは視程の数値は示されません。$visCaption';
+      case PretripLiveStatus.japanJmaNoAdvisory:
+        return 'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+            '緯度 $latitude 経度 $longitude。'
+            '気象庁を確認(都道府県 ${prefectureCode ?? '?'}、気象庁):'
+            '発表中の冬季の警報はありません。'
+            'この予報には視程・路面データはありません — '
+            '危険の判断材料は気温と降水のみです。$visCaption';
+      case PretripLiveStatus.japanJmaFailed:
+        return 'ライブ予報 — データ:MET Norway (CC BY 4.0)、'
+            '緯度 $latitude 経度 $longitude。'
+            '気象庁の冬季警報の確認ができませんでした(取得失敗) — '
+            '気温と降水のみに基づくブリーフィングです。'
+            '実際には正式な雪の警報が発表されている可能性があり、'
+            'ここには反映されていません。$visCaption';
+      case PretripLiveStatus.metNorwayUnavailable:
+        // Caller never asks for a live caption in this arm; demo string is used.
+        return '';
+    }
+  }
   switch (status) {
     case PretripLiveStatus.metNorway:
       return 'LIVE forecast — data: MET Norway (CC BY 4.0), '
@@ -186,4 +231,28 @@ String pretripLiveSourceCaption({
       // Caller never asks for a live caption in this arm; demo string is used.
       return '';
   }
+}
+
+/// The MEASURED departure-hour visibility clause appended to a live source
+/// caption when a REAL visibility observation is merged (the most concrete,
+/// measured reason on the card). Localized for HER mother in Akita; English is
+/// the default + fallback. The leading space is intentional (this clause is
+/// appended to the caption). The measured NUMBERS pass through VERBATIM:
+/// [meters] is already the rounded integer (`obs.meters.round()`), and [km] is
+/// already `distanceKm.toStringAsFixed(0)` — no rounding/conversion happens
+/// here, so the figure HER reads is byte-identical across locales. The
+/// [attribution] token is the canonical source string and is NEVER translated.
+String pretripMeasuredVisibilityCaption({
+  required int meters,
+  required String stationName,
+  required String km,
+  required String attribution,
+  String lang = 'en',
+}) {
+  if (lang == 'ja') {
+    return ' 出発時間帯の計測視程:$meters m($stationName、$km km先) — '
+        'データ:$attribution。';
+  }
+  return ' Departure-hour visibility MEASURED: $meters m at $stationName '
+      '($km km away) — data: $attribution.';
 }
