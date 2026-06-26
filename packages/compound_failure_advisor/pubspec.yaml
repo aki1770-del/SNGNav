@@ -1,0 +1,23 @@
+name: compound_failure_advisor
+description: >-
+  Pure Dart in-drive compound-failure caution advisor for snow-zone navigation:
+  fuses position-trust and visibility into one honest, advisory-only caution
+  label when GPS and the map are failing at once. Never says "safe", never
+  tells her to turn back.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - driving
+  - weather
+
+environment:
+  sdk: ^3.10.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
