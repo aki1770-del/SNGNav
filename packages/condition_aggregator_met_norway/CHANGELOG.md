@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.3 — 2026-06-26 — Docs: dev-first on-ramp
+## 0.0.4 — 2026-06-26 — Docs: dev-first on-ramp (0.0.3 was already taken by the prior license-fix release; attribution preserved)
 
 - Docs: dev-first on-ramp — install (`dart pub add`) + a run-verified
   quickstart snippet now lead the README; governance / mission /
