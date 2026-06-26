@@ -1,8 +1,3 @@
-// Minimal usage example for condition_aggregator_digitraffic.
-//
-// Fetches active Digitraffic traffic announcements near a point in
-// southern Finland (Helsinki) and prints the count plus the severity,
-// event class, and English headline of each matched advisory.
 import 'package:condition_aggregator_digitraffic/condition_aggregator_digitraffic.dart';
 
 Future<void> main() async {

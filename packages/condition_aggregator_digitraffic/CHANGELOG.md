@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.6 — 2026-06-26 — Docs: dev-first on-ramp
+
+- README now LEADS with what-it-is, a `dart pub add` install line, and a
+  run-verified copy-paste quickstart snippet under `## Quick start`, plus
+  one line on what the developer gets back.
+- All governance / mission / service-trace / status / mapping / license
+  prose moved verbatim below a `## Background & provenance` heading.
+- `example/main.dart` updated to match the quickstart snippet (prints the
+  advisory count and severity-tagged event class + headline).
+- No source or behaviour change.
+
+
 ## 0.0.5 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).

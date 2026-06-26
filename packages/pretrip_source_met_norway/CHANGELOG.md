@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.1 — 2026-06-26 — Example no longer crashes on first run
+
+- **Fix:** `example/main.dart` no longer crashes with an unhandled
+  `MetNorwayForecastException: HTTP 403` when the placeholder User-Agent is
+  unchanged. A developer copying the example verbatim previously hit an
+  unhandled exception on first run, because MET Norway's terms reject the
+  generic `your_app/1.0 contact@example.com` identifier. The example now
+  detects the still-placeholder User-Agent (and also catches a live 403),
+  prints the one-line guidance "MET Norway requires an identifying User-Agent:
+  set it to your app + contact email, then re-run", runs an offline mapper demo
+  so the shape is still visible, and exits cleanly (exit 0).
+- **Library behaviour unchanged.** `MetNorwayHourlyForecastProvider` still
+  throws its loud typed `MetNorwayForecastException` on a non-200 response; only
+  the example's handling changed. No public API change.
+
 ## 0.2.0 — 2026-06-24 — Re-pin advisor to ^0.4.0 (catalog resolvability)
 
 - Shifts the `pretrip_decision_advisor` requirement from the 0.2.x range to the
@@ -70,5 +85,6 @@
 - Tests: 11, covering the mapper against a REAL captured Nagoya response
   (fetched live 2026-06-12), the honesty rules, the HTTP request shape via a
   mocked client, and an end-to-end map → `SnowAwarePretripAdvisor` verdict.
-- Data license: MET Norway forecast data is © MET Norway, **CC BY 4.0**;
+- Data license: MET Norway forecast data is dual-licensed under **NLOD 2.0**
+  AND **CC BY 4.0**; credit "Data from MET Norway" (<https://api.met.no/>);
   attribution is REQUIRED at the consumer-facing surface (see README).

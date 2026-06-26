@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.6 — 2026-06-26
+
+- Docs: dev-first on-ramp — install (`dart pub add`) + run-verified quickstart
+  snippet now lead the README; governance/mission prose moved to "Background &
+  provenance". `example/main.dart` now demonstrates a real alert fetch instead
+  of printing client config. No source or behavior change.
+
 ## 0.0.5
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

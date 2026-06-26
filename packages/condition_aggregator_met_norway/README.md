@@ -1,5 +1,59 @@
 # condition_aggregator_met_norway
 
+Turn a MET Norway forecast slice into a source-neutral, driver-actionable
+winter-road `Advisory` (freezing / heavy / subzero) — pure Dart.
+
+```sh
+dart pub add condition_aggregator_met_norway
+```
+
+(Pulls peer deps `condition_aggregator` + `http` automatically.)
+
+## Quick start
+
+Map a forecast slice to an advisory — no network needed to see the value:
+
+```dart
+import 'package:condition_aggregator_met_norway/condition_aggregator_met_norway.dart';
+
+void main() {
+  // A next-hour slice shaped like MET Norway locationforecast/2.0/compact:
+  // -2 C with 5 mm/h precipitation = freezing + heavy = winter road hazard.
+  final advisory = mapLocationForecastResponseToAdvisory(response: {
+    'geometry': {'type': 'Point', 'coordinates': [10.75, 59.91]},
+    'properties': {'timeseries': [
+      {'time': '2026-01-15T08:00:00Z', 'data': {
+        'instant': {'details': {'air_temperature': -2.0}},
+        'next_1_hours': {'summary': {'symbol_code': 'snow'},
+          'details': {'precipitation_amount': 5.0}},
+      }},
+    ]},
+  });
+  print('${advisory!.eventClass} (${advisory.severity.name}) — ${advisory.headline}');
+  print('  ${advisory.areaDescription} | expires ${advisory.expires}');
+  print('  ${advisory.description}');
+}
+```
+
+You get back a typed `Advisory` — `eventClass`, `severity`, `headline`,
+`areaDescription`, `effective` / `expires`, and a `description` carrying the
+required CC-BY-4.0 attribution. Running the snippet above prints:
+
+```
+Freezing precipitation (extreme) — Freezing precipitation — snow
+  Lat 59.9100, Lon 10.7500 | expires 2026-01-15 09:00:00.000Z
+  air_temperature -2.0 °C. next_1_hours precipitation_amount 5.0 mm. symbol_code snow. Source: Norwegian Meteorological Institute (Meteorologisk institutt / MET Norway). CC BY 4.0 — api.met.no.
+```
+
+For live data, swap to `MetNorwayAdvisoryProvider(userAgent: 'your_app/1.0 you@example.com')`,
+then `await provider.init()` and `fetchActiveAdvisoriesAtPoint(latitude:, longitude:)` —
+same `Advisory` output. See [`example/main.dart`](example/main.dart) for the live path
+and [`example/onramp_quickstart.dart`](example/onramp_quickstart.dart) for the snippet above.
+
+---
+
+## Background & provenance
+
 MET Norway (Meteorologisk institutt) locationforecast adapter for the
 [`condition_aggregator`](https://pub.dev/packages/condition_aggregator)
 interface. Maps Norwegian and Nordic-region next-hour weather
@@ -7,7 +61,7 @@ forecasts to source-neutral `Advisory` events at the adapter boundary.
 
 Pure Dart. Only `http` and `condition_aggregator` runtime dependencies.
 
-## Status
+### Status
 
 Published on pub.dev (v0.0.2); early and evolving. Ships against the public MET
 Norway `locationforecast/2.0/compact` endpoint with a heuristic
@@ -19,7 +73,7 @@ This is the **second** adapter under the Nordic-region adapter family
 [`condition_aggregator_digitraffic`](../condition_aggregator_digitraffic/)
 v0.0.1).
 
-### What v0.0.1 covers
+#### What v0.0.1 covers
 
 - Public `locationforecast/2.0/compact` endpoint, GeoJSON Point
   response.
@@ -35,7 +89,7 @@ v0.0.1).
 - Heuristic CAP severity / certainty / urgency mapping; thresholds
   integrator-overridable.
 
-### What v0.0.1 defers
+#### What v0.0.1 defers
 
 - `roadforecast/2.0` direct road-surface mapping. The product
   documented at
@@ -52,7 +106,7 @@ v0.0.1).
 - If-Modified-Since cache-friendly polling.
 - `package:http` `RetryClient` wrapper.
 
-## Endpoint
+### Endpoint
 
 `https://api.met.no/weatherapi/locationforecast/2.0/compact`
 
@@ -62,7 +116,7 @@ application/domain plus a contact email or website link. Non-compliance
 risks throttling or a permanent ban. Coordinates truncated to 4
 decimals before request per MET Norway terms.
 
-## Mapping (v0.0.1)
+### Mapping (v0.0.1)
 
 | Advisory field    | Source                                                |
 |-------------------|-------------------------------------------------------|
@@ -77,7 +131,7 @@ decimals before request per MET Norway terms.
 | `headline`        | `<eventClass> — <symbol_code>` when symbol present    |
 | `description`     | air_temperature + precipitation + symbol + CC-BY-4.0 attribution string |
 
-### Heuristic severity at v0.0.1
+#### Heuristic severity at v0.0.1
 
 | Condition                                                              | Severity   |
 |------------------------------------------------------------------------|------------|
@@ -90,7 +144,7 @@ decimals before request per MET Norway terms.
 Thresholds (4 mm/h heavy floor; 0 °C freezing floor) are
 integrator-overridable at construction time.
 
-## License + attribution (binding)
+### License + attribution (binding)
 
 This package code is licensed under [BSD 3-Clause](LICENSE).
 
@@ -107,7 +161,7 @@ advisory is rendered. See
 `AdvisorySource.metNorway.attributionString` in the parent
 `condition_aggregator` interface for the canonical credit line.
 
-## Usage
+### Live usage
 
 ```dart
 import 'package:condition_aggregator/condition_aggregator.dart';
@@ -133,7 +187,7 @@ Future<void> main() async {
 }
 ```
 
-## Composition
+### Composition
 
 ```dart
 final aggregator = AdvisoryAggregator(providers: [
@@ -143,7 +197,7 @@ final aggregator = AdvisoryAggregator(providers: [
 ]);
 ```
 
-## HER-trace (≤4 hops)
+### HER-trace (≤4 hops)
 
 ```
 MET Norway locationforecast feed
@@ -159,13 +213,13 @@ especially in compound-failure conditions when standard navigation
 infrastructure has gone away. Adapter-count is not the success
 metric; integrator pull + driver-relevance is.
 
-## Carry-forward (post v0.0.1)
+### Carry-forward (post v0.0.1)
 
 See [CHANGELOG.md](CHANGELOG.md) "Open questions surfaced" section
 for the strategic-sequencing + ecosystem-engagement + family-coherence
 questions opened by shipping the second Nordic adapter at the same
 first-slice maturity as the first.
 
-## License
+### License
 
 BSD 3-Clause License. See [LICENSE](LICENSE).

@@ -4,7 +4,7 @@ description: >-
   pretrip_decision_advisor briefing. Fetches the nearest fresh
   NÄKYVYYS_M road-weather sensor and emits a source-neutral
   VisibilityObservation. Pure Dart.
-version: 0.1.0
+version: 0.2.1
 license: BSD-3-Clause
 
 repository: https://github.com/aki1770-del/sngnav

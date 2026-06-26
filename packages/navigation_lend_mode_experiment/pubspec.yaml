@@ -4,7 +4,7 @@ description: >-
   never published. Provides a state machine and observer interface for
   explicit transfer of safety-threshold responsibility between drivers
   on the same device for a single trip.
-version: 0.0.1
+version: 0.0.2
 
 publish_to: none
 
