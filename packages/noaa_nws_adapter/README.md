@@ -1,5 +1,50 @@
 # noaa_nws_adapter
 
+Pure-Dart client that fetches active U.S. winter-weather alerts (Winter
+Storm / Blizzard / Ice Storm, etc.) for a lat/lon from the free NOAA / NWS
+public API. No API key, no account.
+
+```sh
+dart pub add noaa_nws_adapter
+```
+
+(pulls peer deps `http` + `equatable` automatically — no manual peer install.)
+
+## Quick start
+
+```dart
+import 'package:noaa_nws_adapter/noaa_nws_adapter.dart';
+
+void main() async {
+  final client = NoaaNwsClient(userAgent: '(myapp.example.com, you@example.com)');
+  try {
+    // Active winter alerts near these coordinates (Grand Forks, ND).
+    final alerts = await client.fetchActiveWinterAlerts(
+      latitude: 47.9253,
+      longitude: -97.0329,
+    );
+    print('Active winter alerts: ${alerts.length}');
+    for (final a in alerts) {
+      print('• ${a.event} [${a.severity.name}] — ${a.headline}');
+    }
+  } on NoaaNwsHttpException catch (e) {
+    print('NWS unreachable: $e'); // honest failure; never a fake "all clear"
+  } finally {
+    client.close();
+  }
+}
+```
+
+You get back a `List<WinterAlert>` — typed, severity-qualified winter alerts
+for that point (empty when none are active), parsed from NWS GeoJSON for you.
+
+Note: NWS requires a `User-Agent` of the form `(yourapp.com, contact@email.com)`;
+the client raises `ArgumentError` up-front if omitted, so substitute your own contact.
+
+---
+
+## Background & provenance
+
 Smallest-slice direct-consume wrapper around the
 [NOAA / National Weather Service public API](https://www.weather.gov/documentation/services-web-api)
 (`https://api.weather.gov`).
@@ -69,38 +114,6 @@ Advisory, Extreme Cold Warning / Watch.
 Other endpoints (`/points`, `/gridpoints/.../forecast`, `/stations`,
 `/zones`, etc.) and other event classes (severe weather, flood, fire,
 marine) are intentionally out of scope for this slice.
-
-## Quick start
-
-```dart
-import 'package:noaa_nws_adapter/noaa_nws_adapter.dart';
-
-final client = NoaaNwsClient(
-  userAgent: '(sngnav.example, contact@sngnav.example)',
-);
-
-try {
-  final alerts = await client.fetchActiveWinterAlerts(
-    latitude: 47.9253,
-    longitude: -97.0329,
-  );
-  for (final a in alerts) {
-    print('${a.event} (${a.severity.name}): ${a.headline}');
-    print('  area: ${a.areaDesc}');
-    print('  expires: ${a.expires}');
-  }
-} on NoaaNwsHttpException catch (e) {
-  // 4xx/5xx or transport failure. On 429 the publisher recommends
-  // ~5-second backoff before retry.
-  print('NWS unreachable: $e');
-} on NoaaNwsParseException catch (e) {
-  // Schema-shape mismatch — usually transient; surface for review if
-  // it recurs across multiple consecutive polls.
-  print('NWS payload unexpected: $e');
-} finally {
-  client.close();
-}
-```
 
 ## API
 

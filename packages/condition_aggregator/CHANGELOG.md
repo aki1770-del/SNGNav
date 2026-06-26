@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.6 — 2026-06-26 — Dev-first on-ramp
+
+- Docs: dev-first on-ramp — install + run-verified quickstart snippet now lead;
+  governance prose moved to Background. README now opens with a one-sentence
+  description, the `dart pub add condition_aggregator` line, and a copy-paste
+  `## Quick start` snippet (self-contained, no peer deps required) demonstrating
+  the real `AdvisoryAggregator` fan-out. The mission/HER-trace/composition prose
+  is preserved verbatim under `## Background & provenance`.
+- `example/main.dart` now demonstrates the `AdvisoryAggregator` fan-out
+  (init → fetch → typed merge → per-provider error list), matching the
+  quickstart snippet, instead of only constructing a single `Advisory` struct.
+- No SDK source or behaviour change.
+
 ## 0.0.5
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

@@ -1,10 +1,3 @@
-// ignore_for_file: avoid_print
-//
-// Minimal runnable example for noaa_nws_adapter: fetch active U.S. winter
-// alerts for a point and print them. NWS requires a User-Agent of the form
-// "(yourapp.com, contact@email.com)"; the client raises ArgumentError
-// up-front if omitted, so substitute your own contact.
-
 import 'package:noaa_nws_adapter/noaa_nws_adapter.dart';
 
 void main() async {

@@ -1,5 +1,46 @@
 # condition_aggregator_digitraffic
 
+Pull live Finnish road traffic announcements (Fintraffic Digitraffic) as
+typed `Advisory` events. No API key.
+
+```sh
+dart pub add condition_aggregator_digitraffic
+```
+
+## Quick start
+
+```dart
+import 'package:condition_aggregator_digitraffic/condition_aggregator_digitraffic.dart';
+
+Future<void> main() async {
+  // Live Finnish traffic announcements near Helsinki (no API key needed).
+  final provider = DigitrafficAdvisoryProvider();
+  try {
+    await provider.init();
+    final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+      latitude: 60.17,
+      longitude: 24.93,
+    );
+    print('${advisories.length} active advisory(ies) nearby:');
+    for (final a in advisories) {
+      print('  [${a.severity.name}] ${a.eventClass} — ${a.headline}');
+    }
+  } finally {
+    provider.close(); // releases the HTTP client
+  }
+}
+```
+
+You get back a `List<Advisory>` of active announcements near the point,
+each with a CAP-class `severity`, an `eventClass`, and a human-readable
+`headline` (English where available).
+
+> Run it: `dart run example/quickstart.dart`
+
+---
+
+## Background & provenance
+
 Fintraffic Digitraffic traffic-announcements adapter for the
 [`condition_aggregator`](https://pub.dev/packages/condition_aggregator)
 interface. Maps Finnish traffic announcements to source-neutral
@@ -7,7 +48,7 @@ interface. Maps Finnish traffic announcements to source-neutral
 
 Pure Dart. Only `http` and `condition_aggregator` runtime dependencies.
 
-## Status
+### Status
 
 Published on pub.dev (v0.0.5); early and evolving. Ships against the open Digitraffic
 traffic-announcements endpoint with point-based bounding-box
@@ -18,7 +59,7 @@ This is the **first** adapter under the Nordic-region adapter family;
 the **second** is
 [`condition_aggregator_met_norway`](../condition_aggregator_met_norway/).
 
-## Service trace (driver in unexpected snow; ≤4 hops)
+### Service trace (driver in unexpected snow; ≤4 hops)
 
 ```
 Fintraffic Digitraffic traffic-announcements feed
@@ -33,7 +74,7 @@ snow — and her family — especially in compound-failure conditions
 when standard navigation infrastructure has gone away. Adapter-count
 is not the success metric; integrator pull + driver-relevance is.
 
-## Source attribution
+### Source attribution
 
 `v0.0.2` continues to use `AdvisorySource.other` as a placeholder.
 The `condition_aggregator` interface does not yet carry a Finland
@@ -44,7 +85,7 @@ fires when a second Finnish-publisher adapter warrants the enum
 surface change; until then `other` + the verbatim Fintraffic credit
 line in `Advisory.description` carry the attribution load.
 
-## Endpoint
+### Endpoint
 
 `https://tie.digitraffic.fi/api/traffic-message/v2/traffic-announcements`
 
@@ -54,7 +95,7 @@ adapter filters features whose geometry intersects a small bounding
 box around the requested point. The 2026-05-24 live response measured
 ~3.5 MB across 1455 active features.
 
-## Mapping (v0.0.2)
+### Mapping (v0.0.2)
 
 | Advisory field    | Source                                                 |
 |-------------------|--------------------------------------------------------|
@@ -69,7 +110,7 @@ box around the requested point. The 2026-05-24 live response measured
 | `headline`        | English `announcements[].title` if present, else Finnish |
 | `description`     | English `additionalInformation` if present, else Finnish, with verbatim Fintraffic CC-BY-4.0 credit appended |
 
-### Default CAP-class mapping (`defaultDigitrafficCapMapping`)
+#### Default CAP-class mapping (`defaultDigitrafficCapMapping`)
 
 Sourced from the 2026-05-24 live API genchi-genbutsu (5 distinct
 `trafficAnnouncementType` values observed across 1455 active features
@@ -91,32 +132,12 @@ the `capMapping` constructor parameter. The fallback mapping for
 unobserved future event-class values is conservatively
 `minor` / `possible` / `unknown`; integrators MAY override it too.
 
-## Usage
+### Integrator-overridable CAP mapping
 
 ```dart
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_digitraffic/condition_aggregator_digitraffic.dart';
 
-Future<void> main() async {
-  final provider = DigitrafficAdvisoryProvider();
-  try {
-    await provider.init();
-    final advisories = await provider.fetchActiveAdvisoriesAtPoint(
-      latitude: 60.17,
-      longitude: 24.93,
-    );
-    for (final a in advisories) {
-      print('${a.eventClass} (${a.severity.name}) — ${a.headline}');
-    }
-  } finally {
-    provider.close();
-  }
-}
-```
-
-### Integrator-overridable CAP mapping
-
-```dart
 final ruralFinlandProvider = DigitrafficAdvisoryProvider(
   capMapping: <String, DigitrafficCapMapping>{
     // Rural-Finland integrator elevates "general" — any active
@@ -131,7 +152,7 @@ final ruralFinlandProvider = DigitrafficAdvisoryProvider(
 );
 ```
 
-## Composition
+### Composition
 
 ```dart
 final aggregator = AdvisoryAggregator(providers: [
@@ -141,7 +162,7 @@ final aggregator = AdvisoryAggregator(providers: [
 ]);
 ```
 
-## License + attribution (binding)
+### License + attribution (binding)
 
 This adapter package code is licensed under [BSD 3-Clause](LICENSE).
 
@@ -163,7 +184,7 @@ panel — any *"reasonable manner"* satisfying CC-BY-4.0 §3(a)(2)).
 The string is also exported as the public constant
 `kDigitrafficAttributionString` for direct integrator use.
 
-### Modification disclosure (CC-BY-4.0 §3(a)(1)(b))
+#### Modification disclosure (CC-BY-4.0 §3(a)(1)(b))
 
 This adapter transforms the Digitraffic
 `/v2/traffic-announcements` GeoJSON FeatureCollection into a
@@ -176,7 +197,7 @@ rendering the advisory should treat the verbatim attribution credit
 line as accompanying both the original Fintraffic data and this
 adapter's derivative representation of it.
 
-## What v0.0.2 still defers (carry-forward to v0.0.3+)
+### What v0.0.2 still defers (carry-forward to v0.0.3+)
 
 - `AdvisorySource.fintrafficFinland` enum-extension upstream
   proposal (fires when a second Finnish-publisher adapter warrants
@@ -189,6 +210,6 @@ adapter's derivative representation of it.
 - Integrator-facing pana score baseline + publish-readiness
   summary per NDI bylaws Rule 6 (pre-`dart pub publish` substrate).
 
-## License
+### License
 
 BSD 3-Clause License. See [LICENSE](LICENSE).

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.3 — 2026-06-26 — Docs: dev-first on-ramp
+
+- Docs: dev-first on-ramp — install (`dart pub add`) + a run-verified
+  quickstart snippet now lead the README; governance / mission /
+  HER-trace / status / mapping prose moved verbatim to a
+  `## Background & provenance` section below.
+- No source or behaviour change.
+
+
 ## 0.0.2 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).
