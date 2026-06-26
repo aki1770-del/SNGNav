@@ -9,6 +9,12 @@ their own pre-trip "Before you drive" surface.
 
 Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
 
+> **New here? Start with [QUICKSTART.md](QUICKSTART.md)** — empty `flutter
+> create` → a rendered, offline pre-trip briefing in ~10 minutes, with the
+> mandatory `User-Agent`, the honest-null + measured-visibility pairing, and the
+> region/language swap (Akita 日本語 / Tromsø English) all worked through with
+> compile-verified snippets.
+
 ## Status
 
 Phase: extract — v0.1.0. Extracted verbatim (no behaviour change) from the
@@ -176,14 +182,22 @@ See [`example/main.dart`](example/main.dart) for the runnable version.
 
 This adapter package code is licensed under [BSD 3-Clause](LICENSE).
 
-**MET Norway forecast data is licensed CC BY 4.0.** The `locationforecast`
-product is published by the Norwegian Meteorological Institute (MET Norway)
-under the Creative Commons Attribution 4.0 International license. Attribution
-is REQUIRED at the consumer-facing surface, not optional. Surface the credit
-wherever the data is shown (per-forecast detail, credits screen, about panel —
-any *"reasonable manner"* satisfying CC BY 4.0 §3(a)(2)):
+**MET Norway forecast data is dual-licensed** (unless otherwise specified)
+under the **Norwegian Licence for Open Government Data (NLOD) 2.0** AND the
+**Creative Commons Attribution 4.0 International (CC BY 4.0)** licence. The
+`locationforecast` product is published by the Norwegian Meteorological
+Institute (MET Norway) under both licences; an integrator may rely on either.
+Attribution is REQUIRED at the consumer-facing surface, not optional. Per MET
+Norway: *"Credit should be given to The Norwegian Meteorological Institute,
+shortened MET Norway, as the source of data."* Surface the credit wherever the
+data is shown (per-forecast detail, credits screen, about panel). MET Norway's
+suggested credit is:
 
-> Data: © MET Norway, CC BY 4.0.
+> Data from MET Norway
+
+(or *"Based on data from MET Norway"* where the data has been transformed). A
+link to the source where the data can be downloaded is also appreciated:
+<https://api.met.no/>.
 
 The MET Norway terms additionally require the identifying `User-Agent`
 described under "Endpoint". This package consumes the publisher data

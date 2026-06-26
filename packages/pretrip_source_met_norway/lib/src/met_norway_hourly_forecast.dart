@@ -27,7 +27,8 @@
 /// MET Norway terms: requests carry an identifying User-Agent and
 /// coordinates truncated to 4 decimals (publisher cache-friendliness AND
 /// a privacy posture — the driver's sub-11 m position is not transmitted).
-/// Forecast data is © MET Norway, CC BY 4.0; the caller surfaces the
+/// Credit: "Data from MET Norway" (<https://api.met.no/>). Forecast data is
+/// dual-licensed under NLOD 2.0 AND CC BY 4.0; the caller surfaces the
 /// attribution wherever the data is shown.
 library;
 

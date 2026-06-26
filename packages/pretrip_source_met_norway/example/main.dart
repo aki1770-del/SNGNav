@@ -47,7 +47,8 @@ Future<void> main() async {
     print('Verdict: ${briefing.verdict.name}');
     print('Peak hazard: ${briefing.peakHazard.name}');
     // Attribution is REQUIRED wherever the data is shown:
-    //   Data: © MET Norway, CC BY 4.0.
+    //   Data from MET Norway (https://api.met.no/) —
+    //   data dual-licensed under NLOD 2.0 AND CC BY 4.0.
   } finally {
     provider.close();
   }

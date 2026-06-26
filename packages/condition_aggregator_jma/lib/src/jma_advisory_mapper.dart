@@ -1,41 +1,119 @@
-/// JMA forecast-record → source-neutral [Advisory] mapping plus the
-/// direct-parse helpers (atom feed + per-prefecture report XML +
-/// bounding-box prefecture-code resolution) that the
+/// JMA warning-record → source-neutral [Advisory] mapping plus the
+/// parse helper (windowless per-prefecture warning JSON) and the
+/// bounding-box prefecture-code resolution that the
 /// [JmaAdvisoryProvider] composes.
 ///
-/// All four winter-snow advisory event names are passed through
+/// All winter-snow advisory event names are passed through
 /// `Advisory.eventClass` verbatim per AAA Article 17 (β) verbatim-relay
-/// discipline. The CAP-class severity / certainty / urgency mapping
-/// is conservative at 0.1.0 (警報 → severe; 注意報 → moderate).
+/// discipline. The CAP-class severity mapping is conservative
+/// (警報 → severe; 注意報 → moderate; 特別警報 → extreme).
 ///
-/// Severity mapping at 0.1.0:
+/// ## Why the per-prefecture warning JSON (0.2.0)
+///
+/// Through 0.1.x this adapter read the JMA disaster-info atom feed
+/// (`extra.xml` / `extra_l.xml`) and walked each linked per-prefecture
+/// report XML. An independent safety audit found a **window /
+/// scroll-off false-negative**: those feeds are a recent-publication
+/// *window* (a stream of the latest reports). A warning that is still
+/// in force but was last re-issued before the window opens silently
+/// scrolls off the feed and is missed — a false-negative for a
+/// snow-WARNING package, where a stale-but-active 大雪警報 is exactly
+/// what the driver must still see.
+///
+/// 0.2.0 reads the **windowless per-prefecture warning JSON**
+/// (`https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`),
+/// which always reflects the *current in-force* warning state for the
+/// prefecture with no window to scroll off. It is also tiny (~7 KB for
+/// Akita vs ~0.6 MB for the atom feed) — lighter on constrained
+/// in-vehicle hardware.
+///
+/// ## Severity mapping
 /// - 警報 (warning) suffix → `AdvisorySeverity.severe`
 /// - 注意報 (advisory) suffix → `AdvisorySeverity.moderate`
 /// - 特別警報 (emergency warning) suffix → `AdvisorySeverity.extreme`
 /// - any other → `AdvisorySeverity.unknown`
 ///
-/// Certainty / urgency are `unknown` at 0.1.0 — JMA's classification
-/// does not map cleanly to CAP's certainty/urgency scales without a
+/// Certainty / urgency are `unknown` — JMA's classification does not
+/// map cleanly to CAP's certainty/urgency scales without a
 /// per-event-class table; the publisher's authoritative term is
 /// preserved verbatim in `eventClass` either way.
 library;
 
+import 'dart:convert';
+
 import 'package:condition_aggregator/condition_aggregator.dart';
-import 'package:xml/xml.dart';
+
+/// JMA warning-code → verbatim event-name for the snow classes this
+/// adapter surfaces, keyed on the **bosai warning JSON** numeric
+/// `code` value (NOT the jmaxml report `<Kind><Code>`; the two code
+/// systems differ — e.g. in the bosai JSON `06` = 大雪警報, whereas the
+/// jmaxml report XML uses `33` for the same event name).
+///
+/// Each code↔name pair below was verified against the JMA bosai
+/// warning code taxonomy (the `level-NN` legend transcribed from the
+/// JMA `bosai/warning` frontend, cross-checked across three
+/// independent references, 2026-06-26) and is consistent with the live
+/// Akita feed (`14` = 雷注意報, observed in-force 2026-06-26):
+/// - `06` → 大雪警報         (heavy-snow warning)
+/// - `12` → 大雪注意報       (heavy-snow advisory)
+/// - `02` → 暴風雪警報       (blizzard warning)
+/// - `26` → 着雪注意報       (snow-accretion advisory)
+///
+/// NOTE — `暴風雪注意報` is intentionally absent here: the JMA bosai
+/// warning JSON has **no code for it**. JMA's official 注意報 taxonomy
+/// has no 暴風雪注意報; the advisory-level counterpart of 暴風雪警報 is
+/// 風雪注意報 (code `13`), which is outside this adapter's 0.2.0 snow
+/// catalog. The name is retained in [kJmaSnowAdvisoryEventNames] for
+/// back-compat, but the windowless JSON source will never emit it, so
+/// no Advisory is ever produced for it (correct — the source does not
+/// publish that class). See CHANGELOG 0.2.0.
+/// 特別警報 (emergency / level-50) snow codes `36` + `32` added in
+/// 0.2.0 (AAA safety-audit gap: the highest-severity snow class — strictly
+/// more dangerous than 警報 — was missing). Verified directly against the
+/// JMA bosai warning frontend's own served `code2WarningInfo` lookup
+/// (2026-06-26): the page inlines
+/// `36:{nameParts:e.snow[5],elem:"snow",level:50}` with
+/// `e.snow[5]=["大雪","特別警報"]`, and
+/// `32:{nameParts:e.wind_snow[5],elem:"wind_snow",level:50}` with
+/// `e.wind_snow[5]=["暴風雪","特別警報"]` (`level:50` = 特別警報).
+/// There is no 着雪特別警報: the served `e.snow_accretion` array has only
+/// the advisory slot populated (`[[],[],["着雪","注意報"],[],[],[]]`), so 着雪
+/// has no 警報 or 特別警報 level and none is added.
+const Map<String, String> kJmaSnowWarningCodes = <String, String>{
+  '06': '大雪警報',
+  '12': '大雪注意報',
+  '02': '暴風雪警報',
+  '26': '着雪注意報',
+  '36': '大雪特別警報',
+  '32': '暴風雪特別警報',
+};
+
+/// Warning `status` values that mean the warning is **in force**. The
+/// windowless JSON lists a just-cancelled warning with status `解除`
+/// for a short period; anything that is not a cancellation is treated
+/// as active. (`発表` = newly issued, `継続` = continued.)
+const String kJmaWarningStatusCancelled = '解除';
 
 /// Snow / blizzard / icing advisory event names (JA verbatim) the
-/// adapter surfaces at 0.1.0. JMA's catalogue is broader (over 50
+/// adapter surfaces. JMA's catalogue is broader (over 50
 /// 警報・注意報 classes) — we explicitly opt the snow-class names
 /// in here so adding a new one is a deliberate version bump.
+///
+/// Retained verbatim from 0.1.x for back-compat. Of these, the four
+/// that the windowless warning JSON publishes a code for are in
+/// [kJmaSnowWarningCodes]; `暴風雪注意報` has no bosai-JSON code (see
+/// the note on [kJmaSnowWarningCodes]).
 const Set<String> kJmaSnowAdvisoryEventNames = <String>{
   '大雪警報',
   '大雪注意報',
   '暴風雪警報',
   '暴風雪注意報',
   '着雪注意報',
+  '大雪特別警報',
+  '暴風雪特別警報',
 };
 
-/// Bounding-box catalog for 6 snow-zone prefectures at 0.1.0.
+/// Bounding-box catalog for 6 snow-zone prefectures.
 /// Bounding-box is approximate (axis-aligned rectangle in WGS84
 /// decimal degrees). Used by [prefectureCodeForPoint] to resolve a
 /// caller's lat/lon to one of the catalogued prefecture codes; points
@@ -49,9 +127,7 @@ const Set<String> kJmaSnowAdvisoryEventNames = <String>{
 const Map<String, ({double south, double west, double north, double east})>
 kJmaPrefectureBoundingBoxes =
     <String, ({double south, double west, double north, double east})>{
-      // Hokkaido — sub-region 010000 covers the prefecture overall at the
-      // VPWW54 family (the per-sub-region breakdowns surface inside the
-      // report XML's `<Information>` blocks).
+      // Hokkaido — office 010000 covers the prefecture overall.
       '010000': (south: 41.35, west: 139.33, north: 45.55, east: 148.90),
       '020000': (
         south: 40.21,
@@ -85,7 +161,7 @@ kJmaPrefectureBoundingBoxes =
       ), // Niigata
     };
 
-/// Readable prefecture NAMES for the 0.1.0 snow-zone catalog codes — for a
+/// Readable prefecture NAMES for the snow-zone catalog codes — for a
 /// place LABEL in a driver-facing surface, so a destination area never renders
 /// as a bare numeric office code (e.g. '050000'). Codes mirror
 /// [kJmaPrefectureBoundingBoxes]; any code outside the catalog returns null via
@@ -100,14 +176,13 @@ const Map<String, String> kJmaPrefectureNames = <String, String>{
 };
 
 /// The readable prefecture name for a JMA prefecture [code], or null when the
-/// code is not in the 0.1.0 catalog (so the caller never renders a bare code).
+/// code is not in the catalog (so the caller never renders a bare code).
 String? jmaPrefectureName(String code) => kJmaPrefectureNames[code];
 
-/// Resolves a WGS84 lat/lon to a JMA prefecture code in the 0.1.0
-/// catalog. Returns null if the point falls outside every catalogued
-/// bounding box. Iteration is deterministic over `Map` iteration
-/// order so a point on a shared edge resolves consistently across
-/// calls.
+/// Resolves a WGS84 lat/lon to a JMA prefecture code in the catalog.
+/// Returns null if the point falls outside every catalogued bounding
+/// box. Iteration is deterministic over `Map` iteration order so a
+/// point on a shared edge resolves consistently across calls.
 String? prefectureCodeForPoint({
   required double latitude,
   required double longitude,
@@ -124,238 +199,150 @@ String? prefectureCodeForPoint({
   return null;
 }
 
-/// One atom-feed entry — minimal projection of the fields the provider
-/// needs to filter + traverse to the per-prefecture report XML.
-class JmaAtomEntry {
-  /// `<title>` text — e.g. "気象警報・注意報（Ｈ２７）" or
-  /// "気象特別警報・警報・注意報".
-  final String title;
+/// One in-force snow-class warning extracted from a per-prefecture
+/// warning JSON. Deduplicated to one record per distinct snow warning
+/// code in the prefecture (the same code is repeated across every
+/// sub-area / municipality in the JSON; for a prefecture-resolved
+/// lat/lon lookup that detail is below this adapter's resolution).
+class JmaWarningRecord {
+  /// Bosai warning-JSON numeric `code`, e.g. `06`. Stable identifier;
+  /// downstream consumers may key on this rather than the localized
+  /// name.
+  final String warningCode;
 
-  /// `<updated>` ISO-8601 timestamp string verbatim.
-  final String updated;
-
-  /// `<author><name>` — e.g. "長野地方気象台".
-  final String author;
-
-  /// `<link type="application/xml" href="…">` — URL of the per-prefecture
-  /// report XML. The filename suffix encodes the publisher area code
-  /// (e.g. `_200000.xml` for Nagano).
-  final String reportUrl;
-
-  const JmaAtomEntry({
-    required this.title,
-    required this.updated,
-    required this.author,
-    required this.reportUrl,
-  });
-}
-
-/// Parses one atom feed body into a list of [JmaAtomEntry]. Entries
-/// without all four fields are skipped (the publisher's regular shape
-/// always populates them; any missing field signals a malformed entry
-/// we'd rather drop than partially-render).
-List<JmaAtomEntry> parseJmaAtomFeed(String body) {
-  final doc = XmlDocument.parse(body);
-  final feed = doc.rootElement;
-  final out = <JmaAtomEntry>[];
-  for (final entry in feed.findElements('entry', namespace: '*')) {
-    final title = entry
-        .findElements('title', namespace: '*')
-        .firstOrNull
-        ?.innerText;
-    final updated = entry
-        .findElements('updated', namespace: '*')
-        .firstOrNull
-        ?.innerText;
-    final authorEl = entry.findElements('author', namespace: '*').firstOrNull;
-    final author = authorEl
-        ?.findElements('name', namespace: '*')
-        .firstOrNull
-        ?.innerText;
-    String? reportUrl;
-    for (final link in entry.findElements('link', namespace: '*')) {
-      final type = link.getAttribute('type');
-      if (type == 'application/xml') {
-        reportUrl = link.getAttribute('href');
-        break;
-      }
-    }
-    if (title == null ||
-        updated == null ||
-        author == null ||
-        reportUrl == null) {
-      continue;
-    }
-    out.add(
-      JmaAtomEntry(
-        title: title,
-        updated: updated,
-        author: author,
-        reportUrl: reportUrl,
-      ),
-    );
-  }
-  return out;
-}
-
-/// Forecast-record extracted from one per-prefecture report XML. Each
-/// `<Item><Kind>` × `<Areas><Area>` cross-product produces one record
-/// (so a single report can yield multiple records — different event
-/// classes across different sub-regions of the same prefecture).
-class JmaForecastRecord {
-  /// `<Kind><Name>` — e.g. "大雪警報". Verbatim-relayed in
+  /// Verbatim JMA event name, e.g. `大雪警報`. Relayed in
   /// `Advisory.eventClass`.
   final String eventName;
 
-  /// `<Kind><Code>` — JMA's numeric event-class code, e.g. "33" for
-  /// 大雪警報. Surfaced for downstream consumers that key on the
-  /// stable code rather than the localized name.
-  final String eventCode;
+  /// The warning `status` verbatim (`発表` / `継続`). Cancellations
+  /// (`解除`) are filtered out during parse and never become a record.
+  final String status;
 
-  /// `<Headline><Text>` — multi-paragraph publisher headline.
-  final String headline;
+  /// The prefecture (office) code this warning was read for, e.g.
+  /// `050000`.
+  final String prefectureCode;
 
-  /// `<Areas><Area><Name>` — e.g. "北部". Surfaced verbatim as
-  /// `Advisory.areaDescription`.
+  /// Readable prefecture name (e.g. `Akita`) used as
+  /// `Advisory.areaDescription`, or the bare code when not in the
+  /// catalog.
   final String areaName;
 
-  /// `<Areas><Area><Code>` — e.g. "200010". Stable identifier;
-  /// downstream consumers may key on this for region-aware UI.
-  final String areaCode;
+  /// `headlineText` from the warning JSON, verbatim.
+  final String headline;
 
-  /// `<ReportDateTime>` — when the publisher emitted the report.
-  /// Used as `Advisory.effective` until a more granular per-event
-  /// effective timestamp is exposed at the schema layer.
+  /// `reportDatetime` from the warning JSON. Used as
+  /// `Advisory.effective`.
   final DateTime? reportDateTime;
 
-  /// `<TargetDateTime>` — when the conditions described take effect.
-  /// Returned as a candidate `effective` for callers that prefer
-  /// content time over publishing time. (At 0.1.0 we use
-  /// reportDateTime as the canonical effective; this field is
-  /// surfaced for forward-compat.)
-  final DateTime? targetDateTime;
-
-  const JmaForecastRecord({
+  const JmaWarningRecord({
+    required this.warningCode,
     required this.eventName,
-    required this.eventCode,
-    required this.headline,
+    required this.status,
+    required this.prefectureCode,
     required this.areaName,
-    required this.areaCode,
+    required this.headline,
     required this.reportDateTime,
-    required this.targetDateTime,
   });
 }
 
-/// Parses one per-prefecture report XML body into a list of
-/// [JmaForecastRecord]. The cross-product of `<Item><Kind>` ×
-/// `<Item><Areas><Area>` produces one record per pair so downstream
-/// filtering on event-name + area is straightforward.
+/// Parses one per-prefecture warning JSON [body] into the in-force
+/// snow-class [JmaWarningRecord]s for [prefectureCode].
 ///
-/// Only the most-granular `<Information type="気象警報・注意報（市町村等をまとめた地域等）">`
-/// block is consumed when present; the prefecture-level + sub-region
-/// blocks are intentionally skipped to avoid double-counting the
-/// same advisory at multiple resolutions. If the granular block is
-/// absent, the next-most-granular present block is used.
-List<JmaForecastRecord> parseJmaReportXml(String body) {
-  final doc = XmlDocument.parse(body);
-  final report = doc.rootElement;
-
-  // Head → ReportDateTime + TargetDateTime + Headline/Text.
-  DateTime? reportDateTime;
-  DateTime? targetDateTime;
-  String headline = '';
-
-  final headEl = _findFirstByLocalName(report, 'Head');
-  if (headEl != null) {
-    final rdt = _findFirstByLocalName(headEl, 'ReportDateTime')?.innerText;
-    if (rdt != null && rdt.isNotEmpty) {
-      reportDateTime = DateTime.tryParse(rdt);
-    }
-    final tdt = _findFirstByLocalName(headEl, 'TargetDateTime')?.innerText;
-    if (tdt != null && tdt.isNotEmpty) {
-      targetDateTime = DateTime.tryParse(tdt);
-    }
-    final headlineEl = _findFirstByLocalName(headEl, 'Headline');
-    if (headlineEl != null) {
-      headline =
-          _findFirstByLocalName(headlineEl, 'Text')?.innerText ?? headline;
-    }
+/// The JSON shape (verified live 2026-06-26 against
+/// `bosai/warning/data/warning/050000.json`):
+/// ```json
+/// {
+///   "reportDatetime": "2026-05-28T06:11:00+09:00",
+///   "publishingOffice": "秋田地方気象台",
+///   "headlineText": "…",
+///   "areaTypes": [
+///     {"areas": [{"code": "050010", "warnings": [{"code": "14", "status": "発表"}]}, …]},
+///     …
+///   ],
+///   "timeSeries": [ … ]   // forecast warnings — NOT current in-force; ignored
+/// }
+/// ```
+///
+/// Only `areaTypes[].areas[].warnings[]` (the current in-force state)
+/// is consumed; `timeSeries` (the forecast outlook) is intentionally
+/// ignored. Warnings are filtered to the snow-class codes
+/// ([kJmaSnowWarningCodes]) and to non-cancelled status, then
+/// deduplicated to one record per distinct snow code.
+List<JmaWarningRecord> parseJmaWarningJson(
+  String body, {
+  required String prefectureCode,
+  String? prefectureName,
+}) {
+  final dynamic decoded = json.decode(body);
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException(
+      'JMA warning JSON root is not a JSON object.',
+    );
   }
 
-  // Pick the most-granular Information block present.
-  final informationEls = _findAllByLocalName(
-    headEl ?? report,
-    'Information',
-  ).toList();
-  XmlElement? chosenInfo;
-  // Prefer 市町村 granularity > 一次細分区域 > 府県予報区.
-  const granularityOrder = <String>[
-    '気象警報・注意報（市町村等をまとめた地域等）',
-    '気象警報・注意報（一次細分区域等）',
-    '気象警報・注意報（府県予報区等）',
-  ];
-  for (final preferredType in granularityOrder) {
-    for (final info in informationEls) {
-      if (info.getAttribute('type') == preferredType) {
-        chosenInfo = info;
-        break;
-      }
-    }
-    if (chosenInfo != null) break;
-  }
-  if (chosenInfo == null && informationEls.isNotEmpty) {
-    chosenInfo = informationEls.first;
-  }
+  final reportRaw = decoded['reportDatetime'];
+  final DateTime? reportDateTime = reportRaw is String && reportRaw.isNotEmpty
+      ? DateTime.tryParse(reportRaw)
+      : null;
+  final headlineRaw = decoded['headlineText'];
+  final String headline = headlineRaw is String ? headlineRaw : '';
+  final areaName =
+      prefectureName ?? jmaPrefectureName(prefectureCode) ?? prefectureCode;
 
-  final out = <JmaForecastRecord>[];
-  if (chosenInfo == null) return out;
-
-  for (final item in _findAllByLocalName(chosenInfo, 'Item')) {
-    final kinds = _findAllByLocalName(item, 'Kind').toList();
-    final areasEl = _findFirstByLocalName(item, 'Areas');
-    if (areasEl == null) continue;
-    final areas = _findAllByLocalName(areasEl, 'Area').toList();
-    if (kinds.isEmpty || areas.isEmpty) continue;
-    for (final kind in kinds) {
-      final eventName = _findFirstByLocalName(kind, 'Name')?.innerText ?? '';
-      final eventCode = _findFirstByLocalName(kind, 'Code')?.innerText ?? '';
-      if (eventName.isEmpty) continue;
+  // Dedup to one record per distinct in-force snow code; keep first
+  // encountered status. Iteration order is JSON document order so the
+  // result is deterministic.
+  final byCode = <String, JmaWarningRecord>{};
+  final areaTypes = decoded['areaTypes'];
+  if (areaTypes is List) {
+    for (final at in areaTypes) {
+      if (at is! Map) continue;
+      final areas = at['areas'];
+      if (areas is! List) continue;
       for (final area in areas) {
-        final areaName = _findFirstByLocalName(area, 'Name')?.innerText ?? '';
-        final areaCode = _findFirstByLocalName(area, 'Code')?.innerText ?? '';
-        out.add(
-          JmaForecastRecord(
-            eventName: eventName,
-            eventCode: eventCode,
-            headline: headline,
-            areaName: areaName,
-            areaCode: areaCode,
-            reportDateTime: reportDateTime,
-            targetDateTime: targetDateTime,
-          ),
-        );
+        if (area is! Map) continue;
+        final warnings = area['warnings'];
+        if (warnings is! List) continue;
+        for (final w in warnings) {
+          if (w is! Map) continue;
+          final code = w['code'];
+          final status = w['status'];
+          if (code is! String || status is! String) continue;
+          if (status == kJmaWarningStatusCancelled) continue;
+          final eventName = kJmaSnowWarningCodes[code];
+          if (eventName == null) continue; // not a snow class
+          byCode.putIfAbsent(
+            code,
+            () => JmaWarningRecord(
+              warningCode: code,
+              eventName: eventName,
+              status: status,
+              prefectureCode: prefectureCode,
+              areaName: areaName,
+              headline: headline,
+              reportDateTime: reportDateTime,
+            ),
+          );
+        }
       }
     }
   }
-  return out;
+  return byCode.values.toList();
 }
 
-/// Maps a JMA forecast record to a source-neutral [Advisory].
+/// Maps a JMA warning record to a source-neutral [Advisory].
 ///
 /// - `source` ← `AdvisorySource.jmaJapan`
-/// - `eventClass` ← `JmaForecastRecord.eventName` verbatim
+/// - `eventClass` ← `JmaWarningRecord.eventName` verbatim
 /// - `severity` ← derived from name suffix (警報 → severe;
 ///   注意報 → moderate; 特別警報 → extreme; otherwise unknown)
 /// - `certainty` / `urgency` ← `unknown` (CAP-class mapping deferred)
-/// - `areaDescription` ← `JmaForecastRecord.areaName` verbatim
-/// - `headline` ← `JmaForecastRecord.headline` verbatim
-/// - `description` ← `JmaForecastRecord.headline` (the granular
-///   `<Text>` is repeated as description so consumers that key on
-///   description still see the publisher wording verbatim)
+/// - `areaDescription` ← `JmaWarningRecord.areaName` (prefecture label)
+/// - `headline` / `description` ← `JmaWarningRecord.headline` verbatim
 /// - `effective` ← `reportDateTime`
-/// - `expires` ← null (JMA report family does not declare an
-///   explicit expiry; the next report supersedes the previous)
-Advisory mapJmaForecastToAdvisory(JmaForecastRecord record) {
+/// - `expires` ← null (the windowless feed declares no explicit
+///   expiry; the next fetch reflects the then-current in-force state)
+Advisory mapJmaWarningToAdvisory(JmaWarningRecord record) {
   return Advisory(
     source: AdvisorySource.jmaJapan,
     eventClass: record.eventName,
@@ -375,17 +362,4 @@ AdvisorySeverity _severityForEventName(String name) {
   if (name.endsWith('警報')) return AdvisorySeverity.severe;
   if (name.endsWith('注意報')) return AdvisorySeverity.moderate;
   return AdvisorySeverity.unknown;
-}
-
-XmlElement? _findFirstByLocalName(XmlElement parent, String localName) {
-  for (final child in parent.descendants.whereType<XmlElement>()) {
-    if (child.name.local == localName) return child;
-  }
-  return null;
-}
-
-Iterable<XmlElement> _findAllByLocalName(XmlElement parent, String localName) {
-  return parent.descendants.whereType<XmlElement>().where(
-    (e) => e.name.local == localName,
-  );
 }

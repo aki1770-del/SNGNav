@@ -1,47 +1,114 @@
 # condition_aggregator_jma
 
-Japan Meteorological Agency (気象庁 / JMA) adapter for the
-`condition_aggregator` interface. Maps JMA disaster-info XML feeds
-to the source-neutral `Advisory` typed event shape so integrators
-consume one shape across publishers (NWS / JMA / etc.) without
-caring which publisher authored which advisory.
+A JMA (気象庁 / Japan Meteorological Agency) adapter that fetches live
+Japanese winter-snow advisories (大雪 / 暴風雪 / 着雪) for a lat/lon point
+and returns them as source-neutral `Advisory` records.
 
-## Status
+## Install
 
-**0.1.0 — deployed via direct-Dart-XML-parse path.** The provider
-fetches the JMA atom feed
-(`https://www.data.jma.go.jp/developer/xml/feed/extra_l.xml` by
-default), filters to prefecture-class
-気象警報・注意報 reports, parses each linked per-prefecture XML
-directly with the canonical Dart `xml` package, and surfaces
-winter-snow-class advisories
-(大雪警報 / 大雪注意報 / 暴風雪警報 / 暴風雪注意報 / 着雪注意報)
-as source-neutral `Advisory` records.
+```sh
+dart pub add condition_aggregator_jma condition_aggregator
+```
 
-The jmaxml engagement-shape election (alpha/beta/gamma) for an
-upstream typed binding remains a separate open question (OQ-1) and
-does not block this version's publish. A future major version may
-swap the direct-parse path for the elected binding; the public API
-is shaped so the swap does not produce churn.
+`condition_aggregator` is the peer package that defines the shared
+`Advisory` type; you need both.
 
-## What this package does
+## Quick start
 
-When JMA has issued a 大雪 / 暴風雪 / 着雪 advisory for the driver's
-current point in Japan:
+```dart
+import 'package:condition_aggregator/condition_aggregator.dart';
+import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 
-1. The provider fetches the JMA atom feed (extra_l) over HTTPS
-   with a contactable User-Agent.
-2. Atom entries are filtered to the prefecture-class warning
-   report titles and to the caller's prefecture code (resolved
-   from lat/lon via a bounding-box catalog at 0.1.0; 6 snow-zone
-   prefectures: Hokkaido / Aomori / Iwate / Akita / Yamagata /
-   Niigata).
-3. The linked per-prefecture report XML is fetched and parsed for
-   `<Information type="気象警報・注意報（市町村等をまとめた地域等）">`
-   (most-granular block) `<Item><Kind><Name>` events.
-4. Events whose JA name matches the snow-class catalog
-   (`kJmaSnowAdvisoryEventNames`) are mapped to source-neutral
-   `Advisory` records via `mapJmaForecastToAdvisory`.
+Future<void> main() async {
+  final jma = JmaAdvisoryProvider(
+    userAgent: '(condition_aggregator_jma example, https://example.com)',
+  );
+  await jma.init();
+  try {
+    final advisories = await jma.fetchActiveAdvisoriesAtPoint(
+      latitude: 39.7186, // Akita city
+      longitude: 140.1024,
+    );
+    print(jma.source.attributionString);
+    if (advisories.isEmpty) {
+      print('No active snow advisories for this point right now.');
+    }
+    for (final a in advisories) {
+      print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');
+    }
+  } on JmaAdvisoryFetchException catch (e) {
+    print('Could not reach JMA (offline?): $e');
+  } finally {
+    jma.close();
+  }
+}
+```
+
+You get back a `List<Advisory>` — each record carries JMA's verbatim
+event name (`eventClass`, e.g. `大雪警報`), a normalized `severity`, and
+the area name (`areaDescription`). An empty list means no active snow
+advisory for that point. The provider does real HTTPS I/O against the
+public JMA feed, so it can fail offline — handle
+`JmaAdvisoryFetchException` as shown. The same snippet is in
+[`example/main.dart`](example/main.dart); run it with
+`dart run example/main.dart`.
+
+> Coverage at this version: 6 snow-zone prefectures (Hokkaido / Aomori /
+> Iwate / Akita / Yamagata / Niigata). Points outside that catalog
+> return an empty list without an HTTP fetch.
+
+---
+
+## Background & provenance
+
+This adapter maps the JMA windowless per-prefecture warning JSON to
+the source-neutral `Advisory` typed event shape so integrators consume
+one shape across publishers (NWS / JMA / etc.) without caring which
+publisher authored which advisory.
+
+### Status
+
+**0.2.0 — deployed via the windowless per-prefecture warning JSON
+path.** The provider resolves the caller's lat/lon to a snow-zone
+prefecture (office) code, fetches the single small
+`https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`,
+parses the current in-force warnings, and surfaces winter-snow-class
+advisories (大雪警報 / 大雪注意報 / 暴風雪警報 / 着雪注意報) as
+source-neutral `Advisory` records.
+
+**Why this replaced the 0.1.x atom-feed path.** Through 0.1.x the
+adapter read the JMA disaster-info atom feed (`extra.xml`) and walked
+each linked per-prefecture report XML. An independent safety audit
+found a **window / scroll-off false-negative**: the atom feed is a
+recent-publication *window*, so a warning that is still in force but
+was last re-issued before the window opens scrolls off the feed and is
+silently missed — exactly the wrong failure for a snow-WARNING
+package, where a stale-but-active 大雪警報 is what the driver must
+still see. The windowless `warning/{areacode}.json` always reflects
+the *current in-force* state with no window to scroll off (and is
+~7 KB per prefecture vs ~0.6 MB for the national atom feed). See
+CHANGELOG 0.2.0.
+
+### What this package does
+
+When JMA has issued a 大雪 / 暴風雪 / 着雪 warning or advisory for the
+driver's current point in Japan:
+
+1. The caller's lat/lon resolves to a snow-zone prefecture (office)
+   code via a bounding-box catalog (6 snow-zone prefectures:
+   Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata). Points
+   outside the catalog return empty without an HTTP fetch.
+2. The provider fetches the single per-prefecture warning JSON
+   (`warning/{areacode}.json`) over HTTPS with a contactable
+   User-Agent.
+3. The current in-force warnings (`areaTypes[].areas[].warnings[]`)
+   are parsed; the `timeSeries` forecast block is ignored, and
+   cancelled (`解除`) warnings are dropped.
+4. Warnings whose numeric `code` matches the snow-class catalog
+   (`kJmaSnowWarningCodes`: 06 大雪警報 / 12 大雪注意報 /
+   02 暴風雪警報 / 26 着雪注意報) are mapped to source-neutral
+   `Advisory` records via `mapJmaWarningToAdvisory`, deduplicated to
+   one record per distinct in-force snow code.
 5. The `AdvisoryAggregator` merges the JMA records with sibling
    adapters' records (e.g. `condition_aggregator_nws` records when
    the driver crosses an international boundary or relies on
@@ -51,7 +118,14 @@ current point in Japan:
    normalized at the boundary, with JMA's exact wording preserved
    verbatim per Article 17 (β) verbatim-relay discipline.
 
-## Driver-facing loom
+> **Note on `暴風雪注意報`.** The JMA bosai warning JSON has no code
+> for `暴風雪注意報`; JMA's official 注意報 taxonomy has no such class.
+> The advisory-level counterpart of `暴風雪警報` is `風雪注意報`
+> (code 13), which is outside this version's snow catalog. The name is
+> kept in `kJmaSnowAdvisoryEventNames` for back-compat but the source
+> never emits it.
+
+### Driver-facing loom
 
 When JMA has issued a snow / heavy-snow / blizzard advisory for the
 driver's current point on a Japanese road, the integrator HMI
@@ -60,11 +134,11 @@ NWS records. The driver sees JMA's authoritative wording verbatim
 (event name, area name, headline) without aggregator-class
 re-summarization. The driver always drives.
 
-## HER-trace (≤4 hops)
+### HER-trace (≤4 hops)
 
 ```
-JMA disaster-info atom feed (気象庁防災情報XML)
-  → JmaAdvisoryProvider (this package; HTTP + XML parse + filter)
+JMA windowless per-prefecture warning JSON (気象庁防災情報)
+  → JmaAdvisoryProvider (this package; HTTP + JSON parse + filter)
   → AdvisoryAggregator (typed merge with sibling adapters)
   → integrator HMI surfaces advisory to driver in unexpected snow.
 ```
@@ -73,7 +147,7 @@ JMA disaster-info atom feed (気象庁防災情報XML)
 Japanese road. D5 value chain: evidence → contribution →
 architecture → edge developer → driver.
 
-## What this package does NOT do
+### What this package does NOT do
 
 - **No retry inside this adapter.** Transient failure handling
   belongs to the integrator's polling cadence; the aggregator's
@@ -86,17 +160,21 @@ architecture → edge developer → driver.
   name pass through verbatim.
 - **No profile-driven branching.** Profile-aware UX rendering
   composes downstream against `navigation_safety_core` thresholds.
-- **No road-surface inference.** JMA's domain at this report
+- **No road-surface inference.** JMA's domain at this warning
   family is meteorological-advisory; road-surface measurement
   lives in JARTIC / NEXCO / prefectural feeds.
 - **No prefecture catalog past 6.** Points outside the
   6-prefecture catalog return empty without an HTTP fetch.
   Catalog expansion is a deliberate version bump.
+- **No sub-prefecture resolution.** The lat/lon resolves to a
+  prefecture (office) code; results are deduplicated to one record
+  per distinct in-force snow code for the prefecture. Finer
+  sub-region targeting is below this adapter's resolution.
 - **No CAP-class certainty / urgency mapping.** `certainty` and
-  `urgency` are `unknown` at 0.1.0; the publisher's authoritative
-  term is preserved verbatim in `eventClass` either way.
+  `urgency` are `unknown`; the publisher's authoritative term is
+  preserved verbatim in `eventClass` either way.
 
-## Severity mapping
+### Severity mapping
 
 - `特別警報` (emergency warning) suffix → `AdvisorySeverity.extreme`
 - `警報` (warning) suffix → `AdvisorySeverity.severe`
@@ -106,27 +184,7 @@ architecture → edge developer → driver.
 The publisher's authoritative event name is preserved in
 `Advisory.eventClass` either way per Article 17 (β).
 
-## Getting started
-
-```dart
-import 'package:condition_aggregator/condition_aggregator.dart';
-import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
-
-final jma = JmaAdvisoryProvider(
-  userAgent: '(myappname.example, https://example.com/contact)',
-);
-await jma.init();
-final advisories = await jma.fetchActiveAdvisoriesAtPoint(
-  latitude: 39.7186, // Akita-shi
-  longitude: 140.1024,
-);
-for (final a in advisories) {
-  print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');
-  // → 大雪警報 (severe) — 秋田中央
-}
-```
-
-Composition with the NWS sibling adapter:
+### Composition with the NWS sibling adapter
 
 ```dart
 final aggregator = AdvisoryAggregator(providers: <AdvisoryProvider>[
