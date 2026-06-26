@@ -1,0 +1,21 @@
+name: localization_fallback
+description: >-
+  Pure Dart localization fallback controller: turns raw GPS fixes, an optional
+  trust verdict, and an optional dead-reckoning seam into ONE honest position
+  estimate that never emits a confidently-wrong fix in a whiteout.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - dead-reckoning
+  - gps
+  - positioning
+
+environment:
+  sdk: ^3.10.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
