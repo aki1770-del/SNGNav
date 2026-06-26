@@ -1,14 +1,23 @@
 /// JmaAdvisoryProvider — `AdvisoryProvider` adapter for the JMA
-/// disaster-info XML feed via direct-Dart-XML-parse.
+/// **windowless per-prefecture warning JSON**.
 ///
-/// 0.1.0 deploys without a jmaxml typed-binding in transit. The
-/// provider fetches the atom feed (`extra_l.xml` by default), filters
-/// to the 気象警報・注意報 prefecture report family (`VPWW54`),
-/// fetches each linked per-prefecture report XML, parses for
-/// `<Item><Kind><Name>` events that match a snow / blizzard / icing
-/// advisory class, and maps to source-neutral `Advisory`. The
-/// caller's lat/lon picks the prefecture (bounding-box approximate
-/// resolution; broader region resolution is composition-time work).
+/// 0.2.0 resolves the caller's lat/lon to one of the catalogued
+/// snow-zone prefecture (office) codes, fetches the single small
+/// `warning/{areacode}.json`, parses the current in-force warnings,
+/// filters to the snow / blizzard / icing classes, and maps each to a
+/// source-neutral `Advisory`.
+///
+/// ## Why the warning JSON (replaces the 0.1.x atom-feed path)
+///
+/// Through 0.1.x the adapter read the JMA disaster-info atom feed
+/// (`extra.xml`) and walked each linked per-prefecture report XML. An
+/// independent safety audit found a **window / scroll-off
+/// false-negative**: the atom feed is a recent-publication *window*, so
+/// a still-in-force warning that was last re-issued before the window
+/// opens scrolls off and is silently missed — a false-negative for a
+/// snow-WARNING package. The windowless `warning/{areacode}.json`
+/// always reflects the *current in-force* state with no window to
+/// scroll off (and is ~7 KB vs ~0.6 MB for the atom feed).
 ///
 /// Construction discipline (per condition_aggregator interface
 /// contract):
@@ -27,34 +36,26 @@ import 'package:http/http.dart' as http;
 
 import 'jma_advisory_mapper.dart';
 
-/// Default atom feed URL — the long-form 随時 (extra_l) feed where
-/// 気象警報・注意報 prefecture reports surface.
+/// Base URL for the JMA windowless per-prefecture warning JSON. The
+/// provider appends `{areacode}.json` (e.g. `050000.json` for Akita).
 ///
-/// The 定時 (regular_l) feed carries periodic forecasts, NOT live
-/// advisories — so we default to extra_l and let integrators override
-/// at construction time if they need a different feed shape.
-const String kDefaultJmaAtomFeedUrl =
-    'https://www.data.jma.go.jp/developer/xml/feed/extra_l.xml';
-
-/// Atom-entry title strings that signal a prefecture-class warning /
-/// advisory report containing per-area `<Item><Kind>` events. Other
-/// title strings (大雨危険度通知, 季節予報, etc.) carry different
-/// payload shapes and are out of scope at deploy 0.1.0.
-const Set<String> kJmaPrefectureWarningReportTitles = <String>{
-  '気象警報・注意報（Ｈ２７）',
-  '気象特別警報・警報・注意報',
-};
+/// This endpoint always reflects the prefecture's CURRENT in-force
+/// warning state — there is no publication window to scroll off, which
+/// is the false-negative the 0.1.x atom-feed path could not avoid.
+const String kJmaWarningJsonBaseUrl =
+    'https://www.jma.go.jp/bosai/warning/data/warning/';
 
 /// Hard caps applied to network I/O so a runaway publisher response
 /// cannot exhaust integrator memory or stall the driver-facing UI.
 const Duration kJmaFetchWallClockBudget = Duration(seconds: 30);
-// Atom feed lists ALL recent JMA reports across Japan (not per-point),
-// so the response is publisher-wide rather than caller-scoped. Observed
-// at ~1.6 MB during normal cadence; busy weather days run larger. 4 MB
-// gives generous headroom while still preventing a runaway publisher
-// response from exhausting integrator memory.
-const int kJmaAtomFeedMaxBytes = 4 * 1024 * 1024;
-const int kJmaReportXmlMaxBytes = 200 * 1024;
+
+/// Per-prefecture warning JSON byte cap. The live response is tiny
+/// (Akita observed 2026-06-26 at 7,424 bytes); 256 KiB gives ample
+/// headroom for a prefecture under many simultaneous warnings while
+/// still bounding a runaway response. This is ~16x smaller than the
+/// old atom-feed cap — the windowless JSON is per-prefecture, not a
+/// national feed of every recent report.
+const int kJmaWarningJsonMaxBytes = 256 * 1024;
 
 /// Thrown when the provider cannot reach the JMA endpoint, the
 /// response exceeds a documented byte cap, or the wall-clock budget
@@ -73,11 +74,13 @@ class JmaAdvisoryFetchException implements Exception {
   }
 }
 
-/// Adapter implementing [AdvisoryProvider] against the JMA
-/// disaster-info atom feed via direct-Dart-XML-parse.
+/// Adapter implementing [AdvisoryProvider] against the JMA windowless
+/// per-prefecture warning JSON.
 class JmaAdvisoryProvider implements AdvisoryProvider {
-  /// Atom feed URL. Default points at the public JMA extra_l feed.
-  final String atomFeedUrl;
+  /// Base URL for the per-prefecture warning JSON. Default points at
+  /// the public JMA bosai endpoint; injectable for testing or for an
+  /// integrator-side mirror.
+  final String warningJsonBaseUrl;
 
   /// User-Agent string. JMA does not require auth, but a contactable
   /// User-Agent is best practice so the publisher can reach the
@@ -91,7 +94,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   bool _initialized = false;
 
   JmaAdvisoryProvider({
-    this.atomFeedUrl = kDefaultJmaAtomFeedUrl,
+    this.warningJsonBaseUrl = kJmaWarningJsonBaseUrl,
     this.userAgent =
         '(sngnav-class app, https://github.com/aki1770-del/sngnav)',
     http.Client? client,
@@ -138,81 +141,47 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     );
     if (prefectureCode == null) {
       // The point is outside the Japan bounding-box catalog the
-      // adapter ships at 0.1.0 (6 snow-zone prefectures). Return
-      // empty — the aggregator's other providers (e.g. NWS) cover
-      // points outside the catalog at this layer.
+      // adapter ships (6 snow-zone prefectures). Return empty — the
+      // aggregator's other providers (e.g. NWS) cover points outside
+      // the catalog at this layer.
       return const <Advisory>[];
     }
 
-    final feedUri = Uri.parse(atomFeedUrl);
-    return _fetchAndParse(feedUri, prefectureCode).timeout(
+    final uri = Uri.parse('$warningJsonBaseUrl$prefectureCode.json');
+    return _fetchAndParse(uri, prefectureCode).timeout(
       kJmaFetchWallClockBudget,
       onTimeout: () {
         final seconds = kJmaFetchWallClockBudget.inSeconds;
         throw JmaAdvisoryFetchException(
           'Wall-clock budget $seconds seconds exhausted before fetch '
           'completed.',
-          uri: feedUri,
+          uri: uri,
         );
       },
     );
   }
 
   Future<List<Advisory>> _fetchAndParse(
-    Uri feedUri,
+    Uri uri,
     String prefectureCode,
   ) async {
-    final feedBody = await _httpGet(feedUri, kJmaAtomFeedMaxBytes);
-    final List<JmaAtomEntry> atomEntries;
+    final body = await _httpGet(uri, kJmaWarningJsonMaxBytes);
+    final List<JmaWarningRecord> records;
     try {
-      atomEntries = parseJmaAtomFeed(feedBody);
-    } on Exception catch (e) {
+      records = parseJmaWarningJson(body, prefectureCode: prefectureCode);
+    } on FormatException catch (e) {
       throw JmaAdvisoryFetchException(
-        'Atom feed parse failed: $e',
-        uri: feedUri,
+        'JMA warning JSON parse failed: $e',
+        uri: uri,
       );
     }
-
-    final out = <Advisory>[];
-    for (final entry in atomEntries) {
-      // Only the prefecture-class warning report families carry
-      // per-area `<Item><Kind>` events.
-      if (!kJmaPrefectureWarningReportTitles.contains(entry.title)) continue;
-
-      // The atom-entry id+href pattern encodes the publisher area
-      // code at the end of the filename, e.g.
-      // `..._VPWW54_200000.xml` → 200000 (Nagano). Filter to the
-      // caller's prefecture before any per-report fetch.
-      if (!entry.reportUrl.contains('_$prefectureCode.xml')) continue;
-
-      final reportBody = await _httpGet(
-        Uri.parse(entry.reportUrl),
-        kJmaReportXmlMaxBytes,
-      );
-      final List<JmaForecastRecord> records;
-      try {
-        records = parseJmaReportXml(reportBody);
-      } on Exception {
-        // One malformed prefecture report does not poison the batch;
-        // surface via the aggregator's per-provider error channel
-        // would require a different surface. At 0.1.0 we simply
-        // skip — the publisher very rarely ships malformed reports.
-        // Future versions may expose a per-record error stream.
-        continue;
-      }
-
-      for (final r in records) {
-        if (!kJmaSnowAdvisoryEventNames.contains(r.eventName)) continue;
-        out.add(mapJmaForecastToAdvisory(r));
-      }
-    }
-    return out;
+    return records.map(mapJmaWarningToAdvisory).toList();
   }
 
   Future<String> _httpGet(Uri uri, int maxBytes) async {
     final headers = <String, String>{
       'User-Agent': userAgent,
-      'Accept': 'application/atom+xml, application/xml, text/xml',
+      'Accept': 'application/json',
     };
     http.Response response;
     try {
@@ -242,11 +211,10 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
         uri: uri,
       );
     }
-    // The atom feed + per-prefecture reports are utf-8 (declared in
-    // the XML prolog). `response.body` defaults to latin-1 unless
-    // the Content-Type carries an explicit charset; explicitly
-    // decode utf-8 to preserve JA characters across HTTP layers
-    // that strip the charset hint.
+    // The warning JSON is utf-8. `response.body` defaults to latin-1
+    // unless the Content-Type carries an explicit charset; explicitly
+    // decode utf-8 to preserve JA characters across HTTP layers that
+    // strip the charset hint.
     return utf8.decode(response.bodyBytes, allowMalformed: false);
   }
 }

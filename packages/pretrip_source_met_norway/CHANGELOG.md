@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.2.0 — 2026-06-24 — Re-pin advisor to ^0.4.0 (catalog resolvability)
+
+- Shifts the `pretrip_decision_advisor` requirement from the 0.2.x range to the
+  0.4.x range; advisor 0.2.x/0.3.x are no longer supported by this version. This
+  package's own public API is unchanged. Minor bump because the resolution
+  requirement is consumer-affecting. The published `pretrip_decision_advisor`
+  0.4.0 is live on pub.dev; the previous `^0.2.0` constraint was incompatible
+  with it and blocked edge developers from `pub add`-ing this source alongside
+  the current advisor in one project.
+- **License unchanged from 0.1.1.** Package CODE license stays **BSD 3-Clause**;
+  the MET Norway DATA license remains **dual-licensed** under the **Norwegian
+  Licence for Open Government Data (NLOD) 2.0** AND **Creative Commons
+  Attribution 4.0 International (CC BY 4.0)** as documented in the README.
+  Attribution ("Data from MET Norway", source The Norwegian Meteorological
+  Institute) is REQUIRED at the consumer-facing surface.
+- Completed the MET Norway data-attribution correction across all
+  consumer-facing surfaces (library dartdoc, src dartdoc, and example), not the
+  README alone — credit is "Data from MET Norway", data dual-licensed NLOD 2.0 /
+  CC BY 4.0.
+
+## 0.1.1 — 2026-06-22 — License documentation correction
+
+- **Docs-only; no behaviour, API, or dependency change.** Corrects the stated
+  MET Norway DATA license in the README. The freely-available forecast data is
+  **dual-licensed** (unless otherwise specified) under the **Norwegian Licence
+  for Open Government Data (NLOD) 2.0** AND **Creative Commons Attribution 4.0
+  International (CC BY 4.0)** — the previous README under-stated it as CC BY 4.0
+  only.
+- Uses MET Norway's verbatim suggested credit **"Data from MET Norway"**,
+  credits **The Norwegian Meteorological Institute (MET Norway)** as the source
+  of data, and adds the appreciated source link <https://api.met.no/>.
+- The package CODE license is unchanged: **BSD 3-Clause**. (The DATA license
+  and the CODE license are separate.)
+
 ## 0.1.0 — 2026-06-14 — Initial extraction
 
 - Initial release of the MET Norway hourly-forecast **source** for the

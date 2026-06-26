@@ -27,8 +27,10 @@
 ///
 /// Pure Dart. Only `http` and `pretrip_decision_advisor` runtime deps.
 ///
-/// MET Norway forecast data is © MET Norway, CC BY 4.0; the integrator
-/// surfaces the attribution wherever the data is shown (see README).
+/// Credit: "Data from MET Norway" (<https://api.met.no/>). MET Norway
+/// forecast data is dual-licensed under NLOD 2.0 AND CC BY 4.0; the
+/// integrator surfaces the attribution wherever the data is shown (see
+/// README).
 library;
 
 export 'src/met_norway_hourly_forecast.dart'
