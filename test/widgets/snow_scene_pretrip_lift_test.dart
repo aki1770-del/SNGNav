@@ -104,6 +104,23 @@ void main() {
     if (!benign) throw ex as Object;
   }
 
+  // The Start-drive affordance is a `FilledButton.icon`, which on the embedded
+  // floor's Flutter (3.38.x, Dart 3.10.1) builds a PRIVATE `_FilledButtonWithIcon`
+  // subclass — NOT a bare `FilledButton`. `find.byType` (and thus
+  // `find.widgetWithText(FilledButton, ...)`) matches the EXACT `runtimeType`, so
+  // it finds ZERO on that floor even though the English "Start drive" label and a
+  // real FilledButton ARE rendered (verified by render-probe: localeOf=en, the
+  // label present, button type `_FilledButtonWithIcon`). Match the SUBTYPE with an
+  // `is` predicate so the finder is robust across Flutter versions (some return a
+  // bare `FilledButton`, others the `_FilledButtonWithIcon` subclass).
+  Finder startDriveButton() => find.ancestor(
+        of: find.text('Start drive'),
+        matching: find.byWidgetPredicate(
+          (w) => w is FilledButton,
+          description: 'FilledButton (incl. .icon _FilledButtonWithIcon subtype)',
+        ),
+      );
+
   testWidgets(
     'NO-REGRESSION (host): main.dart Pre-trip view renders the shared '
     'PretripScreen + briefing card',
@@ -150,7 +167,7 @@ void main() {
       // snow_scene_scaffold_test; mounting it here from SnowSceneApp would fire
       // the default Open-Meteo network feed + leave the nav Timer pending, which
       // is out of this lift test's scope.)
-      expect(find.widgetWithText(FilledButton, 'Start drive'), findsOneWidget);
+      expect(startDriveButton(), findsOneWidget);
     },
   );
 
@@ -205,7 +222,7 @@ void main() {
       // Pretrip first; the drive scaffold is NOT mounted yet.
       expect(find.byType(SnowSceneScaffold), findsNothing);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Start drive'));
+      await tester.tap(startDriveButton());
       await tester.pump();
       drainBenign(tester);
 
