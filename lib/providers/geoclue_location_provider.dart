@@ -125,6 +125,18 @@ class GeoClueLocationProvider implements LocationProvider {
 
     try {
       final position = await session.readPosition(locationPath, now: _now);
+      // L2 source guard (defense-in-depth) — drop a non-finite-coordinate fix
+      // at ingest so a NaN/±inf never enters the pipeline. On the degraded-GPS
+      // path GeoClue can surface a non-finite Latitude/Longitude; emitting it
+      // would teleport HER dot at the map boundary (flutter_map 8.2.2 silently
+      // projects a non-finite coordinate to garbage, 8.3.0 throws). We skip
+      // SILENTLY — the last good fix is retained and a sustained garbage stream
+      // ages to `stale`/dead-reckoning via the downstream watchdogs — rather
+      // than surfacing a stream error (which would knock the LocationBloc into
+      // its error state on a single bad fix). No valid coordinate is dropped.
+      if (!position.latitude.isFinite || !position.longitude.isFinite) {
+        return;
+      }
       if (!_controller.isClosed) {
         _controller.add(position);
       }
@@ -289,8 +301,15 @@ class GeoClueDbusSession implements GeoClueSession {
         (await location.getProperty(_locationIface, 'Latitude')).asDouble();
     final longitude =
         (await location.getProperty(_locationIface, 'Longitude')).asDouble();
-    final accuracy =
+    final rawAccuracy =
         (await location.getProperty(_locationIface, 'Accuracy')).asDouble();
+    // L2 source guard — a non-finite Accuracy read means "unknown"; coerce it
+    // to the GeoPosition unknown sentinel (NaN) so a +infinity can never scale
+    // the downstream Kalman measurement noise. The coordinate itself is
+    // validated (and a non-finite fix skipped) at the ingest point in
+    // _onLocationUpdated; a NaN accuracy with a valid coordinate correctly
+    // degrades (isNavigationGrade is false) without dropping the fix.
+    final accuracy = rawAccuracy.isFinite ? rawAccuracy : double.nan;
 
     return GeoPosition(
       latitude: latitude,

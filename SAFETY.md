@@ -75,6 +75,8 @@ Dead reckoning positions are clearly distinguished from GPS-derived positions
 through increasing accuracy radius values. The system does not represent
 estimated positions as verified positions.
 
+**Finite-position guard**: a non-finite (NaN / ±infinity) position is never shown as a live fix — it is dropped at the location-pipeline chokepoint, and a sustained garbage stream ages honestly to *GPS stale → dead-reckoning → "position unavailable"* (the 500 m accuracy cap) rather than masquerading as a confident dot. This invariant is enforced by regression tests at every layer (see `packages/kalman_dr/SAFETY_BOUNDARY.md` §3).
+
 ## Consent and Privacy
 
 Fleet telemetry (vehicle position sharing) requires explicit, per-purpose

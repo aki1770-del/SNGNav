@@ -2,9 +2,9 @@
 
 **Package**: `kalman_dr`
 **Version**: 0.3.0 (current pub.dev release)
-**Boundary record version**: 1.0
-**Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-05
+**Boundary record version**: 1.1 (2026-06-27 — §3 finite-position invariant PROMOTED from documented-known-limitation to ENFORCED-with-tests; §3/§8/§9 dangling `KNOWN_LIMITATIONS-class material` reference drift corrected to the in-repo enforcing tests. CT build-track, closing AAA-carried guard conditions.)
+**Authoring skill**: AAA (automotive-adas-analyst); v1.1 §3 promotion by CT (build-track lead)
+**Date**: 2026-05-05 (v1.0); 2026-06-27 (v1.1)
 **Anchor**: driver-facing-loom-as-default architectural discipline (per-package boundary record per AAA spawn-50 precedent)
 
 ---
@@ -30,8 +30,8 @@
 - **GPS fusion clamps covariance under measurement**: when GPS arrives, the update step fuses prediction with measurement and reduces covariance per Kalman gain arithmetic. The recovery from prediction-only mode is honest, not ornamental.
 - **Constant-velocity prediction model**: the prediction model is documented as constant-velocity (speed + heading held). The package does not pretend to model accelerations / yaw rates; the integrator wanting more sophisticated motion models implements outside the package.
 - **`accuracy` field as honesty-channel**: every `GeoPosition` carries an `accuracy` value computed from the covariance. The integrator's HMI surface uses this to decide whether to render the position dot solid (high confidence) or dotted / faded (low confidence). The package surfaces honesty; the integrator renders it.
-- **Numerical-safety surface (known limitation)**: the existing class-1 + class-2 numerical-safety lifecycle hardening (per SDE Rule 1) is the integrator's-and-package-author's joint concern; known NaN-on-pole class is documented in the package's KNOWN_LIMITATIONS-class material. Integrators relying on Kalman-DR for safety-class loops perform their own numerical-stability audit before deployment.
-These five disciplines collectively form the package's SOTIF-class advisory-honesty posture.
+- **Finite-position invariant (ENFORCED, not merely documented)**: a non-finite (NaN / ±infinity) latitude, longitude, or accuracy can never poison the fused state nor reach a map boundary. This is now an *enforced* invariant with regression tests at every layer — not a known limitation an integrator must defend alone. The filter floors a non-finite accuracy (`_diagFromAccuracy`) and rejects a non-finite determinant (`_invertMat`); the `DeadReckoningProvider` drops a non-finite coordinate at ingest *before* the GPS-back / watchdog logic. Critically — and this is the load-bearing property — a SUSTAINED garbage stream does NOT masquerade as a live fix: because the drop sits before `_resetGpsWatchdog`, the stream is invisible to the watchdog and the system ages HONESTLY into dead-reckoning takeover and then the 500m `DeadReckoningAccuracyExceededException` "position unavailable" cap. Package tests: `test/finiteness_guard_test.dart` — the `KalmanFilter` floor + determinant guards, the ingest drop (linear + kalman), and the two `does NOT mask as live GPS` cases (DR-takeover-under-sustained-garbage + 500m-cap-under-sustained-garbage). At the SNGNav integration layer the same invariant is re-verified end-to-end: `test/bloc/location_bloc_finiteness_guard_test.dart` (chokepoint drop + the stale-watchdog `does NOT mask as a live fix` case), `test/providers/geoclue_finiteness_guard_test.dart` (source-ingest skip + accuracy coercion), and `test/fluorite/snow_scene_3d_view_confidence_radius_nan_test.dart` (a NaN confidence-radius renders a finite max-fog scrim + a suppressed `±N m` label — no `±NaN m`). The residual numerical-safety class is the NaN-on-pole Jacobian singularity under *closed-loop* integrator use, which stays an integrator-audit item per §2 — it is NOT a non-finite-input gap (that surface is now closed and tested).
+These disciplines collectively form the package's SOTIF-class advisory-honesty posture.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
@@ -74,7 +74,7 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Sakichi reading**: the loom is *the position estimator that admits its own uncertainty rather than fabricating confidence*. The Sakichi-class loom in this package is the covariance-growth-under-prediction discipline: when the input thread (GPS fix) breaks, the loom's output (position estimate) does not fabricate continuity; the line stops growing in confidence and lets the integrator render the honest decay. The driver decides under honest uncertainty; the package never imposes a lie on HER.
 
-**Audible-to-edge-developer**: integrator reading `KalmanFilter` API today sees the predict / update cycle documented in dartdoc + the `accuracy` field documented as covariance-derived + the constant-velocity prediction model documented explicitly + the known numerical-safety class noted with reference to KNOWN_LIMITATIONS-class material. Nothing patronizes the developer; the math discipline is explicit at the surface.
+**Audible-to-edge-developer**: integrator reading `KalmanFilter` API today sees the predict / update cycle documented in dartdoc + the `accuracy` field documented as covariance-derived + the constant-velocity prediction model documented explicitly + the finite-position invariant noted as ENFORCED by the package's `test/finiteness_guard_test.dart` regression suite (§3), with the residual closed-loop NaN-on-pole class flagged for integrator audit per §2. Nothing patronizes the developer; the math discipline is explicit at the surface.
 
 **Driver-facing-loom field**: this section is the canonical driver-facing-loom declaration for `kalman_dr` 0.3.0. Subsequent versions update this field on material changes to the position-estimate surface (new motion models, new uncertainty models, new dropout-handling discipline, etc.).
 
@@ -99,7 +99,7 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 - AAA bylaws Article 17 (β) safe-default boundary
 - PHIL-001 boundary preserved: `kalman_dr` is the math primitive; it is **not** a crash-data-harvester; the package boundary refuses crash-class data routing by virtue of its scope (numerical position estimation only).
 - Composition: `kalman_dr` numerical estimate → integrator's map / route / off-route-detector surface → profile-aware rendering at the HMI layer.
-- SDE Rule 1 numerical-safety lifecycle hardening (class-1 + class-2 owner per FDD + SDE joint scope) — known NaN-on-pole class noted in package KNOWN_LIMITATIONS-class material.
+- SDE Rule 1 numerical-safety lifecycle hardening (class-1 + class-2 owner per FDD + SDE joint scope) — the finite-position invariant is ENFORCED by `test/finiteness_guard_test.dart` (see §3); the residual NaN-on-pole Jacobian-singularity class is an integrator closed-loop audit item (§2), not a documented-but-unenforced package gap. *(kalman_dr ships no `KNOWN_LIMITATIONS.md`; the earlier "KNOWN_LIMITATIONS-class material" wording was a dangling reference, corrected here to the in-repo enforcing tests.)*
 
 ---
 

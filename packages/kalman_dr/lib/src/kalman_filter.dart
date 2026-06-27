@@ -374,8 +374,15 @@ class KalmanFilter {
   /// zero-covariance matrix, causing the filter to reject all future
   /// measurements (infinite Kalman gain trust in a zero-noise GPS).
   static Mat4 _diagFromAccuracy(double accuracyMetres) {
-    // Floor to 1m — prevents zero/negative covariance from degenerate input.
-    final safeAccuracy = accuracyMetres < 1.0 ? 1.0 : accuracyMetres;
+    // Floor to 1m AND reject non-finite input — prevents a zero/negative OR a
+    // NaN/±infinity accuracy from producing a degenerate or poisoned
+    // covariance. The original `accuracyMetres < 1.0 ? 1.0 : accuracyMetres`
+    // floor is FALSE for NaN (NaN < 1.0 is false), so a NaN accuracy would
+    // pass through and make the whole covariance NaN, poisoning every later
+    // fix. A non-finite accuracy (unknown / sensor error) is treated as the 1m
+    // floor so the init covariance stays finite and well-conditioned.
+    final safeAccuracy =
+        (accuracyMetres.isFinite && accuracyMetres >= 1.0) ? accuracyMetres : 1.0;
     final accDeg = safeAccuracy / _metresPerDegreeLat;
     return _diag([
       accDeg * accDeg, // lat variance
@@ -463,7 +470,13 @@ class KalmanFilter {
   static Mat4? _invertMat(Mat4 m) {
     // Compute cofactors for 4×4 — expanded inline for clarity.
     final det = _det4(m);
-    if (det.abs() < 1e-30) return null;
+    // Reject a singular OR non-finite determinant. A NaN determinant (from a
+    // poisoned measurement-noise matrix R, e.g. a non-finite GPS accuracy) is
+    // NOT caught by `det.abs() < 1e-30` — `NaN < 1e-30` is false — so an
+    // un-guarded inverse would compute 1.0/NaN and propagate NaN into the
+    // Kalman gain, corrupting the fused state. Returning null skips the update;
+    // the prior (finite) state is retained.
+    if (!det.isFinite || det.abs() < 1e-30) return null;
 
     final invDet = 1.0 / det;
     final adj = List.generate(4, (_) => List.filled(4, 0.0));

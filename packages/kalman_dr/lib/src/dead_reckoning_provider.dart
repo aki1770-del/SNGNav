@@ -175,6 +175,18 @@ class DeadReckoningProvider implements LocationProvider {
   void _onGpsPosition(GeoPosition pos) {
     if (_controller == null || _controller!.isClosed) return;
 
+    // L3 ingest guard (defense-in-depth) — a non-finite latitude/longitude is
+    // poison on the degraded-GPS path: forwarding it would teleport the dot at
+    // the map boundary, and feeding it to the Kalman filter would corrupt the
+    // fused state. Drop it BEFORE the GPS-back / watchdog logic so a stream of
+    // garbage does NOT masquerade as a live fix — it must not stop dead
+    // reckoning nor reset the GPS watchdog (a sustained garbage stream then
+    // correctly ages into DR takeover). Covers both linear and Kalman modes,
+    // mirroring the LocationBloc chokepoint. No valid coordinate is dropped.
+    if (!pos.latitude.isFinite || !pos.longitude.isFinite) {
+      return;
+    }
+
     // GPS is back — stop DR if it was active.
     if (_isDrActive) {
       _stopDr();
@@ -215,8 +227,15 @@ class DeadReckoningProvider implements LocationProvider {
 
     // Feed GPS fix into Kalman filter. `isFinite` guards against both NaN
     // and ±infinity — without it a stale or sensor-error GPS could push
-    // double.infinity into the filter and corrupt subsequent state.
-    if (pos.speed.isFinite && pos.heading.isFinite && pos.speed >= 0) {
+    // double.infinity into the filter and corrupt subsequent state. lat/lon
+    // are already guaranteed finite by the _onGpsPosition ingest guard;
+    // `accuracy.isFinite` is added so an unknown/sensor-error accuracy does not
+    // scale the measurement noise into a non-finite covariance — such a fix is
+    // forwarded raw (its coordinate is valid) instead of poisoning the filter.
+    if (pos.speed.isFinite &&
+        pos.heading.isFinite &&
+        pos.speed >= 0 &&
+        pos.accuracy.isFinite) {
       kf.update(
         lat: pos.latitude,
         lon: pos.longitude,

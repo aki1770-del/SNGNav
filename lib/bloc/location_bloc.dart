@@ -90,7 +90,30 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   ) {
     final pos = event.position;
 
-    // Reset stale timer on every position update.
+    // L1 finiteness guard — the PRIMARY guard for HER in the compound-failure
+    // GPS scenario (Maps fail + GPS degraded). On the live GeoClue / Kalman-DR
+    // path a non-finite latitude or longitude can reach the map boundary:
+    // flutter_map 8.2.2 SILENTLY projects a non-finite coordinate to garbage
+    // (teleporting her dot, wrecking the follow camera, with NO throw), while
+    // 8.3.0 throws outright. We mirror flutter_map's own `isFinite` condition
+    // and DROP a poisoned fix at this chokepoint — every map boundary (the
+    // follow camera in snow_scene_scaffold, the position marker in map_layer,
+    // route_follower) reads LocationState.position, so guarding here covers
+    // them all, version-independently. The last good LocationState is retained
+    // (we do NOT emit) and the stale watchdog is NOT reset, so a stream of
+    // garbage correctly ages to `stale` rather than masquerading as a live fix.
+    //
+    // A non-finite *accuracy* alone is NOT a poison and does NOT drop the fix:
+    // accuracy never reaches the map boundary (only lat/lon do), and
+    // GeoPosition already uses a non-finite value to mean "unknown". An unknown
+    // accuracy correctly fails `isNavigationGrade` (accuracy <= 50.0 is false
+    // for NaN) and flows to the `degraded` branch below — exactly the right
+    // signal, with no valid coordinate dropped.
+    if (!pos.latitude.isFinite || !pos.longitude.isFinite) {
+      return;
+    }
+
+    // Reset stale timer on every (valid) position update.
     _resetStaleTimer();
 
     // Detect dead reckoning status from the provider.
