@@ -284,6 +284,14 @@ final fusion = VehicleConditionFusion.fromPartialFrames(
 );
 ```
 
+**Runnable end-to-end bridge:** [`example/kuksa_databroker.dart`](example/kuksa_databroker.dart)
+wires a real `KuksaClient.subscribe(...)` into this fusion and ships an
+in-process fake source so it runs on a laptop with **no databroker** —
+`dart run example/kuksa_databroker.dart` prints an escalating black-ice verdict,
+shows partial-frame carry-forward and garbage-frame honesty, then an honest
+`unavailable` on disconnect. Go live with
+`dart run example/kuksa_databroker.dart --live localhost:55555`.
+
 > ⚠️ **SAFETY — partial-frame transports MUST carry forward; use the
 > `fromPartialFrames` rail.** On the documented-primary KUKSA path, `subscribe`
 > re-sends **only the signals that changed** after the first cycle. If those
@@ -316,6 +324,13 @@ final fusion = VehicleConditionFusion.fromPartialFrames(
 > default constructor for **complete** snapshots — a CAN reader or sensor fusion
 > where a `null` genuinely means "no longer valid" — which does **not** carry
 > forward and so never over-warns on retracted data (see *What it does NOT do*).
+
+> **Attribution / no affiliation.** VSS (Vehicle Signal Specification) is a
+> [COVESA](https://github.com/COVESA/vehicle_signal_specification) standard and
+> KUKSA is an [Eclipse Foundation](https://github.com/eclipse-kuksa) project.
+> This package is an independent, SDK-free consumer of those open standards — it
+> is **not affiliated with, nor endorsed by,** COVESA, the Eclipse Foundation, or
+> the KUKSA project.
 
 ## What it does NOT do
 

@@ -10,7 +10,18 @@ environment:
 
 dependencies:
   # Direct: the demo re-derives the FRESH candidate assessment (to mark
-  # debounce-held steps) via DrivingConditionAssessment.fromCondition.
+  # debounce-held steps) via DrivingConditionAssessment.fromCondition, and
+  # reads RoadSurfaceState for the printed verdict.
   driving_conditions: ^0.5.2
   vehicle_condition_fusion:
     path: ../
+
+dev_dependencies:
+  test: ^1.25.0
+  # The KUKSA databroker bridge example (example/kuksa_databroker.dart) imports
+  # the real SDK so the live `client.subscribe(...)` path is COMPILE-CHECKED
+  # against the actual SDK types. It is a dev_dependency of the EXAMPLE only —
+  # the published `vehicle_condition_fusion` package stays completely SDK-free
+  # (see ../pubspec.yaml). The default `dart run` uses a fake source and never
+  # dials a broker; only `--live host:port` constructs a real KuksaClient.
+  kuksa_dart_sdk: ^0.2.3

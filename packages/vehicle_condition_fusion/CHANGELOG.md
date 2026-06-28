@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.1
+
+- **Runnable KUKSA-databroker bridge example** —
+  `example/kuksa_databroker.dart`. Shows the whole adapter as a four-line map
+  chain: `client.subscribe(VehicleConditionSignals.recognizedVssPaths)` →
+  decode each `Datapoint` to its scalar `.value` → `fromVss` per frame →
+  `VehicleConditionFusion.fromPartialFrames` (carry-forward rail).
+  - It imports the **real `kuksa_dart_sdk`** (an example-only dev-dependency —
+    the published package stays completely SDK-free), so the live
+    `client.subscribe(...)` bridge is compile-checked against the actual SDK
+    types. `--live host:port` constructs a real `KuksaClient`.
+  - The **default `dart run`** uses an in-process fake source shaped exactly
+    like the decoded `subscribe` yield, so it runs end-to-end with **no
+    databroker**. It demonstrates: an escalating black-ice verdict; partial-frame
+    **carry-forward** (a speed-only frame still reports black ice); **garbage-frame
+    honesty** (a non-finite friction degrades to `null`, never a fabricated max
+    grip, and cannot erase a once-seen ice hazard); and **honest degradation**
+    (a mid-drive disconnect yields an explicit `unavailable`, never the stale
+    verdict).
+  - Behavioural tests in `example/test/kuksa_databroker_test.dart` assert each of
+    those properties.
+- Docs-only / additive: the package `lib` and its public API are unchanged.
+
 ## 0.3.0
 
 - **Zero-glue KUKSA on-ramp — `VehicleConditionSignals.fromVss(...)`.** A new
