@@ -87,7 +87,8 @@ double _visibilityMetersForLevel(int level) => switch (level) {
 ///    when temperature ≤ 0 °C else `rain` (temperature disambiguates what the
 ///    wiper cannot); intensity from [_intensityForLevel].
 ///  * **ice risk** iff a *direct* road measurement says so — friction below
-///    [kIcyFrictionThreshold], OR TCS/ABS engaged at/below [kColdSlipCelsius].
+///    [kIcyFrictionThreshold], OR TCS/ABS/ESC engaged at/below
+///    [kColdSlipCelsius].
 ///  * **visibility** = the documented [_visibilityMetersForLevel] proxy.
 ///
 /// The result is handed to `DrivingConditionAssessment.fromCondition` — the
@@ -106,7 +107,9 @@ WeatherCondition vehicleSignalsToWeatherCondition(
 
   final iceRisk = (s.roadFriction != null &&
           s.roadFriction! < kIcyFrictionThreshold) ||
-      ((s.tcsEngaged == true || s.absEngaged == true) &&
+      ((s.tcsEngaged == true ||
+              s.absEngaged == true ||
+              s.escEngaged == true) &&
           temp <= kColdSlipCelsius);
 
   return WeatherCondition(

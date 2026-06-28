@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.3.0
+
+- **Zero-glue KUKSA on-ramp — `VehicleConditionSignals.fromVss(...)`.** A new
+  factory that maps **standard COVESA VSS (v6.0)** leaf paths straight to the
+  typed fields, so a KUKSA databroker user can hand the decoded `{path: value}`
+  map (what a `get` / `subscribe` yields) in directly with no hand-written
+  per-field glue.
+  - The exact paths read are exposed as `VehicleConditionSignals.recognizedVssPaths`
+    (and individually as `vssRoadFriction`, `vssTcsEngaged`, … constants) for
+    building a `subscribe` request and for tests.
+  - The wiper leaf is the **Front-instance** path
+    `Vehicle.Body.Windshield.Front.Wiping.Intensity` — `Windshield` is an
+    instanced branch (`["Front", "Rear"]`) in VSS, so this is the deployed
+    databroker key. It is an actuator **setpoint** (uint8, no fixed max), a
+    coarse precipitation cue; the measured precipitation channel is the separate
+    `Raindetection.Intensity` sensor.
+  - `ESC.RoadFriction.MostProbable` is a PERCENT in VSS, so it is divided by 100
+    and clamped to `0.0..1.0`; `Raindetection.Intensity` is rounded/clamped to
+    `0..100`; `Windshield.Front.Wiping.Intensity` (no fixed VSS max) is clamped
+    `>= 0` only.
+  - **Honest by construction:** an absent / `null` / non-coercible leaf leaves
+    that field `null` (never a fabricated default), and a garbage frame degrades
+    to `null` rather than throwing — a malformed leaf cannot crash the pipeline.
+    A non-finite numeric (`NaN`/`Infinity`) is treated as garbage → `null`
+    (notably, a `NaN` friction can no longer fabricate `1.0` max grip).
+  - The VSS-typed **boolean** leaves (`TCS`/`ABS`/`ESC.IsEngaged`) accept a Dart
+    `bool`, or an int `1`/`0` (faithful decoding of a `boolean` leaf from a CAN
+    bridge / non-SDK source, so a traction-loss ice signal is not silently
+    dropped); numeric leaves never accept a `bool`.
+  - For KUKSA `subscribe` (partial frames), build a `fromVss` per frame and feed
+    `VehicleConditionFusion.fromPartialFrames` (carry-forward rail).
+- **New `escEngaged` field + ESC now contributes to cold-slip ice risk.** Added
+  an additive (non-breaking) `bool? escEngaged` to `VehicleConditionSignals`
+  (mapped from `Vehicle.ADAS.ESC.IsEngaged`). `Vehicle.ADAS.ESC.IsEngaged` is as
+  strong an ice indicator as TCS/ABS, so — like them — an engaged ESC at/below
+  `kColdSlipCelsius` now also contributes to ice risk in
+  `vehicleSignalsToWeatherCondition`.
+- Additive and non-breaking: the existing fields, the classifier semantics for
+  prior signals, and every existing public API are unchanged; still pure Dart,
+  no Flutter, no databroker SDK, no protobuf, no new dependency.
+
 ## 0.2.0
 
 - **Lower the floor — try it with just a laptop.** Added an opt-in

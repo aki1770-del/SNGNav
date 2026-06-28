@@ -142,9 +142,9 @@ final fusion = VehicleConditionFusion.fromPartialFrames(
 ## What it does
 
 - `VehicleConditionSignals` — a typed, all-nullable snapshot of the snow-safety
-  signals (`roadFriction`, `tcsEngaged`, `absEngaged`, `wiperIntensity`,
-  `rainIntensity`, `airTempC`, `speedKmh`). A signal the vehicle has not
-  published is `null`, never a fabricated default.
+  signals (`roadFriction`, `tcsEngaged`, `absEngaged`, `escEngaged`,
+  `wiperIntensity`, `rainIntensity`, `airTempC`, `speedKmh`). A signal the
+  vehicle has not published is `null`, never a fabricated default.
 - `vehicleSignalsToWeatherCondition(...)` — a pure, total, deterministic mapping
   to a `WeatherCondition` (no LLM, no prose, no ad-hoc heuristic), with named
   calibration thresholds: `kIcyFrictionThreshold` (0.3), `kColdSlipCelsius`
@@ -187,7 +187,8 @@ source.add(const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5));
   temperature ≤ 0 °C else `rain` (temperature disambiguates what the wiper
   cannot).
 - **ice risk** iff a *direct* road measurement says so — friction below
-  `kIcyFrictionThreshold`, **or** TCS/ABS engaged at/below `kColdSlipCelsius`.
+  `kIcyFrictionThreshold`, **or** TCS/ABS/ESC engaged at/below
+  `kColdSlipCelsius`.
 
 ## Honest bounds — read this
 
@@ -224,12 +225,72 @@ That is the whole point: you can unit-test the full hazard fusion with a plain
 `StreamController<VehicleConditionSignals>` and direct construction — **no
 `kuksa_dart_sdk` import, no protobuf, no running databroker.**
 
+### From a KUKSA databroker (VSS paths)
+
+If your source speaks **standard COVESA VSS** (Vehicle Signal Specification,
+v6.0) — as a KUKSA databroker does — you do not even write the per-field
+mapping. A KUKSA `get` / `subscribe` yields a map of `{VSS-leaf-path: value}`;
+hand it straight to `VehicleConditionSignals.fromVss(...)`:
+
+```dart
+final signals = VehicleConditionSignals.fromVss({
+  'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 18.0, // percent → 0.18
+  'Vehicle.ADAS.TCS.IsEngaged': true,
+  'Vehicle.ADAS.ABS.IsEngaged': false,
+  'Vehicle.ADAS.ESC.IsEngaged': true,
+  'Vehicle.Exterior.AirTemperature': -6.0, // °C
+  'Vehicle.Speed': 35.0, // km/h
+  'Vehicle.Body.Windshield.Front.Wiping.Intensity': 4, // setpoint, no fixed max
+  'Vehicle.Body.Raindetection.Intensity': 70, // percent
+});
+```
+
+The map values are the **decoded scalars** your KUKSA client yields — a live
+client returns typed `Datapoint`s, so you pass `datapoint.value` (a `bool` /
+`int` / `double`), not the wrapper.
+
+- The leaves it reads are exactly `VehicleConditionSignals.recognizedVssPaths`
+  (use it to build your `subscribe` request); unknown / extra keys are ignored.
+- `Windshield` is an **instanced** branch (`["Front", "Rear"]`) in VSS, so the
+  deployed databroker key is the **Front**-instance path
+  (`Vehicle.Body.Windshield.Front.Wiping.Intensity`).
+- `ESC.RoadFriction.MostProbable` is a **percent** in VSS, so it is divided by
+  100 and clamped to `0.0..1.0`; `Raindetection.Intensity` (a SENSOR, percent)
+  is clamped `0..100`; `Windshield.Front.Wiping.Intensity` is an actuator
+  **setpoint** with no fixed VSS max, so it is clamped `>= 0` only (a coarse
+  precipitation cue, not a measured value).
+- The VSS-typed **boolean** leaves (`TCS`/`ABS`/`ESC.IsEngaged`) accept a Dart
+  `bool`, or an int `1`/`0` (faithful decoding of a `boolean` leaf from a CAN
+  bridge / non-SDK source, so a traction-loss ice signal is not silently
+  dropped); numeric leaves never accept a `bool`.
+- **No fabrication:** a path that is absent, `null`, or holds a non-coercible
+  value (including a non-finite `NaN`/`Infinity`) leaves that field `null` — a
+  missing or garbage leaf is never a default, and a malformed frame degrades to
+  `null` instead of throwing.
+- **`Vehicle.ADAS.ESC.IsEngaged` is mapped** to `escEngaged` and, like TCS/ABS,
+  contributes to cold-slip ice risk.
+- **Intentionally not mapped:** the `Vehicle.Exterior.RoadSurfaceCondition`
+  family (VSS `master` / unreleased v7, not in any released spec).
+
+For a KUKSA `subscribe` (a **partial-frame** transport — only changed leaves are
+re-sent), build a `fromVss` snapshot **per frame** and feed
+`VehicleConditionFusion.fromPartialFrames`, which carries the last-known value
+forward so a once-seen ice signal is not under-warned (see the ⚠️ safety note
+below):
+
+```dart
+final fusion = VehicleConditionFusion.fromPartialFrames(
+  partialFrames: kuksaFrames.map(VehicleConditionSignals.fromVss),
+);
+```
+
 > ⚠️ **SAFETY — partial-frame transports MUST carry forward; use the
 > `fromPartialFrames` rail.** On the documented-primary KUKSA path, `subscribe`
 > re-sends **only the signals that changed** after the first cycle. If those
 > partial frames are fed to the **default** constructor (which treats every
-> snapshot as complete), `roadFriction`, `tcsEngaged` / `absEngaged` (and the
-> other ice-risk signals) drop to `null` the moment they rotate out of a frame —
+> snapshot as complete), `roadFriction`, `tcsEngaged` / `absEngaged` /
+> `escEngaged` (and the other ice-risk signals) drop to `null` the moment they
+> rotate out of a frame —
 > even while the real ice hazard on the road **persists unchanged**. Because this
 > processor honestly refuses to fabricate from a missing signal, that would
 > **fail toward NO ice warning while a real ice hazard persists** —
