@@ -21,14 +21,31 @@ Pure Dart. No Flutter.
 
 - **`RerouteEvaluator`** — decides when rerouting is justified given
   forecast hazards, current position, and configured thresholds.
-- **`DetourPlanner`** — generates waypoints that bypass identified
-  hazard zones; respects detour-distance limits and routing-engine
-  constraints.
+- **`DetourPlanner`** — generates left/right waypoint pairs that bypass
+  identified hazard zones, each offset by the zone radius plus a configured
+  lateral offset. It produces candidate waypoints only; honouring
+  detour-distance limits and routing-engine constraints is the calling
+  routing engine's responsibility.
 - **`RerouteDecision`** — typed result with `shouldReroute`, human-readable
   `reason`, and `detourWaypoints` ready to hand back to a routing engine.
-- **`AdaptiveRerouteConfig`** — knobs for hazard thresholds, max detour
-  distance, and minimum-progress-before-reroute logic (avoids rerouting
-  thrashing when the driver has just started).
+- **`AdaptiveRerouteConfig`** — knobs for the hazard look-ahead window
+  (`hazardWindowSeconds`), the minimum forecast confidence to act
+  (`minConfidenceToAct`), and the detour waypoint offset distance
+  (`detourOffsetMeters`).
+
+## Not yet implemented
+
+Documented as carry-forward gaps so the public API is honest about what
+currently ships:
+
+- **`AdaptiveRerouteConfig.maxDetourFraction`** is declared but **not yet
+  enforced** — no code path rejects a detour for exceeding it. Treat it as
+  advisory and enforce detour-distance limits in your own routing engine
+  until a future version wires it into evaluation.
+- **Minimum-progress / anti-thrashing logic** (suppressing rapid
+  re-reroute prompts so the driver is not alarmed repeatedly) is **not
+  implemented**. `RerouteEvaluator` evaluates each forecast independently;
+  debounce reroute prompts in your integration if you need this.
 
 ## Install
 

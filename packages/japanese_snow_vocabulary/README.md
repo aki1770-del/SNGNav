@@ -17,7 +17,7 @@ captured.
 | 雪道 | yuki-michi | snow road | JAF — fully populated |
 | 圧雪 | assetsu | compacted snow | JAF — fully populated |
 | シャーベット | shabetto | slush | JAF — fully populated (single-publisher; see `KNOWN_LIMITATIONS.md`) |
-| 凍結 | kettou | frozen surface | JAF — fully populated |
+| 凍結 | touketsu | frozen surface | JAF — fully populated |
 
 The package serves a population gap: VSS `RoadSurfaceCondition`
 (English-language) collapses these distinctions into broader buckets,

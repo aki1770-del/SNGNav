@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 — 2026-06-29 — Docs: remove stray tool-markup lines
+
+- Docs: remove stray tool-markup lines that rendered on the pub.dev page. No source change.
+
 ## 0.2.1 — 2026-06-26 — Docs: dev-first on-ramp
 
 - The README now leads with what-it-is, a `dart pub add pretrip_source_digitraffic`

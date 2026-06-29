@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.3
+
+Safety-documentation honesty fix. The docs now describe only what ships;
+no source/behavior change.
+
+- **Struck a fabricated SOTIF safety claim.** README and `SAFETY_BOUNDARY.md`
+  (§3) described a "minimum-progress-before-reroute / anti-thrashing logic"
+  presented as an explicit SOTIF-class mitigation against alarm-fatigue. No
+  such field or logic exists in code; `RerouteEvaluator` evaluates each
+  forecast independently with no debounce. Removed the claim and recorded
+  alarm-fatigue mitigation as a documented carry-forward gap (integrator
+  responsibility until implemented).
+- **Corrected the "respects detour-distance limits" claim.** README said
+  `DetourPlanner` respects detour-distance limits; `AdaptiveRerouteConfig`
+  exposed `maxDetourFraction`, documented as the threshold above which a
+  candidate route "is rejected." No code path consumes `maxDetourFraction` —
+  nothing is rejected. The field is now documented as **declared but not yet
+  enforced** (carry-forward gap; enforce in your own routing engine).
+- Fixed a stale dartdoc reference to the non-existent `AdaptiveRerouteService`
+  (actual class: `RerouteEvaluator`).
+
 ## 0.1.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

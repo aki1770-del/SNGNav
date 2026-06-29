@@ -154,7 +154,7 @@ jafAuthoritativeData = {
   // --- 凍結 (FULL data 0.2.0; primary source = JAF FAQ148) ---
   JapaneseSnowSurfaceClass.surfaceFrozen: JapaneseSnowVocabularyEntry(
     termJa: '凍結',
-    termRomaji: 'kettou',
+    termRomaji: 'touketsu',
     labelEn: 'frozen surface',
     authoritativeSource: 'JAF',
     sourceUrl:

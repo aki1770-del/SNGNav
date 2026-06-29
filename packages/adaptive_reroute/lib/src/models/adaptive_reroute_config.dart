@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Thresholds that govern when [AdaptiveRerouteService] recommends rerouting.
+/// Thresholds that govern when [RerouteEvaluator] recommends rerouting.
 ///
 /// All thresholds are advisory — they influence [RerouteDecision.shouldReroute]
 /// but the driver always decides. The defaults are conservative for winter
@@ -13,11 +13,17 @@ class AdaptiveRerouteConfig extends Equatable {
   /// Default: 1800 s (30 minutes at 60 km/h ≈ 30 km).
   final double hazardWindowSeconds;
 
-  /// Detour distance limit as a fraction of the original route distance.
-  /// A candidate route that exceeds `originalKm * (1 + maxDetourFraction)`
-  /// is rejected.
+  /// Detour distance limit as a fraction of the original route distance —
+  /// the threshold above which a candidate route
+  /// (`originalKm * (1 + maxDetourFraction)`) would be considered excessive.
   ///
-  /// Default: 0.25 (25% longer route accepted).
+  /// **Not yet enforced.** No code path in this package consumes this field;
+  /// neither [RerouteEvaluator] nor [DetourPlanner] rejects a detour on its
+  /// basis. It is reserved for a future version that evaluates candidate
+  /// detour distance. Until then, enforce detour-distance limits in your own
+  /// routing engine.
+  ///
+  /// Default: 0.25 (25% longer route).
   final double maxDetourFraction;
 
   /// Minimum forecast confidence required to act on a hazard signal.

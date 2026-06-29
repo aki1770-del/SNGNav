@@ -219,5 +219,3 @@ for direct integrator use.
 ### License
 
 BSD 3-Clause License. See [LICENSE](LICENSE).
-</content>
-</invoke>

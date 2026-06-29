@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.3
+
+- Data-correctness fix: correct the `termRomaji` for `凍結`
+  (`JapaneseSnowSurfaceClass.surfaceFrozen`) from the wrong `kettou` to
+  the correct Hepburn `touketsu` (凍結 reads とうけつ). Fixed in
+  `lib/src/jaf_authoritative_data.dart` and the README romaji table.
+  No enum-shape, behavior, or verbatim-citation change.
+- Add `test/romaji_test.dart` — a romaji-vs-kanji regression guard
+  pinning every entry's `termRomaji` to its `termJa`, so a future
+  mistyped romanization is caught at test time.
+
 ## 0.2.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale
