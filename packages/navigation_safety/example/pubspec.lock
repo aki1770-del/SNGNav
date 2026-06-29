@@ -169,14 +169,14 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.9.1"
+    version: "0.9.2"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.10.2"
+    version: "0.10.4"
   nested:
     dependency: transitive
     description:
