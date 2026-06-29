@@ -1,5 +1,141 @@
 # Changelog
 
+## 0.3.0 — 2026-06-29 — Conservative prefecture union at borders (over-warn on resolution; partial reads signalled)
+
+**Border-resolution change (minor bump).** Prefecture resolution at a border
+changes from **single-first-match** to a **conservative union**: when a lat/lon
+falls inside more than one catalogued prefecture bounding box, the provider now
+fetches **every** containing prefecture's warning JSON and surfaces the
+**merged, deduplicated union** of their in-force warnings.
+
+- **Why (safety — under-warn fix):** the catalogued bounding boxes are crude
+  axis-aligned rectangles over irregular prefectures, so adjacent prefectures'
+  boxes **overlap along every shared border**. The previous resolver returned
+  only the *first* matching box, silently dropping the neighbour(s). No
+  single-prefecture tie-break is correct at every border — e.g. a nearest-
+  centroid guess merely trades a northern-border error for a southern coastal
+  one. The result was that a driver near a prefecture border could **miss** a
+  neighbouring prefecture's warning purely because of a resolution guess.
+- **Fix:** at a border the provider surfaces **all** candidate prefectures'
+  warnings (deduplicated). A driver near a prefecture border may now see a
+  neighbouring prefecture's warning — the **safe, over-warn direction**,
+  consistent with this package's conservative-on-uncertain philosophy. An
+  interior point still resolves to exactly one prefecture (single fetch).
+- **Concurrency + budget (single 30 s per prefecture, everywhere):** at a
+  **border** (more than one containing prefecture) the prefectures are fetched
+  **concurrently**; each per-prefecture fetch carries its **OWN per-request
+  timeout** set to the single `kJmaFetchWallClockBudget` (30 s) and **always
+  resolves to a captured result** rather than throwing, so **one hung endpoint
+  cannot block, fail, or discard the whole batch**. The same 30 s value is used
+  for an interior single fetch and for every border sibling — there is
+  **deliberately no shorter border budget**. (An earlier draft used a shorter
+  10 s per-request cap at borders; it was removed because it could time out
+  **HER own slow-but-valid warning**: if her prefecture answers a real 大雪警報
+  on a marginal 10–30 s link while the other containing prefecture answers
+  fast-empty, the 10 s cap turned her warning into a captured failure → empty
+  union + a failure → incomplete-read throw → she got **nothing**. Never drop a
+  slow-but-valid warning.)
+  - **Latency bound (honest cost):** per-prefecture isolation already prevents a
+    hung sibling from blocking or discarding a fast sibling's success, so the
+    only cost of the single budget is **latency** — a hung border neighbour can
+    make the union take **up to ~30 s** before it returns (carrying the in-band
+    incomplete-read notice). That pre-trip latency is **preferred over ever
+    dropping a slow-but-valid warning**. The batch-level timeout is retained
+    only as the outer backstop for the theoretical case where the `Future.wait`
+    combinator machinery itself stalls.
+- **Robustness hardening (worst-case / degraded-connectivity):**
+  - **Hung-sibling isolation.** Previously a single hung endpoint blocked the
+    `Future.wait` batch until the batch-level timeout fired and **threw** —
+    discarding an already-successful sibling's warnings. At an Akita / Yamagata
+    border with Akita succeeding fast and Yamagata hanging, the driver would
+    have got **nothing** where the single-prefecture path gave Akita's
+    大雪警報. Each fetch now self-bounds at one per-request budget and is
+    captured as a failure, so the successful sibling's warnings are **still
+    returned**.
+  - **Captured-failure isolation.** Each per-prefecture fetch's catch was
+    broadened from `JmaAdvisoryFetchException` to any error, so a raw
+    `FormatException` (e.g. from `utf8.decode` of malformed bytes) is captured
+    as a failed sibling rather than escaping and discarding a successful one.
+  - **Timeout exception shape.** The timeout / all-failed exception now
+    preserves a meaningful source `uri` (the per-request path carries it),
+    restoring the field the single-prefecture path had.
+- **Partial-failure policy (conservative; a partial read is never presented as
+  complete):** the over-warn invariant is **unconditional** — whenever a
+  containing border prefecture was not successfully checked, the caller (and the
+  aggregator) **always learns it**, either by a thrown exception or by an
+  in-band notice in the returned list.
+  - The union collects every prefecture that fetched successfully; a
+    successfully fetched warning is **never** withheld because a sibling fetch
+    failed.
+  - If **every** prefecture fetch fails, a `JmaAdvisoryFetchException` is thrown
+    (the first failure's shape — uri / statusCode / message — is preserved).
+  - If the union is **empty AND at least one** containing prefecture **failed**,
+    a `JmaAdvisoryFetchException` (**incomplete read**) is thrown rather than
+    returning `[]`. An empty list would be a false **'no warnings'** all-clear
+    for a border where the unreachable prefecture could hold an active 大雪警報;
+    the incomplete read tells the integrator 'could not fully determine', not
+    'all clear'. (A genuine all-clear — every containing prefecture succeeded
+    with no in-force snow warning — still returns `[]`.) The thrown exception
+    preserves the failing sibling's `uri` + `statusCode`.
+  - If the union is **non-empty AND at least one** containing prefecture
+    **failed**, the real warnings are returned **plus a synthetic,
+    clearly-marked, LOW-severity incomplete-read notice** (`Advisory` with
+    `eventClass == kJmaIncompleteReadEventClass`, `severity` `minor`) naming the
+    unreachable prefecture(s) in Japanese. Previously the captured failure was
+    silently discarded here, so a partial border read (e.g. a mild reachable
+    着雪注意報 while an unreachable sibling could hold a 大雪特別警報) landed as a
+    **complete, fully-successful** result with no staleness signal — a silent
+    under-warn at the exact scenario this border-union exists for. The notice
+    carries the lowest severity + a distinct event identity, so it can never
+    masquerade as — or be deduped against — a real weather warning.
+  - **Residual (disclosed, narrowed):** a warning from an **unreachable**
+    prefecture cannot be **surfaced** (we cannot read what we could not fetch) —
+    but it is no longer silently dropped: a non-empty union with a failed
+    sibling now carries the incomplete-read notice **flagging** that an
+    unreachable containing prefecture exists. So the union is over-warn on the
+    **resolution** guess (it never drops a neighbour because the resolver chose
+    one side) **and** signals a partial read; it does **not** guarantee a
+    warning held by an unreachable prefecture is shown — only flagged.
+- **Driver-facing label localized to Japanese (`areaDescription`).** At a
+  border the prefecture label is the load-bearing way a Japanese-reading driver
+  tells their own prefecture's warning from an over-warned neighbour's; the
+  headline / event name were already verbatim Japanese, so the structured
+  `areaDescription` label is now Japanese too (e.g. `秋田県` / `山形県` rather
+  than `Akita` / `Yamagata`). New `kJmaPrefectureNamesJa` / `jmaPrefectureNameJa`
+  expose the map; the romaji `kJmaPrefectureNames` / `jmaPrefectureName` are
+  retained for logs and non-Japanese consumer UIs.
+- **Deduplication:** the union is deduplicated on the **full advisory identity**
+  (source, event class, severity, certainty, urgency, area, effective, expires,
+  headline, description), so two genuinely different warnings (e.g. the same
+  snow class reported by two different prefectures, each carrying its own
+  prefecture label) both survive, while a byte-identical record is never listed
+  twice.
+- **API additions (non-breaking):**
+  - `prefectureCodesForPoint({latitude, longitude}) → List<String>` — all
+    catalogued prefecture codes containing the point, in deterministic catalog
+    order (empty when outside the catalog).
+  - `prefectureCodeForPoint` is **retained** for back-compat; it now returns the
+    **first** containing box (equivalent to the first element of
+    `prefectureCodesForPoint`). Callers wanting border-correct behaviour should
+    migrate to `prefectureCodesForPoint`.
+  - `kJmaPrefectureNamesJa` / `jmaPrefectureNameJa(code)` — the driver-facing
+    Japanese prefecture-name map / lookup used for `Advisory.areaDescription`.
+    The existing romaji `kJmaPrefectureNames` / `jmaPrefectureName` are
+    unchanged.
+  - `kJmaIncompleteReadEventClass` — the `eventClass` of the synthetic
+    incomplete-read notice (so consumers can match / filter / render it
+    distinctly from a real warning).
+  - `buildIncompleteReadNotice(List<String> failedPrefectureCodes)` — builds
+    that notice (exposed for integrator-side replay / rendering tests).
+- **Residual approximation (disclosed):** bounding-box granularity remains
+  coarser than actual prefecture geometry. The union is the deliberate
+  over-warn handling of that approximation, not a claim of exact prefecture
+  geofencing.
+- **Unchanged:** the public entrypoint `fetchActiveAdvisoriesAtPoint({latitude,
+  longitude}) → Future<List<Advisory>>`, the bounding-box catalog (6 snow-zone
+  prefectures), the snow-class code mapping, `init()`, the byte cap, and the
+  `JmaAdvisoryFetchException` shape.
+
 ## 0.2.0 — 2026-06-26 — Windowless per-prefecture warning JSON (fixes scroll-off false-negative)
 
 **Source-architecture change (minor bump).** The default data source moves from

@@ -21,17 +21,28 @@
 /// ---
 ///
 /// **Status: deployed via the windowless per-prefecture warning JSON
-/// path (0.2.0).** The provider resolves the caller's lat/lon to a
-/// snow-zone prefecture (office) code, fetches the single small
-/// `https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`,
-/// parses the current in-force warnings, and surfaces the
-/// winter-snow-class advisories (大雪警報 / 大雪注意報 / 暴風雪警報 /
-/// 着雪注意報) as source-neutral `Advisory` records to the aggregator.
+/// path.** The provider resolves the caller's lat/lon to **every**
+/// catalogued snow-zone prefecture (office) code whose bounding box
+/// contains the point — one for an interior point, or the full
+/// containing set at a border (the boxes overlap along every shared
+/// border) — fetches each prefecture's
+/// `https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`
+/// **concurrently**, parses the current in-force warnings, and surfaces
+/// the **deduplicated union** of the winter-snow-class advisories
+/// (大雪警報 / 大雪注意報 / 暴風雪警報 / 着雪注意報) as source-neutral
+/// `Advisory` records to the aggregator. This is the conservative,
+/// over-warn handling of border ambiguity (0.3.0): a border driver
+/// never misses a neighbouring prefecture's warning because the resolver
+/// guessed a single side. When the union is non-empty but a containing
+/// prefecture could not be fetched, the partial read is signalled in-band
+/// by a synthetic, low-severity incomplete-read notice naming the
+/// unreachable prefecture(s) — a partial read is never presented as a
+/// complete all-clear. See CHANGELOG 0.3.0.
 ///
-/// 0.2.0 replaces the 0.1.x atom-feed + per-report-XML path, which had
-/// a window / scroll-off false-negative (a still-in-force warning that
-/// was last re-issued before the feed window opens scrolled off and
-/// was silently missed). The windowless JSON always reflects the
+/// The windowless JSON replaced the 0.1.x atom-feed + per-report-XML
+/// path, which had a window / scroll-off false-negative (a still-in-force
+/// warning that was last re-issued before the feed window opens scrolled
+/// off and was silently missed); the windowless JSON always reflects the
 /// current in-force state. See CHANGELOG 0.2.0.
 ///
 /// HER-trace (≤4-hop) end-to-end:
@@ -67,10 +78,15 @@ export 'src/jma_advisory_mapper.dart'
     show
         JmaWarningRecord,
         mapJmaWarningToAdvisory,
+        buildIncompleteReadNotice,
+        kJmaIncompleteReadEventClass,
         parseJmaWarningJson,
         kJmaSnowWarningCodes,
         kJmaSnowAdvisoryEventNames,
         kJmaPrefectureBoundingBoxes,
         kJmaPrefectureNames,
+        kJmaPrefectureNamesJa,
         jmaPrefectureName,
-        prefectureCodeForPoint;
+        jmaPrefectureNameJa,
+        prefectureCodeForPoint,
+        prefectureCodesForPoint;

@@ -9,6 +9,13 @@ library;
 // `Advisory` is the source-neutral typed event from the aggregator interface
 // (a direct dependency); the JMA umbrella does not re-export it.
 import 'package:condition_aggregator/condition_aggregator.dart';
+// The JMA umbrella exports the IN-BAND partial-read marker: at a border point a
+// reachable prefecture's real warnings are returned ALONGSIDE a synthetic
+// incomplete-read notice (`eventClass == kJmaIncompleteReadEventClass`) naming
+// the unreachable sibling(s). We honour it so a PARTIAL read never reaches HER
+// dressed as a COMPLETE one.
+import 'package:condition_aggregator_jma/condition_aggregator_jma.dart'
+    show kJmaIncompleteReadEventClass;
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
 import 'forecast_case.dart';
@@ -32,12 +39,30 @@ class PretripLiveResult {
   final PretripLiveStatus status;
   final String? jmaEventName; // verbatim JP (e.g. 大雪警報); non-null only on merged.
   final String? prefectureCode; // e.g. '050000'; non-null on Japan arms.
+
+  /// True when the JMA read was PARTIAL: at a border point a containing
+  /// prefecture could NOT be fetched while a reachable sibling DID return, so
+  /// the official-warning check is incomplete — a real sibling warning (up to a
+  /// 大雪特別警報) could be missing from [forecast]. Carried in-band from the
+  /// aggregator's incomplete-read notice (`kJmaIncompleteReadEventClass`) and
+  /// NEVER silently dropped: the partial read must reach HER alongside any real
+  /// warning that DID arrive. Always false on the global MET arm, the
+  /// no-Japan-source arms, and the total-failure arm.
+  final bool jmaBorderCheckIncomplete;
+
+  /// The unreachable prefecture name(s) for the partial read — verbatim JA from
+  /// the notice (e.g. `秋田県` / `秋田県・山形県`). Null unless
+  /// [jmaBorderCheckIncomplete] is true.
+  final String? jmaUnreachableArea;
+
   const PretripLiveResult({
     this.forecast,
     this.departure,
     required this.status,
     this.jmaEventName,
     this.prefectureCode,
+    this.jmaBorderCheckIncomplete = false,
+    this.jmaUnreachableArea,
   });
 }
 
@@ -90,6 +115,20 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
       );
       try {
         final advisories = await fetchJmaAdvisories();
+        // IN-BAND PARTIAL-READ signal FIRST. At a border the aggregator returns
+        // the reachable prefecture's real warnings AND a synthetic, low-severity
+        // incomplete-read notice naming the unreachable sibling(s). It is NOT a
+        // snow advisory (the snow filter below skips it), but it MUST reach HER:
+        // discarding it would present a partial read as a complete all-clear at
+        // the exact degraded-connectivity scenario this product exists for. We
+        // detect it independently of the snow filter and honour BOTH — the real
+        // warning (merged below) AND this flag.
+        final incomplete = _firstWhereOrNull(
+          advisories,
+          (a) => a.eventClass == kJmaIncompleteReadEventClass,
+        );
+        final borderIncomplete = incomplete != null;
+        final unreachableArea = incomplete?.areaDescription;
         // Pick via the merge helper's OWN predicate (decoupled from the
         // provider's internal filter + from severity ordering — a non-goal).
         final snow = _firstWhereOrNull(
@@ -97,11 +136,16 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
           (a) => roadConditionForJmaSnowAdvisory(a.eventClass) != null,
         );
         if (snow == null) {
+          // No reachable snow warning. Still honour a partial read: if a sibling
+          // was unreachable, this is NOT a clean all-clear — carry the flag so
+          // HER sees the gap instead of an implied "no warnings".
           return PretripLiveResult(
             forecast: base,
             departure: departure,
             status: PretripLiveStatus.japanJmaNoAdvisory,
             prefectureCode: code,
+            jmaBorderCheckIncomplete: borderIncomplete,
+            jmaUnreachableArea: unreachableArea,
           );
         }
         // BINDING: JMA only ADDS a road-condition band into null/unknown
@@ -119,6 +163,10 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
           status: PretripLiveStatus.japanJmaMerged,
           jmaEventName: snow.eventClass,
           prefectureCode: code,
+          // Surface the real warning AND the partial-read flag together: the
+          // merged 着雪注意報 is shown, and HER is told 秋田県 could not be checked.
+          jmaBorderCheckIncomplete: borderIncomplete,
+          jmaUnreachableArea: unreachableArea,
         );
       } catch (_) {
         // ANY JMA failure (fetch/parse/timeout/init) → keep the MET base,

@@ -68,15 +68,56 @@ publisher authored which advisory.
 
 ### Status
 
-**0.2.0 — deployed via the windowless per-prefecture warning JSON
-path.** The provider resolves the caller's lat/lon to a snow-zone
-prefecture (office) code, fetches the single small
+Deployed via the windowless per-prefecture warning JSON path. The
+provider resolves the caller's lat/lon to the snow-zone prefecture
+(office) code(s) whose bounding box contains the point, fetches each
+prefecture's
 `https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`,
 parses the current in-force warnings, and surfaces winter-snow-class
 advisories (大雪警報 / 大雪注意報 / 暴風雪警報 / 着雪注意報) as
 source-neutral `Advisory` records.
 
-**Why this replaced the 0.1.x atom-feed path.** Through 0.1.x the
+**Border behaviour (over-warn at prefecture borders).** The catalogued
+bounding boxes are crude axis-aligned rectangles over irregular
+prefectures, so adjacent boxes overlap along every shared border. A
+point in a border zone is legitimately inside more than one box; rather
+than guess a single prefecture, the provider fetches **every** containing
+prefecture **concurrently** and returns the **deduplicated union** of
+their in-force warnings, each labelled with its own (Japanese)
+prefecture name. An interior point resolves to exactly one prefecture (a
+single fetch). This is the safe, over-warn direction **at the resolution
+step**: a driver near a prefecture border never has a neighbouring
+prefecture **dropped because the resolver guessed one side** — every
+containing prefecture is fetched. (A warning from a prefecture that
+cannot be *fetched* is a separate, network-level case, handled below: it
+cannot be surfaced, but it is flagged rather than silently dropped.)
+
+**Robustness at the border.** Every per-prefecture fetch — at a **border**
+(more than one containing prefecture) and at an **interior** point (exactly
+one) alike — carries its own request timeout at the single
+`kJmaFetchWallClockBudget` (30 s) and always resolves to a **captured
+result**, so one hung or failing endpoint can neither block nor fail the
+whole batch. There is deliberately **no shorter border budget**: a single
+30 s budget everywhere never times out a slow-but-valid warning arriving on
+a marginal link (the false-negative a shorter cap would reintroduce). The
+honest trade is **completeness over latency** — because the union waits for
+every containing prefecture, a single hung border neighbour can delay the
+union up to ~30 s before it returns; that is preferred over ever dropping a
+slow-but-valid warning. A successfully fetched warning is
+never withheld because a sibling fetch failed. The call throws
+`JmaAdvisoryFetchException` only when **every** containing prefecture
+fetch fails, or when the union is **empty and at least one** containing
+prefecture failed (an incomplete read that must not be presented as a
+false 'no warnings' all-clear). When the union is **non-empty and a
+sibling failed**, the real warnings are returned **plus a synthetic,
+low-severity incomplete-read notice** (`eventClass ==
+kJmaIncompleteReadEventClass`) naming the unreachable prefecture(s), so a
+partial read is never presented as complete. The disclosed residual: a
+warning held by a prefecture that could not be **fetched** cannot be
+**surfaced** — but it is now **flagged** by that notice rather than
+silently dropped. See CHANGELOG 0.3.0.
+
+**Why the windowless JSON replaced the 0.1.x atom-feed path.** Through 0.1.x the
 adapter read the JMA disaster-info atom feed (`extra.xml`) and walked
 each linked per-prefecture report XML. An independent safety audit
 found a **window / scroll-off false-negative**: the atom feed is a
@@ -94,13 +135,17 @@ CHANGELOG 0.2.0.
 When JMA has issued a 大雪 / 暴風雪 / 着雪 warning or advisory for the
 driver's current point in Japan:
 
-1. The caller's lat/lon resolves to a snow-zone prefecture (office)
-   code via a bounding-box catalog (6 snow-zone prefectures:
-   Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata). Points
-   outside the catalog return empty without an HTTP fetch.
-2. The provider fetches the single per-prefecture warning JSON
-   (`warning/{areacode}.json`) over HTTPS with a contactable
-   User-Agent.
+1. The caller's lat/lon resolves to the snow-zone prefecture (office)
+   code(s) whose bounding box contains the point, via a bounding-box
+   catalog (6 snow-zone prefectures:
+   Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata). An interior
+   point yields exactly one code; a border point can yield more than one
+   (the boxes overlap at shared borders). Points outside the catalog
+   return empty without an HTTP fetch.
+2. The provider fetches each containing prefecture's warning JSON
+   (`warning/{areacode}.json`) over HTTPS **concurrently** with a
+   contactable User-Agent. Each fetch self-bounds with its own request
+   timeout, so one slow or failing prefecture cannot block the others.
 3. The current in-force warnings (`areaTypes[].areas[].warnings[]`)
    are parsed; the `timeSeries` forecast block is ignored, and
    cancelled (`解除`) warnings are dropped.
@@ -108,7 +153,10 @@ driver's current point in Japan:
    (`kJmaSnowWarningCodes`: 06 大雪警報 / 12 大雪注意報 /
    02 暴風雪警報 / 26 着雪注意報) are mapped to source-neutral
    `Advisory` records via `mapJmaWarningToAdvisory`, deduplicated to
-   one record per distinct in-force snow code.
+   one record per distinct in-force snow code per prefecture. The
+   prefecture label (`areaDescription`) is the Japanese prefecture name
+   (e.g. `秋田県`), so at a border a driver can tell their own
+   prefecture's warning from an over-warned neighbour's.
 5. The `AdvisoryAggregator` merges the JMA records with sibling
    adapters' records (e.g. `condition_aggregator_nws` records when
    the driver crosses an international boundary or relies on
@@ -166,10 +214,11 @@ architecture → edge developer → driver.
 - **No prefecture catalog past 6.** Points outside the
   6-prefecture catalog return empty without an HTTP fetch.
   Catalog expansion is a deliberate version bump.
-- **No sub-prefecture resolution.** The lat/lon resolves to a
-  prefecture (office) code; results are deduplicated to one record
-  per distinct in-force snow code for the prefecture. Finer
-  sub-region targeting is below this adapter's resolution.
+- **No sub-prefecture resolution.** The lat/lon resolves to
+  prefecture (office) code(s) — one for an interior point, or the
+  containing set at a border; results are deduplicated to one record
+  per distinct in-force snow code per prefecture. Finer sub-region
+  targeting is below this adapter's resolution.
 - **No CAP-class certainty / urgency mapping.** `certainty` and
   `urgency` are `unknown`; the publisher's authoritative term is
   preserved verbatim in `eventClass` either way.

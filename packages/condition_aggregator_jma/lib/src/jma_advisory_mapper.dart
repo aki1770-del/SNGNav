@@ -113,6 +113,20 @@ const Set<String> kJmaSnowAdvisoryEventNames = <String>{
   '暴風雪特別警報',
 };
 
+/// Event-class identity for the synthetic **incomplete-read** meta-advisory
+/// that [JmaAdvisoryProvider.fetchActiveAdvisoriesAtPoint] injects into a
+/// NON-EMPTY border union when at least one containing prefecture could not be
+/// fetched (see [buildIncompleteReadNotice]).
+///
+/// This is **not** a weather warning — it is an availability / completeness
+/// notice. It is deliberately distinct from every real JMA warning name, so it
+/// can never be confused with — or deduplicated against — a real advisory, and
+/// it does **not** end in a `警報` / `注意報` / `特別警報` suffix, so the
+/// severity-by-suffix mapping never classifies it as a hazard. Consumers that
+/// want to filter the notice out (or render it differently from a weather
+/// warning) can match `Advisory.eventClass == kJmaIncompleteReadEventClass`.
+const String kJmaIncompleteReadEventClass = 'データ取得不可';
+
 /// Bounding-box catalog for 6 snow-zone prefectures.
 /// Bounding-box is approximate (axis-aligned rectangle in WGS84
 /// decimal degrees). Used by [prefectureCodeForPoint] to resolve a
@@ -161,11 +175,16 @@ kJmaPrefectureBoundingBoxes =
       ), // Niigata
     };
 
-/// Readable prefecture NAMES for the snow-zone catalog codes — for a
-/// place LABEL in a driver-facing surface, so a destination area never renders
-/// as a bare numeric office code (e.g. '050000'). Codes mirror
+/// Romaji / English prefecture NAMES for the snow-zone catalog codes — a
+/// place LABEL for logs or a non-Japanese consumer UI, so a code never
+/// renders as a bare numeric office code (e.g. '050000'). Codes mirror
 /// [kJmaPrefectureBoundingBoxes]; any code outside the catalog returns null via
 /// [jmaPrefectureName] (the caller falls back to a localized generic phrase).
+///
+/// For the **driver-facing** Japanese label used as
+/// `Advisory.areaDescription` — the field a Japanese-reading driver reads to
+/// tell their own prefecture's warning from an over-warned neighbour's at a
+/// border — see [kJmaPrefectureNamesJa] / [jmaPrefectureNameJa].
 const Map<String, String> kJmaPrefectureNames = <String, String>{
   '010000': 'Hokkaido',
   '020000': 'Aomori',
@@ -175,28 +194,102 @@ const Map<String, String> kJmaPrefectureNames = <String, String>{
   '150000': 'Niigata',
 };
 
-/// The readable prefecture name for a JMA prefecture [code], or null when the
-/// code is not in the catalog (so the caller never renders a bare code).
+/// The romaji / English prefecture name for a JMA prefecture [code], or null
+/// when the code is not in the catalog. For the driver-facing Japanese label
+/// use [jmaPrefectureNameJa].
 String? jmaPrefectureName(String code) => kJmaPrefectureNames[code];
 
-/// Resolves a WGS84 lat/lon to a JMA prefecture code in the catalog.
-/// Returns null if the point falls outside every catalogued bounding
-/// box. Iteration is deterministic over `Map` iteration order so a
-/// point on a shared edge resolves consistently across calls.
+/// Driver-facing **Japanese** prefecture names for the snow-zone catalog
+/// codes. The JMA headline / event name are already verbatim Japanese, and at
+/// a border the prefecture label is the load-bearing way a Japanese-reading
+/// driver tells their own prefecture's warning from an over-warned
+/// neighbour's — so the structured label is localized to Japanese too (used as
+/// `Advisory.areaDescription`). Codes mirror [kJmaPrefectureBoundingBoxes];
+/// any code outside the catalog returns null via [jmaPrefectureNameJa].
+const Map<String, String> kJmaPrefectureNamesJa = <String, String>{
+  '010000': '北海道',
+  '020000': '青森県',
+  '030000': '岩手県',
+  '050000': '秋田県',
+  '060000': '山形県',
+  '150000': '新潟県',
+};
+
+/// The driver-facing Japanese prefecture name for a JMA prefecture [code], or
+/// null when the code is not in the catalog. This is the label surfaced in
+/// `Advisory.areaDescription` so a Japanese-reading driver can disambiguate a
+/// border over-warn; for the romaji/English label (logs / non-JA UI) use
+/// [jmaPrefectureName].
+String? jmaPrefectureNameJa(String code) => kJmaPrefectureNamesJa[code];
+
+/// Resolves a WGS84 lat/lon to the **FIRST** catalogued JMA prefecture
+/// code whose bounding box contains the point (deterministic
+/// [kJmaPrefectureBoundingBoxes] iteration order), or null if the point
+/// falls outside every catalogued box.
+///
+/// The bounding boxes are crude axis-aligned rectangles over irregular
+/// prefectures, so they **overlap at every shared border**: a point in a
+/// border zone falls inside more than one box, and this "first match"
+/// silently drops the neighbour(s). No single-prefecture tie-break is
+/// correct at every border — e.g. a nearest-centroid guess merely trades
+/// a north-Akita border error for a south-Akita (Chōkai / Nikaho coastal)
+/// one. Callers that need border-correct (over-warn) behaviour —
+/// surfacing every prefecture a border point could be in — should use
+/// [prefectureCodesForPoint].
+///
+/// Retained for back-compat; equivalent to the first element of
+/// [prefectureCodesForPoint] (null when that list is empty).
 String? prefectureCodeForPoint({
   required double latitude,
   required double longitude,
 }) {
+  final codes = prefectureCodesForPoint(
+    latitude: latitude,
+    longitude: longitude,
+  );
+  return codes.isEmpty ? null : codes.first;
+}
+
+/// Resolves a WGS84 lat/lon to **ALL** catalogued JMA prefecture (office)
+/// codes whose bounding box contains the point, in deterministic
+/// [kJmaPrefectureBoundingBoxes] iteration order. Returns an empty list
+/// when the point falls outside every catalogued box.
+///
+/// ## Why a list — conservative (over-warn) border handling
+///
+/// The catalogued bounding boxes are **approximate**: each is a crude
+/// axis-aligned rectangle drawn generously over an irregular prefecture,
+/// so adjacent prefectures' boxes **overlap along every shared border**.
+/// A point in a border zone is therefore legitimately inside more than
+/// one box, and there is no resolution guess that is correct at every
+/// border (a nearest-centroid tie-break only moves the error from one
+/// border to another).
+///
+/// Rather than guess a single prefecture, this function returns **every**
+/// containing prefecture so the caller can fetch and surface all of their
+/// in-force warnings. That is the conservative, over-warn handling of
+/// border ambiguity — consistent with the package's conservative-on-
+/// uncertain philosophy: a driver at a prefecture border never **misses**
+/// a warning because the resolver guessed the wrong side. Bounding-box
+/// granularity is coarser than prefecture geometry; surfacing the union
+/// is the deliberate trade.
+///
+/// For a single best-guess code (back-compat) use [prefectureCodeForPoint].
+List<String> prefectureCodesForPoint({
+  required double latitude,
+  required double longitude,
+}) {
+  final codes = <String>[];
   for (final entry in kJmaPrefectureBoundingBoxes.entries) {
     final box = entry.value;
     if (latitude >= box.south &&
         latitude <= box.north &&
         longitude >= box.west &&
         longitude <= box.east) {
-      return entry.key;
+      codes.add(entry.key);
     }
   }
-  return null;
+  return codes;
 }
 
 /// One in-force snow-class warning extracted from a per-prefecture
@@ -222,9 +315,11 @@ class JmaWarningRecord {
   /// `050000`.
   final String prefectureCode;
 
-  /// Readable prefecture name (e.g. `Akita`) used as
+  /// Driver-facing prefecture name (e.g. `秋田県`) used as
   /// `Advisory.areaDescription`, or the bare code when not in the
-  /// catalog.
+  /// catalog. Localized to Japanese for a Japanese-reading driver so the
+  /// border-disambiguation label matches the verbatim-JA headline / event
+  /// name (see [jmaPrefectureNameJa]).
   final String areaName;
 
   /// `headlineText` from the warning JSON, verbatim.
@@ -275,9 +370,7 @@ List<JmaWarningRecord> parseJmaWarningJson(
 }) {
   final dynamic decoded = json.decode(body);
   if (decoded is! Map<String, dynamic>) {
-    throw const FormatException(
-      'JMA warning JSON root is not a JSON object.',
-    );
+    throw const FormatException('JMA warning JSON root is not a JSON object.');
   }
 
   final reportRaw = decoded['reportDatetime'];
@@ -286,8 +379,15 @@ List<JmaWarningRecord> parseJmaWarningJson(
       : null;
   final headlineRaw = decoded['headlineText'];
   final String headline = headlineRaw is String ? headlineRaw : '';
+  // Driver-facing label: prefer the caller-supplied name, else the JA
+  // prefecture name (the field a Japanese-reading driver reads to tell their
+  // own prefecture's warning from an over-warned border neighbour's), else
+  // the romaji name, else the bare code (never a null label).
   final areaName =
-      prefectureName ?? jmaPrefectureName(prefectureCode) ?? prefectureCode;
+      prefectureName ??
+      jmaPrefectureNameJa(prefectureCode) ??
+      jmaPrefectureName(prefectureCode) ??
+      prefectureCode;
 
   // Dedup to one record per distinct in-force snow code; keep first
   // encountered status. Iteration order is JSON document order so the
@@ -362,4 +462,63 @@ AdvisorySeverity _severityForEventName(String name) {
   if (name.endsWith('警報')) return AdvisorySeverity.severe;
   if (name.endsWith('注意報')) return AdvisorySeverity.moderate;
   return AdvisorySeverity.unknown;
+}
+
+/// Builds the synthetic, clearly-marked, LOW-severity **incomplete-read**
+/// meta-advisory naming the [failedPrefectureCodes] that could not be fetched
+/// for a border point whose reachable prefecture(s) DID return warnings.
+///
+/// Why this exists (HER-trace): at a border, returning only the reachable
+/// prefecture's warnings while silently discarding an unreachable sibling
+/// would present a PARTIAL read as a COMPLETE, fully-successful one — a silent
+/// under-warn at the exact degraded-connectivity scenario this package exists
+/// for (a mild reachable warning landing while an unreachable sibling could be
+/// holding a 大雪特別警報). The aggregator only records a provider error when a
+/// provider THROWS, and a non-empty union is (correctly) returned rather than
+/// thrown — so to make the partial read available to the aggregator /
+/// integrator the signal is carried IN-BAND, in the returned list. The
+/// provider→caller layer guarantee is unconditional: a partial read is ALWAYS
+/// surfaced to the caller, never silently dropped. Whether the notice then
+/// reaches the DRIVER is the integrator's rendering choice — it is `minor`
+/// severity (below `Advisory.isHighImpact`), so an integrator that renders only
+/// high-impact items can filter it out; the package guarantees availability to
+/// the caller, not a particular driver-facing presentation.
+///
+/// The notice is built so it can never masquerade as a weather warning:
+///   * `severity` = [AdvisorySeverity.minor] — the lowest impact rung; **no**
+///     real JMA snow advisory maps to `minor` (警報→severe / 注意報→moderate /
+///     特別警報→extreme), and `minor` is below the `Advisory.isHighImpact`
+///     (severe / extreme) threshold;
+///   * `certainty` / `urgency` = `unknown` — it is not a weather event, so a
+///     CAP certainty / urgency does not apply;
+///   * `eventClass` = [kJmaIncompleteReadEventClass] — a distinct identity that
+///     does not collide with any real warning name (so the full-identity dedup
+///     key keeps it distinct) and carries no warning suffix.
+///
+/// The human-readable [Advisory.headline] / `description` are JA-localized
+/// (like the real advisories) and name the actually-unreachable prefecture(s).
+/// `effective` / `expires` are null — an availability notice has no weather
+/// validity window, and a null effective keeps `stalenessAt` honestly
+/// "unknown" rather than fabricating a freshness timestamp.
+Advisory buildIncompleteReadNotice(List<String> failedPrefectureCodes) {
+  final names = <String>[
+    for (final code in failedPrefectureCodes)
+      jmaPrefectureNameJa(code) ?? jmaPrefectureName(code) ?? code,
+  ];
+  final joined = names.join('・');
+  final text =
+      '$joined の気象警報を確認できませんでした（通信不可）。'
+      'この地域に警報が出ている場合でも、ここには表示されていない可能性があります。';
+  return Advisory(
+    source: AdvisorySource.jmaJapan,
+    eventClass: kJmaIncompleteReadEventClass,
+    severity: AdvisorySeverity.minor,
+    certainty: AdvisoryCertainty.unknown,
+    urgency: AdvisoryUrgency.unknown,
+    areaDescription: joined,
+    effective: null,
+    expires: null,
+    headline: text,
+    description: text,
+  );
 }

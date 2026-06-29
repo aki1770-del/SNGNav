@@ -15,6 +15,9 @@
 /// area-condition ceiling, the durable-clear tombstone — is carried verbatim.
 library;
 
+// `Advisory` (the source-neutral typed event) is the element type of the
+// optional JMA-fetch test seam below; the JMA umbrella does not re-export it.
+import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 import 'package:flutter/material.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
@@ -47,6 +50,7 @@ class PretripScreen extends StatefulWidget {
     this.savedPlaceStore,
     this.destForecastProviderFactory,
     this.forecastSourceOverride,
+    this.jmaAdvisoryFetchOverride,
     required this.surfaceState,
   });
 
@@ -65,6 +69,17 @@ class PretripScreen extends StatefulWidget {
   /// without a `--dart-define`. Null in production ⇒ the compile-time source is
   /// used. Consumed ONLY on the dest path in [_initDestAreaCondition].
   final String? forecastSourceOverride;
+
+  /// Optional test seam: overrides the live JMA advisory fetch at a point, so a
+  /// fake advisory list — INCLUDING an in-band incomplete-read notice — can be
+  /// injected without a socket, and the partial-read reach is verified by a
+  /// plain `flutter test`. Production constructs a real [JmaAdvisoryProvider]
+  /// when null (the live behaviour is byte-for-byte unchanged). Used by BOTH
+  /// the current-location briefing and the destination-area read.
+  final Future<List<Advisory>> Function({
+    required double latitude,
+    required double longitude,
+  })? jmaAdvisoryFetchOverride;
 
   /// The road-surface state the host's driving-condition assessment expects;
   /// drives the offline winter-driving guidance card. The host owns the
@@ -135,6 +150,13 @@ class _PretripScreenState extends State<PretripScreen> {
   PretripLiveStatus? _pretripLiveStatus;
   String? _pretripJmaEventName;
   String? _pretripJmaPrefecture;
+
+  // PARTIAL-READ at HER current location: a border read where a containing
+  // prefecture was unreachable. When true, the briefing shows an honest caution
+  // (naming [_pretripJmaUnreachableArea]) — a partial read is never presented as
+  // a complete warning check, even when a real warning DID merge.
+  bool _pretripJmaBorderCheckIncomplete = false;
+  String? _pretripJmaUnreachableArea;
   static const Duration _pretripWindow = Duration(minutes: 30);
 
   // MEASURED VISIBILITY (additive opt-in on top of the live forecast):
@@ -202,6 +224,14 @@ class _PretripScreenState extends State<PretripScreen> {
   /// baked from the raw platform locale (which would split the card's locale)
   /// and never as an English literal leaking into the Japanese card.
   String? _destAreaPrefCode;
+
+  /// PARTIAL-READ at the destination AREA (the FAMILY-THREAD section): the
+  /// border read for her mother's area was incomplete — a containing prefecture
+  /// could not be reached. When true, an honest caution naming
+  /// [_destUnreachableArea] is shown next to the family card, so a partial read
+  /// is never presented as a complete "no warnings" / "all checked".
+  bool _destBorderCheckIncomplete = false;
+  String? _destUnreachableArea;
 
   static final DateTime _pretripDeparture = DateTime(2026, 1, 1, 7, 15);
 
@@ -317,7 +347,6 @@ class _PretripScreenState extends State<PretripScreen> {
     if (_pretripForecastSource != 'met_norway') return; // not selected
     final met = MetNorwayHourlyForecastProvider();
     _pretripForecastProvider = met;
-    final jma = JmaAdvisoryProvider();
     final result = await resolvePretripLiveForecast(
       latitude: _pretripLat,
       longitude: _pretripLon,
@@ -325,18 +354,8 @@ class _PretripScreenState extends State<PretripScreen> {
       window: _pretripWindow,
       fetchMetForecast: () =>
           met.fetchForecast(latitude: _pretripLat, longitude: _pretripLon),
-      fetchJmaAdvisories: () async {
-        // init() is idempotent; close() releases the client after the fetch.
-        await jma.init();
-        try {
-          return await jma.fetchActiveAdvisoriesAtPoint(
-            latitude: _pretripLat,
-            longitude: _pretripLon,
-          );
-        } finally {
-          jma.close();
-        }
-      },
+      fetchJmaAdvisories: () =>
+          _fetchJmaAdvisories(latitude: _pretripLat, longitude: _pretripLon),
     );
     // Honest floor: the orchestrator never throws, and a null forecast means
     // no live source delivered → the offline demo forecast stays, nothing live
@@ -348,7 +367,36 @@ class _PretripScreenState extends State<PretripScreen> {
       _pretripLiveStatus = result.status;
       _pretripJmaEventName = result.jmaEventName;
       _pretripJmaPrefecture = result.prefectureCode;
+      // A border read where a sibling prefecture was unreachable: keep the
+      // partial-read flag so the briefing discloses the gap (never a clean
+      // "all warnings checked"), even when a real warning DID merge.
+      _pretripJmaBorderCheckIncomplete = result.jmaBorderCheckIncomplete;
+      _pretripJmaUnreachableArea = result.jmaUnreachableArea;
     });
+  }
+
+  /// Fetches the JMA advisories at a point. Uses the
+  /// [PretripScreen.jmaAdvisoryFetchOverride] test seam when supplied; otherwise
+  /// constructs a real [JmaAdvisoryProvider] (init() is idempotent; close()
+  /// releases the client after the fetch) — byte-for-byte the prior live path.
+  Future<List<Advisory>> _fetchJmaAdvisories({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final override = widget.jmaAdvisoryFetchOverride;
+    if (override != null) {
+      return override(latitude: latitude, longitude: longitude);
+    }
+    final jma = JmaAdvisoryProvider();
+    await jma.init();
+    try {
+      return await jma.fetchActiveAdvisoriesAtPoint(
+        latitude: latitude,
+        longitude: longitude,
+      );
+    } finally {
+      jma.close();
+    }
   }
 
   /// Loads the driver-saved destination PLACE once (guarded by
@@ -461,7 +509,6 @@ class _PretripScreenState extends State<PretripScreen> {
     final met = (widget.destForecastProviderFactory ??
         MetNorwayHourlyForecastProvider.new)();
     _destForecastProvider = met;
-    final jma = JmaAdvisoryProvider();
     final result = await resolvePretripLiveForecast(
       latitude: destLat,
       longitude: destLon,
@@ -469,17 +516,8 @@ class _PretripScreenState extends State<PretripScreen> {
       window: _pretripWindow,
       fetchMetForecast: () =>
           met.fetchForecast(latitude: destLat, longitude: destLon),
-      fetchJmaAdvisories: () async {
-        await jma.init();
-        try {
-          return await jma.fetchActiveAdvisoriesAtPoint(
-            latitude: destLat,
-            longitude: destLon,
-          );
-        } finally {
-          jma.close();
-        }
-      },
+      fetchJmaAdvisories: () =>
+          _fetchJmaAdvisories(latitude: destLat, longitude: destLon),
     );
     // Honest floor: no live forecast for the area ⇒ no section.
     if (!mounted || result.forecast == null) return;
@@ -530,6 +568,12 @@ class _PretripScreenState extends State<PretripScreen> {
     setState(() {
       _destAreaRead = read;
       _destAreaPrefCode = result.prefectureCode;
+      // A border read where a sibling prefecture was unreachable: HER mother's
+      // area read is PARTIAL. Carry the flag + the unreachable prefecture so the
+      // family section shows an honest caution (over-warn), never a clean
+      // "no warnings" / "all checked".
+      _destBorderCheckIncomplete = result.jmaBorderCheckIncomplete;
+      _destUnreachableArea = result.jmaUnreachableArea;
     });
   }
 
@@ -671,6 +715,15 @@ class _PretripScreenState extends State<PretripScreen> {
                   lang: locale.languageCode,
                 ),
               ),
+              // PARTIAL-READ caution for HER CURRENT location: a border read
+              // where a sibling prefecture was unreachable. HER must SEE that
+              // the official-warning check was incomplete — over-warn, never a
+              // clean "all checked". Naming the unreachable prefecture (秋田県).
+              if (live != null &&
+                  _pretripJmaBorderCheckIncomplete &&
+                  _pretripJmaUnreachableArea != null)
+                _borderIncompleteCaution(
+                    context, strings, _pretripJmaUnreachableArea!),
               // In-app TYPED-PLACE ENTRY: the driver (HER) sets/changes the
               // destination AREA herself. ALWAYS visible — she must be able to
               // set the place the FIRST time, when _destAreaRead is still null.
@@ -717,8 +770,58 @@ class _PretripScreenState extends State<PretripScreen> {
                           ? strings.prefectureName(_destAreaPrefCode!)
                           : strings.genericDestinationArea),
                 ),
+              // PARTIAL-READ caution for the FAMILY-THREAD area (her mother's
+              // area): a border read where a sibling prefecture was unreachable.
+              // The family card still shows any real warning that DID arrive;
+              // this caution adds the honest gap so a partial read is never
+              // presented as a complete "no warnings" — over-warn, never deter.
+              if (_destBorderCheckIncomplete && _destUnreachableArea != null)
+                _borderIncompleteCaution(
+                    context, strings, _destUnreachableArea!),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// An honest, conservative caution that the official-warning check was only
+  /// PARTIAL: a border prefecture ([unreachableArea]) could not be reached, so a
+  /// warning (up to a 大雪特別警報) may be in force there that is not shown. It
+  /// DISCLOSES the gap; it never tells HER not to drive. Localized for HER
+  /// (Japanese for her mother in Akita).
+  Widget _borderIncompleteCaution(
+    BuildContext context,
+    BriefingStrings strings,
+    String unreachableArea,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      key: const Key('pretrip-border-incomplete-caution'),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      color: theme.colorScheme.tertiaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                strings.borderWarningCheckIncomplete(unreachableArea),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -137,6 +137,14 @@ abstract class BriefingStrings {
   /// Japanese card never falls back to an English literal or a bare code.
   String get genericDestinationArea;
 
+  /// A caution shown when the official-warning check was only PARTIAL: at a
+  /// border a containing prefecture could NOT be reached, so a warning (up to a
+  /// 大雪特別警報) may be in force there that is not reflected here.
+  /// [unreachableArea] names the unreachable prefecture(s) verbatim (e.g. 秋田県).
+  /// Conservative / over-warn — it discloses the gap; it NEVER tells the driver
+  /// not to go.
+  String borderWarningCheckIncomplete(String unreachableArea);
+
   // --- In-app place ENTRY (typed-place destination area) --------------------
   // The driver sets the destination AREA herself. All strings frame a PLACE,
   // never a person; English is the complete fallback.
@@ -264,6 +272,11 @@ class _EnBriefingStrings extends BriefingStrings {
 
   @override
   String get genericDestinationArea => 'destination area';
+
+  @override
+  String borderWarningCheckIncomplete(String unreachableArea) =>
+      'Could not check warnings for $unreachableArea (connectivity). A warning '
+      'may be in effect there that is not shown here.';
 
   @override
   String get setDestinationAreaButton => 'Set destination area';
@@ -432,6 +445,11 @@ class _JaBriefingStrings extends BriefingStrings {
 
   @override
   String get genericDestinationArea => '目的地周辺';
+
+  @override
+  String borderWarningCheckIncomplete(String unreachableArea) =>
+      '$unreachableAreaの警報を確認できませんでした（通信状況により）。'
+      '周辺で警報が出ている可能性があります。';
 
   @override
   String get setDestinationAreaButton => '目的地エリアを設定';

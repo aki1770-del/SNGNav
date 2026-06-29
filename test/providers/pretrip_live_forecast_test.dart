@@ -222,6 +222,82 @@ void main() {
     }
   });
 
+  test('T10 PARTIAL border read (merged): real warning AND incomplete flag '
+      'both honoured', () async {
+    // Founding case: at a border, the reachable prefecture returned a mild
+    // 着雪注意報 (merged) while a containing sibling (秋田県) could NOT be fetched
+    // and could be holding a 大雪特別警報. The aggregator carries this in-band as
+    // a synthetic incomplete-read notice ALONGSIDE the real warning.
+    final base = tempOnlyBase();
+    final result = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      fetchJmaAdvisories: jmaStub([
+        adv('着雪注意報'),
+        buildIncompleteReadNotice(const ['050000']), // → 秋田県
+      ]),
+    );
+    // The real warning is STILL surfaced + merged (never hidden by the notice).
+    expect(result.status, PretripLiveStatus.japanJmaMerged);
+    expect(result.jmaEventName, '着雪注意報');
+    final depSlot = slotAt(result.forecast!, DateTime(2026, 1, 1, 7));
+    expect(depSlot.estimatedRoadCondition, RoadConditionEstimate.ice);
+    // AND the partial read reaches HER: flag set + the unreachable area named.
+    expect(result.jmaBorderCheckIncomplete, isTrue);
+    expect(result.jmaUnreachableArea, '秋田県');
+  });
+
+  test('T11 PARTIAL border read (no reachable warning): NOT a clean all-clear',
+      () async {
+    final base = tempOnlyBase();
+    final result = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      // No reachable snow warning, only the incomplete-read notice.
+      fetchJmaAdvisories:
+          jmaStub([buildIncompleteReadNotice(const ['050000', '060000'])]),
+    );
+    // No band merged, but the read is INCOMPLETE — the flag carries so HER is
+    // not shown an implied "no warnings".
+    expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
+    expect(result.jmaBorderCheckIncomplete, isTrue);
+    expect(result.jmaUnreachableArea, '秋田県・山形県');
+  });
+
+  test('T12 COMPLETE read unchanged: no notice → flag false (no false caution)',
+      () async {
+    final base = tempOnlyBase();
+    final merged = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      fetchJmaAdvisories: jmaStub([adv('大雪警報')]),
+    );
+    expect(merged.status, PretripLiveStatus.japanJmaMerged);
+    expect(merged.jmaBorderCheckIncomplete, isFalse);
+    expect(merged.jmaUnreachableArea, isNull);
+
+    final clean = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      fetchJmaAdvisories: jmaStub(const []),
+    );
+    expect(clean.status, PretripLiveStatus.japanJmaNoAdvisory);
+    expect(clean.jmaBorderCheckIncomplete, isFalse);
+    expect(clean.jmaUnreachableArea, isNull);
+  });
+
   test('T9 caption strings: exact arms, UNAVAILABLE token, no CJK', () {
     // metNorway arm — byte-equal to the legacy main.dart literal.
     final metCap = pretripLiveSourceCaption(
