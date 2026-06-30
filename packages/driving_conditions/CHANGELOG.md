@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.4
+
+- deps: allow `fleet_hazard: ^0.4.0` → `^0.5.0` (the anonymized-`HazardZone`
+  dignity fix). `driving_conditions` consumes only the `FleetReport` input atom
+  and the `RoadCondition` enum via `FleetHazardConfidenceAdapter` — neither
+  changed in fleet_hazard 0.5.0 (only the *retained* `HazardZone.reports` type
+  was anonymized from `List<FleetReport>` to `List<ZoneObservation>`, which this
+  package never reads). Source-compatible; no `lib/` code change. Unblocks
+  integrators that pull both packages from pub.dev.
+
 ## 0.5.3
 
 - Docs: de-promote the optional native (C FFI) `NativeSafetyScoreSimulationEngine`. The README now states the pure-Dart `CpuSafetyScoreSimulationEngine` is the default, and that the native path requires compiling the C library (`native/build/lib...`) first — it throws (`DynamicLibrary.open` / `UnsupportedError`) otherwise, with no silent fallback. Updated the README install snippet pin to `^0.5.3`. No code change.
