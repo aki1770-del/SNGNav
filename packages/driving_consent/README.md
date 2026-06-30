@@ -9,13 +9,16 @@ UNKNOWN equals DENIED — the pipeline stops itself until the user explicitly
 grants the exact sharing purpose.
 
 Use `driving_consent` when your app handles location, telemetry, or diagnostic
-data and you need GDPR/CCPA/APPI-ready consent management with a safe default.
+data and you need a per-purpose, jurisdiction-aware consent **state machine**
+with Jidoka gates and a safe default. This package manages consent *state*;
+legal compliance (GDPR, CCPA, APPI, …) remains the integrator's responsibility
+at their persistence and jurisdiction layer.
 
 ## Features
 
 - **Jidoka gate**: `ConsentStatus.unknown` is treated as denied. The pipeline stops itself.
 - **Per-purpose consent**: fleet location, weather telemetry, diagnostics — each independently controlled.
-- **Multi-jurisdiction**: GDPR, CCPA, APPI — design for GDPR, deploy everywhere.
+- **Jurisdiction-aware state**: tag consent records per jurisdiction (GDPR, CCPA, APPI, …). The package tracks the consent *state*; the integrator owns the legal interpretation and enforcement for each jurisdiction.
 - **Pluggable storage**: abstract `ConsentService` interface. Bring your own persistent backend.
 - **Pure Dart**: no Flutter dependency. Works in CLI tools, servers, and Flutter apps.
 

@@ -4,7 +4,7 @@ library;
 import 'package:equatable/equatable.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'fleet_report.dart';
+import 'zone_observation.dart';
 
 /// Severity of a hazard zone, derived from its constituent reports.
 enum HazardSeverity {
@@ -22,20 +22,33 @@ class HazardZone extends Equatable {
   /// Radius in meters.
   final double radiusMeters;
 
-  /// Fleet reports that form this zone.
-  final List<FleetReport> reports;
+  /// Anonymized observations that form this zone.
+  ///
+  /// These are [ZoneObservation]s — they carry **no `vehicleId`**. The
+  /// per-vehicle re-identification key is dropped at aggregation time, so a
+  /// retained zone is genuinely an anonymized aggregate, not a re-identifiable
+  /// per-vehicle trail. See [ZoneObservation].
+  final List<ZoneObservation> reports;
 
   /// Zone severity.
   final HazardSeverity severity;
 
-  /// Number of unique vehicles contributing to this zone.
-  int get vehicleCount =>
-      reports.map((report) => report.vehicleId).toSet().length;
+  /// Number of unique vehicles that contributed to this zone.
+  ///
+  /// Computed at aggregation time from the input reports' `vehicleId`s (before
+  /// they are stripped) and stored. It can no longer be *derived* from
+  /// [reports], which carry no `vehicleId` — that is the point: the count is
+  /// preserved for honest "N vehicles reported" rendering without retaining the
+  /// re-identification key that would let the trail be reconstructed.
+  final int vehicleCount;
 
-  /// Average confidence across all reports in the zone.
+  /// Average confidence across all observations in the zone.
   double get averageConfidence {
     if (reports.isEmpty) return 0;
-    return reports.fold<double>(0, (sum, report) => sum + report.confidence) /
+    return reports.fold<double>(
+          0,
+          (sum, observation) => sum + observation.confidence,
+        ) /
         reports.length;
   }
 
@@ -44,10 +57,17 @@ class HazardZone extends Equatable {
     required this.radiusMeters,
     required this.reports,
     required this.severity,
+    required this.vehicleCount,
   });
 
   @override
-  List<Object?> get props => [center, radiusMeters, reports, severity];
+  List<Object?> get props => [
+    center,
+    radiusMeters,
+    reports,
+    severity,
+    vehicleCount,
+  ];
 
   @override
   String toString() =>

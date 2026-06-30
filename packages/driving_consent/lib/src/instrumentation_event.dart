@@ -5,10 +5,12 @@
 /// Each subtype carries the minimum field set needed for the driver's own
 /// calibration loop. Zero GPS, zero destination, zero PII.
 ///
-/// The events are gated by per-purpose consent at the
-/// `InstrumentationService.recordEvent` boundary. UNKNOWN equals DENIED:
-/// recording an event for a purpose whose consent is not explicitly granted
-/// throws `StateError`. The line stops itself.
+/// The events are gated by per-purpose consent on BOTH boundaries.
+/// `InstrumentationService.recordEvent` throws `StateError` for a purpose
+/// whose consent is not explicitly granted, and `readEvents` excludes a
+/// purpose's events unless its consent is effectively granted at read time
+/// — so revoking consent stops reads, not just writes. UNKNOWN equals
+/// DENIED. The line stops itself.
 ///
 /// Driver-facing-loom posture: instrumentation is feedback-class, not
 /// control-loop-class. The driver always drives; instrumentation only
@@ -143,21 +145,6 @@ enum VehicleClass {
   other,
 }
 
-/// Passenger-presence class populated by the integrator.
-enum PassengerPresenceClass {
-  /// Driver only.
-  driverOnly,
-
-  /// Driver plus one passenger.
-  driverPlusOne,
-
-  /// Driver plus multiple passengers.
-  driverPlusMany,
-
-  /// Unknown / not provided.
-  unknown,
-}
-
 /// Coarse time-of-day class for context-aware calibration.
 enum TimeOfDayClass {
   /// Pre-dawn / early morning.
@@ -171,21 +158,6 @@ enum TimeOfDayClass {
 
   /// Night.
   night,
-}
-
-/// Coarse driving-day-streak class.
-enum ConsecutiveDrivingDayClass {
-  /// First driving day in the current streak.
-  firstDay,
-
-  /// Two-to-three consecutive driving days.
-  twoToThree,
-
-  /// Four-to-six consecutive driving days.
-  fourToSix,
-
-  /// Seven or more consecutive driving days.
-  sevenPlus,
 }
 
 /// Coarse driver-profile class.
@@ -338,19 +310,16 @@ final class CohortMultiplierObserved extends InstrumentationEvent {
 
 /// A trip-context capture event.
 ///
-/// Coarse classes only; no GPS, no destination, no PII.
+/// Coarse classes only; no GPS, no destination, no PII. Profile/cohort and
+/// vehicle/time-of-day context only — deliberately carries NO occupant or
+/// body-adjacent fields (cabin occupancy, driving-streak/fatigue), per the
+/// dignity pull-back away from the 見守り / occupant-instrumentation line.
 final class TripContextCaptured extends InstrumentationEvent {
   /// Vehicle class as provided by the integrator.
   final VehicleClass vehicleClass;
 
-  /// Passenger-presence class as provided by the integrator.
-  final PassengerPresenceClass passengerPresenceClass;
-
   /// Coarse time-of-day class.
   final TimeOfDayClass timeOfDayClass;
-
-  /// Coarse consecutive-driving-day class.
-  final ConsecutiveDrivingDayClass consecutiveDrivingDayClass;
 
   /// The driver's profile class at capture time.
   final DriverProfileClass driverProfile;
@@ -359,9 +328,7 @@ final class TripContextCaptured extends InstrumentationEvent {
     required super.timestamp,
     required super.driverPseudonym,
     required this.vehicleClass,
-    required this.passengerPresenceClass,
     required this.timeOfDayClass,
-    required this.consecutiveDrivingDayClass,
     required this.driverProfile,
   });
 
@@ -370,16 +337,13 @@ final class TripContextCaptured extends InstrumentationEvent {
     timestamp,
     driverPseudonym,
     vehicleClass,
-    passengerPresenceClass,
     timeOfDayClass,
-    consecutiveDrivingDayClass,
     driverProfile,
   ];
 
   @override
   String toString() =>
       'TripContextCaptured(at $timestamp, vehicle=${vehicleClass.name}, '
-      'passengers=${passengerPresenceClass.name}, '
       'tod=${timeOfDayClass.name}, '
-      'streak=${consecutiveDrivingDayClass.name})';
+      'profile=${driverProfile.name})';
 }

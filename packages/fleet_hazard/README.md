@@ -13,8 +13,8 @@ into hazard zones that can be rendered on any map widget.
 
 ## Features
 
-- `FleetReport` model with road condition, timestamp, confidence, and position.
-- `HazardZone` cluster model with severity, vehicle count, and average confidence.
+- `FleetReport` model with road condition, timestamp, confidence, and position — the input atom, carrying a `vehicleId`.
+- `HazardZone` cluster model with severity, vehicle count, and average confidence. The zone retains **anonymized `ZoneObservation`s** — it drops the `vehicleId`, so the aggregate is genuinely anonymized and not a re-identifiable per-vehicle trail.
 - `HazardAggregator` pure-Dart clustering algorithm for snowy and icy reports.
 - `FleetProvider` abstract interface so apps can swap simulated, local, or remote telemetry backends.
 - Pure Dart package with no Flutter dependency.
@@ -23,7 +23,7 @@ into hazard zones that can be rendered on any map widget.
 
 ```yaml
 dependencies:
-  fleet_hazard: ^0.3.0
+  fleet_hazard: ^0.5.0
 ```
 
 ## Quick Start
@@ -154,8 +154,9 @@ class MyFleetProvider implements FleetProvider {
 
 | Type | Purpose |
 |------|---------|
-| `FleetReport` | Individual vehicle report carrying position, road condition, confidence, and timestamp. |
-| `HazardZone` | Clustered geographic hazard summary with severity and confidence rollups. |
+| `FleetReport` | Individual vehicle report (the input atom) carrying `vehicleId`, position, road condition, confidence, and timestamp. |
+| `ZoneObservation` | Anonymized observation retained inside a zone — position, condition, timestamp, confidence; **no `vehicleId`**. |
+| `HazardZone` | Clustered geographic hazard summary with severity, a precomputed `vehicleCount`, and confidence rollups over anonymized observations. |
 | `HazardAggregator` | Pure Dart clustering algorithm that converts reports into hazard zones. |
 | `FleetProvider` | Stream-based interface for simulated, local, or remote fleet telemetry sources. |
 | `RoadCondition` | Canonical hazard labels such as `dry`, `snowy`, and `icy`. |

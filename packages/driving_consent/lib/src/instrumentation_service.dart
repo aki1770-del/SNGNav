@@ -9,10 +9,11 @@
 ///   * `recordEvent` throws `StateError` if the corresponding consent
 ///     status is not explicitly granted. UNKNOWN equals DENIED — the
 ///     line stops itself.
-///   * `readEvents` only returns events whose purpose has consent in a
-///     state the caller has already inspected; the service trusts the
-///     caller's gate-check, but the gate-check is mandatory before
-///     `recordEvent`.
+///   * `readEvents` enforces the same gate on the way out: it queries the
+///     consent service per purpose and excludes any purpose whose consent
+///     is not effectively granted. Revoking consent stops reads, not just
+///     writes — UNKNOWN equals DENIED on both boundaries. The service does
+///     not trust the caller's gate-check; it performs its own.
 ///
 /// Driver-always-drives invariant: instrumentation is feedback-class,
 /// not control-loop-class. Reading or writing events never alters
@@ -33,8 +34,15 @@ abstract class InstrumentationService {
 
   /// Read recorded events, optionally filtered by purpose and time window.
   ///
+  /// Consent-gated on read: events for a purpose are returned only while
+  /// that purpose's consent is effectively granted. Once consent is
+  /// revoked (or was never granted — UNKNOWN equals DENIED) the purpose's
+  /// events are excluded, even though they remain stored until erased via
+  /// [deleteAllEvents]. Revoking consent stops reads, not just writes.
+  ///
   /// Results are returned in chronological order (oldest first). When
-  /// [purpose] is null, events for all purposes are returned. When
+  /// [purpose] is null, every stored purpose is gated independently and
+  /// only the effectively-granted purposes' events are returned. When
   /// [since] or [until] are provided, only events whose timestamp falls
   /// within `[since, until]` (inclusive bounds) are returned.
   Future<List<InstrumentationEvent>> readEvents({

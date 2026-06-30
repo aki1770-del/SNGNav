@@ -92,6 +92,14 @@ class InMemoryInstrumentationService implements InstrumentationService {
     for (final p in purposes) {
       final bucket = _events[p];
       if (bucket == null) continue;
+      // Jidoka gate on read: revoking consent must stop reads, not just
+      // writes. Query the consent service for each purpose independently;
+      // exclude a purpose's events unless its consent is effectively
+      // granted. UNKNOWN equals DENIED. Stored events are NOT deleted here
+      // (deleteAllEvents is the separate erasure affordance) — they are
+      // simply not returned once consent is no longer effectively granted.
+      final consent = await _consentService.getConsent(p);
+      if (!consent.isEffectivelyGranted) continue;
       for (final ev in bucket) {
         if (since != null && ev.timestamp.isBefore(since)) continue;
         if (until != null && ev.timestamp.isAfter(until)) continue;

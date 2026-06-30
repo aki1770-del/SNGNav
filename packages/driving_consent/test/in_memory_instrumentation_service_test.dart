@@ -168,5 +168,119 @@ void main() {
       final pruned = await instr.pruneExpired();
       expect(pruned, 0);
     });
+
+    test(
+      'DIGNITY: revoking consent stops reads — readEvents returns EMPTY for '
+      'a revoked purpose (events not deleted, just not returned)',
+      () async {
+        // Record under granted consent (granted in setUp).
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(DateTime.now()),
+        );
+        // Sanity: visible while granted.
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          hasLength(1),
+        );
+
+        // Driver revokes consent.
+        await consent.revoke(ConsentPurpose.alertExperienceInstrumentation);
+
+        // The load-bearing dignity proof: reads stop after revoke.
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          isEmpty,
+        );
+        // Also empty when reading all purposes (purpose == null gates each).
+        expect(await instr.readEvents(), isEmpty);
+      },
+    );
+
+    test(
+      'DIGNITY: revoking one purpose does not affect a still-granted purpose '
+      'in the same store',
+      () async {
+        // Grant a second, distinct purpose.
+        await consent.grant(
+          ConsentPurpose.voiceExperienceInstrumentation,
+          Jurisdiction.gdpr,
+        );
+
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(DateTime.now()),
+        );
+        await instr.recordEvent(
+          ConsentPurpose.voiceExperienceInstrumentation,
+          VoicePaceAdjusted(
+            timestamp: DateTime.now(),
+            driverPseudonym: instr.driverPseudonym,
+            previousRate: 1.0,
+            newRate: 0.9,
+            adjustmentReason: VoicePaceAdjustmentReason.driverPreference,
+            driverProfile: DriverProfileClass.defaultProfile,
+          ),
+        );
+
+        // Revoke only the alert purpose.
+        await consent.revoke(ConsentPurpose.alertExperienceInstrumentation);
+
+        // Revoked purpose: empty.
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          isEmpty,
+        );
+        // Still-granted purpose: unaffected.
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.voiceExperienceInstrumentation,
+          ),
+          hasLength(1),
+        );
+        // Reading all purposes returns only the still-granted one.
+        expect(await instr.readEvents(), hasLength(1));
+      },
+    );
+
+    test(
+      'deleteAllEvents still erases independently of the read-gate',
+      () async {
+        await instr.recordEvent(
+          ConsentPurpose.alertExperienceInstrumentation,
+          makeAlert(DateTime.now()),
+        );
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          hasLength(1),
+        );
+
+        // Erase the events while consent is still granted (distinct
+        // affordance from revocation).
+        await instr.deleteAllEvents(
+          ConsentPurpose.alertExperienceInstrumentation,
+        );
+
+        // Consent is still granted, but there are no events to return.
+        final record = await consent.getConsent(
+          ConsentPurpose.alertExperienceInstrumentation,
+        );
+        expect(record.isEffectivelyGranted, isTrue);
+        expect(
+          await instr.readEvents(
+            purpose: ConsentPurpose.alertExperienceInstrumentation,
+          ),
+          isEmpty,
+        );
+      },
+    );
   });
 }

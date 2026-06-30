@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.0
+
+**Breaking — anonymization fix (dignity-class).** A retained `HazardZone` no
+longer carries a re-identifiable per-vehicle trail. Previously a zone retained
+the full `List<FleetReport>`, including each report's `vehicleId` — so the
+"anonymized, aggregated" claim in the safety boundary was false: a zone held a
+`vehicleId` mapped to its sequence of `position` + `timestamp`, which is a
+per-vehicle trail. This release protects the fleet-contributor drivers: their
+participation no longer leaves a reconstructable trail in the aggregate.
+
+- **New `ZoneObservation`** — the anonymized atom a zone retains: `position`,
+  `condition`, `timestamp`, `confidence`, and **no `vehicleId`**.
+- **`HazardZone.reports` is now `List<ZoneObservation>`** (was
+  `List<FleetReport>`). `zone.reports[i].vehicleId` no longer exists — by
+  design. `FleetReport` (with `vehicleId`) remains the **input atom** to
+  aggregation.
+- **`HazardZone.vehicleCount` is now a stored `final int`**, computed at
+  aggregation time from the input reports' unique `vehicleId`s *before* the key
+  is stripped. It can no longer be derived from `reports`. The honest
+  "N vehicles reported" count is preserved without retaining the re-id key.
+- `averageConfidence` is unchanged (still derived; `confidence` is retained on
+  each `ZoneObservation`).
+- `HazardAggregator.aggregate(List<FleetReport>)` is unchanged in signature and
+  clustering behavior; it now drops `vehicleId` when constructing each zone.
+
+Migration: construct `HazardZone` with `reports: <ZoneObservation>[...]` and a
+`vehicleCount:`; build observations with `ZoneObservation.fromReport(report)`.
+
 ## 0.4.1
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

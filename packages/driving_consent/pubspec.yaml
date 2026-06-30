@@ -1,8 +1,8 @@
 name: driving_consent
 description: >-
-  Privacy-first per-purpose consent gate where UNKNOWN equals DENIED.
-  GDPR / CCPA / APPI-ready, pluggable storage. Pure Dart.
-version: 0.4.3
+  Privacy-first per-purpose, jurisdiction-aware consent state machine where
+  UNKNOWN equals DENIED. Jidoka gates, pluggable storage. Pure Dart.
+version: 0.5.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'fleet_report.dart';
 import 'hazard_zone.dart';
+import 'zone_observation.dart';
 
 /// Clusters hazardous fleet reports into geographic [HazardZone]s.
 class HazardAggregator {
@@ -85,11 +86,23 @@ class HazardAggregator {
       (report) => report.condition == RoadCondition.icy,
     );
 
+    // Count unique vehicles BEFORE stripping the re-identification key, then
+    // drop `vehicleId` by converting each report to an anonymized observation.
+    // The retained zone is an anonymized aggregate, never a per-vehicle trail.
+    final vehicleCount = cluster
+        .map((report) => report.vehicleId)
+        .toSet()
+        .length;
+    final observations = cluster
+        .map(ZoneObservation.fromReport)
+        .toList(growable: false);
+
     return HazardZone(
       center: center,
       radiusMeters: radius,
-      reports: List.unmodifiable(cluster),
+      reports: List.unmodifiable(observations),
       severity: hasIcy ? HazardSeverity.icy : HazardSeverity.snowy,
+      vehicleCount: vehicleCount,
     );
   }
 

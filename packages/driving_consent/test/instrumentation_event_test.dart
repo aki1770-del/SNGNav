@@ -65,9 +65,7 @@ void main() {
           timestamp: DateTime(2026, 5, 5, 9, 3),
           driverPseudonym: 'p',
           vehicleClass: VehicleClass.passengerCar,
-          passengerPresenceClass: PassengerPresenceClass.driverOnly,
           timeOfDayClass: TimeOfDayClass.day,
-          consecutiveDrivingDayClass: ConsecutiveDrivingDayClass.firstDay,
           driverProfile: DriverProfileClass.defaultProfile,
         ),
       ];
@@ -117,22 +115,20 @@ void main() {
         timestamp: DateTime(2026, 5, 5, 9),
         driverPseudonym: 'p',
         vehicleClass: VehicleClass.passengerCar,
-        passengerPresenceClass: PassengerPresenceClass.driverOnly,
         timeOfDayClass: TimeOfDayClass.evening,
-        consecutiveDrivingDayClass: ConsecutiveDrivingDayClass.fourToSix,
         driverProfile: DriverProfileClass.foreignTouristSnowZone,
       );
 
       // Spot-check: each prop is one of the coarse enum classes / opaque
-      // pseudonym / timestamp.
+      // pseudonym / timestamp. Occupant/body-adjacent fields (cabin
+      // occupancy, driving-streak) were removed for dignity — props carry
+      // only vehicle/time-of-day context and profile/cohort labels.
       for (final p in ev.props) {
         expect(
           p is DateTime ||
               p is String ||
               p is VehicleClass ||
-              p is PassengerPresenceClass ||
               p is TimeOfDayClass ||
-              p is ConsecutiveDrivingDayClass ||
               p is DriverProfileClass,
           isTrue,
           reason: 'TripContextCaptured field is not a coarse-class enum: $p',

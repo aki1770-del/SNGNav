@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.5.0
+
+Dignity + honesty pass. **Breaking** (`TripContextCaptured` API).
+
+- **Consent-gated reads (privacy fix).** `InstrumentationService.readEvents`
+  now enforces the per-purpose consent gate on the way OUT, not only on
+  `recordEvent`. A purpose's events are returned only while its consent is
+  effectively granted; once consent is **revoked** (or was never granted —
+  UNKNOWN equals DENIED) the purpose's events are excluded. Revoking consent
+  now stops reads, not just writes. Events are not deleted by the read-gate —
+  `deleteAllEvents` remains the separate, distinct erasure affordance. The
+  in-memory implementation queries each purpose independently when `purpose`
+  is null.
+- **Narrowed driver-as-subject instrumentation (BREAKING).** Removed the two
+  occupant/body-adjacent fields from `TripContextCaptured` and their enums —
+  `passengerPresenceClass` (`PassengerPresenceClass`, cabin occupancy) and
+  `consecutiveDrivingDayClass` (`ConsecutiveDrivingDayClass`, fatigue-adjacent
+  driving streak). This is a deliberate pull-back from the occupant /
+  見守り (watching-over) instrumentation line: the package observes the
+  driving *context* and the driver's own profile/cohort for HMI calibration,
+  not who is in the cabin or how many days the driver has been driving.
+  `TripContextCaptured` now carries only `vehicleClass`, `timeOfDayClass`,
+  and `driverProfile`. Profile/cohort labels (`DriverProfileClass`,
+  `CohortMultiplierClass`, incl. `ageingRural`) are unchanged — they are
+  rendering labels, not occupant instrumentation.
+- **Removed regulatory overclaim (honesty).** README and pubspec no longer
+  claim "GDPR/CCPA/APPI-ready" / "deploy everywhere". This package provides a
+  per-purpose, jurisdiction-aware consent **state machine** with Jidoka
+  gates; legal compliance (GDPR, CCPA, APPI, …) is the integrator's
+  responsibility at their persistence and jurisdiction layer.
+
 ## 0.4.3
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

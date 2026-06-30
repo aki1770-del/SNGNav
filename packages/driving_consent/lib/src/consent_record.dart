@@ -6,7 +6,7 @@
 /// Three enums:
 ///   [ConsentStatus]  — granted / denied / unknown (3-state gate)
 ///   [ConsentPurpose] — what the data is used for (per-purpose, not blanket)
-///   [Jurisdiction]   — which legal regime applies (design for GDPR, deploy everywhere)
+///   [Jurisdiction]   — which legal regime the integrator operates under (a per-record label)
 library;
 
 import 'package:equatable/equatable.dart';
@@ -67,19 +67,22 @@ enum ConsentPurpose {
   /// device by default at v0.4.0.
   cohortCalibrationInstrumentation,
 
-  /// The driver's trip-context capture: vehicle-class (when integrator
-  /// provides via VehicleClass enum) + passenger-presence (when
-  /// integrator provides via PassengerPresenceProvider). Used for
-  /// context-aware calibration. Stays on the driver's device by
-  /// default at v0.4.0.
+  /// The driver's trip-context capture: coarse vehicle-class + coarse
+  /// time-of-day + driver-profile class, all integrator-supplied. Used
+  /// for context-aware calibration. Stays on the driver's device by
+  /// default. (Occupant-presence and consecutive-driving-day capture were
+  /// removed in 0.5.0 — see CHANGELOG; the package does not instrument the
+  /// cabin or the driver's body.)
   tripContextInstrumentation,
 }
 
 /// Legal jurisdiction governing this consent record.
 ///
-/// "Design for GDPR, deploy everywhere":
-/// An architecture that passes EDPB scrutiny automatically
-/// satisfies APPI and CCPA. Zero jurisdiction-specific code paths.
+/// A per-record label naming which legal regime the integrator is
+/// operating under. This package provides per-purpose, jurisdiction-aware
+/// consent STATE + Jidoka gates; it does NOT assert legal compliance.
+/// Meeting GDPR / CCPA / APPI obligations is the integrator's
+/// responsibility at their persistence and jurisdiction layer.
 enum Jurisdiction {
   /// EU General Data Protection Regulation.
   gdpr,

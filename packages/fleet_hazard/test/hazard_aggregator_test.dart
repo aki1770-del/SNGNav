@@ -213,16 +213,33 @@ void main() {
       expect(zones[0].averageConfidence, closeTo(0.8, 0.001));
     });
 
-    test('returns unmodifiable report list inside zone', () {
+    test('returns unmodifiable observation list inside zone', () {
       final reports = [makeReport(id: 'V-001', lat: 35.050, lon: 137.250)];
 
       final zones = HazardAggregator.aggregate(reports);
       expect(
         () => zones[0].reports.add(
-          makeReport(id: 'V-002', lat: 35.051, lon: 137.251),
+          ZoneObservation.fromReport(
+            makeReport(id: 'V-002', lat: 35.051, lon: 137.251),
+          ),
         ),
         throwsUnsupportedError,
       );
+    });
+
+    test('zones retain no vehicleId (anonymized aggregate)', () {
+      final reports = [
+        makeReport(id: 'V-001', lat: 35.050, lon: 137.250),
+        makeReport(id: 'V-002', lat: 35.052, lon: 137.252),
+      ];
+
+      final zones = HazardAggregator.aggregate(reports);
+      // vehicleCount is preserved...
+      expect(zones[0].vehicleCount, 2);
+      // ...but no observation carries the re-identification key.
+      for (final observation in zones[0].reports) {
+        expect(observation.toString(), isNot(contains('V-')));
+      }
     });
   });
 }

@@ -25,3 +25,4 @@ export 'src/fleet_provider.dart';
 export 'src/fleet_report.dart';
 export 'src/hazard_aggregator.dart';
 export 'src/hazard_zone.dart';
+export 'src/zone_observation.dart';
