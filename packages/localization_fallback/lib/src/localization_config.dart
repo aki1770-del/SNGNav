@@ -20,6 +20,12 @@ class LocalizationConfig {
   ///
   /// 2.0 m/s is a conservative default for a slowly drifting inertial / wheel
   /// dead-reckoning solution.
+  ///
+  /// Must be finite and non-negative (asserted). If a release build (where
+  /// asserts are stripped) somehow supplies a garbage value (NaN / negative /
+  /// infinite), the controller cannot model uncertainty growth from it, so it
+  /// refuses to let it collapse the radius and degrades honestly to `lost`
+  /// rather than invent precision.
   final double driftRateMetersPerSecond;
 
   /// Once the confidence radius exceeds this many metres, the mode becomes

@@ -1,3 +1,27 @@
+## 0.1.1
+
+- fix: `lost` is now TERMINAL until re-acquisition. Previously a time-triggered
+  `lost` could be silently un-lost — resurrected to `deadReckoning` or
+  `gpsSuspect` — by a backwards / out-of-order / clamped `poll(now)` or a
+  `suspect`/`failed` fix, restoring confidence with NO trusted fix. This
+  violated the documented contract that a trusted fix is the only way back from
+  `lost`. A `_lost` latch now holds the mode at `lost` until a fresh, newer
+  trusted fix reconverges (the latch is cleared only by `onFix` with a trusted,
+  newer fix).
+- fix: a garbage configured `driftRateMetersPerSecond` (NaN / negative /
+  infinite) can no longer fabricate precision. `LocalizationConfig`'s asserts
+  are stripped in release / `dart run`; with a garbage drift the growth model
+  previously produced a radius of `0 m` (a false "exactly here" dot) in
+  `deadReckoning`. The radius is now clamped to never fall below the last
+  trusted accuracy, and an un-modellable (garbage) drift degrades honestly to
+  `lost` instead of inventing certainty.
+- test: added a "lost is terminal until reconvergence" suite (backwards-poll,
+  suspect-after-lost, failed-after-lost, trusted-re-acquisition) and a
+  "garbage configured drift" hardening suite (NaN / -inf / negative → lost,
+  radius never below last trusted accuracy, plus a sane-drift regression guard).
+- docs: corrected the README and dartdoc — `mode` is not memoryless; the radius
+  is monotonic and `lost` is terminal until a trusted fix reconverges.
+
 ## 0.1.0
 
 - Initial release.

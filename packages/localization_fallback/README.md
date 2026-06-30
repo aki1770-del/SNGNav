@@ -94,11 +94,15 @@ It hands back exactly one `LocalizationEstimate` per input:
      └────────── a TRUSTED fix returns ──────────────────────┘
 ```
 
-`mode` is a **pure function of the latest input** — each `onFix` recomputes it
-from that fix's `TrustSignal` (a `failed` fix goes straight to `deadReckoning`,
-never through `gpsSuspect`) and the radius/time horizons; there is no hidden
-gap-timer. Drive degradation during a blackout by calling `poll(now)` on a tick;
-the radius grows each call and reaches `lost` at the horizon.
+`mode` follows that fix's `TrustSignal` (a `failed` fix goes straight to
+`deadReckoning`, never through `gpsSuspect`) and the radius/time horizons; there
+is no hidden gap-timer. It is **not** memoryless, though, and deliberately so:
+the confidence radius is monotonic, and once the controller is `lost` it stays
+`lost` until a fresh, newer **trusted** fix reconverges — a backwards or
+out-of-order `poll`, a stale/duplicate fix, or a `suspect`/`failed` fix can
+never silently un-lose you. The only arrow back to `gpsTrusted` is a trusted
+fix. Drive degradation during a blackout by calling `poll(now)` on a tick; the
+radius grows each call and reaches `lost` at the horizon.
 
 `deadReckoning` drives position from the seam and **grows** the confidence
 radius with a documented model:
@@ -131,9 +135,12 @@ These are enforced in code and proven in
    to). (The one exception is the bootstrap "nothing seen yet" state, which
    reports an *infinite* radius; the first coarse guess after it is finite —
    both are non-confident `lost`.)
-2. **`lost` is first-class and honest.** It still returns a position + radius,
-   but `mode == lost` means "we do not know where you are." Never a fabricated
-   confident dot.
+2. **`lost` is first-class, honest, and terminal until re-acquisition.** It
+   still returns a position + radius, but `mode == lost` means "we do not know
+   where you are" — never a fabricated confident dot. Once `lost`, the
+   controller stays `lost` until a fresh, newer **trusted** fix reconverges: no
+   backwards-in-time or out-of-order `poll`, no stale/duplicate fix, and no
+   `suspect`/`failed` fix can silently restore confidence we have lost.
 3. **Every estimate carries its `basis`** so the app can be honest to the driver
    about where the dot came from.
 4. **No silent smoothing.** A `suspect`/`failed` fix is never blended into the

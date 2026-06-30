@@ -756,4 +756,414 @@ void main() {
           throwsUnsupportedError);
     });
   });
+
+  // ===========================================================================
+  // 0.1.1 hardening — regression guards on the exact boundaries + the two
+  // safety-critical invariants (non-deterrence + no-under-warn-in-compound).
+  // Each test FAILS if a future tweak relaxes the threshold it pins.
+  // ===========================================================================
+
+  group('0.1.1 — calibration constants pinned at documented values', () {
+    test('band/threshold constants have not drifted (relaxing-tweak guard)', () {
+      expect(kVisClearM, 1000.0);
+      expect(kVisReducedM, 500.0);
+      expect(kVisLowM, 200.0);
+      expect(kVisStaleSeconds, 300.0);
+      expect(kRadiusNeighbourhoodM, 150.0);
+      expect(kStaleFixSeconds, 60.0);
+      expect(kFastForConditionsMps, 13.4);
+      // Hint calibration is caution-add-only (fail-toward-slower).
+      expect(kWinterDecelMps2, lessThanOrEqualTo(1.0));
+      expect(kReactionTimeSeconds, greaterThanOrEqualTo(2.5));
+      expect(kSightHintCeilingMps, lessThanOrEqualTo(kFastForConditionsMps));
+    });
+  });
+
+  group('0.1.1 — exact visibility band boundaries (inclusive/exclusive pinned)', () {
+    // trusted position, fresh reading, slow speed, no advisory ⇒ the action and
+    // flags reflect the visibility concern directly. Pins each k* edge so a
+    // band-shift or a `>=`→`>` flip is caught.
+    DriveAdvice atVis(double m) => adviseInDrive(
+        sit(visibilityMeters: m, visibilityAgeSeconds: 10, speedMetersPerSecond: 5));
+
+    test('1000 m is CLEAR (concern 0); 999 m is REDUCED (concern 1)', () {
+      final clear = atVis(1000); // == kVisClearM, inclusive
+      expect(clear.visibilityKnown, isTrue);
+      expect(clear.visibilityLow, isFalse);
+      expect(clear.action, DriveAction.continueDriving);
+      expect(clear.reasons, isEmpty); // clear emits no visibility reason
+      expect(clear.sightStoppingSpeedHintMps, isNull);
+
+      final reduced = atVis(999);
+      expect(reduced.action, DriveAction.heightenedCaution);
+      expect(reduced.reasons, contains(CautionReason.reducedVisibility));
+      expect(reduced.reasons, isNot(contains(CautionReason.lowVisibility)));
+      expect(reduced.visibilityLow, isFalse);
+      expect(reduced.sightStoppingSpeedHintMps, isNull);
+    });
+
+    test('500 m is REDUCED (concern 1); 499 m is LOW (concern 2)', () {
+      final reduced = atVis(500); // == kVisReducedM, inclusive
+      expect(reduced.reasons, contains(CautionReason.reducedVisibility));
+      expect(reduced.visibilityLow, isFalse);
+      expect(reduced.sightStoppingSpeedHintMps, isNull);
+
+      final low = atVis(499);
+      expect(low.reasons, contains(CautionReason.lowVisibility));
+      expect(low.reasons, isNot(contains(CautionReason.reducedVisibility)));
+      expect(low.visibilityLow, isTrue);
+      expect(low.sightStoppingSpeedHintMps, isNotNull);
+      // low alone (trusted position) is corePair 2 ⇒ heightenedCaution, NOT yet
+      // the ceiling — the ceiling needs whiteout or a compounding/escalator.
+      expect(low.action, DriveAction.heightenedCaution);
+    });
+
+    test('200 m is LOW (concern 2); 199 m is WHITEOUT (concern 3 ⇒ ceiling alone)',
+        () {
+      final low = atVis(200); // == kVisLowM, inclusive
+      expect(low.visibilityLow, isTrue);
+      expect(low.reasons, contains(CautionReason.lowVisibility));
+      expect(low.action, DriveAction.heightenedCaution); // corePair 2
+
+      final whiteout = atVis(199);
+      expect(whiteout.visibilityLow, isTrue);
+      expect(whiteout.reasons, contains(CautionReason.lowVisibility));
+      // A whiteout is a single axis at its worst ⇒ ceiling, but NOT compounding
+      // (position is trusted here).
+      expect(whiteout.action, DriveAction.considerStopping);
+      expect(whiteout.compounding, isFalse);
+    });
+  });
+
+  group('0.1.1 — exact visibility freshness boundary (kVisStaleSeconds)', () {
+    test('age == 300 s is FRESH/known; age just past 300 s is STALE/unknown', () {
+      final fresh =
+          adviseInDrive(sit(visibilityMeters: 1500, visibilityAgeSeconds: 300));
+      expect(fresh.visibilityKnown, isTrue);
+      expect(fresh.action, DriveAction.continueDriving); // clear AND fresh
+      expect(fresh.reasons, isNot(contains(CautionReason.staleVisibility)));
+
+      final stale = adviseInDrive(
+          sit(visibilityMeters: 1500, visibilityAgeSeconds: 300.0001));
+      expect(stale.visibilityKnown, isFalse);
+      expect(stale.reasons, contains(CautionReason.staleVisibility));
+      expect(stale.unknowns, contains(Unknown.visibilityReadingIsStale));
+      expect(stale.action, DriveAction.heightenedCaution); // held level-1 floor
+      expect(stale.sightStoppingSpeedHintMps, isNull);
+    });
+  });
+
+  group('0.1.1 — exact position thresholds (radius + stale-fix)', () {
+    test('SUSPECT radius == 150 m stays concern 1; just past 150 m bumps to 2', () {
+      // Paired with low visibility (vc2) so the pc1→pc2 step flips compounding.
+      final at = adviseInDrive(sit(
+          positionTrust: PositionTrust.suspect,
+          confidenceRadiusMeters: 150, // == kRadiusNeighbourhoodM, NOT bad
+          visibilityMeters: 300,
+          speedMetersPerSecond: 5));
+      expect(at.compounding, isFalse); // pc1, no stacking
+      expect(at.action, DriveAction.heightenedCaution);
+
+      final past = adviseInDrive(sit(
+          positionTrust: PositionTrust.suspect,
+          confidenceRadiusMeters: 150.0001,
+          visibilityMeters: 300,
+          speedMetersPerSecond: 5));
+      expect(past.compounding, isTrue); // pc2 & vc2 now stack
+      expect(past.action, DriveAction.considerStopping);
+    });
+
+    test('DEGRADED radius == 150 m stays concern 2; just past 150 m bumps to 3', () {
+      // Paired with REDUCED visibility (vc1) so the pc2→pc3 step flips the action.
+      final at = adviseInDrive(sit(
+          positionTrust: PositionTrust.degraded,
+          confidenceRadiusMeters: 150,
+          visibilityMeters: 700,
+          speedMetersPerSecond: 5));
+      expect(at.action, DriveAction.heightenedCaution); // corePair 2
+
+      final past = adviseInDrive(sit(
+          positionTrust: PositionTrust.degraded,
+          confidenceRadiusMeters: 150.0001,
+          visibilityMeters: 700,
+          speedMetersPerSecond: 5));
+      expect(past.action, DriveAction.considerStopping); // pc3 reaches ceiling
+    });
+
+    test('DEGRADED fix-age == 60 s stays concern 2; just past 60 s bumps to 3', () {
+      final at = adviseInDrive(sit(
+          positionTrust: PositionTrust.degraded,
+          confidenceRadiusMeters: 20,
+          secondsSinceTrustedFix: 60, // == kStaleFixSeconds, NOT stale
+          visibilityMeters: 700,
+          speedMetersPerSecond: 5));
+      expect(at.action, DriveAction.heightenedCaution); // pc2
+      expect(at.unknowns, isNot(contains(Unknown.noTrustedGpsForAWhile)));
+
+      final past = adviseInDrive(sit(
+          positionTrust: PositionTrust.degraded,
+          confidenceRadiusMeters: 20,
+          secondsSinceTrustedFix: 60.0001,
+          visibilityMeters: 700,
+          speedMetersPerSecond: 5));
+      expect(past.action, DriveAction.considerStopping); // pc3
+      expect(past.unknowns, contains(Unknown.noTrustedGpsForAWhile));
+    });
+  });
+
+  group('0.1.1 — exact fast-speed boundary (kFastForConditionsMps)', () {
+    test('speed == 13.4 is NOT fast; just past it escalates an already-degraded core',
+        () {
+      // suspect(pc1) + low(vc2) ⇒ corePair 2; crossing the fast line adds +1.
+      final at = adviseInDrive(sit(
+          positionTrust: PositionTrust.suspect,
+          confidenceRadiusMeters: 20,
+          visibilityMeters: 300,
+          speedMetersPerSecond: 13.4));
+      expect(at.reasons,
+          isNot(contains(CautionReason.highSpeedInDegradedConditions)));
+      expect(at.action, DriveAction.heightenedCaution);
+
+      final past = adviseInDrive(sit(
+          positionTrust: PositionTrust.suspect,
+          confidenceRadiusMeters: 20,
+          visibilityMeters: 300,
+          speedMetersPerSecond: 13.4001));
+      expect(
+          past.reasons, contains(CautionReason.highSpeedInDegradedConditions));
+      expect(past.action, DriveAction.considerStopping);
+    });
+  });
+
+  group('0.1.1 — NON-DETERRENCE invariant (exhaustive, incl. garbage inputs)', () {
+    test(
+        'NO input — however degraded, NaN, or out-of-range — ever produces an '
+        'action beyond considerStopping; the package is structurally incapable '
+        'of telling her to turn back', () {
+      const radii = <double>[10, 150.0001, -1, double.nan];
+      const fixes = <double>[0, 60.0001, double.infinity, double.nan];
+      const viss = <double?>[
+        null, 1500, 999, 500, 499, 300, 199, 1, -10, double.nan, double.infinity,
+      ];
+      const ages = <double?>[10, null, 300.0001, double.nan, -5];
+      const advs = <AdvisoryLevel?>[
+        null,
+        AdvisoryLevel.minor,
+        AdvisoryLevel.moderate,
+        AdvisoryLevel.severe,
+        AdvisoryLevel.extreme,
+      ];
+      const speeds = <double?>[null, 5, 13.4001, double.nan, double.infinity, -3];
+      final ceiling = DriveAction.considerStopping.index;
+
+      var n = 0;
+      var beyondCeiling = 0;
+      var notAKnownRung = 0;
+      var firstViolation = '';
+      for (final trust in PositionTrust.values) {
+        for (final hasPos in const [true, false]) {
+          for (final r in radii) {
+            for (final f in fixes) {
+              for (final v in viss) {
+                for (final age in ages) {
+                  for (final adv in advs) {
+                    for (final sp in speeds) {
+                      final a = adviseInDrive(DriveSituation(
+                        positionTrust: trust,
+                        confidenceRadiusMeters: r,
+                        secondsSinceTrustedFix: f,
+                        hasPosition: hasPos,
+                        visibilityMeters: v,
+                        visibilityAgeSeconds: age,
+                        advisorySeverity: adv,
+                        speedMetersPerSecond: sp,
+                      ));
+                      if (a.action.index > ceiling) {
+                        beyondCeiling++;
+                        firstViolation = firstViolation.isEmpty
+                            ? '$trust/hasPos=$hasPos/r=$r/f=$f/v=$v/age=$age/'
+                                '$adv/sp=$sp -> ${a.action.name}'
+                            : firstViolation;
+                      }
+                      if (!DriveAction.values.contains(a.action)) {
+                        notAKnownRung++;
+                      }
+                      n++;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      expect(beyondCeiling, 0,
+          reason: 'non-deterrence breached — an input deterred her: '
+              '$firstViolation');
+      expect(notAKnownRung, 0);
+      // 4 trust × 2 hasPos × 4 radii × 4 fixes × 11 vis × 5 ages × 5 adv × 6 spd
+      expect(n, 4 * 2 * 4 * 4 * 11 * 5 * 5 * 6);
+    });
+
+    test('the action vocabulary has exactly three rungs, ceiling = considerStopping',
+        () {
+      expect(DriveAction.values.length, 3);
+      expect(DriveAction.values.last, DriveAction.considerStopping);
+    });
+  });
+
+  group('0.1.1 — NO UNDER-WARN in compound degradation (D3 core, exhaustive)', () {
+    test(
+        'every KNOWN position-concern>=2 paired with a KNOWN visibility-concern>=2 '
+        'reaches considerStopping AND sets compounding — the two measured dangers '
+        'stacking must NEVER stay calm', () {
+      // Each builder yields a position that scores pc>=2 (the comment states pc).
+      final pcBuilders =
+          <DriveSituation Function(double vis, AdvisoryLevel? adv, double? sp)>[
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: 20,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc2
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: double.nan,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc3 (bad radius)
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: 5000,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc3 (neighbourhood radius)
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: 20,
+            secondsSinceTrustedFix: double.infinity,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc3 (long blind)
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.lost,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc3
+        (vis, adv, sp) => sit(
+            hasPosition: false,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc3 (no dot)
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.suspect,
+            confidenceRadiusMeters: 5000,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc2 (suspect at neighbourhood scale)
+        (vis, adv, sp) => sit(
+            positionTrust: PositionTrust.suspect,
+            confidenceRadiusMeters: 20,
+            secondsSinceTrustedFix: double.infinity,
+            visibilityMeters: vis,
+            advisorySeverity: adv,
+            speedMetersPerSecond: sp), // pc2 (suspect, long blind)
+      ];
+      // All KNOWN low/whiteout readings (fresh age via the sit default), vc>=2.
+      const knownLowVis = <double>[499, 300, 200, 199, 50, 1, -10];
+      const advs = <AdvisoryLevel?>[
+        null,
+        AdvisoryLevel.minor,
+        AdvisoryLevel.moderate,
+        AdvisoryLevel.severe,
+        AdvisoryLevel.extreme,
+      ];
+      const speeds = <double?>[null, 5, 25];
+
+      var n = 0;
+      for (final build in pcBuilders) {
+        for (final vis in knownLowVis) {
+          for (final adv in advs) {
+            for (final sp in speeds) {
+              final a = adviseInDrive(build(vis, adv, sp));
+              final ctx = 'vis=$vis/$adv/sp=$sp';
+              expect(a.compounding, isTrue, reason: 'not flagged compounding: $ctx');
+              expect(a.action, DriveAction.considerStopping,
+                  reason: 'under-warned a stacked-danger case: $ctx');
+              expect(a.visibilityLow, isTrue, reason: ctx);
+              expect(a.reasons, contains(CautionReason.positionUncertain),
+                  reason: ctx);
+              expect(a.reasons, contains(CautionReason.lowVisibility), reason: ctx);
+              n++;
+            }
+          }
+        }
+      }
+      expect(n, 8 * 7 * 5 * 3);
+    });
+
+    test(
+        'the deliberate under-confirmation boundary is pinned: position-concern>=2 '
+        'with UNKNOWN/STALE visibility holds at heightenedCaution (no over-warn) '
+        'while surfacing BOTH uncertainties — change is a conscious decision', () {
+      // GPS degraded AND the visibility sensor ALSO dropped out: the package
+      // refuses to assert a whiteout it cannot confirm (not the ceiling) and
+      // refuses to clear her (held floor). Both uncertainties still surface.
+      final cases = <DriveSituation>[
+        sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: 20,
+            visibilityMeters: null,
+            speedMetersPerSecond: 5),
+        sit(
+            positionTrust: PositionTrust.degraded,
+            confidenceRadiusMeters: 20,
+            visibilityMeters: 300,
+            visibilityAgeSeconds: 9999, // stale ⇒ unknown
+            speedMetersPerSecond: 5),
+        sit(
+            positionTrust: PositionTrust.suspect,
+            confidenceRadiusMeters: 5000, // pc2
+            visibilityMeters: null,
+            speedMetersPerSecond: 5),
+      ];
+      for (final s in cases) {
+        final a = adviseInDrive(s);
+        expect(a.compounding, isFalse);
+        expect(a.visibilityKnown, isFalse);
+        expect(a.action, DriveAction.heightenedCaution);
+        expect(a.reasons, contains(CautionReason.positionUncertain));
+        expect(
+            a.reasons.any((r) =>
+                r == CautionReason.unknownVisibility ||
+                r == CautionReason.staleVisibility),
+            isTrue);
+      }
+    });
+  });
+
+  group('0.1.1 — speed axis is monotonic (never lowers caution)', () {
+    test('rising ground speed never lowers the action', () {
+      // suspect(pc1) + low(vc2): corePair 2; crossing the fast line adds +1.
+      DriveAction act(double? sp) => adviseInDrive(sit(
+            positionTrust: PositionTrust.suspect,
+            confidenceRadiusMeters: 20,
+            visibilityMeters: 300,
+            speedMetersPerSecond: sp,
+          )).action;
+      final order = [
+        act(null),
+        act(0),
+        act(5),
+        act(13.4),
+        act(13.4001),
+        act(25),
+        act(double.infinity),
+      ];
+      for (var i = 1; i < order.length; i++) {
+        expect(order[i].index >= order[i - 1].index, isTrue,
+            reason: 'speed step $i lowered caution');
+      }
+    });
+  });
 }

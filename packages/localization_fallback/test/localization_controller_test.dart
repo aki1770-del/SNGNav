@@ -355,6 +355,111 @@ void main() {
     });
   });
 
+  group('lost is terminal until reconvergence (resurrection guard)', () {
+    // Config where only the TIME horizon (not the radius) can trigger lost, so
+    // we can probe whether a non-monotonic clock un-loses us.
+    LocalizationController timeLostController() => LocalizationController(
+          config: const LocalizationConfig(
+            driftRateMetersPerSecond: 0.1, // radius stays tiny → never lost on radius
+            maxTrustworthyRadiusMeters: 100000,
+            maxDeadReckoningSeconds: 60,
+          ),
+          deadReckoningSeam: northSeam(39.70, 140.10, 1),
+        );
+
+    test('a backwards / out-of-order poll cannot un-lose a time-triggered lost',
+        () {
+      final c = timeLostController();
+      c.onFix(fix(39.70, 140.10, acc: 6), trust: TrustSignal.trusted);
+      final lost = c.poll(t0.add(const Duration(seconds: 90)));
+      expect(lost.mode, LocalizationMode.lost, reason: 'should be lost at t+90s');
+      // Clock jumps backwards (NTP correction / replayed tick). Without the
+      // lost-latch this resurrected to deadReckoning — a confidence increase
+      // with NO trusted fix, violating the honesty contract.
+      final back = c.poll(t0.add(const Duration(seconds: 30)));
+      expect(back.mode, LocalizationMode.lost,
+          reason: 'lost must stay lost until a TRUSTED fix re-acquires');
+    });
+
+    test('a suspect fix after lost does not silently restore gpsSuspect', () {
+      final c = timeLostController();
+      c.onFix(fix(39.70, 140.10, acc: 6), trust: TrustSignal.trusted);
+      expect(c.poll(t0.add(const Duration(seconds: 90))).mode,
+          LocalizationMode.lost);
+      // An earlier-stamped suspect fix used to un-lose to gpsSuspect.
+      final e = c.onFix(fix(39.70, 140.10, acc: 5, seconds: 35),
+          trust: TrustSignal.suspect);
+      expect(e.mode, LocalizationMode.lost,
+          reason: 'a non-trusted fix can never re-acquire from lost');
+      expect(e.isConfident, isFalse);
+    });
+
+    test('a failed fix after lost stays lost', () {
+      final c = timeLostController();
+      c.onFix(fix(39.70, 140.10, acc: 6), trust: TrustSignal.trusted);
+      expect(c.poll(t0.add(const Duration(seconds: 90))).mode,
+          LocalizationMode.lost);
+      final e = c.onFix(fix(39.70, 140.10, acc: 5, seconds: 35),
+          trust: TrustSignal.failed);
+      expect(e.mode, LocalizationMode.lost);
+    });
+
+    test('ONLY a fresh trusted fix re-acquires after lost (latch clears)', () {
+      final c = timeLostController();
+      c.onFix(fix(39.70, 140.10, acc: 6), trust: TrustSignal.trusted);
+      expect(c.poll(t0.add(const Duration(seconds: 90))).mode,
+          LocalizationMode.lost);
+      // A genuine, newer trusted fix is the one and only way back.
+      final back = c.onFix(fix(39.7005, 140.1005, acc: 7, seconds: 100),
+          trust: TrustSignal.trusted);
+      expect(back.mode, LocalizationMode.gpsTrusted);
+      expect(back.confidenceRadiusMeters, 7);
+      // ...and after re-acquisition we may degrade to a non-lost state again.
+      final dr = c.poll(t0.add(const Duration(seconds: 102)));
+      expect(dr.mode, LocalizationMode.deadReckoning);
+    });
+  });
+
+  group('garbage configured drift cannot fabricate precision (release hardening)',
+      () {
+    // DEBUG guard: LocalizationConfig asserts driftRate >= 0, so a garbage value
+    // is rejected at construction time when asserts are enabled (as they are
+    // under `dart test`). This locks in that the config validates its input.
+    //
+    // RELEASE guard (NOT reachable from this asserted suite — asserts are
+    // STRIPPED in release / `dart run`): if a release build still supplies a
+    // garbage drift, the controller's _degraded() clamps the radius to never
+    // fall below the last trusted accuracy (no false 0 m "exactly here" dot) and
+    // forces `lost`. That path is verified out-of-band with asserts disabled,
+    // because here the constructor throws before the controller can run.
+    for (final rate in <double>[
+      double.nan,
+      double.negativeInfinity,
+      -5.0,
+    ]) {
+      test('drift=$rate is rejected at construction (debug assert guard)', () {
+        expect(
+          () => LocalizationConfig(driftRateMetersPerSecond: rate),
+          throwsA(isA<AssertionError>()),
+        );
+      });
+    }
+
+    test('a sane positive drift is unaffected (regression guard)', () {
+      final c = LocalizationController(
+        config: const LocalizationConfig(
+          driftRateMetersPerSecond: 2,
+          maxTrustworthyRadiusMeters: 100000,
+          maxDeadReckoningSeconds: 100000,
+        ),
+      );
+      c.onFix(fix(39.70, 140.10, acc: 6), trust: TrustSignal.trusted);
+      final e = c.poll(t0.add(const Duration(seconds: 30)));
+      expect(e.mode, LocalizationMode.deadReckoning); // sane drift → not forced lost
+      expect(e.confidenceRadiusMeters, closeTo(6 + 2 * 30, 0.001));
+    });
+  });
+
   group('unanchored coarse guess (finding #9)', () {
     test('a suspect first fix plants the dot on the fix coords at huge radius',
         () {

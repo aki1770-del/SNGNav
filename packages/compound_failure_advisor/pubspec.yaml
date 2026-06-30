@@ -4,7 +4,7 @@ description: >-
   fuses position-trust and visibility into one honest, advisory-only caution
   label when GPS and the map are failing at once. Never says "safe", never
   tells her to turn back.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues

@@ -27,7 +27,10 @@ import 'trust_signal.dart';
 ///    coarse guess that follows is necessarily finite — both are non-confident
 ///    `lost`, so this transition never claims false confidence.)
 /// 2. `lost` is a first-class, honest state: it still returns the last-known
-///    position and a radius, but says plainly that this is a guess.
+///    position and a radius, but says plainly that this is a guess. Once
+///    `lost`, the controller stays `lost` until a fresh, newer trusted fix
+///    reconverges — a backwards / out-of-order / clamped [poll] or any
+///    non-trusted fix can NEVER silently restore confidence we have lost.
 /// 3. Every estimate carries its [EstimateBasis].
 /// 4. A `suspect`/`failed` fix is NEVER blended in as if trusted — its
 ///    coordinates do not move the dot.
@@ -58,6 +61,13 @@ class LocalizationController {
 
   /// Monotonic floor for the radius while degraded. Reset on a trusted fix.
   double _degradedRadiusFloor = 0;
+
+  /// Latches `true` once we have emitted `lost` from a degraded path, and stays
+  /// set until a fresh, newer trusted fix reconverges. Enforces that `lost` is
+  /// TERMINAL until re-acquisition: a backwards / out-of-order / clamped poll,
+  /// or any non-trusted fix, can never silently un-lose us. The ONLY way to
+  /// clear it is a trusted fix (see [onFix]).
+  bool _lost = false;
 
   LocalizationEstimate? _last;
 
@@ -104,6 +114,10 @@ class LocalizationController {
       // refuse to claim more precision than the trust horizon allows.
       final beyondHorizon =
           fix.accuracyMeters > config.maxTrustworthyRadiusMeters;
+      // A trusted fix is the ONLY thing that clears the `lost` latch. A precise
+      // fix reconverges (cleared); an imprecise, beyond-horizon trusted fix is
+      // adopted as the baseline but we remain honestly `lost`.
+      _lost = beyondHorizon;
       return _emit(LocalizationEstimate(
         latitude: fix.latitude,
         longitude: fix.longitude,
@@ -209,6 +223,16 @@ class LocalizationController {
       basis = EstimateBasis.lastKnownPosition;
     }
 
+    // A configured drift rate that is not finite-and-non-negative is garbage
+    // (NaN / negative / infinite). The LocalizationConfig asserts catch this in
+    // debug, but they are STRIPPED in release / `dart run`, so we must not trust
+    // the value here. We cannot model uncertainty growth from a garbage rate, so
+    // we (a) refuse to let it shrink or collapse the radius and (b) stay honest
+    // by forcing `lost` below — rather say "lost" than invent precision.
+    final configuredDrift = config.driftRateMetersPerSecond;
+    final driftIsSane = configuredDrift.isFinite && configuredDrift >= 0;
+    var driftRate = driftIsSane ? configuredDrift : 0.0;
+
     // Documented growth model: last trusted accuracy + drift * seconds.
     //
     // When the dot is FROZEN at last-known (no seam carried it forward), the
@@ -216,14 +240,21 @@ class LocalizationController {
     // rate by the last known ground speed so the confidence circle still
     // plausibly contains a vehicle that kept moving after GPS dropped. This
     // only ever GROWS the radius (more conservative), never shrinks it.
-    var driftRate = config.driftRateMetersPerSecond;
     if (basis == EstimateBasis.lastKnownPosition &&
         _lastTrustedSpeed != null &&
         _lastTrustedSpeed!.isFinite &&
         _lastTrustedSpeed! > driftRate) {
       driftRate = _lastTrustedSpeed!;
     }
-    final modelled = _lastTrustedAccuracy + driftRate * secondsSafe;
+
+    // Drift only ever ADDS uncertainty, so the modelled radius can never
+    // honestly drop below the last trusted accuracy; clamp up. This also
+    // sanitises a NaN product (e.g. garbageDrift * 0) to a finite, non-confident
+    // floor — never a false 0 m "exactly here" dot.
+    var modelled = _lastTrustedAccuracy + driftRate * secondsSafe;
+    if (!modelled.isFinite || modelled < _lastTrustedAccuracy) {
+      modelled = _lastTrustedAccuracy;
+    }
 
     // Radius = max(growth model, seam's own claim), then forced monotonic.
     var radius = modelled;
@@ -233,12 +264,20 @@ class LocalizationController {
     }
     radius = _bumpFloor(radius);
 
-    // Honesty horizon: too uncertain, or dead too long → lost.
+    // Honesty horizon → `lost` when ANY of: the radius is too uncertain, dead
+    // too long, the drift model is garbage (cannot justify confidence), OR we
+    // are ALREADY `lost` and have not yet been re-acquired by a trusted fix.
+    // `lost` is TERMINAL until a fresh, newer trusted fix reconverges (the only
+    // way back, per the state machine): a backwards / out-of-order / clamped
+    // poll or a non-trusted fix must NEVER resurrect confidence we have lost.
     final beyondRadius = radius > config.maxTrustworthyRadiusMeters;
     final beyondTime = secondsSafe > config.maxDeadReckoningSeconds;
-    final mode = (beyondRadius || beyondTime)
+    final mode = (_lost || beyondRadius || beyondTime || !driftIsSane)
         ? LocalizationMode.lost
         : requestedMode;
+    if (mode == LocalizationMode.lost) {
+      _lost = true;
+    }
 
     return _emit(LocalizationEstimate(
       latitude: lat,
