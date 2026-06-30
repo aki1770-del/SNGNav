@@ -7,12 +7,13 @@ HazardZone _zone(LatLng center, {double radius = 500}) => HazardZone(
       center: center,
       radiusMeters: radius,
       severity: HazardSeverity.icy,
+      vehicleCount: 1,
       reports: [
-        FleetReport(
-          vehicleId: 'v1',
+        ZoneObservation(
           position: center,
           timestamp: DateTime.utc(2026, 4, 5),
           condition: RoadCondition.icy,
+          confidence: 0.8,
         ),
       ],
     );

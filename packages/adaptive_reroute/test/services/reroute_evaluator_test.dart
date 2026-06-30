@@ -147,12 +147,13 @@ void main() {
         center: hazardCenter,
         radiusMeters: 500,
         severity: HazardSeverity.icy,
+        vehicleCount: 1,
         reports: [
-          FleetReport(
-            vehicleId: 'v1',
+          ZoneObservation(
             position: hazardCenter,
             timestamp: DateTime.utc(2026, 4, 5),
             condition: RoadCondition.icy,
+            confidence: 0.8,
           ),
         ],
       );

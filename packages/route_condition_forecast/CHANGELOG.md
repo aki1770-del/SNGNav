@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4
+
+- deps: require `fleet_hazard: ^0.5.0` (the anonymized aggregate — `HazardZone`
+  no longer retains a re-identifiable per-vehicle trail). No API change here;
+  this package reads only zone center/severity/vehicleCount/confidence, all
+  preserved. Tests updated to the `ZoneObservation` element type.
+
 ## 0.1.3
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

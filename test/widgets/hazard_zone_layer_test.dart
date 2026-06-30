@@ -18,15 +18,16 @@ void main() {
       center: const LatLng(35.05, 137.25),
       radiusMeters: radiusMeters,
       severity: severity,
+      vehicleCount: reportCount,
       reports: List.generate(
         reportCount,
-        (i) => FleetReport(
-          vehicleId: 'v$i',
+        (i) => ZoneObservation(
           position: const LatLng(35.05, 137.25),
           timestamp: now,
           condition: severity == HazardSeverity.icy
               ? RoadCondition.icy
               : RoadCondition.snowy,
+          confidence: 0.8,
         ),
       ),
     );
@@ -104,12 +105,13 @@ void main() {
           center: const LatLng(35.10, 137.30),
           radiusMeters: 800,
           severity: HazardSeverity.snowy,
+          vehicleCount: 1,
           reports: [
-            FleetReport(
-              vehicleId: 'v10',
+            ZoneObservation(
               position: const LatLng(35.10, 137.30),
               timestamp: now,
               condition: RoadCondition.snowy,
+              confidence: 0.8,
             ),
           ],
         ),

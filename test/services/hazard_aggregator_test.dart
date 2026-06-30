@@ -176,16 +176,23 @@ void main() {
   });
 
   group('HazardZone', () {
-    test('vehicleCount counts unique vehicle IDs', () {
+    ZoneObservation obs({double confidence = 0.8}) => ZoneObservation(
+      position: const LatLng(35.05, 137.25),
+      timestamp: now,
+      condition: RoadCondition.icy,
+      confidence: confidence,
+    );
+
+    test('vehicleCount is the stored unique-vehicle count', () {
+      // Derivation of unique vehicles now happens at aggregation time (it can
+      // no longer be recomputed from the anonymized observations); the zone
+      // stores the count.
       final zone = HazardZone(
         center: const LatLng(35.05, 137.25),
         radiusMeters: 500,
-        reports: [
-          makeReport(id: 'v1', lat: 35.05, lon: 137.25),
-          makeReport(id: 'v1', lat: 35.05, lon: 137.25), // same vehicle
-          makeReport(id: 'v2', lat: 35.05, lon: 137.25),
-        ],
+        reports: [obs(), obs(), obs()],
         severity: HazardSeverity.icy,
+        vehicleCount: 2,
       );
       expect(zone.vehicleCount, 2);
     });
@@ -196,6 +203,7 @@ void main() {
         radiusMeters: 500,
         reports: [],
         severity: HazardSeverity.snowy,
+        vehicleCount: 0,
       );
       expect(zone.averageConfidence, 0);
     });
@@ -204,10 +212,9 @@ void main() {
       final zone = HazardZone(
         center: const LatLng(35.05, 137.25),
         radiusMeters: 1000,
-        reports: [
-          makeReport(id: 'v1', lat: 35.05, lon: 137.25),
-        ],
+        reports: [obs()],
         severity: HazardSeverity.icy,
+        vehicleCount: 1,
       );
       expect(zone.toString(), contains('icy'));
       expect(zone.toString(), contains('1 reports'));

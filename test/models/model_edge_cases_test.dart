@@ -54,6 +54,19 @@ FleetReport _fleetReport({
   );
 }
 
+ZoneObservation _obs({
+  RoadCondition condition = RoadCondition.snowy,
+  double confidence = 0.8,
+  DateTime? timestamp,
+}) {
+  return ZoneObservation(
+    position: _nagoya,
+    timestamp: timestamp ?? DateTime.now(),
+    condition: condition,
+    confidence: confidence,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -311,16 +324,15 @@ void main() {
   // =========================================================================
   group('HazardZone', () {
     group('vehicleCount', () {
-      test('counts unique vehicles', () {
+      test('stores the unique-vehicle count', () {
+        // vehicleId is stripped from retained observations, so vehicleCount is
+        // computed at aggregation time and stored, not derived here.
         final zone = HazardZone(
           center: _nagoya,
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
-          reports: [
-            _fleetReport(vehicleId: 'v1'),
-            _fleetReport(vehicleId: 'v2'),
-            _fleetReport(vehicleId: 'v1'), // duplicate
-          ],
+          reports: [_obs(), _obs(), _obs()],
+          vehicleCount: 2,
         );
         expect(zone.vehicleCount, 2);
       });
@@ -330,7 +342,8 @@ void main() {
           center: _nagoya,
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
-          reports: [_fleetReport(vehicleId: 'v1')],
+          reports: [_obs()],
+          vehicleCount: 1,
         );
         expect(zone.vehicleCount, 1);
       });
@@ -341,6 +354,7 @@ void main() {
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
           reports: [],
+          vehicleCount: 0,
         );
         expect(zone.vehicleCount, 0);
       });
@@ -353,10 +367,11 @@ void main() {
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
           reports: [
-            _fleetReport(confidence: 0.6),
-            _fleetReport(confidence: 0.8),
-            _fleetReport(confidence: 1.0),
+            _obs(confidence: 0.6),
+            _obs(confidence: 0.8),
+            _obs(confidence: 1.0),
           ],
+          vehicleCount: 3,
         );
         expect(zone.averageConfidence, closeTo(0.8, 0.001));
       });
@@ -367,6 +382,7 @@ void main() {
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
           reports: [],
+          vehicleCount: 0,
         );
         expect(zone.averageConfidence, 0);
       });
@@ -376,7 +392,8 @@ void main() {
           center: _nagoya,
           radiusMeters: 500,
           severity: HazardSeverity.snowy,
-          reports: [_fleetReport(confidence: 0.95)],
+          reports: [_obs(confidence: 0.95)],
+          vehicleCount: 1,
         );
         expect(zone.averageConfidence, 0.95);
       });
@@ -388,10 +405,8 @@ void main() {
           center: _nagoya,
           radiusMeters: 1500,
           severity: HazardSeverity.icy,
-          reports: [
-            _fleetReport(vehicleId: 'v1'),
-            _fleetReport(vehicleId: 'v2'),
-          ],
+          reports: [_obs(), _obs()],
+          vehicleCount: 2,
         );
         final s = zone.toString();
         expect(s, contains('icy'));

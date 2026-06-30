@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4
+
+- deps: require `fleet_hazard: ^0.5.0` (the anonymized aggregate — `HazardZone`
+  no longer retains a re-identifiable per-vehicle trail). No API change here;
+  this package reads only zone center/severity/vehicleCount/confidence, all
+  preserved. Tests updated to the `ZoneObservation` element type.
+
 ## 0.1.3
 
 Safety-documentation honesty fix. The docs now describe only what ships;

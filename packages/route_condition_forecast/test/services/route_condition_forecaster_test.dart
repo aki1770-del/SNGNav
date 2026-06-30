@@ -164,12 +164,13 @@ void main() {
         center: const LatLng(midLat, midLng),
         radiusMeters: 2000,
         severity: HazardSeverity.icy,
+        vehicleCount: 1,
         reports: [
-          FleetReport(
-            vehicleId: 'v1',
+          ZoneObservation(
             position: const LatLng(midLat, midLng),
             timestamp: DateTime.utc(2026, 4, 5),
             condition: RoadCondition.icy,
+            confidence: 0.8,
           ),
         ],
       );
@@ -194,12 +195,13 @@ void main() {
         center: const LatLng(36.5, 138.0),
         radiusMeters: 500,
         severity: HazardSeverity.icy,
+        vehicleCount: 1,
         reports: [
-          FleetReport(
-            vehicleId: 'v1',
+          ZoneObservation(
             position: const LatLng(36.5, 138.0),
             timestamp: DateTime.utc(2026, 4, 5),
             condition: RoadCondition.icy,
+            confidence: 0.8,
           ),
         ],
       );
