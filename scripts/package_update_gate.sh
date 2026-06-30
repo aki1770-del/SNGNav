@@ -13,6 +13,9 @@
 #   G6  provenance        lib-delta vs pub.dev  (BEFORE publish: does a "no-code/docs-only"
 #                                                CHANGELOG claim contradict an EXECUTABLE
 #                                                lib delta vs the latest published archive?)
+#   G7  hosted-resolve    strip overrides +     (does the package's DECLARED hosted sibling
+#                         dart/flutter pub get   constraint actually resolve + pass tests for a
+#                         + test (in a copy)     clean `pub add` consumer — not just locally?)
 #
 # G6 closes the failure learned 2026-06-30: snow_rendering 0.2.4 ("no API change") and
 # kalman_dr 0.4.3 ("No code change") were published while their lib/ actually differed
@@ -36,6 +39,28 @@
 # (pub.dev unreachable yields SKIP, so G6 is not a substitute for the always-local G5). See
 # provenance_gate().
 #
+# G7 closes the resolution-masking failure (the OTHER half of the monorepo-override hazard that
+# G6 does not reach). Six published packages ship monorepo-only `dependency_overrides: path:` on
+# their siblings (navigation_safety, routing_bloc, adaptive_reroute, driving_weather,
+# voice_guidance, driving_conditions). Neither CI (.github/workflows/ci.yml — every job runs
+# `pub get` HONORING those overrides) nor G1 (which also honors overrides) ever resolves a
+# package's DECLARED HOSTED sibling constraints against pub.dev. So they certify "works on my
+# local checkout," never "works for an edge developer who `pub add`s it." G7 reproduces the clean
+# consumer: it copies the package to a temp dir, DELETES only the `dependency_overrides:` block,
+# runs `dart`/`flutter pub get` (now resolving the declared caret constraints from pub.dev, NOT
+# local path), and — if that resolves — runs the package's own tests against the HOSTED siblings.
+#   VERDICT  PASS  pub-get resolves hosted AND tests pass (a clean `pub add` works).
+#            FAIL  declared hosted constraint will NOT resolve against published versions, OR
+#                  it resolves but tests FAIL against the published siblings (overrides masked it).
+#            SKIP  pub.dev unreachable (mirror G6 SKIP_NET — NEVER block offline); OR the package
+#                  has no `dependency_overrides` (nothing to strip — G1's normal resolve already
+#                  covered its hosted deps); OR a sibling version the declared constraint needs is
+#                  not published yet but the LOCAL sibling satisfies it (a coordinated multi-package
+#                  release in flight — prints which sibling/version). Honest scope: G7 needs the
+#                  sibling already published and needs the network (else SKIP); it is NOT a
+#                  substitute for G6 (change-class honesty) or the always-local G1/G5. See
+#                  hosted_resolve_gate().
+#
 # The JUDGMENT gate — adversarial verify, advocate!=verifier (OPS-068 §B) — is conducted by
 # the `multi-gate-package-update` workflow, NOT this script (free-text judgment is not
 # mechanically gateable; claiming it is would be the narration-over-reading failure, OPS-062).
@@ -46,6 +71,8 @@
 #   ./scripts/package_update_gate.sh <pkg> [<pkg> ...]     # gate the named update candidates
 #   ./scripts/package_update_gate.sh --coherence-only      # just the catalog-wide G5
 #   ./scripts/package_update_gate.sh --provenance-sweep    # G6 across the WHOLE catalog
+#   ./scripts/package_update_gate.sh --g7 <pkg> [<pkg>...]  # ONLY the G7 hosted-resolve gate
+#   ./scripts/package_update_gate.sh --hosted-resolve-sweep # G7 across all override-bearing pkgs
 #   PKG_ROOT=/path ./scripts/package_update_gate.sh <pkg>
 #   G6_COMPARE_VERSION=0.2.3 ./scripts/package_update_gate.sh <pkg>   # pin G6's compare version
 #
@@ -122,9 +149,12 @@ coherence() {
 # version that was "latest" at the instant the mislabeled release went out).
 # ---------------------------------------------------------------------------
 G6_TMP="$(mktemp -d "${TMPDIR:-/tmp}/g6.XXXXXX")"
-trap 'rm -rf "$G6_TMP"' EXIT
+G7_TMP="$(mktemp -d "${TMPDIR:-/tmp}/g7.XXXXXX")"   # G7 working area; cleaned by the same EXIT trap
+trap 'rm -rf "$G6_TMP" "$G7_TMP"' EXIT
 G6_VERPARSE="$G6_TMP/verparse.py"
 G6_CLASSIFY="$G6_TMP/classify.py"
+G7_STRIP="$G7_TMP/strip_overrides.py"       # removes ONLY the top-level dependency_overrides block
+G7_CLASSIFY="$G7_TMP/classify_sibling.py"   # per-sibling: declared constraint vs published vs local
 
 cat > "$G6_VERPARSE" <<'PYVER'
 import sys, json, os
@@ -304,6 +334,126 @@ for f, sgn, k in sample[:24]:
     print("NETLINE\t%s\t%s" % (sgn, k[:120]))
 PYCLS
 
+# G7 strip helper — remove ONLY the top-level `dependency_overrides:` block from a pubspec copy.
+# The block is the key at column 0 plus every following blank/indented line, up to the next
+# column-0 line (a new top-level key/comment) or EOF. Nothing else is touched.
+cat > "$G7_STRIP" <<'PYSTRIP'
+import sys, re
+path = sys.argv[1]
+with open(path, encoding='utf-8', errors='replace') as f:
+    lines = f.readlines()
+out = []; i = 0; n = len(lines); removed = 0
+while i < n:
+    line = lines[i]
+    if re.match(r'^dependency_overrides:[ \t]*(#.*)?\r?\n?$', line):
+        removed += 1; i += 1
+        while i < n:                       # consume the block body
+            b = lines[i]
+            if b.strip() == '' or b[:1] in (' ', '\t'):
+                i += 1; continue           # blank or indented => still inside the block
+            break                          # column-0 non-blank => block ended
+        continue
+    out.append(line); i += 1
+with open(path, 'w', encoding='utf-8') as f:
+    f.writelines(out)
+sys.stderr.write('g7-strip: removed %d dependency_overrides block(s)\n' % removed)
+PYSTRIP
+
+# G7 sibling classifier — given the package pubspec, an overridden sibling name, and the local
+# sibling pubspec path (or '-'), plus the sibling's pub.dev API JSON on stdin, decide:
+#   HOSTED_SAT  does ANY published (stable) sibling version satisfy the package's DECLARED caret
+#               constraint?  (Dart caret: ^1.2.3 -> >=1.2.3 <2.0.0 ; ^0.10.0 -> >=0.10.0 <0.11.0 ;
+#               ^0.0.5 -> >=0.0.5 <0.0.6 — the leftmost-non-zero rule, implemented exactly.)
+#   LOCAL_SAT   does the LOCAL monorepo sibling version satisfy that same constraint?
+# A SKIP-not-yet-published case is HOSTED_SAT=0 AND LOCAL_SAT=1 (coordinated release in flight).
+cat > "$G7_CLASSIFY" <<'PYSIB'
+import sys, json, re
+pkg_pubspec   = sys.argv[1]
+name          = sys.argv[2]
+local_pubspec = sys.argv[3] if len(sys.argv) > 3 else '-'
+
+def read(p):
+    try: return open(p, encoding='utf-8', errors='replace').read()
+    except Exception: return ''
+
+def declared_constraint(text, dep):
+    in_deps = False
+    for l in text.splitlines():
+        if re.match(r'^dependencies:\s*$', l):
+            in_deps = True; continue
+        if in_deps:
+            if re.match(r'^\S', l):          # next top-level key ends the dependencies block
+                break
+            m = re.match(r'^\s+([A-Za-z0-9_]+):\s*(.*)$', l)
+            if m and m.group(1) == dep:
+                return m.group(2).strip()
+    return ''
+
+def parse_core(s):
+    core = s.strip().split('+')[0]
+    if '-' in core: core = core.split('-', 1)[0]
+    nums = []
+    for x in re.split(r'\.', core)[:3]:
+        try: nums.append(int(re.match(r'\d+', x).group()))
+        except Exception: nums.append(0)
+    while len(nums) < 3: nums.append(0)
+    return tuple(nums[:3])
+
+def is_pre(v): return '-' in v.split('+')[0]
+INF = (10**9, 0, 0)
+
+def clauses_for(c):
+    c = c.strip()
+    if (c[:1], c[-1:]) in (('"', '"'), ("'", "'")): c = c[1:-1].strip()
+    if c == '' or c == 'any':
+        return [('>=', (0, 0, 0)), ('<', INF)]
+    if c.startswith('^'):
+        maj, minr, pat = parse_core(c[1:])
+        if maj > 0:   high = (maj + 1, 0, 0)
+        elif minr > 0: high = (maj, minr + 1, 0)
+        else:          high = (maj, minr, pat + 1)
+        return [('>=', (maj, minr, pat)), ('<', high)]
+    toks = c.split(); cl = []
+    for t in toks:
+        m = re.match(r'^(>=|<=|>|<|=)?\s*([0-9][\w.\-+]*)$', t)
+        if not m: continue
+        op = m.group(1) or '=='
+        if op == '=': op = '=='
+        cl.append((op, parse_core(m.group(2))))
+    if cl: return cl
+    if re.match(r'^[0-9]', c): return [('==', parse_core(c))]
+    return [('>=', (0, 0, 0)), ('<', INF)]
+
+def satisfies(v, clauses):
+    for op, ref in clauses:
+        if op == '>=' and not (v >= ref): return False
+        if op == '>'  and not (v >  ref): return False
+        if op == '<=' and not (v <= ref): return False
+        if op == '<'  and not (v <  ref): return False
+        if op == '==' and not (v == ref): return False
+    return True
+
+constraint = declared_constraint(read(pkg_pubspec), name)
+clauses = clauses_for(constraint)
+try:
+    d = json.load(sys.stdin)
+    versions = [x['version'] for x in d.get('versions', []) if 'version' in x]
+    latest = d.get('latest', {}).get('version', '')
+except Exception:
+    versions = []; latest = ''
+stable = [v for v in versions if not is_pre(v)]
+hosted_sat = any(satisfies(parse_core(v), clauses) for v in stable)
+local_v = ''
+m = re.search(r'(?m)^version:\s*(\S+)', read(local_pubspec)) if local_pubspec != '-' else None
+if m: local_v = m.group(1)
+local_sat = bool(local_v) and satisfies(parse_core(local_v), clauses)
+print('CONSTRAINT=%s' % (constraint if constraint else '-'))
+print('HOSTED_SAT=%d' % (1 if hosted_sat else 0))
+print('LOCAL_SAT=%d'  % (1 if local_sat else 0))
+print('LOCAL_VER=%s'  % (local_v if local_v else '-'))
+print('LATEST_PUB=%s' % (latest if latest else '-'))
+PYSIB
+
 # g6_compute <pkgdir> <name> -> echoes "STATUS|VER|CLAIM|DELTA|NETCOUNT"
 # Full per-package detail (ENTRY/FILE/NETLINE lines) is left in $G6_TMP/last_out.
 # STATUS: OK | SKIP_UNPUB | SKIP_NET | SKIP_NOLIB | SKIP_NOVER
@@ -420,6 +570,150 @@ provenance_sweep() {
   return 0
 }
 
+# ---------------------------------------------------------------------------
+# G7 hosted-resolve — the resolution-masking gate (the OTHER half of the monorepo-override hazard).
+#
+# Per override-bearing package: copy it to a temp dir, DELETE only the `dependency_overrides:`
+# block, then `dart`/`flutter pub get` (resolving the DECLARED hosted sibling constraints from
+# pub.dev, NOT local path) and — if that resolves — run the package's own tests against those
+# HOSTED siblings. This reproduces exactly what `pub add <pkg>` gives a clean consumer, the
+# guarantee CI and G1 never check because they honor the overrides.
+# Sets fail=1 on a real FAIL. SKIP paths never set fail (never block offline / on nothing-to-strip).
+# ---------------------------------------------------------------------------
+
+# g7_siblings <pubspec> — list the override KEYS (the sibling names) at the block's base indent.
+g7_siblings() {
+  awk '
+    /^dependency_overrides:/{ind=1; base=-1; next}
+    ind && /^[^[:space:]]/{ind=0}
+    ind {
+      if (match($0, /^[[:space:]]+/)) {
+        cur=RLENGTH
+        if ($0 ~ /^[[:space:]]+[A-Za-z0-9_]+:/) {
+          if (base==-1) base=cur
+          if (cur==base) { line=$0; sub(/^[[:space:]]+/,"",line); sub(/:.*/,"",line); print line }
+        }
+      }
+    }' "$1"
+}
+
+hosted_resolve_gate() {
+  local pkg="$1" name="$2" label="G7 hosted-resolve"
+
+  # SKIP: nothing to strip — G1's normal resolve already exercised this package's hosted deps.
+  if ! grep -qE '^dependency_overrides:' "$pkg/pubspec.yaml" 2>/dev/null; then
+    printf '    %-14s SKIP (no dependency_overrides — G1 normal resolve already covers hosted deps)\n' "$label"
+    return
+  fi
+
+  # SKIP (offline, mirror G6 SKIP_NET): never block when pub.dev is unreachable.
+  command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 \
+    || { printf '    %-14s SKIP (curl/python3 unavailable — cannot reach pub.dev)\n' "$label"; return; }
+  if ! curl -s --max-time 15 -o /dev/null "https://pub.dev/api/packages/$name" 2>/dev/null \
+     && ! curl -s --max-time 15 -o /dev/null "https://pub.dev" 2>/dev/null; then
+    printf '    %-14s SKIP (pub.dev unreachable — never block offline)\n' "$label"
+    return
+  fi
+
+  # Pre-check each overridden sibling: if the DECLARED constraint has no satisfying PUBLISHED
+  # version but the LOCAL sibling satisfies it, this is a coordinated release in flight -> SKIP
+  # (print which). If neither hosted nor local satisfies, fall through so the real pub-get error
+  # surfaces as the FAIL the gate is built to catch.
+  local sib api rec cons hsat lsat lver lpub
+  while IFS= read -r sib; do
+    [[ -n "$sib" ]] || continue
+    api="$(curl -s --max-time 25 "https://pub.dev/api/packages/$sib" 2>/dev/null)"
+    if [[ -z "$api" ]]; then
+      printf '    %-14s SKIP (pub.dev metadata for sibling %s unavailable — never block offline)\n' "$label" "$sib"
+      return
+    fi
+    rec="$(printf '%s' "$api" | python3 "$G7_CLASSIFY" "$pkg/pubspec.yaml" "$sib" "$PKG_ROOT/$sib/pubspec.yaml" 2>/dev/null)"
+    cons="$(sed -n 's/^CONSTRAINT=//p' <<<"$rec")"
+    hsat="$(sed -n 's/^HOSTED_SAT=//p'  <<<"$rec")"
+    lsat="$(sed -n 's/^LOCAL_SAT=//p'   <<<"$rec")"
+    lver="$(sed -n 's/^LOCAL_VER=//p'   <<<"$rec")"
+    lpub="$(sed -n 's/^LATEST_PUB=//p'  <<<"$rec")"
+    if [[ "$hsat" != "1" && "$lsat" == "1" ]]; then
+      printf '    %-14s SKIP (sibling %s constraint %s satisfied by LOCAL %s but NOT yet on pub.dev; latest published %s — coordinated release in flight)\n' \
+        "$label" "$sib" "$cons" "$lver" "$lpub"
+      return
+    fi
+  done < <(g7_siblings "$pkg/pubspec.yaml")
+
+  # Build the clean-consumer copy: strip ONLY the override block; force a fresh resolve.
+  local work; work="$(mktemp -d "$G7_TMP/${name}.XXXXXX")"
+  cp -a "$pkg/." "$work/" 2>/dev/null
+  rm -rf "$work/.dart_tool" "$work/build" "$work/pubspec.lock" "$work/.packages" \
+         "$work/.flutter-plugins" "$work/.flutter-plugins-dependencies"
+  # A bundled example/ app carries monorepo-only `path:`/override sibling deps and (for flutter
+  # packages) is ALSO resolved by `flutter pub get` — but a clean `pub add <pkg>` consumer NEVER
+  # resolves the package's example. G7 certifies the package's OWN declared hosted constraints,
+  # so the dev-only example resolution is removed from the consumer model (a broken bundled
+  # example is a real but SEPARATE concern — out of G7's resolution-masking scope).
+  rm -rf "$work/example"
+  python3 "$G7_STRIP" "$work/pubspec.yaml" 2>/dev/null
+
+  # Flutter vs pure-Dart toolchain (same detection as catalog_census.sh).
+  local tool="dart"
+  if grep -qE '^[[:space:]]*flutter:[[:space:]]*$' "$pkg/pubspec.yaml" 2>/dev/null \
+     && grep -qE 'sdk:[[:space:]]*flutter' "$pkg/pubspec.yaml" 2>/dev/null; then
+    tool="flutter"
+  fi
+  if [[ "$tool" == "flutter" ]] && ! command -v flutter >/dev/null 2>&1; then
+    printf '    %-14s SKIP (flutter package but flutter not on PATH — cannot exercise hosted resolve here)\n' "$label"
+    return
+  fi
+
+  local getlog="$work/_g7_get.log" testlog="$work/_g7_test.log"
+  if ! (cd "$work" && "$tool" pub get) >"$getlog" 2>&1; then
+    printf '    %-14s FAIL (declared HOSTED sibling constraints will NOT resolve for a clean `pub add %s` — overrides masked this)\n' "$label" "$name"
+    sed 's/^/        /' "$getlog" | tail -15
+    fail=1
+    return
+  fi
+  if [[ -d "$work/test" ]]; then
+    if (cd "$work" && "$tool" test) >"$testlog" 2>&1; then
+      printf '    %-14s PASS (hosted resolve OK + tests pass vs published siblings — `pub add %s` works for a clean consumer)\n' "$label" "$name"
+    else
+      printf '    %-14s FAIL (hosted resolve OK but tests FAIL against PUBLISHED siblings — overrides masked a behavioral skew)\n' "$label"
+      sed 's/^/        /' "$testlog" | tail -18
+      fail=1
+    fi
+  else
+    printf '    %-14s PASS (hosted resolve OK; package ships no test/ dir to exercise)\n' "$label"
+  fi
+}
+
+# hosted_resolve_sweep — G7 across every override-bearing package in the catalog.
+hosted_resolve_sweep() {
+  echo ">> G7 hosted-resolve sweep — every override-bearing package, resolved against PUBLISHED siblings"
+  echo "   Reproduces 'pub add <pkg>' for a clean consumer: strip dependency_overrides, then pub get + test vs pub.dev."
+  local any=0 pkg name
+  for pkg in "$PKG_ROOT"/*/; do
+    pkg="${pkg%/}"; name="$(basename "$pkg")"
+    [[ -f "$pkg/pubspec.yaml" ]] || continue
+    grep -qE '^dependency_overrides:' "$pkg/pubspec.yaml" 2>/dev/null || continue
+    any=1
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    hosted_resolve_gate "$pkg" "$name"
+  done
+  [[ "$any" -eq 1 ]] || echo "   (no override-bearing packages found under $PKG_ROOT)"
+  return "$fail"
+}
+
+if [[ "${1:-}" == "--hosted-resolve-sweep" ]]; then hosted_resolve_sweep; exit $?; fi
+if [[ "${1:-}" == "--g7" ]]; then            # run ONLY the G7 hosted-resolve gate per named package
+  shift
+  [[ $# -ge 1 ]] || { echo "usage: $0 --g7 <pkg> [<pkg> ...]" >&2; exit 2; }
+  for name in "$@"; do
+    pkg="$PKG_ROOT/$name"
+    if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    hosted_resolve_gate "$pkg" "$name"
+  done
+  exit "$fail"
+fi
+
 if [[ "${1:-}" == "--provenance-sweep" ]]; then provenance_sweep; exit $?; fi
 if [[ "${1:-}" == "--g6" ]]; then            # run ONLY the G6 provenance gate per named package
   shift
@@ -446,6 +740,7 @@ for name in "$@"; do
   if [[ -d "$pkg/test" ]]; then gate "G3 test" bash -c "cd '$pkg' && dart test"; else printf '    %-14s NONE (no test/ dir)\n' "G3 test"; fi
   dryrun_gate "$pkg"
   provenance_gate "$pkg" "$name"
+  hosted_resolve_gate "$pkg" "$name"
 done
 
 echo

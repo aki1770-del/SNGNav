@@ -5,6 +5,9 @@
 #   2. flutter test    (all tests must pass)
 #   3. aggregate coverage summary (quality signal for edge developers)
 #   4. flutter build linux --release (build must succeed)
+#   5. hosted-resolve  (reproduce `pub add <pkg>` for a CLEAN consumer — the only lane that
+#                       resolves each override-bearing package's DECLARED hosted sibling
+#                       constraints against pub.dev instead of the monorepo `path:` overrides)
 #
 # Probe tests (tagged 'probe') are excluded — they require
 # live network access to external APIs.
@@ -181,3 +184,50 @@ jobs:
 
       - name: App tests on target Dart
         run: flutter test --exclude-tags=probe
+
+  hosted-resolve:
+    name: Hosted-resolve (pub add)
+    # The resolution-masking lane. Six published packages ship monorepo-only
+    # `dependency_overrides: path:` on their siblings (adaptive_reroute, driving_conditions,
+    # driving_weather, navigation_safety, routing_bloc, voice_guidance). Every OTHER job above
+    # runs `pub get` HONORING those overrides, so they only ever certify "works on this checkout."
+    # This job reproduces what a CLEAN `pub add <pkg>` consumer gets: it strips the
+    # `dependency_overrides:` block and resolves each package's DECLARED hosted sibling constraints
+    # against pub.dev (NOT local path), then runs that package's own tests against the PUBLISHED
+    # siblings. Red here = a published package would not resolve / would not pass for an edge
+    # developer who `pub add`s it — the gap the analyze/test/build lanes cannot see.
+    #
+    # It invokes the SAME G7 gate as scripts/package_update_gate.sh (single source of truth for the
+    # pre-publish gate AND CI, so the two can never drift). G7 SKIPs (does NOT go red) when pub.dev
+    # is unreachable or when a sibling version a constraint needs is not yet published but the local
+    # sibling satisfies it (a coordinated multi-package release in flight) — so this lane never
+    # blocks offline and never false-reds a staged release.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false   # one package's failure must not hide the others'
+      matrix:
+        package:
+          - adaptive_reroute
+          - driving_conditions
+          - driving_weather
+          - navigation_safety
+          - routing_bloc
+          - voice_guidance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.41.4'
+
+      - name: Install Linux deps (flutter widget tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libsqlite3-dev
+
+      - name: Reproduce `pub add ${{ matrix.package }}` for a clean consumer
+        # Strips dependency_overrides, resolves the declared hosted siblings from pub.dev, and runs
+        # the package's tests against them (G7). PKG_ROOT points the gate at this checkout's
+        # packages/ (the script's default is an absolute developer path).
+        run: PKG_ROOT="$GITHUB_WORKSPACE/packages" bash scripts/package_update_gate.sh --g7 ${{ matrix.package }}
