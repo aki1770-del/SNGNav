@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.4
+
+- Provenance correction (honesty-of-record): the 0.4.3 CHANGELOG stated "No code
+  change", but 0.4.3 in fact shipped — carried in from the 2026-06-27
+  finite-position safety work — four executable NaN/non-finite guards in the
+  dead-reckoning + Kalman path that were not present in the published 0.4.2:
+  a non-finite latitude/longitude early-return in `_onGpsPosition`
+  (`dead_reckoning_provider.dart`); an `accuracy.isFinite` condition on the
+  Kalman-update gate; a non-finite-determinant guard in the matrix inverse
+  (`kalman_filter.dart`); and a NaN-reject floor in the accuracy→covariance
+  mapping. These guards are correctness-improving — they stop a NaN/Inf GPS fix
+  from corrupting the filter or teleporting the position — and are covered by
+  `finiteness_guard_test.dart`. This 0.4.4 release corrects the record; it
+  contains no further code change of its own (lib is identical to 0.4.3).
+
 ## 0.4.3
 
 - Docs: correct the README test-count claim from "200+ unit tests" to the real count (77, confirmed via `dart test`). Update the README install snippet pin to `^0.4.3` to resolve the current version. No code change.

@@ -40,7 +40,7 @@ class DrivingConditionAssessment extends Equatable {
     required this.visibility,
     required this.precipitation,
     required this.advisoryMessage,
-    required this.recommendedResponse,
+    this.recommendedResponse = RecommendedResponse.proceed,
   });
 
   /// Build a full assessment from current weather conditions.

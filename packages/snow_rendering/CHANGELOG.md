@@ -1,7 +1,32 @@
 # Changelog
 
+## 0.2.5
+
+- Non-breaking restore + honest correction of a mislabeled release. The 0.2.4
+  entry below was labeled "(no API change)", but 0.2.4 had in fact shipped a
+  **breaking public-API change** relative to 0.2.3: it added the
+  `RecommendedResponse` enum, exported it from the package, and added a
+  **`required`** `recommendedResponse` parameter to the public const constructor
+  of `DrivingConditionAssessment`. The `required` parameter broke any edge
+  developer who constructs `DrivingConditionAssessment` directly (the 0.2.3
+  call sites no longer compiled).
+- This release makes the `recommendedResponse` constructor parameter
+  **optional**, defaulting to `RecommendedResponse.proceed` (the neutral,
+  lowest-severity "conditions within normal driving tolerance" tier). Direct
+  0.2.3-style construction that omits `recommendedResponse` compiles again;
+  0.2.4 callers that pass `recommendedResponse` are unaffected. The field stays
+  non-nullable, so consumers can always read a concrete tier.
+- Documents the public API as it now stands: the `RecommendedResponse` enum,
+  the `recommendedResponse` field on `DrivingConditionAssessment` (still part of
+  equality/`props`), and the package export of `recommended_response.dart` are
+  all supported public API. The `DrivingConditionAssessment.fromCondition`
+  factory continues to classify and set `recommendedResponse` explicitly.
+
 ## 0.2.4
 - docs: correct stale README install pin to current version (no API change).
+  NOTE (see 0.2.5): this release was mislabeled — it also shipped a breaking
+  API change (a `required` `recommendedResponse` ctor parameter + the
+  `RecommendedResponse` enum + its export). 0.2.5 restores source compatibility.
 
 ## 0.2.3
 
