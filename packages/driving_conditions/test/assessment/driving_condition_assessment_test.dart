@@ -149,6 +149,7 @@ void main() {
           a.visibility,
           a.precipitation,
           a.advisoryMessage,
+          a.recommendedResponse,
         ],
       );
     });
