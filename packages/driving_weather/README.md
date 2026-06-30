@@ -25,7 +25,7 @@ simulated scenarios for demos and testing.
 
 ```yaml
 dependencies:
-  driving_weather: ^0.3.0
+  driving_weather: ^0.4.3
 ```
 
 ## Quick Start

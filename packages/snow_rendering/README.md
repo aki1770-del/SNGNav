@@ -21,7 +21,7 @@ Pure Dart — no Flutter dependency. Safe to use from any Dart environment.
 
 ```yaml
 dependencies:
-  snow_rendering: ^0.1.0
+  snow_rendering: ^0.2.4
 ```
 
 ## Quick Start

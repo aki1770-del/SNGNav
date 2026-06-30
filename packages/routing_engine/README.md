@@ -22,7 +22,7 @@ server today and a local server tomorrow — same code, same interface.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.3.0
+  routing_engine: ^0.4.2
   latlong2: ^0.9.1          # for LatLng coordinates
 ```
 

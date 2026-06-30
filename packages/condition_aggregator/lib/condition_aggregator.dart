@@ -7,9 +7,9 @@
 /// packages (e.g. `condition_aggregator_nws`, `condition_aggregator_jma`)
 /// implement [AdvisoryProvider] and depend on this package.
 ///
-/// Phase: explore (`publish_to: none` in pubspec.yaml). Deploy graduation
-/// fires when interface tests + first adapter wire are green per the
-/// FDD bylaws spike-to-package promotion gate.
+/// Published to pub.dev. Graduated from the explore phase once the
+/// interface tests + first adapter wire were green per the FDD bylaws
+/// spike-to-package promotion gate.
 ///
 /// HER-trace (≤4-hop) end-to-end:
 ///   publisher advisory feed (NWS / JMA / etc.)

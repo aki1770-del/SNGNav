@@ -27,8 +27,7 @@
 /// - [NoaaNwsClient]: thin HTTP client around `/alerts/active?point=`.
 /// - [NoaaNwsParseException]: thrown on GeoJSON schema-shape mismatch.
 ///
-/// This is an internal SNGNav adapter package. Phase: explore
-/// (`publish_to: none` in pubspec.yaml). Not published to pub.dev.
+/// An SNGNav adapter package, published to pub.dev.
 ///
 /// ```dart
 /// import 'package:noaa_nws_adapter/noaa_nws_adapter.dart';

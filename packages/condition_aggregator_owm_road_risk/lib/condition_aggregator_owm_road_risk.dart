@@ -21,12 +21,10 @@
 ///   `condition_aggregator_nws`   — NOAA NWS (United States)
 ///   `condition_aggregator_owm_road_risk` — OWM (US / EU; commercial)
 ///
-/// The aggregator umbrella `condition_aggregator` 0.0.3 does not yet
-/// name OpenWeatherMap as a dedicated `AdvisorySource` enum value;
-/// 0.1.0 ships using `AdvisorySource.other`. A forward-additive
-/// enum bump in `condition_aggregator` 0.0.4+ will introduce a
-/// dedicated value; consumers consuming via the `AdvisoryAggregator`
-/// type do not need to change.
+/// The aggregator umbrella `condition_aggregator` has no dedicated
+/// OpenWeatherMap `AdvisorySource` enum value, so this adapter reports
+/// `AdvisorySource.other`. Consumers consuming via the
+/// `AdvisoryAggregator` type handle it like any other advisory.
 ///
 /// Surface published in this package:
 /// - [OwmRoadRiskClient] — lower-level HTTP client around the

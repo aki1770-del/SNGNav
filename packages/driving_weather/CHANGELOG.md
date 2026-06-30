@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.3
+- docs: correct stale README install pin to current version (no API change).
+
 ## 0.4.2 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`) + `condition_aggregator_digitraffic` (`^0.0.3`→`^0.0.5`).

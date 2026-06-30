@@ -25,7 +25,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  navigation_safety_core: ^0.6.0
+  navigation_safety_core: ^0.10.5
 ```
 
 Then import:

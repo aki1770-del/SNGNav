@@ -1,5 +1,4 @@
 // Quickstart: fetch live NWS winter alerts at a point, as typed events.
-import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_nws/condition_aggregator_nws.dart';
 
 Future<void> main() async {

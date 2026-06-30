@@ -30,7 +30,7 @@ pulling in Flutter UI code.
 
 ```yaml
 dependencies:
-  driving_conditions: ^0.3.0
+  driving_conditions: ^0.5.3
 ```
 
 ## Core Models
@@ -232,9 +232,21 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 | `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. Inject to replace the 0.8 baseline. |
 | `ConstantFleetConfidenceProvider` | Returns a fixed confidence value. Default (0.8) preserves pre-Sprint-91 behaviour. |
 | `FleetHazardConfidenceAdapter` | Derives confidence from `List<FleetReport>` — dry 1.0, wet 0.7, snowy 0.4, icy 0.1. |
-| `CpuSafetyScoreSimulationEngine` | Pure-Dart Monte Carlo engine. Always available regardless of platform. |
-| `NativeSafetyScoreSimulationEngine` | C FFI engine for higher throughput. Exposes `executionMs` in `SimulationResult`. |
+| `CpuSafetyScoreSimulationEngine` | **Default** pure-Dart Monte Carlo engine. Always available regardless of platform; no build step required. |
+| `NativeSafetyScoreSimulationEngine` | **Optional** C FFI engine for higher throughput. **Not the default and not usable out of the box** — see the note below. |
 | `SimulationBackend` / `SimulationOptions` | Extension points for native or alternative simulation engines. |
+
+### Native (C FFI) engine — optional, requires a build step
+
+The pure-Dart `CpuSafetyScoreSimulationEngine` is the default and the only path
+you need for normal use. `NativeSafetyScoreSimulationEngine` is an **opt-in**
+performance spike that is **not usable without first compiling the C library**.
+Constructing it (or letting it load its bindings) will **throw** unless a
+compiled `libsimulation_engine` (`.so` / `.dylib` / `.dll`) exists under
+`native/build/` for your platform; unsupported platforms throw
+`UnsupportedError`. Do not select the native path expecting a silent fallback —
+there is none. Stick with the CPU engine unless you have explicitly built and
+shipped the native library yourself.
 
 ## Validation
 

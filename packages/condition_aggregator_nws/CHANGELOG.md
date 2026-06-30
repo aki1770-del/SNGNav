@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 — 2026-06-30 — Doc honesty
+
+- Docs: library dartdoc no longer claims `Phase: explore` /
+  `publish_to: none`; corrected to reflect the published-to-pub.dev state.
+  No code change.
+
 ## 0.0.6 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`) + `noaa_nws_adapter` (`^0.0.3`→`^0.0.5`).

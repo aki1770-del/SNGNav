@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.5 — Docs: restore dual NLOD 2.0 + CC-BY-4.0 license statement
+
+- Docs: restore the **NLOD 2.0** (Norwegian Licence for Open Government Data) statement alongside **CC BY 4.0** in the README "License + attribution" section, matching the Chair-ratified record and the sibling `pretrip_source_met_norway`. MET Norway data is dual-licensed under both; an integrator may rely on either. Consistency-only — CC-BY-4.0 alone was already legally sufficient; no behavior or attribution-string change.
+
 ## 0.0.4 — 2026-06-26 — Docs: dev-first on-ramp (0.0.3 was already taken by the prior license-fix release; attribution preserved)
 
 - Docs: dev-first on-ramp — install (`dart pub add`) + a run-verified

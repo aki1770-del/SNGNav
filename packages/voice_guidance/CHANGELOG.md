@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.1
+- docs: correct stale README install pin to current version (no API change).
+
 ## 0.7.0 — 2026-06-14 — add the tactile (haptic) accessibility hazard channel
 
 Adds an opt-in tactile hazard channel so a deaf / hard-of-hearing

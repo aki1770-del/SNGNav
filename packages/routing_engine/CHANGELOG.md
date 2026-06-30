@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.2
+- docs: correct stale README install pin to current version (no API change).
+
 ## 0.4.1
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

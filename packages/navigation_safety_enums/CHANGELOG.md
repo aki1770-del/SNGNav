@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Docs: correct the README to state the package ships **five** enum types (was "Four"), and document the previously-undocumented fifth enum `HapticCuePattern` (deaf-driver / whiteout accessibility tactile-cue grammar) alongside the others. Clarified that the byte-identical-to-`navigation_safety_core`-0.10.0 extraction provenance covers the four original enums only — `HapticCuePattern` was added in 0.1.3 and has no 0.10.0 counterpart. No code change.
+
 ## 0.1.3 — 2026-06-14 — add HapticCuePattern (accessibility / tactile hazard channel)
 
 Adds a fifth pure-enum domain type plus its pure severity-mapping

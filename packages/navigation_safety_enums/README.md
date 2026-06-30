@@ -3,7 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/navigation_safety_enums.svg)](https://pub.dev/packages/navigation_safety_enums)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
-**Pure Dart navigation-safety domain enums.** Four stable enum
+**Pure Dart navigation-safety domain enums.** Five stable enum
 types extracted from
 [`navigation_safety_core`](https://pub.dev/packages/navigation_safety_core)
 for consumers who need the safety vocabulary without paying for the
@@ -19,6 +19,15 @@ larger core-package surface area or its transitive dependencies.
 - `DriverProfile` — driver-class trait axis (`ageingRural` /
   `snowZoneExperienced` / `noviceUrban` / `professional` /
   `agriculturalForestry` / `foreignTouristSnowZone`).
+- `HapticCuePattern` — tactile (vibration) hazard-cue grammar for the
+  accessibility channel (`none` / `warning` / `critical`). Carries the
+  **same warning set** as the audio channel off the **same severity gate**
+  — so a deaf / hard-of-hearing driver, or any driver inside a roaring-wind
+  whiteout where speech cannot carry, is never silently dropped from the most
+  serious warnings. The two announced tiers render as **distinct** cues
+  (`pulseCount` 2 vs 3) so they can be told apart by feel alone. Map from
+  `AlertSeverity` via `hapticCueForSeverity(severity)`; the cue is a pure
+  function of severity only.
 
 No Flutter dependency. No transitive dependencies (beyond
 `test` + `lints` for development). Safe to consume from CLI tools,
@@ -63,9 +72,11 @@ void main() {
 
 ## Relationship to navigation_safety_core
 
-The four enum source files in this package are byte-identical to the
-corresponding files in `navigation_safety_core` 0.10.0 at the time
-of extraction. A subsequent `navigation_safety_core` 0.11.0 release
+Four of the five enum source files (`AlertSeverity`, `CircadianPhase`,
+`DriverState`, `DriverProfile`) are byte-identical to the corresponding
+files in `navigation_safety_core` 0.10.0 at the time of extraction.
+`HapticCuePattern` was added later (0.1.3) and has no counterpart in that
+0.10.0 baseline. A subsequent `navigation_safety_core` 0.11.0 release
 will depend-on and re-export from this package for ABI-compat, so
 existing consumers of `navigation_safety_core` will not need to
 change imports.

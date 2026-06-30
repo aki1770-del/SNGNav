@@ -26,7 +26,7 @@ routing engine.
 
 ```yaml
 dependencies:
-  routing_bloc: ^0.3.0
+  routing_bloc: ^0.4.3
 ```
 
 ## Quick Start

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3
+
+- Docs: correct the README test-count claim from "200+ unit tests" to the real count (77, confirmed via `dart test`). Update the README install snippet pin to `^0.4.3` to resolve the current version. No code change.
+
 ## 0.4.2
 
 - Docs: correct the dead-reckoning description — the package does constant-velocity extrapolation from the last GPS fix, NOT device-sensor/IMU fusion. No code change.

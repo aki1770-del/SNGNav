@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4 — Doc honesty
+
+- Docs: refresh stale README install pins (`condition_aggregator: ^0.0.3 → ^0.0.5` to match the pubspec dependency; self-pin `^0.1.0 → ^0.1.4`).
+- Docs: correct the unfulfilled `AdvisorySource` promise — README and dartdoc no longer claim a dedicated OpenWeatherMap enum value "will" be added; they now state the adapter reports `AdvisorySource.other` because the umbrella enum has no OWM value (actual behavior; no enum added).
+- Docs: remove the inaccurate "caution-add-only rounding"/"rounds to the lower of the two adjacent CAP buckets" claim from README + mapper dartdoc — `severityFromEventLevel` is a fixed integer→bucket lookup with no runtime rounding step. The conservative cut-point choice is documented accurately.
+- Docs: add an OpenWeatherMap data-attribution note (data © OpenWeatherMap, provided under the Open Database License (ODbL) per the OWM pricing/licensing pages; attribution required), distinct from the BSD-3-Clause source-code license.
+
+No code change.
+
 ## 0.1.3 — 2026-06-14 — Dependency hygiene
 
 - Track latest `condition_aggregator` (`^0.0.4`→`^0.0.5`).

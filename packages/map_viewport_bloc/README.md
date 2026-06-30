@@ -25,7 +25,7 @@ own map renderer.
 
 ```yaml
 dependencies:
-  map_viewport_bloc: ^0.3.0
+  map_viewport_bloc: ^0.4.3
 ```
 
 ## Quick Start

@@ -148,10 +148,14 @@ integrator-overridable at construction time.
 
 This package code is licensed under [BSD 3-Clause](LICENSE).
 
-**MET Norway data is licensed CC-BY-4.0.** Attribution is REQUIRED by
-the license at the consumer-facing surface, not optional. The adapter
-emits the parent interface's verbatim attribution string in the
-`Advisory.description` field:
+**MET Norway data is dual-licensed** (unless otherwise specified) under the
+**Norwegian Licence for Open Government Data (NLOD) 2.0** AND the **Creative
+Commons Attribution 4.0 International (CC BY 4.0)** licence. The
+`locationforecast` product is published by the Norwegian Meteorological
+Institute (MET Norway) under both licences; an integrator may rely on either.
+Attribution is REQUIRED by the licence at the consumer-facing surface, not
+optional. The adapter emits the parent interface's verbatim attribution string
+in the `Advisory.description` field:
 
 > Source: Norwegian Meteorological Institute (Meteorologisk institutt
 > / MET Norway). CC BY 4.0 — api.met.no.

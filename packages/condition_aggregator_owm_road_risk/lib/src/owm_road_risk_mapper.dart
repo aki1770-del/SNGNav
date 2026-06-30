@@ -1,10 +1,11 @@
 /// Mapper from OWM Road Risk alert payloads to the source-neutral
 /// [Advisory] typed event used by the condition_aggregator umbrella.
 ///
-/// Mapping discipline: caution-add-only — when the publisher's level
-/// is ambiguous, severity is mapped to the lower (more conservative)
-/// of the two adjacent CAP buckets so the consumer warns earlier, not
-/// later. Verbatim Article 17 (β) discipline applies to `event` and
+/// Mapping discipline: caution-add-only — the `event_level` bucket
+/// cut-points are chosen conservatively so the consumer warns earlier,
+/// not later (see [OwmRoadRiskMapper.severityFromEventLevel]). The
+/// mapping is a fixed lookup; there is no runtime rounding step.
+/// Verbatim Article 17 (β) discipline applies to `event` and
 /// `description` fields — the publisher's wording is preserved as the
 /// `Advisory.eventClass` and `Advisory.description`.
 library;

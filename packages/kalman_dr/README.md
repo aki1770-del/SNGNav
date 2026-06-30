@@ -27,7 +27,7 @@ Pure Dart, no native dependencies.
 
 ```yaml
 dependencies:
-  kalman_dr: ^0.3.0
+  kalman_dr: ^0.4.3
 ```
 
 ## Quick Start
@@ -167,7 +167,7 @@ rendering instead of freezing.
 
 Display-only position estimates — does not control vehicle systems.
 When accuracy exceeds 500m, the provider stops emitting rather than showing
-unreliable data. Built with automotive-grade test discipline (200+ unit tests),
+unreliable data. Built with automotive-grade test discipline (77 unit tests),
 usable in any Flutter app.
 
 ## Works With

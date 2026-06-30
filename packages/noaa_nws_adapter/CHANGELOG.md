@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 — 2026-06-30 — Doc honesty
+
+- Docs: library dartdoc no longer says `internal SNGNav adapter` /
+  `Phase: explore` / `publish_to: none` / `Not published to pub.dev`;
+  corrected to reflect the published-to-pub.dev state. No code change.
+
 ## 0.0.6 — 2026-06-26
 
 - Docs: dev-first on-ramp — install (`dart pub add`) + run-verified quickstart

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.5
+- docs: correct stale README install pin to current version (no API change).
+
 ## 0.10.4
 
 Conservative-on-uncertain hardening — a non-finite value must never

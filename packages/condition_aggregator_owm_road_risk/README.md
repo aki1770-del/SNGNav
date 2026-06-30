@@ -47,8 +47,8 @@ provider construction time.
 
 ```yaml
 dependencies:
-  condition_aggregator: ^0.0.3
-  condition_aggregator_owm_road_risk: ^0.1.0
+  condition_aggregator: ^0.0.5
+  condition_aggregator_owm_road_risk: ^0.1.4
 ```
 
 ```dart
@@ -104,20 +104,21 @@ final alerts = await client.fetchTrack([
 
 ## Mapping discipline
 
-- **Severity is caution-add-only.** When the publisher's `event_level`
-  is at a bucket boundary, `OwmRoadRiskMapper` rounds to the lower
-  (more conservative) of the two adjacent CAP buckets so the consumer
-  warns earlier, not later.
+- **Severity bucket boundaries are chosen caution-add-only.**
+  `OwmRoadRiskMapper.severityFromEventLevel` maps the publisher's
+  monotonic `event_level` integer directly to a CAP-class
+  `AdvisorySeverity` (`1 → minor`, `2 → moderate`, `3 → severe`,
+  `≥4 → extreme`, `≤0 → unknown`). The bucket cut-points were picked
+  conservatively so the consumer warns earlier rather than later; the
+  mapping itself is a fixed lookup — there is no runtime rounding step.
 - **Verbatim relay (Article 17 β).** The publisher's `event` and
   `description` strings are preserved as `Advisory.eventClass` and
   `Advisory.description`. The adapter does not transform publisher
   wording.
-- **AdvisorySource for 0.1.0.** The umbrella enum
-  `condition_aggregator` 0.0.3 does not yet name OpenWeatherMap as a
-  dedicated source; 0.1.0 reports `AdvisorySource.other`. A forward-
-  additive enum bump in `condition_aggregator` 0.0.4+ will introduce
-  a dedicated value; `AdvisoryAggregator` consumers do not need to
-  change.
+- **AdvisorySource.** The umbrella enum `condition_aggregator` has no
+  dedicated OpenWeatherMap source value, so this adapter reports
+  `AdvisorySource.other`. `AdvisoryAggregator` consumers handle it like
+  any other advisory.
 
 ## Standards mapping
 
@@ -153,6 +154,18 @@ boundary disclosure.
   does not plan routes; the integrator supplies the waypoints.
 - **Not an L2+ automation or handover-class supervision package.**
 
+## Data attribution
+
+This adapter's *code* is BSD-3-Clause (below). The road-risk and weather
+**data** it relays is supplied by **OpenWeatherMap** and is © OpenWeatherMap.
+OpenWeatherMap provides its automated self-service plan data under the
+**Open Database License (ODbL)** (per the OpenWeatherMap pricing/licensing
+pages). Consumers building surfaces over this adapter must attribute
+OpenWeatherMap as the data source and comply with the ODbL and the
+[OpenWeatherMap terms](https://openweathermap.org/terms) and
+[pricing/license terms](https://openweathermap.org/price) for their plan. Data
+license is independent of this package's source-code license.
+
 ## License
 
-BSD-3-Clause. See [`LICENSE`](LICENSE).
+BSD-3-Clause (source code). See [`LICENSE`](LICENSE).

@@ -22,7 +22,7 @@ Separates what to cache (coverage tiers) from how tiles resolve at runtime.
 
 ```yaml
 dependencies:
-  offline_tiles: ^0.4.0
+  offline_tiles: ^0.5.3
 ```
 
 ## Quick Start

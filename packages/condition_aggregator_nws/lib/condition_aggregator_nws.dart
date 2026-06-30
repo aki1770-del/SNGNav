@@ -6,7 +6,7 @@
 /// event at the adapter boundary. Implements `AdvisoryProvider` for use
 /// inside an `AdvisoryAggregator`.
 ///
-/// Phase: explore (`publish_to: none` in pubspec.yaml).
+/// Published to pub.dev.
 ///
 /// Driver-facing loom: when NWS has issued a winter alert for the
 /// driver's current point inside the U.S., the integrator HMI surfaces

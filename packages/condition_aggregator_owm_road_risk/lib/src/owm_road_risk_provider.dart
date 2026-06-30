@@ -151,11 +151,8 @@ class OwmRoadRiskClient {
 
 /// `AdvisoryProvider` implementation backed by [OwmRoadRiskClient].
 ///
-/// Uses [AdvisorySource.other] in 0.1.0 because the umbrella enum
-/// `condition_aggregator` 0.0.3 does not yet name OpenWeatherMap as a
-/// dedicated source; a forward-additive enum bump in
-/// `condition_aggregator` 0.0.4+ will introduce a dedicated value and
-/// this provider will graduate to it without consumer-side breakage.
+/// Uses [AdvisorySource.other] because the umbrella enum
+/// `condition_aggregator` has no dedicated OpenWeatherMap source value.
 class OwmRoadRiskProvider implements AdvisoryProvider {
   final OwmRoadRiskClient _client;
 

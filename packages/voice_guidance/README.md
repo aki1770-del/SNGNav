@@ -24,7 +24,7 @@ stays independent from platform speech APIs.
 
 ```yaml
 dependencies:
-  voice_guidance: ^0.3.0
+  voice_guidance: ^0.7.1
 ```
 
 ## Quick Start

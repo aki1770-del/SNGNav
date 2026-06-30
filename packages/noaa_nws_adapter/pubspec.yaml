@@ -2,7 +2,7 @@ name: noaa_nws_adapter
 description: >-
   NOAA / NWS direct-consume wrapper — smallest-slice GeoJSON client
   for api.weather.gov active winter alerts by point. Pure Dart.
-version: 0.0.6
+version: 0.0.7
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 

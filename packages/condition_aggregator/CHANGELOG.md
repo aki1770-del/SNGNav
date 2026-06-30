@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 — 2026-06-30 — Doc honesty
+
+- Docs: library dartdoc no longer claims `Phase: explore` /
+  `publish_to: none`; corrected to reflect the published-to-pub.dev state
+  (the explore-phase graduation already fired). No code change.
+
 ## 0.0.6 — 2026-06-26 — Dev-first on-ramp
 
 - Docs: dev-first on-ramp — install + run-verified quickstart snippet now lead;

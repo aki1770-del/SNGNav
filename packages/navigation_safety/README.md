@@ -26,7 +26,7 @@ blocking the driver's view or controlling the vehicle.
 
 ```yaml
 dependencies:
-  navigation_safety: ^0.3.0
+  navigation_safety: ^0.9.3
 ```
 
 ## Quick Start
