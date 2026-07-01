@@ -1,5 +1,76 @@
 # Changelog
 
+## 0.0.8 — 2026-07-02 — Out-of-coverage short-circuit (behavior change)
+
+`api.weather.gov` covers the United States **and its territories**. Handed
+an out-of-coverage point (for example Akita, Japan — `39.7167, 140.0983`)
+the endpoint returns **HTTP 400**, which this adapter surfaced as a
+`NoaaNwsHttpException`. That forced every consumer to wrap non-US points in
+a try/catch and pattern-match a 400 just to mean "no US alerts here."
+
+**Behavior change:** `NoaaNwsClient.fetchActiveWinterAlerts` now returns an
+**empty list** for an out-of-coverage point **without constructing or
+sending any HTTP request** — the coordinate never leaves the process and
+`api.weather.gov` never sees it. This makes the package safe for any
+consumer that may pass a worldwide point, and avoids spending the
+publisher's quota on requests that can only 400.
+
+**In-coverage behavior is unchanged (real errors preserved):** for a
+US/territory point a genuine 4xx/5xx from NWS **still throws**
+`NoaaNwsHttpException` — only the out-of-coverage case is short-circuited;
+a real US error is never swallowed. The retry policy, parser, filters, and
+typed area are all unchanged.
+
+### Added
+
+- **`isWithinNwsCoverage(double latitude, double longitude)`** top-level
+  predicate (exported): `true` when the point is inside the NWS service
+  area — the US **and its territories** — approximated by inclusive
+  bounding boxes. Coverage is **not** confined to the Western hemisphere:
+  Guam, the Northern Mariana Islands, and the western Aleutians are
+  positive-longitude US territories, and American Samoa is Southern
+  hemisphere. The boxes:
+  - CONUS: lat 24–50 / lon −125..−66
+  - Alaska (main): lat 51–72 / lon −170..−129
+  - Hawaii: lat 18–23 / lon −161..−154
+  - Puerto Rico + US Virgin Islands: lat 17.5–18.7 / lon −67.5..−64.5
+  - Guam + Northern Mariana Islands: lat 13.0–21.0 / lon 144.5..146.2
+    (positive longitude)
+  - American Samoa: lat −14.5..−11.0 / lon −171.2..−168.0 (Southern
+    hemisphere)
+  - Western Aleutians (west of the antimeridian): lat 51.0–54.0 /
+    lon 172.0..180.0 (positive longitude)
+
+  Boxes are deliberately generous supersets of US land — the only failure
+  that matters is wrongly excluding covered US land, so over-inclusion
+  (which merely costs a lookup that returns no alerts) is the safe
+  direction. The positive-longitude Pacific boxes are latitude-disjoint
+  from Japan (Japan ~24–46°N; Guam box caps at 21°N, Aleutian box starts
+  at 51°N), so no Japanese point is covered. A non-finite coordinate
+  (`NaN`, `±Infinity`) reports out-of-coverage.
+
+### Changed
+
+- `fetchActiveWinterAlerts` short-circuits to an empty list for an
+  out-of-coverage point before any request is issued (see above). This is
+  the only behavior change; the previous 400-throws-on-a-Japan-point
+  behavior is gone for out-of-coverage points.
+
+### Tests
+
+- Out-of-coverage point (Akita) returns empty AND issues **no** HTTP
+  request (proven with a recording fake client that flags any call).
+- In-coverage US point still issues the request and still throws
+  `NoaaNwsHttpException` on a simulated 400 (real-error surfacing
+  preserved), with the request flag asserted true.
+- Coverage-predicate boundaries: CONUS/Alaska/Hawaii interior + inclusive
+  edges covered; covered US territories asserted (Puerto Rico, US Virgin
+  Islands, Guam, Saipan/N. Mariana, western Aleutians, American Samoa);
+  Japan (Akita + Tokyo) and several Japanese points sharing the Guam
+  longitude band (Hokkaido, Sapporo, Okinawa, Yonaguni) asserted NOT
+  covered; just-outside points and non-finite coordinates reported
+  out-of-coverage.
+
 ## 0.0.7 — 2026-06-30 — Doc honesty
 
 - Docs: library dartdoc no longer says `internal SNGNav adapter` /

@@ -82,6 +82,102 @@ const String kDefaultNwsApiBase = 'https://api.weather.gov';
 /// but this smallest-slice client uses GeoJSON only.
 const String kDefaultAcceptHeader = 'application/geo+json';
 
+/// True when `(latitude, longitude)` falls inside the National Weather
+/// Service's service area — the United States and (a subset of) its
+/// territories — so that a call to `api.weather.gov/alerts/active` is
+/// meaningful.
+///
+/// `api.weather.gov` covers the United States **and its territories**
+/// (including some in the Pacific). Handed an out-of-coverage point (for
+/// example a point in Japan) the endpoint returns **HTTP 400**, which this
+/// adapter would otherwise surface as a [NoaaNwsHttpException]. Consumers
+/// use this predicate to decide whether an NWS lookup is worth making at
+/// all; [NoaaNwsClient.fetchActiveWinterAlerts] itself calls it as a
+/// defense-in-depth short-circuit so an out-of-coverage coordinate never
+/// leaves the process (see that method).
+///
+/// Coverage is approximated by axis-aligned bounding boxes. Note that US
+/// coverage is **not** confined to the Western hemisphere — Guam, the
+/// Northern Mariana Islands, and the western Aleutians (west of the
+/// antimeridian) are **positive-longitude** US territories, and American
+/// Samoa is in the **Southern** hemisphere:
+/// - **CONUS** (contiguous 48): latitude 24–50, longitude −125..−66.
+/// - **Alaska** (main): latitude 51–72, longitude −170..−129.
+/// - **Hawaii**: latitude 18–23, longitude −161..−154.
+/// - **Puerto Rico + US Virgin Islands**: latitude 17.5–18.7,
+///   longitude −67.5..−64.5.
+/// - **Guam + Northern Mariana Islands**: latitude 13.0–21.0,
+///   longitude 144.5..146.2 (positive longitude).
+/// - **American Samoa**: latitude −14.5..−11.0, longitude −171.2..−168.0
+///   (Southern hemisphere).
+/// - **Western Aleutians** (west of the antimeridian): latitude 51.0–54.0,
+///   longitude 172.0..180.0 (positive longitude).
+///
+/// Boundaries are inclusive. Because these are coarse rectangles the
+/// predicate is intentionally a **superset** of the true US land area (a
+/// box also contains some open ocean / cross-border land); a point there
+/// still gets a real NWS lookup, which simply returns no winter alerts.
+/// This over-inclusion is deliberate: the only failure that matters is
+/// wrongly EXCLUDING covered US land, so the boxes err generous. The
+/// positive-longitude Pacific boxes are latitude-disjoint from Japan
+/// (Japan spans ~24–46°N; the Guam box caps at 21°N and the Aleutian box
+/// starts at 51°N), so no Japanese point is covered.
+///
+/// A non-finite coordinate (`NaN`, `±Infinity`) compares `false` against
+/// every bound and is therefore reported out-of-coverage.
+bool isWithinNwsCoverage(double latitude, double longitude) {
+  // CONUS (contiguous United States).
+  if (latitude >= 24 &&
+      latitude <= 50 &&
+      longitude >= -125 &&
+      longitude <= -66) {
+    return true;
+  }
+  // Alaska (mainland + eastern Aleutians, all negative longitude).
+  if (latitude >= 51 &&
+      latitude <= 72 &&
+      longitude >= -170 &&
+      longitude <= -129) {
+    return true;
+  }
+  // Hawaii.
+  if (latitude >= 18 &&
+      latitude <= 23 &&
+      longitude >= -161 &&
+      longitude <= -154) {
+    return true;
+  }
+  // Puerto Rico + US Virgin Islands.
+  if (latitude >= 17.5 &&
+      latitude <= 18.7 &&
+      longitude >= -67.5 &&
+      longitude <= -64.5) {
+    return true;
+  }
+  // Guam + Northern Mariana Islands (positive longitude).
+  if (latitude >= 13.0 &&
+      latitude <= 21.0 &&
+      longitude >= 144.5 &&
+      longitude <= 146.2) {
+    return true;
+  }
+  // American Samoa (Southern hemisphere, negative longitude).
+  if (latitude >= -14.5 &&
+      latitude <= -11.0 &&
+      longitude >= -171.2 &&
+      longitude <= -168.0) {
+    return true;
+  }
+  // Western Aleutians west of the antimeridian (positive longitude).
+  if (latitude >= 51.0 &&
+      latitude <= 54.0 &&
+      longitude >= 172.0 &&
+      longitude <= 180.0) {
+    return true;
+  }
+  return false;
+}
+
 /// Thrown when an HTTP call to `api.weather.gov` returns a non-2xx
 /// status code OR fails at the transport layer.
 class NoaaNwsHttpException implements Exception {
@@ -173,6 +269,19 @@ class NoaaNwsClient {
   /// exhaust on 5xx/transport failure.
   /// Throws [NoaaNwsParseException] on GeoJSON shape mismatch.
   ///
+  /// **Out-of-coverage short-circuit** (0.0.8): `api.weather.gov` covers
+  /// only the United States and (some of) its territories. When
+  /// `(latitude, longitude)` is outside [isWithinNwsCoverage] this method
+  /// returns an **empty list WITHOUT constructing or sending any HTTP
+  /// request** — no out-of-coverage coordinate ever reaches the
+  /// publisher. This is defense-in-depth so a consumer that hands the
+  /// adapter a non-US point (for example a point in Japan) gets a clean
+  /// "no advisories here" result instead of the **HTTP 400** the endpoint
+  /// returns for such points (which would otherwise surface as a
+  /// [NoaaNwsHttpException]). **In-coverage behavior is unchanged**: a
+  /// genuine 4xx/5xx for a US point still throws — a real error is never
+  /// swallowed, only the out-of-coverage case is short-circuited.
+  ///
   /// **Retry behavior** (via [retryPolicy]; default is no retry for
   /// 0.0.1 back-compat): on a transient failure (5xx, 408, 429,
   /// transport-class), the call is retried with exponential backoff
@@ -186,6 +295,15 @@ class NoaaNwsClient {
     required double longitude,
     bool actualOnly = true,
   }) async {
+    // Defense-in-depth coverage gate. An out-of-coverage point is
+    // short-circuited to an empty result BEFORE any URI is constructed or
+    // any request is issued, so the coordinate never leaves the process
+    // and the publisher never sees (and 400s on) a non-US point. An
+    // in-coverage point falls through unchanged — a real NWS error for a
+    // US point must still surface.
+    if (!isWithinNwsCoverage(latitude, longitude)) {
+      return <WinterAlert>[];
+    }
     final uri = Uri.parse('$apiBase/alerts/active?point=$latitude,$longitude');
     final response = await _fetchWithRetry(uri);
     final Object? decoded;

@@ -59,4 +59,8 @@ export 'src/winter_alert.dart'
         AlertStatus,
         kNwsWinterEventTypes;
 export 'src/noaa_nws_client.dart'
-    show NoaaNwsClient, NoaaNwsHttpException, NoaaNwsRetryPolicy;
+    show
+        NoaaNwsClient,
+        NoaaNwsHttpException,
+        NoaaNwsRetryPolicy,
+        isWithinNwsCoverage;

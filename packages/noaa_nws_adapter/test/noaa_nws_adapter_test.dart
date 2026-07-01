@@ -402,6 +402,189 @@ void main() {
     });
   });
 
+  group('isWithinNwsCoverage predicate (0.0.8)', () {
+    test('CONUS interior point is covered', () {
+      expect(isWithinNwsCoverage(40.0, -100.0), isTrue); // central plains
+      expect(isWithinNwsCoverage(47.9253, -97.0329), isTrue); // Grand Forks ND
+    });
+
+    test('Alaska interior point is covered', () {
+      expect(isWithinNwsCoverage(64.8378, -147.7164), isTrue); // Fairbanks
+    });
+
+    test('Hawaii interior point is covered', () {
+      expect(isWithinNwsCoverage(21.3069, -157.8583), isTrue); // Honolulu
+    });
+
+    test('CONUS box edges are inclusive', () {
+      expect(isWithinNwsCoverage(24, -125), isTrue); // SW corner
+      expect(isWithinNwsCoverage(50, -66), isTrue); // NE corner
+      expect(isWithinNwsCoverage(24, -66), isTrue);
+      expect(isWithinNwsCoverage(50, -125), isTrue);
+    });
+
+    test('Alaska + Hawaii box edges are inclusive', () {
+      expect(isWithinNwsCoverage(51, -170), isTrue); // AK SW corner
+      expect(isWithinNwsCoverage(72, -129), isTrue); // AK NE corner
+      expect(isWithinNwsCoverage(18, -161), isTrue); // HI SW corner
+      expect(isWithinNwsCoverage(23, -154), isTrue); // HI NE corner
+    });
+
+    test('points just outside every box are not covered', () {
+      expect(isWithinNwsCoverage(23.9, -100.0), isFalse); // just S of CONUS
+      expect(isWithinNwsCoverage(50.1, -100.0), isFalse); // just N of CONUS
+      expect(isWithinNwsCoverage(40.0, -125.1), isFalse); // just W of CONUS
+      expect(isWithinNwsCoverage(40.0, -65.9), isFalse); // just E of CONUS
+      expect(isWithinNwsCoverage(72.1, -150.0), isFalse); // just N of Alaska
+      expect(isWithinNwsCoverage(17.9, -157.0), isFalse); // just S of Hawaii
+    });
+
+    test('US territories are covered (incl. positive-longitude Pacific)', () {
+      // Negative-longitude Caribbean territories.
+      expect(isWithinNwsCoverage(18.2, -66.5), isTrue); // Puerto Rico (San Juan)
+      expect(isWithinNwsCoverage(18.0, -64.8), isTrue); // US Virgin Islands
+      // Positive-longitude Pacific territories.
+      expect(isWithinNwsCoverage(13.45, 144.79), isTrue); // Guam (Hagåtña)
+      expect(isWithinNwsCoverage(15.19, 145.75), isTrue); // Saipan (N. Mariana)
+      expect(isWithinNwsCoverage(52.9, 173.2), isTrue); // W. Aleutians (Attu/Adak-west)
+      // Southern-hemisphere territory.
+      expect(isWithinNwsCoverage(-14.3, -170.7), isTrue); // American Samoa
+    });
+
+    test('Japan (Akita) and Tokyo are NOT covered', () {
+      expect(isWithinNwsCoverage(39.7167, 140.0983), isFalse); // Akita
+      expect(isWithinNwsCoverage(35.6762, 139.6503), isFalse); // Tokyo
+    });
+
+    test('no Japanese point slips into the positive-longitude US boxes', () {
+      // Japan is not a US territory and must fall in NO box, even though it
+      // shares a longitude band with the Guam/Mariana box. The boxes are
+      // latitude-disjoint from Japan (Japan ~24–46°N; Guam box caps at 21°N,
+      // Aleutian box starts at 51°N), so the shared longitude never matters.
+      expect(isWithinNwsCoverage(45.0, 145.0), isFalse); // NE Hokkaido (Nemuro)
+      expect(isWithinNwsCoverage(43.06, 141.35), isFalse); // Sapporo
+      expect(isWithinNwsCoverage(26.2, 127.7), isFalse); // Naha, Okinawa
+      expect(isWithinNwsCoverage(24.45, 122.9), isFalse); // Yonaguni (SW-most)
+      expect(isWithinNwsCoverage(40.0, 140.0), isFalse); // CONUS-lat, Japan-lon
+    });
+
+    test('non-finite coordinates report out-of-coverage', () {
+      expect(isWithinNwsCoverage(double.nan, -100.0), isFalse);
+      expect(isWithinNwsCoverage(40.0, double.nan), isFalse);
+      expect(isWithinNwsCoverage(double.infinity, -100.0), isFalse);
+      expect(isWithinNwsCoverage(40.0, double.negativeInfinity), isFalse);
+    });
+  });
+
+  group('fetchActiveWinterAlerts out-of-coverage short-circuit (0.0.8)', () {
+    test(
+      'out-of-coverage point (Akita) returns EMPTY and makes NO HTTP request',
+      () async {
+        // A recording fake: the ONLY way this handler runs is if the client
+        // actually issued a request. We flag it and fail the test if it did.
+        var requestIssued = false;
+        final mock = MockClient((req) async {
+          requestIssued = true;
+          // If we ever reach here, mimic the real endpoint's HTTP 400 for a
+          // non-US point — which is exactly what we are proving does NOT
+          // happen for an out-of-coverage coordinate.
+          return http.Response('bad request', 400);
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+        );
+        final out = await c.fetchActiveWinterAlerts(
+          latitude: 39.7167, // Akita, Japan — outside NWS coverage
+          longitude: 140.0983,
+        );
+        expect(out, isEmpty);
+        expect(
+          requestIssued,
+          isFalse,
+          reason:
+              'an out-of-coverage point must NOT send a request to '
+              'api.weather.gov — the coordinate must never leave the process',
+        );
+        c.close();
+      },
+    );
+
+    test(
+      'in-coverage US point STILL issues the request and STILL throws on 4xx '
+      '(real-error surfacing preserved)',
+      () async {
+        var requestIssued = false;
+        final mock = MockClient((req) async {
+          requestIssued = true;
+          return http.Response('bad request', 400);
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+        );
+        await expectLater(
+          c.fetchActiveWinterAlerts(
+            latitude: 47.9253, // Grand Forks ND — in coverage
+            longitude: -97.0329,
+          ),
+          throwsA(
+            isA<NoaaNwsHttpException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              400,
+            ),
+          ),
+        );
+        expect(
+          requestIssued,
+          isTrue,
+          reason:
+              'an in-coverage point must still issue the request so a genuine '
+              'NWS error surfaces (only out-of-coverage is short-circuited)',
+        );
+        c.close();
+      },
+    );
+
+    test(
+      'in-coverage US point with alerts still returns them (unchanged path)',
+      () async {
+        var requestIssued = false;
+        final mock = MockClient((req) async {
+          requestIssued = true;
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'type': 'FeatureCollection',
+              'features': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'properties': <String, dynamic>{
+                    'event': 'Blizzard Warning',
+                    'severity': 'Extreme',
+                    'status': 'Actual',
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        });
+        final c = NoaaNwsClient(
+          userAgent: '(sngnav.example, contact@sngnav.example)',
+          client: mock,
+        );
+        final out = await c.fetchActiveWinterAlerts(
+          latitude: 47.9,
+          longitude: -97.0,
+        );
+        expect(requestIssued, isTrue);
+        expect(out, hasLength(1));
+        expect(out.first.event, 'Blizzard Warning');
+        c.close();
+      },
+    );
+  });
+
   _retryGroup();
 
   group('Exception types', () {
