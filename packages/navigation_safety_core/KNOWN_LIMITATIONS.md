@@ -582,8 +582,9 @@ temperature inputs. The factory is purely additive: the existing
 `forProfile()` factory is unchanged, and a null context delegates to
 `forProfile()`. No existing call site is affected.
 
-The new factory composes three formulas, each in
-`lib/src/calibration/`:
+The new factory composes three formulas, provided since 0.11.0 by the
+standalone `navigation_safety_calibration` dependency (re-exported from
+core's barrel; formerly vendored under `lib/src/calibration/`):
 
 ### Speed-dependent visibility floor (`speed_dependent_visibility.dart`)
 

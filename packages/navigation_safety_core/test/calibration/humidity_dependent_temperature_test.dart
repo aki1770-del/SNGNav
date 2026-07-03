@@ -1,4 +1,4 @@
-import 'package:navigation_safety_core/src/calibration/humidity_dependent_temperature.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
 void main() {

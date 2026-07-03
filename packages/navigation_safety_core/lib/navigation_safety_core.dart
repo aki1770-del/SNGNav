@@ -18,6 +18,15 @@
 /// cross-reference.
 library;
 
+// Calibration primitives now live in the standalone
+// `navigation_safety_calibration` package (the single source of truth
+// for the meteorological / kinematic design-default baseline). Core
+// depends on it and re-exports it here so existing consumers keep
+// seeing these symbols via `package:navigation_safety_core` — the
+// depend-on + re-export design the calibration package's own docs
+// anticipated (0.11.0; replaces core's former internal byte-copy).
+export 'package:navigation_safety_calibration/navigation_safety_calibration.dart';
+
 export 'src/alert_density_throttle.dart';
 export 'src/alert_explainer.dart';
 export 'src/alert_severity.dart';

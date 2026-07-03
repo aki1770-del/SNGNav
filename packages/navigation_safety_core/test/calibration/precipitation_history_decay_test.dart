@@ -1,4 +1,4 @@
-import 'package:navigation_safety_core/src/calibration/precipitation_history_decay.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
 void main() {

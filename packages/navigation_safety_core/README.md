@@ -25,7 +25,7 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  navigation_safety_core: ^0.10.5
+  navigation_safety_core: ^0.11.0
 ```
 
 Then import:
@@ -160,28 +160,43 @@ Two runtime helpers ship alongside the threshold config:
 
 ## Calibration formulas
 
-Three context-dependent calibrations live in
-`lib/src/calibration/`:
+Three context-dependent calibrations are provided by the standalone
+[`navigation_safety_calibration`](https://pub.dev/packages/navigation_safety_calibration)
+package (the single source of truth for the meteorological / kinematic
+design-default baseline). Since 0.11.0 core **depends on** that package
+and **re-exports** it from the barrel, so the three functions are
+available directly via
+`package:navigation_safety_core/navigation_safety_core.dart` — you do
+not need a separate import:
 
-- **Speed-dependent visibility** (`speed_dependent_visibility.dart`)
+- **Speed-dependent visibility** (`computeSpeedAdjustedVisibilityMeters`)
   — at higher speed the warning visibility floor must cover reaction
   time + braking distance; the per-profile reaction-time default is
   used to translate a live speed sample into an additional visibility
   margin.
 - **Humidity-dependent effective temperature**
-  (`humidity_dependent_temperature.dart`) — black ice forms at
+  (`computeEffectiveTemperatureCelsius`) — black ice forms at
   road-surface temperature ≤ 0 °C, which can be several degrees below
   ambient when humidity is high; the dew-point-aware effective
   temperature replaces ambient when it crosses the warning threshold
   earlier.
 - **Time-since-precipitation surface moisture**
-  (`precipitation_history_decay.dart`) — surface moisture decays
+  (`computeSurfaceMoistureFraction`) — surface moisture decays
   exponentially after the last rain or snowfall; the residual moisture
   fraction adds a margin to the visibility floor proportional to
   how wet the road still is.
 
-Per-formula citations live in each calibration module's header
-comment.
+Per-formula citations live in each calibration source file's header
+comment in the `navigation_safety_calibration` package.
+
+**Determinism note (safety-class).** These constants are the worst-case
+baseline HER relies on (Magnus black-ice constants; the surface-moisture
+half-life; the braking-distance default; the per-profile visibility
+floor). The calibration package is **caution-add-only — the per-profile
+floor never lowers** across its releases. Core pins it at `^0.1.2`;
+integrators shipping a product SHOULD commit a `pubspec.lock` so the
+exact calibration version is reproducible across builds rather than
+floating within the `0.1.x` range.
 
 ## Standards mapping
 

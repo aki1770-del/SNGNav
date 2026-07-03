@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.11.0
+
+Calibration single-source-of-truth — depend-on + re-export.
+
+- The three calibration primitives (`computeEffectiveTemperatureCelsius`,
+  `computeSurfaceMoistureFraction`, `computeSpeedAdjustedVisibilityMeters`)
+  are no longer an internal byte-copy in `lib/src/calibration/`. Core now
+  **depends on `navigation_safety_calibration` (^0.1.2)** and **re-exports**
+  it from the package barrel, so the standalone package is the single
+  source of truth for the meteorological / kinematic design-default
+  baseline — kept in sync by a real dependency edge, not by hand.
+- **Non-breaking / additive:** these functions were previously private to
+  core (used only internally by `NavigationSafetyConfig`); the re-export
+  now surfaces them publicly via
+  `package:navigation_safety_core/navigation_safety_core.dart` in addition
+  to their existing home in `package:navigation_safety_calibration`. No
+  existing symbol changes or is removed. Behavior is identical (the copies
+  were byte-identical at the time of consolidation).
+- This fulfills the depend-on + re-export design the calibration package's
+  own docs anticipated at extraction time.
+
 ## 0.10.5
 - docs: correct stale README install pin to current version (no API change).
 
