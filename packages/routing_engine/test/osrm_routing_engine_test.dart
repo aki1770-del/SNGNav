@@ -310,6 +310,67 @@ void main() {
         'Depart on Route 153',
       );
     });
+
+    // Mutation guard: reverting utf8.decode(bodyBytes) → response.body makes
+    // THIS test fail (a charset-LESS server + a Japanese street name is the
+    // exact case the fix targets; response.body would decode it as Latin-1).
+    test('Japanese street names survive a charset-less server (UTF-8 guard)', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: MockClient((request) async {
+          return http.Response.bytes(
+            utf8.encode(jsonEncode({
+              'code': 'Ok',
+              'routes': [
+                {
+                  'geometry': '_p~iF~ps|U',
+                  'distance': 1000.0,
+                  'duration': 60.0,
+                  'legs': [
+                    {
+                      'steps': [_step(name: '国道153号', type: 'depart')],
+                    },
+                  ],
+                },
+              ],
+            })),
+            200,
+            // Deliberately NO content-type at all: package:http defaults
+            // JSON-typed bodies to UTF-8 since 1.x, but a missing/mis-declared
+            // content-type still decodes response.body as Latin-1 and mangles
+            // the kanji — the real-world misconfigured-proxy case.
+            headers: {},
+          );
+        }),
+      );
+      final result = await engine.calculateRoute(
+        RouteRequest(origin: _nagoya, destination: _okazaki),
+      );
+      await engine.dispose();
+      expect(result.maneuvers.first.instruction, '国道153号を出発');
+    });
+
+    // Mutation guard: replacing the engine's roundaboutExit threading with
+    // null makes THIS test fail — the exit ordinal is safety-relevant (a
+    // multi-exit roundabout in low visibility needs the ordinal), and the
+    // localizer unit test alone cannot prove the OSRM json→instruction wiring.
+    test('OSRM maneuver.exit reaches the ja instruction (exit-ordinal guard)', () async {
+      final step = _step(name: '国道153号', type: 'roundabout');
+      (step['maneuver'] as Map<String, dynamic>)['exit'] = 2;
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: _osrmClient(steps: [step]),
+      );
+      final result = await engine.calculateRoute(
+        RouteRequest(origin: _nagoya, destination: _okazaki),
+      );
+      await engine.dispose();
+      expect(result.maneuvers.first.instruction, contains('2番目の出口'));
+      expect(
+        result.maneuvers.first.instruction,
+        'ロータリーに入り2番目の出口で国道153号方面へ進む',
+      );
+    });
   });
 
   group('OsrmRoutingEngine — polyline5 decoding', () {

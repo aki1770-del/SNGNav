@@ -13,8 +13,11 @@ server today and a local server tomorrow — same code, same interface.
 ## Features
 
 - **Abstract interface**: `RoutingEngine` defines `calculateRoute`, `isAvailable`, `info`, `dispose`
-- **OSRM engine**: sub-frame latency (4.9ms for 10km), polyline5 decoding
-- **Valhalla engine**: multi-modal routing, isochrone support, Japanese language
+- **OSRM engine**: sub-frame latency (4.9ms for 10km), polyline5 decoding, client-side
+  localized instructions honoring `RouteRequest.language` — Japanese (`ja-JP`, the
+  default) natively; other locales degrade gracefully to the engine's English
+- **Valhalla engine**: multi-modal routing, isochrone support, server-side localized
+  instructions (forwards `RouteRequest.language`)
 - **Engine identity**: `EngineInfo` reports name, version, and query latency
 - **Build-time selection**: swap engines without code changes
 
@@ -22,7 +25,7 @@ server today and a local server tomorrow — same code, same interface.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.4.2
+  routing_engine: ^0.5.0
   latlong2: ^0.9.1          # for LatLng coordinates
 ```
 

@@ -15,11 +15,11 @@ dependencies:
   latlong2: ^0.9.1
   driving_weather: ^0.3.0
   map_viewport_bloc: ^0.3.0
-  navigation_safety: ^0.5.0
+  navigation_safety: ^0.9.0
   offline_tiles: ^0.4.0
-  routing_bloc: ^0.3.0
-  routing_engine: ^0.3.0
-  voice_guidance: ^0.3.0
+  routing_bloc: ^0.4.4
+  routing_engine: ^0.5.0
+  voice_guidance: ^0.7.2
 
 dev_dependencies:
   flutter_test:

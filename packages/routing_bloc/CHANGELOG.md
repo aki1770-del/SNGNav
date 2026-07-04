@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.4
+
+- Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can
+  take `routing_engine` 0.5.0 (language-honoring turn-by-turn narration)
+  alongside `routing_bloc`. No library code change (lib/ is byte-identical
+  to 0.4.3).
+
+
 ## 0.4.3
 - docs: correct stale README install pin to current version (no API change).
 

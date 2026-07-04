@@ -14,7 +14,7 @@
 /// - [speedMps] — current vehicle speed in metres per second; when
 ///   non-null, the warning visibility floor adjusts to ensure reaction
 ///   time + braking distance fits the threshold.
-/// - [humidityRH] — relative humidity as a fraction in `[0.0, 1.0]`;
+/// - [humidityRH] — relative humidity as a fraction in `(0.0, 1.0]`;
 ///   combined with [ambientTempCelsius] adjusts the warning temperature
 ///   for dew-point-driven black-ice risk.
 /// - [timeSincePrecipitation] — duration since the last observed
@@ -51,7 +51,7 @@ class DrivingContext extends Equatable {
   /// threshold falls back to the per-profile baseline.
   final double? speedMps;
 
-  /// Relative humidity as a fraction in `[0.0, 1.0]` (i.e. `0.85` for
+  /// Relative humidity as a fraction in `(0.0, 1.0]` (i.e. `0.85` for
   /// 85% RH). `null` means humidity is unknown; the temperature
   /// threshold falls back to the per-profile baseline.
   ///
@@ -94,7 +94,7 @@ class DrivingContext extends Equatable {
   /// for any input you do not have; the factory will fall back to the
   /// per-profile baseline for that dimension.
   ///
-  /// NOTE the unit of [humidityRH]: a FRACTION in `[0.0, 1.0]`. Weather
+  /// NOTE the unit of [humidityRH]: a FRACTION in `(0.0, 1.0]`. Weather
   /// APIs and the `pretrip_*` packages carry relative humidity in
   /// PERCENT (`95.0`) — passing percent here throws downstream in the
   /// calibration. If your source is percent, use
@@ -111,11 +111,23 @@ class DrivingContext extends Equatable {
   /// (`95.0` for 95% RH) — the meteorological convention used by
   /// weather APIs (e.g. MET Norway `relative_humidity`) and by the
   /// `pretrip_*` forecast models. Converts to the fraction contract of
-  /// [humidityRH] internally, so percent-sourced integrations have a
-  /// door that cannot be wired wrong.
+  /// [humidityRH] internally.
   ///
-  /// Throws [ArgumentError] if [humidityPercent] is outside `(0, 100]`
-  /// or is not finite.
+  /// Handles the dirty values real feeds deliver, caution-consistently:
+  ///
+  /// - `1.0 <= p <= 100.0` — converted to the fraction (`95.0` → `0.95`).
+  /// - `100.0 < p <= 105.0` — **saturated to `100.0`**: supersaturated RH
+  ///   slightly above 100% is a documented NWP/sensor reality at peak
+  ///   icing and freezing fog; saturated air = maximum caution, so the
+  ///   reading is kept, not crashed on.
+  /// - `p <= 0.0` — treated as **unknown** (`humidityRH: null`): `0.0` is
+  ///   a common missing-data sentinel; no lift, no crash.
+  /// - `0.0 < p < 1.0` — **rejected** ([ArgumentError]): sub-1% RH is
+  ///   almost certainly a FRACTION mis-wired into the percent door (the
+  ///   exact confusion this factory exists to prevent — `0.95` here would
+  ///   silently mean 0.95% RH). Pass fractions to [humidityRH] directly.
+  /// - `p > 105.0`, `NaN`, `±inf` — **rejected** ([ArgumentError]): not a
+  ///   plausible RH reading; surface the feed bug instead of guessing.
   factory DrivingContext.withPercentHumidity({
     double? speedMps,
     double? humidityPercent,
@@ -124,17 +136,30 @@ class DrivingContext extends Equatable {
     String? vehicleClassToken,
   }) {
     double? fraction;
-    if (humidityPercent != null) {
-      if (!humidityPercent.isFinite ||
-          humidityPercent <= 0.0 ||
-          humidityPercent > 100.0) {
+    final p = humidityPercent;
+    if (p != null) {
+      if (!p.isFinite || p > 105.0) {
         throw ArgumentError.value(
-          humidityPercent,
+          p,
           'humidityPercent',
-          'must lie in (0, 100]',
+          'not a plausible RH percent reading (finite, <= 105.0 expected)',
         );
       }
-      fraction = humidityPercent / 100.0;
+      if (p > 0.0 && p < 1.0) {
+        throw ArgumentError.value(
+          p,
+          'humidityPercent',
+          'sub-1% RH is almost certainly a FRACTION mis-wired into the '
+              'percent door; pass fractions to DrivingContext(humidityRH: ...)',
+        );
+      }
+      if (p <= 0.0) {
+        fraction = null; // missing-data sentinel -> unknown, no lift, no crash
+      } else if (p > 100.0) {
+        fraction = 1.0; // supersaturation -> saturated air, maximum caution
+      } else {
+        fraction = p / 100.0;
+      }
     }
     return DrivingContext(
       speedMps: speedMps,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.2
+
+- Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so voice guidance
+  can speak `routing_engine` 0.5.0's language-honoring instructions (Japanese
+  by default) — the voice lane must not be the link that blocks the narration
+  from reaching the driver. No library code change (lib/ is byte-identical
+  to 0.7.1).
+
+
 ## 0.7.1
 - docs: correct stale README install pin to current version (no API change).
 

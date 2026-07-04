@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.11.1
+
+The percent door — a correct home for percent-sourced humidity readings.
+
+- **Added `DrivingContext.withPercentHumidity(humidityPercent: 95.0)`** —
+  weather APIs (e.g. MET Norway `relative_humidity`) and forecast models
+  carry relative humidity in PERCENT, while `DrivingContext.humidityRH` is a
+  FRACTION in `(0.0, 1.0]` (and the downstream calibration throws on
+  percent). The factory converts to the fraction contract and handles the
+  dirty values real feeds deliver, caution-consistently:
+  `1 <= p <= 100` converts; `100 < p <= 105` **saturates to 100%**
+  (supersaturated RH is a documented NWP/sensor reality at peak icing and
+  freezing fog — saturated air is maximum caution, so the reading is kept,
+  never crashed on); `p <= 0` is treated as **unknown** (the common
+  missing-data sentinel; no lift, no crash); `0 < p < 1` is **rejected** as
+  an almost-certain mis-wired fraction; `p > 105`/`NaN`/`±inf` are
+  **rejected** (surface the feed bug). Additive; no existing API changes.
+  Raw feed values outside these rules must be sanitized by the caller.
+- Unit-warning docs on `humidityRH` cross-referencing the percent door; the
+  documented `humidityRH` range is corrected to `(0.0, 1.0]` (the shipped
+  calibration has always rejected `0.0` — the previous `[0.0, 1.0]` doc
+  overstated the left edge).
+- Portability hardening: an explicit `.toInt()` where `int.clamp`'s declared
+  `num` return is assigned to an `int` in the humidity-lift path (no behavior
+  change on current SDKs; verified the published 0.11.0 compiles and runs
+  clean in a Flutter consumer — this is hardening, not a bug fix).
+
+
 ## 0.11.0
 
 Calibration single-source-of-truth — depend-on + re-export.

@@ -92,15 +92,23 @@ class ValhallaRoutingEngine implements RoutingEngine {
 
       stopwatch.stop();
 
+      // Decode bytes as UTF-8 explicitly: response.body honors the
+      // content-type charset header and falls back to Latin-1 when a server
+      // omits it. Valhalla returns fully-localized instruction text (e.g.
+      // Japanese via directions_options.language), so a charset-less server
+      // would mojibake the whole narration — a larger exposure than OSRM's
+      // street names.
+      final bodyText = utf8.decode(response.bodyBytes);
+
       if (response.statusCode != 200) {
-        final errorBody = _tryParseJson(response.body);
-        final errorMsg = errorBody?['error'] ?? response.body;
+        final errorBody = _tryParseJson(bodyText);
+        final errorMsg = errorBody?['error'] ?? bodyText;
         throw RoutingException(
           'Valhalla route failed (${response.statusCode}): $errorMsg',
         );
       }
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = jsonDecode(bodyText) as Map<String, dynamic>;
       return _parseRouteResponse(json, stopwatch.elapsed);
     } on RoutingException {
       rethrow;

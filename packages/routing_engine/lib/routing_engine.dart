@@ -3,8 +3,11 @@
 /// Provides an abstract [RoutingEngine] interface that decouples routing
 /// consumers from specific engine implementations. Includes two concrete
 /// engines:
-/// - [OsrmRoutingEngine]: Sub-frame latency, optimised for real-time rerouting
-/// - [ValhallaRoutingEngine]: Multi-modal routing, isochrones, Japanese support
+/// - [OsrmRoutingEngine]: Sub-frame latency, optimised for real-time rerouting;
+///   localizes instructions client-side per `RouteRequest.language` (Japanese —
+///   the default — natively; unknown locales degrade to the engine's English)
+/// - [ValhallaRoutingEngine]: Multi-modal routing, isochrones; localizes
+///   server-side by forwarding `RouteRequest.language`
 ///
 /// ```dart
 /// import 'package:routing_engine/routing_engine.dart';

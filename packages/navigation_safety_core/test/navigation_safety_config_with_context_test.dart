@@ -38,7 +38,8 @@ void main() {
       );
     });
 
-    test('humidity + ambient context can raise warning temperature', () {
+    test('humidity + ambient context RAISES the warning temperature '
+        '(strict + value-pinned; deleting the lift branch fails this)', () {
       final base = NavigationSafetyConfig.forProfile(
         DriverProfile.snowZoneExperienced,
       );
@@ -46,11 +47,17 @@ void main() {
         DriverProfile.snowZoneExperienced,
         context: const DrivingContext(humidityRH: 0.4, ambientTempCelsius: 1.0),
       );
-      // Effective at 40% RH and 1C ambient drops below freezing → lift expected.
+      // Effective at 40% RH and 1C ambient drops below freezing → the lift
+      // FIRES. Strict > (a >= here tolerated silent deletion of the lift).
       expect(
         adj.warningTemperatureCelsius,
-        greaterThanOrEqualTo(base.warningTemperatureCelsius),
+        greaterThan(base.warningTemperatureCelsius),
       );
+      // Value-pinned at these inputs (probe-measured, not assumed): 40% RH
+      // at 1degC gives a deep dew-point depression -> the lift hits its
+      // clamp maximum. base 0degC -> lifted 10degC.
+      expect(base.warningTemperatureCelsius, 0);
+      expect(adj.warningTemperatureCelsius, 10);
     });
 
     test('precipitation context can raise warning visibility', () {

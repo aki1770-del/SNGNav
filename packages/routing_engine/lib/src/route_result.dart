@@ -117,6 +117,21 @@ class RouteRequest extends Equatable {
   final LatLng origin;
   final LatLng destination;
   final String costing; // 'auto', 'bicycle', 'pedestrian', 'truck'
+
+  /// BCP-47-ish language tag for the turn-by-turn instructions
+  /// (default `'ja-JP'`).
+  ///
+  /// Per-engine localization contract:
+  /// - **OSRM**: localized CLIENT-side. Japanese (`ja`/`ja-JP`/`ja_JP`) is
+  ///   produced natively; any other tag degrades gracefully to the engine's
+  ///   own English phrasing (never a wrong instruction, never a throw).
+  /// - **Valhalla**: the tag is forwarded SERVER-side
+  ///   (`directions_options.language`); supported locales are the Valhalla
+  ///   server's.
+  ///
+  /// Consumers switching engines should expect this asymmetry: a tag like
+  /// `'de-DE'` yields English on the OSRM path but German (if the server
+  /// supports it) on the Valhalla path.
   final String language;
 
   const RouteRequest({

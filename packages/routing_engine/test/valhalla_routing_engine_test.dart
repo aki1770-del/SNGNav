@@ -528,5 +528,50 @@ void main() {
 
       await engine.dispose();
     });
+
+    // Mutation guard: reverting utf8.decode(bodyBytes) → response.body makes
+    // THIS test fail. Valhalla returns fully-localized instruction text
+    // (Japanese via directions_options.language), so a charset-LESS server
+    // mojibakes the entire narration — a larger exposure than OSRM's
+    // street names.
+    test('Japanese instructions survive a charset-less server (UTF-8 guard)',
+        () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: MockClient((request) async {
+          return http.Response.bytes(
+            utf8.encode(jsonEncode({
+              'trip': {
+                'summary': {'length': 5.0, 'time': 300},
+                'legs': [
+                  {
+                    'shape': 'o}@o}@o}@o}@',
+                    'maneuvers': [
+                      {
+                        'instruction': '国道153号を直進します。',
+                        'type': 8,
+                        'length': 5.0,
+                        'time': 300,
+                        'begin_shape_index': 0,
+                      },
+                    ],
+                  },
+                ],
+              },
+            })),
+            200,
+            // Deliberately NO content-type: a missing/mis-declared type
+            // decodes response.body as Latin-1 (http defaults JSON to UTF-8
+            // only when the type says json) — the misconfigured-proxy case.
+            headers: {},
+          );
+        }),
+      );
+
+      final result = await engine.calculateRoute(_request);
+      expect(result.maneuvers.first.instruction, '国道153号を直進します。');
+
+      await engine.dispose();
+    });
   });
 }

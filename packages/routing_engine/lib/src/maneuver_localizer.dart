@@ -11,9 +11,11 @@
 /// instruction is worse for a driver than an honest English one.
 ///
 /// Keyed on the engine-agnostic canonical maneuver type (see the OSRM engine's
-/// type mapping): depart, arrive, straight, left, right, slight_left,
-/// slight_right, sharp_left, sharp_right, u_turn_left, u_turn_right,
-/// roundabout_enter, merge, ramp_left, ramp_right.
+/// type mapping): depart, arrive, straight, proceed (unknown geometry —
+/// defers to the road), left, right, slight_left, slight_right, sharp_left,
+/// sharp_right, u_turn_left (OSRM's side-less 'uturn' maps here; u_turn_right
+/// is accepted for engine-agnostic callers), roundabout_enter,
+/// roundabout_exit, merge, ramp_left, ramp_right, ramp (side-less).
 library;
 
 class ManeuverLocalizer {

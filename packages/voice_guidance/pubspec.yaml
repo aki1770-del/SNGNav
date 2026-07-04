@@ -2,7 +2,7 @@ name: voice_guidance
 description: >-
   Platform-agnostic voice guidance for navigation apps. Works on
   mobile (flutter_tts), Linux (spd-say), and silently in CI.
-version: 0.7.1
+version: 0.7.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -24,7 +24,7 @@ dependencies:
   navigation_safety: ^0.9.0
   navigation_safety_core: ^0.10.0
   navigation_safety_enums: ^0.1.3
-  routing_engine: ^0.4.0
+  routing_engine: '>=0.4.0 <0.6.0'
 
 dev_dependencies:
   flutter_test:
