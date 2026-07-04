@@ -1,0 +1,20 @@
+# known_consumers.list — the G8 reachability registry.
+#
+# Every KNOWN consumer of the catalog, one per line:
+#   <consumer-name>\t<source>
+# where <source> is:
+#   local:<repo-relative pubspec path>     (our own integrator apps/examples)
+#   github:<owner/repo>:<pubspec path>     (verified external adopters)
+#
+# WHY (the 2026-07-04 vision-alignment audit): landing is not reception. The
+# unit published 0.4.x while its ONE verified adopter pinned ^0.3.0 and its
+# OWN reference app pinned ^0.3.0 — nobody could receive what we built, and
+# no loom measured it. G8 asks, at every publish: "which known consumer pins
+# actually receive this release?" A LEFT-BEHIND consumer demands an explicit
+# serve-decision (lift the pin / backport / recorded restraint) — never
+# silence.
+#
+# Add a line whenever a real consumer is verified (downstream-pull sensor,
+# adoption ledger, or a maintainer telling us). Remove only with a ledger note.
+example-app	local:example/pubspec.yaml
+jitreq-drunkenv2	github:Jitreq/drunkenv2:pubspec.yaml

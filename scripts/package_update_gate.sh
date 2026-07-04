@@ -729,6 +729,136 @@ fi
 if [[ "${1:-}" == "--coherence-only" ]]; then coherence; exit "$fail"; fi
 if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  |  --provenance-sweep  |  --g6 <pkg>" >&2; exit 2; fi
 
+# ---------------------------------------------------------------------------
+# G8 reachability — which KNOWN consumers actually receive this release?
+#
+# WHY (2026-07-04 vision-alignment audit): landing is not reception. The unit
+# published 0.4.x while its ONE verified adopter pinned ^0.3.0 and its OWN
+# reference app pinned ^0.3.0 — nobody could receive what we built, and no
+# loom measured it ("repo green" had quietly become "done"). G8 reads
+# scripts/known_consumers.list and, for each staged release, reports per
+# consumer:
+#   RECEIVES     the consumer's pin admits the staged version
+#   LEFT-BEHIND  the pin excludes it -> FAIL unless an EXPLICIT serve-decision
+#                is recorded: a `reach-disposition(<consumer>): ...` line in
+#                the CHANGELOG's top entry, or G8_ACCEPT="<pkg>:<consumer>,..."
+#   NO-DEP       the consumer does not depend on this package (info)
+#   SKIP-NET     remote pubspec unreachable (never block offline; mirrors G6)
+#   UNPARSED     constraint syntax not understood -> WARN, human judges
+# Honest scope: reads DIRECT one-line dependency constraints only (caret,
+# ">=A <B", exact, any); transitive reachability is G7's business; a consumer
+# using unusual pubspec formatting yields UNPARSED, never a silent pass.
+
+ver_cmp() { # A B -> 0 eq, 1 gt, 2 lt (numeric triplets; prerelease stripped)
+  local i; local -a a b
+  read -ra a <<< "${1//./ }"; read -ra b <<< "${2//./ }"
+  for i in 0 1 2; do
+    local x="${a[i]:-0}" y="${b[i]:-0}"
+    x="${x%%[-+]*}"; y="${y%%[-+]*}"
+    [[ "$x" =~ ^[0-9]+$ && "$y" =~ ^[0-9]+$ ]] || return 3   # non-numeric -> caller treats as unparsed
+    if ((10#$x > 10#$y)); then return 1; fi
+    if ((10#$x < 10#$y)); then return 2; fi
+  done
+  return 0
+}
+ver_ge() { ver_cmp "$1" "$2" && return 0 || { [[ $? -eq 1 ]] && return 0 || return 1; }; }
+ver_lt() { ver_cmp "$1" "$2" && return 1 || { [[ $? -eq 2 ]] && return 0 || return 1; }; }
+
+constraint_admits() { # <constraint> <version> -> 0 yes, 1 no, 2 unparsed
+  local c="$1" v="$2"
+  c="${c//\'/}"; c="${c//\"/}"; c="$(echo "$c" | xargs)"
+  if [[ "$c" == ^* ]]; then
+    local base="${c#^}" major upper minor
+    major="${base%%.*}"
+    if [[ "$major" == 0 ]]; then
+      minor="${base#*.}"; minor="${minor%%.*}"
+      upper="0.$((minor+1)).0"
+    else
+      upper="$((major+1)).0.0"
+    fi
+    if ver_ge "$v" "$base" && ver_lt "$v" "$upper"; then return 0; else return 1; fi
+  fi
+  if [[ "$c" =~ ^\>=([0-9][^[:space:]]*)[[:space:]]+\<([0-9][^[:space:]]*)$ ]]; then
+    if ver_ge "$v" "${BASH_REMATCH[1]}" && ver_lt "$v" "${BASH_REMATCH[2]}"; then return 0; else return 1; fi
+  fi
+  if [[ "$c" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    [[ "$c" == "$v" ]] && return 0 || return 1
+  fi
+  if [[ "$c" == "any" || -z "$c" ]]; then return 0; fi
+  return 2
+}
+
+# README install-pin honesty — the pub.dev landing page must not instruct an
+# install that can never receive the release it ships in. Second occurrence of
+# this class (0.4.2 was cut to fix the first) -> deterministic gate per §3
+# repeat-pattern. PASS when README has no pin, or its constraint ADMITS the
+# staged version; FAIL when the pin excludes the very release carrying it.
+readme_pin_gate() { # <pkgdir> <name> <staged-version>
+  local pkg="$1" name="$2" ver="$3"
+  [[ -f "$pkg/README.md" ]] || { printf '    %-14s SKIP (no README)\n' "G9 readme-pin"; return; }
+  local pins bad=0 line c r
+  pins="$(grep -E "^[[:space:]]+$name: *[\^'\">=0-9]" "$pkg/README.md" || true)"
+  if [[ -z "$pins" ]]; then printf '    %-14s SKIP (no install pin in README)\n' "G9 readme-pin"; return; fi
+  while IFS= read -r line; do
+    c="${line#*:}"
+    constraint_admits "$c" "$ver" && r=0 || r=$?
+    if [[ $r -eq 1 ]]; then
+      printf '    %-14s FAIL (README pins %s which EXCLUDES this release %s)\n' "G9 readme-pin" "$(echo "$c" | xargs)" "$ver"
+      bad=1; fail=1
+    elif [[ $r -eq 2 ]]; then
+      printf '    %-14s WARN (README pin %s unparsed — judge by hand)\n' "G9 readme-pin" "$(echo "$c" | xargs)"
+    fi
+  done <<< "$pins"
+  [[ $bad -eq 0 ]] && printf '    %-14s PASS (README pin admits %s)\n' "G9 readme-pin" "$ver"
+}
+
+reach_gate() { # <pkgdir> <name> <staged-version>
+  local pkg="$1" name="$2" ver="$3"
+  local sdir; sdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local reg="$sdir/known_consumers.list" root; root="$(dirname "$sdir")"
+  if [[ ! -f "$reg" ]]; then printf '    %-14s SKIP (no known_consumers.list)\n' "G8 reach"; return; fi
+  local left=0 out=""
+  while IFS=$'\t' read -r consumer source; do
+    [[ -z "$consumer" || "$consumer" == \#* ]] && continue
+    local pubspec="" line c r
+    case "$source" in
+      local:*)
+        pubspec="$(cat "$root/${source#local:}" 2>/dev/null)" || true ;;
+      github:*)
+        local rest="${source#github:}" repo path
+        repo="${rest%%:*}"; path="${rest#*:}"
+        if ! pubspec="$(curl -fsSL --max-time 10 "https://raw.githubusercontent.com/$repo/HEAD/$path" 2>/dev/null)"; then
+          out+="        $consumer  SKIP-NET (pubspec unreachable)"$'\n'; continue
+        fi ;;
+      *) out+="        $consumer  UNPARSED source '$source'"$'\n'; continue ;;
+    esac
+    # Read ONLY the `dependencies:` section — a bare `<name>:` key also appears
+    # under `dependency_overrides:` (path overrides) and must not match.
+    line="$(printf '%s\n' "$pubspec" | awk -v pkg="$name" '
+      /^dependencies:/       {sec=1; next}
+      /^[A-Za-z_]+:/         {sec=0}
+      sec && $0 ~ "^  "pkg":" {print; exit}')" || true
+    if [[ -z "$line" ]]; then out+="        $consumer  NO-DEP"$'\n'; continue; fi
+    c="${line#*:}"
+    constraint_admits "$c" "$ver" && r=0 || r=$?
+    if [[ $r -eq 0 ]]; then
+      out+="        $consumer  RECEIVES ($(echo "$c" | xargs) admits $ver)"$'\n'
+    elif [[ $r -eq 2 ]]; then
+      out+="        $consumer  UNPARSED constraint '$(echo "$c" | xargs)' — judge by hand"$'\n'
+    else
+      if grep -A30 -m1 "^## " "$pkg/CHANGELOG.md" 2>/dev/null | grep -qi "reach-disposition($consumer)" \
+         || [[ ",${G8_ACCEPT:-}," == *",$name:$consumer,"* ]]; then
+        out+="        $consumer  LEFT-BEHIND (accepted: recorded serve-decision) — pin $(echo "$c" | xargs) excludes $ver"$'\n'
+      else
+        out+="        $consumer  LEFT-BEHIND — pin $(echo "$c" | xargs) excludes $ver; SERVE-DECISION REQUIRED (lift the pin / backport / \`reach-disposition($consumer): <why>\` in the CHANGELOG top entry / G8_ACCEPT=$name:$consumer)"$'\n'
+        left=1
+      fi
+    fi
+  done < "$reg"
+  if [[ $left -eq 0 ]]; then printf '    %-14s PASS\n' "G8 reach"; else printf '    %-14s FAIL (a known consumer is LEFT-BEHIND with no recorded serve-decision)\n' "G8 reach"; fail=1; fi
+  printf '%s' "$out"
+}
+
 for name in "$@"; do
   pkg="$PKG_ROOT/$name"
   if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE ($pkg/pubspec.yaml missing)"; fail=1; continue; fi
@@ -737,10 +867,22 @@ for name in "$@"; do
   # gates run in the PARENT shell (cd is inside the command) so fail propagates.
   gate "G1 pub-get"   bash -c "cd '$pkg' && dart pub get"
   gate "G2 analyze"   bash -c "cd '$pkg' && dart analyze"
-  if [[ -d "$pkg/test" ]]; then gate "G3 test" bash -c "cd '$pkg' && dart test"; else printf '    %-14s NONE (no test/ dir)\n' "G3 test"; fi
+  # Flutter-dependent packages need the flutter runner: `dart test` compiles
+  # the Flutter framework sources under the standalone runner and dies inside
+  # the SDK (found 2026-07-04 gating routing_bloc — the first Flutter package
+  # through G3).
+  if [[ -d "$pkg/test" ]]; then
+    if grep -q 'sdk: flutter' "$pkg/pubspec.yaml" 2>/dev/null; then
+      gate "G3 test" bash -c "cd '$pkg' && flutter test"
+    else
+      gate "G3 test" bash -c "cd '$pkg' && dart test"
+    fi
+  else printf '    %-14s NONE (no test/ dir)\n' "G3 test"; fi
   dryrun_gate "$pkg"
   provenance_gate "$pkg" "$name"
   hosted_resolve_gate "$pkg" "$name"
+  readme_pin_gate "$pkg" "$name" "$ver"
+  reach_gate "$pkg" "$name" "$ver"
 done
 
 echo
