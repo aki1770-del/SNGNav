@@ -73,15 +73,19 @@ import 'widgets/snow_scene_scaffold.dart';
 // See OPS-RULE-005 in CLAUDE.md for the route consistency rule.
 // ---------------------------------------------------------------------------
 
+// Demo route instructions in Japanese — this is HER drive; the running demo
+// defaults to this mock route, so it must reach her in her own language.
+// (The OSRM/Valhalla engines localize live via ManeuverLocalizer / server
+// directions_options; these hand-authored strings keep the demo's narrative.)
 final _maneuvers = [
-  RouteManeuver(index: 0, instruction: 'Depart Sakae Station heading east', type: 'depart', lengthKm: 1.8, timeSeconds: 160, position: const LatLng(35.1709, 136.9066)),
-  RouteManeuver(index: 1, instruction: 'Continue east through Chikusa', type: 'straight', lengthKm: 3.5, timeSeconds: 310, position: const LatLng(35.1608, 136.9208)),
-  RouteManeuver(index: 2, instruction: 'Merge onto Route 153 toward Okazaki', type: 'slight_right', lengthKm: 4.0, timeSeconds: 210, position: const LatLng(35.1376, 137.0000)),
-  RouteManeuver(index: 3, instruction: 'Continue southeast on Route 153', type: 'straight', lengthKm: 5.5, timeSeconds: 290, position: const LatLng(35.1013, 137.0628)),
-  RouteManeuver(index: 4, instruction: 'Enter tunnel — GPS may be lost', type: 'straight', lengthKm: 6.0, timeSeconds: 360, position: const LatLng(35.0824, 137.1088)),
-  RouteManeuver(index: 5, instruction: 'Exit tunnel — GPS recovered', type: 'straight', lengthKm: 3.0, timeSeconds: 270, position: const LatLng(35.0182, 137.1698)),
-  RouteManeuver(index: 6, instruction: 'Continue south toward Higashiokazaki', type: 'straight', lengthKm: 4.5, timeSeconds: 400, position: const LatLng(34.9896, 137.1707)),
-  RouteManeuver(index: 7, instruction: 'Arrive at Higashiokazaki Station', type: 'arrive', lengthKm: 0.0, timeSeconds: 0, position: const LatLng(34.9554, 137.1791)),
+  RouteManeuver(index: 0, instruction: '栄駅を東へ出発', type: 'depart', lengthKm: 1.8, timeSeconds: 160, position: const LatLng(35.1709, 136.9066)),
+  RouteManeuver(index: 1, instruction: '千種を東へ直進', type: 'straight', lengthKm: 3.5, timeSeconds: 310, position: const LatLng(35.1608, 136.9208)),
+  RouteManeuver(index: 2, instruction: '国道153号に合流し岡崎方面へ', type: 'merge', lengthKm: 4.0, timeSeconds: 210, position: const LatLng(35.1376, 137.0000)),
+  RouteManeuver(index: 3, instruction: '国道153号を南東へ直進', type: 'straight', lengthKm: 5.5, timeSeconds: 290, position: const LatLng(35.1013, 137.0628)),
+  RouteManeuver(index: 4, instruction: 'トンネルに進入 — GPSが不安定になる可能性', type: 'straight', lengthKm: 6.0, timeSeconds: 360, position: const LatLng(35.0824, 137.1088)),
+  RouteManeuver(index: 5, instruction: 'トンネルを出る — GPS復帰', type: 'straight', lengthKm: 3.0, timeSeconds: 270, position: const LatLng(35.0182, 137.1698)),
+  RouteManeuver(index: 6, instruction: '東岡崎方面へ南下', type: 'straight', lengthKm: 4.5, timeSeconds: 400, position: const LatLng(34.9896, 137.1707)),
+  RouteManeuver(index: 7, instruction: '東岡崎駅に到着', type: 'arrive', lengthKm: 0.0, timeSeconds: 0, position: const LatLng(34.9554, 137.1791)),
 ];
 
 /// Route shape follows the simulated location waypoints for visual consistency.

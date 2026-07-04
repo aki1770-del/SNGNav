@@ -26,21 +26,27 @@ MockClient _osrmClient({
   double duration = 1800,
 }) {
   return MockClient((request) async {
-    return http.Response(
-      jsonEncode({
-        'code': 'Ok',
-        'routes': [
-          {
-            'geometry': geometry,
-            'distance': distance,
-            'duration': duration,
-            'legs': [
-              {'steps': steps},
-            ],
-          },
-        ],
-      }),
+    // Encode as UTF-8 bytes with an explicit charset, exactly as a real OSRM
+    // server returns — so Japanese street names survive the round trip
+    // (http.Response(String, ...) would default to Latin-1 and mangle them).
+    return http.Response.bytes(
+      utf8.encode(
+        jsonEncode({
+          'code': 'Ok',
+          'routes': [
+            {
+              'geometry': geometry,
+              'distance': distance,
+              'duration': duration,
+              'legs': [
+                {'steps': steps},
+              ],
+            },
+          ],
+        }),
+      ),
       200,
+      headers: {'content-type': 'application/json; charset=utf-8'},
     );
   });
 }
@@ -200,16 +206,29 @@ void main() {
       );
     });
 
-    test('empty modifier and empty type → straight', () async {
-      expect(await typeFor(type: '', modifier: ''), 'straight');
+    test('empty modifier and empty type → proceed (never a fabricated straight)', () async {
+      expect(await typeFor(type: '', modifier: ''), 'proceed');
+    });
+
+    test('ramp without a stated side → side-less ramp (never fabricates left)', () async {
+      expect(await typeFor(type: 'on ramp', modifier: ''), 'ramp');
+      expect(await typeFor(type: 'off ramp', modifier: 'straight'), 'ramp');
+    });
+
+    test('exit roundabout → roundabout_exit', () async {
+      expect(await typeFor(type: 'exit roundabout'), 'roundabout_exit');
+      expect(await typeFor(type: 'exit rotary'), 'roundabout_exit');
     });
   });
 
   group('OsrmRoutingEngine — instruction building', () {
+    // These tests exercise the ENGLISH builder, so they request English
+    // explicitly — the request default is now 'ja-JP' (HER's locale).
     Future<String> instructionFor({
       String name = '',
       String type = 'turn',
       String modifier = '',
+      String language = 'en',
     }) async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
@@ -217,7 +236,13 @@ void main() {
           steps: [_step(name: name, type: type, modifier: modifier)],
         ),
       );
-      final result = await engine.calculateRoute(_request);
+      final result = await engine.calculateRoute(
+        RouteRequest(
+          origin: _nagoya,
+          destination: _okazaki,
+          language: language,
+        ),
+      );
       await engine.dispose();
       return result.maneuvers.first.instruction;
     }
@@ -252,6 +277,37 @@ void main() {
       expect(
         await instructionFor(type: 'turn', modifier: 'sharp right'),
         'Sharp right',
+      );
+    });
+
+    // HER default locale end-to-end through the real engine: the request
+    // language defaults to 'ja-JP', so instructions must come back Japanese —
+    // this is the gap the fix closes (OSRM used to ignore request.language).
+    test('ja-JP default → depart in Japanese', () async {
+      expect(
+        await instructionFor(type: 'depart', name: 'Route 153', language: 'ja-JP'),
+        'Route 153を出発',
+      );
+    });
+
+    test('ja-JP default → turn in Japanese', () async {
+      expect(
+        await instructionFor(type: 'turn', modifier: 'left', name: '国道153号', language: 'ja-JP'),
+        '国道153号方面へ左折',
+      );
+    });
+
+    test('ja-JP default → arrive in Japanese', () async {
+      expect(
+        await instructionFor(type: 'arrive', language: 'ja-JP'),
+        '目的地に到着',
+      );
+    });
+
+    test('unrecognized locale still yields English (graceful, no regression)', () async {
+      expect(
+        await instructionFor(type: 'depart', name: 'Route 153', language: 'fr-FR'),
+        'Depart on Route 153',
       );
     });
   });

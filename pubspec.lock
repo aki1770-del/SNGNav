@@ -15,7 +15,7 @@ packages:
       path: "packages/adaptive_reroute"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.4"
   analyzer:
     dependency: transitive
     description:
@@ -110,21 +110,21 @@ packages:
       path: "packages/condition_aggregator"
       relative: true
     source: path
-    version: "0.0.5"
+    version: "0.0.7"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
       path: "packages/condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.5"
+    version: "0.0.6"
   condition_aggregator_jma:
     dependency: "direct main"
     description:
       path: "packages/condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.3.0"
   convert:
     dependency: transitive
     description:
@@ -187,21 +187,21 @@ packages:
       path: "packages/driving_conditions"
       relative: true
     source: path
-    version: "0.5.2"
+    version: "0.5.4"
   driving_consent:
     dependency: "direct main"
     description:
       path: "packages/driving_consent"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.5.0"
   driving_weather:
     dependency: "direct main"
     description:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.4.3"
   dylib:
     dependency: transitive
     description:
@@ -256,7 +256,7 @@ packages:
       path: "packages/fleet_hazard"
       relative: true
     source: path
-    version: "0.4.1"
+    version: "0.5.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -414,7 +414,7 @@ packages:
       path: "packages/kalman_dr"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.4.4"
   kuksa_dart_sdk:
     dependency: "direct main"
     description:
@@ -501,7 +501,7 @@ packages:
       path: "packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.4.3"
   matcher:
     dependency: transitive
     description:
@@ -572,14 +572,22 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.9.2"
+    version: "0.9.3"
+  navigation_safety_calibration:
+    dependency: transitive
+    description:
+      name: navigation_safety_calibration
+      sha256: f7b3f6fa6588e9a77df7c4e32941041dbcec89ab82aeaa0466683bcf9e493691
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.10.4"
+    version: "0.11.0"
   nested:
     dependency: transitive
     description:
@@ -610,7 +618,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.2"
+    version: "0.5.3"
   package_config:
     dependency: transitive
     description:
@@ -720,21 +728,21 @@ packages:
       path: "packages/pretrip_source_digitraffic"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.2"
   pretrip_source_jma:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_jma"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   pretrip_source_met_norway:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_met_norway"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.1"
   proj4dart:
     dependency: transitive
     description:
@@ -773,21 +781,21 @@ packages:
       path: "packages/route_condition_forecast"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.1.4"
   routing_bloc:
     dependency: "direct main"
     description:
       path: "packages/routing_bloc"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.4.3"
   routing_engine:
     dependency: "direct main"
     description:
       path: "packages/routing_engine"
       relative: true
     source: path
-    version: "0.4.1"
+    version: "0.4.2"
   shelf:
     dependency: transitive
     description:
@@ -831,7 +839,7 @@ packages:
       path: "packages/snow_rendering"
       relative: true
     source: path
-    version: "0.2.3"
+    version: "0.2.5"
   source_map_stack_trace:
     dependency: transitive
     description:
@@ -958,7 +966,7 @@ packages:
       path: "packages/vehicle_condition_fusion"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.1"
   vm_service:
     dependency: transitive
     description:

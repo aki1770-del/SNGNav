@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import 'exceptions.dart';
+import 'maneuver_localizer.dart';
 import 'route_result.dart';
 import 'routing_engine.dart';
 
@@ -66,7 +67,11 @@ class OsrmRoutingEngine implements RoutingEngine {
         );
       }
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      // Decode the bytes as UTF-8 explicitly: response.body honors the
+      // content-type charset header and falls back to Latin-1 when a server
+      // omits it — which would mangle Japanese street names. OSRM responses
+      // are UTF-8 JSON regardless of header.
+      final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
 
       final code = json['code'] as String?;
       if (code != 'Ok') {
@@ -75,7 +80,7 @@ class OsrmRoutingEngine implements RoutingEngine {
         );
       }
 
-      return _parseRouteResponse(json, stopwatch.elapsed);
+      return _parseRouteResponse(json, stopwatch.elapsed, request.language);
     } on RoutingException {
       rethrow;
     } on Exception catch (e) {
@@ -83,7 +88,11 @@ class OsrmRoutingEngine implements RoutingEngine {
     }
   }
 
-  RouteResult _parseRouteResponse(Map<String, dynamic> json, Duration latency) {
+  RouteResult _parseRouteResponse(
+    Map<String, dynamic> json,
+    Duration latency,
+    String language,
+  ) {
     final routes = json['routes'] as List<dynamic>?;
     if (routes == null || routes.isEmpty) {
       throw RoutingException('OSRM returned no routes');
@@ -121,7 +130,7 @@ class OsrmRoutingEngine implements RoutingEngine {
         allManeuvers.add(
           RouteManeuver(
             index: maneuverIndex++,
-            instruction: _buildInstruction(stepMap, maneuver),
+            instruction: _localizedInstruction(stepMap, maneuver, language),
             type: _mapModifierToType(maneuver),
             lengthKm: stepDistanceM / 1000,
             timeSeconds: stepDurationS,
@@ -142,6 +151,24 @@ class OsrmRoutingEngine implements RoutingEngine {
           '${totalDistanceKm.toStringAsFixed(1)} km, '
           '${(durationSeconds / 60).toStringAsFixed(0)} min',
       engineInfo: EngineInfo(name: 'osrm', queryLatency: latency),
+    );
+  }
+
+  /// Build the localized instruction for the requested [language], degrading
+  /// to the engine's own English phrasing when the locale/type is unsupported.
+  String _localizedInstruction(
+    Map<String, dynamic> step,
+    Map<String, dynamic> maneuver,
+    String language,
+  ) {
+    final name = step['name'] as String? ?? '';
+    return ManeuverLocalizer.localize(
+      language: language,
+      type: _mapModifierToType(maneuver),
+      streetName: name,
+      // OSRM supplies the 1-based exit ordinal on roundabout maneuvers.
+      roundaboutExit: (maneuver['exit'] as num?)?.toInt(),
+      englishFallback: () => _buildInstruction(step, maneuver),
     );
   }
 
@@ -177,9 +204,16 @@ class OsrmRoutingEngine implements RoutingEngine {
     if (type == 'depart') return 'depart';
     if (type == 'arrive') return 'arrive';
     if (type == 'roundabout' || type == 'rotary') return 'roundabout_enter';
+    if (type == 'exit roundabout' || type == 'exit rotary') {
+      return 'roundabout_exit';
+    }
     if (type == 'merge') return 'merge';
     if (type == 'on ramp' || type == 'off ramp') {
-      return modifier.contains('right') ? 'ramp_right' : 'ramp_left';
+      // Only claim a side the engine actually stated — a fabricated side is a
+      // wrong direction on a road, the one thing the localizer must never say.
+      if (modifier.contains('right')) return 'ramp_right';
+      if (modifier.contains('left')) return 'ramp_left';
+      return 'ramp';
     }
 
     return switch (modifier) {
@@ -191,7 +225,9 @@ class OsrmRoutingEngine implements RoutingEngine {
       'sharp right' => 'sharp_right',
       'straight' => 'straight',
       'uturn' => 'u_turn_left',
-      _ => type.isNotEmpty ? type : 'straight',
+      // No type and no modifier: do NOT synthesize 'straight' — the maneuver
+      // may really be a turn. 'proceed' defers to the road (道なりに進む).
+      _ => type.isNotEmpty ? type : 'proceed',
     };
   }
 

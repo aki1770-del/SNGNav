@@ -23,6 +23,9 @@
 library;
 
 export 'src/exceptions.dart';
+// NOTE: src/maneuver_localizer.dart is deliberately NOT exported — it is an
+// internal product piece (§9: no pub.dev-facing API without edge-developer
+// demand evidence; measured 2026-07-04: none). The engine uses it internally.
 export 'src/osrm_routing_engine.dart';
 export 'src/route_result.dart';
 export 'src/routing_engine.dart';
