@@ -27,9 +27,10 @@ frost check missed. Envelope-bounded after adversarial review.
   calibration takes a FRACTION. The guard ADAPTS (does NOT mirror) the
   boundary classes of `navigation_safety_core`'s percent door: core throws
   on implausible input; a briefing must never crash on one dirty forecast
-  slot, so here every rejected class — `<= 0` sentinels, sub-1% mis-wired
-  fractions, `> 105`, non-finite, and subnormal underflow — simply adds
-  nothing. Absence (or corruption) of data is never presence of hazard,
+  slot, so here every rejected class — `<= 0` sentinels, everything below a
+  5% physical-plausibility floor (which kills the mis-wired-fraction class
+  INCLUDING exactly `1.0`, saturated air, its most common value), `> 105`,
+  non-finite, and subnormal underflow — simply adds nothing. Absence (or corruption) of data is never presence of hazard,
   and never an exception out of `hazardOf`.
 - Honest bound: the calibration's surface-cooling magnitude is documented
   UNVERIFIED-conservative (early-warning direction); see

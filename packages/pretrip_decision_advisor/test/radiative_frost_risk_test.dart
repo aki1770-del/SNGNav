@@ -68,11 +68,19 @@ void main() {
           reason: 'implausible reading adds nothing (feed bug, not hazard)');
       expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: double.nan)),
           isFalse);
-      // A mis-wired FRACTION in the percent field (0.95 == 0.95% RH) would
-      // fabricate a deep depression — ignored, like core's percent door
-      // rejects it (core throws; a briefing must not).
+      // A mis-wired FRACTION in the percent field would fabricate a deep
+      // depression — the plausibility floor (rh < 5.0 ignored) kills the
+      // whole class, INCLUDING exactly 1.0 (saturated air, the single most
+      // common fraction value — the leak 3 of 5 re-review lenses caught).
       expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 0.95)), isFalse,
-          reason: 'sub-1%% is almost certainly a mis-wired fraction');
+          reason: 'mis-wired fraction 0.95 must add nothing');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 1.0)), isFalse,
+          reason: 'mis-wired fraction 1.0 (saturated air) must add nothing');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 4.9)), isFalse,
+          reason: 'below the physical-plausibility floor');
+      // The floor itself is real weather territory and computes normally
+      // (5% RH @ 0.5C -> dew far below zero -> fires, inside the ceiling).
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 5.0)), isTrue);
     });
 
     test('SUBNORMAL humidity must not crash the briefing '
@@ -90,6 +98,10 @@ void main() {
           reason: 'saturated air at +0.5 ambient: surface estimate +0.5 > 0');
       expect(advisor.radiativeFrostRisk(slot(temp: 0.0, rh: 101.0)), isTrue,
           reason: 'saturated air at 0.0 ambient: surface estimate 0.0 <= 0');
+      // The inclusive upper guard endpoint: 105.0 is accepted (as saturated).
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.0, rh: 105.0)), isTrue);
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 105.1)), isFalse,
+          reason: 'just past the guard: implausible, adds nothing');
     });
   });
 

@@ -49,6 +49,24 @@ outside this package, so the package itself stays pure Dart.
   briefing. This is the loudest behavior change in the package's history:
   mornings that briefed CLEAR at 0.4.0 can brief caution at 0.5.0.
 
+  *Why +3.0 and not 4–5*: the ceiling reads the calibration's prose at its
+  minimum deliberately — at introduction, the false-positive cost (cry-wolf
+  eroding trust in every chip) dominates the marginal early-warning shoulder
+  (probe-measured shapes like 3.5 °C/70% RH sit inside the calibration's
+  prose envelope but outside the ceiling). **Evidence tripwire to widen**: a
+  real observed frost/black-ice event at 3–5 °C ambient re-opens the ceiling
+  decision with data; homing the envelope constant in
+  `navigation_safety_calibration` itself (single source of truth) is the
+  recorded follow-up so future consumers don't re-derive divergent ceilings.
+
+  *Saturated-air blind spot (inherent to the ratified dew-point-floor
+  model)*: at very high humidity the dew point approaches ambient, so the
+  highest-humidity above-zero mornings (e.g. +1 °C at 95–100% RH, classic
+  freezing-fog territory) can never fire this condition — the surface
+  estimate equals ambient, which is above zero. This is a property of the
+  calibration's conservative estimator, not a regression; freezing-fog
+  coverage at those shapes needs a visibility/fog signal, not humidity.
+
 ## When this file changes
 
 These constraints are current at 0.5.0. Re-evaluate them against the shipped

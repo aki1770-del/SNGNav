@@ -377,8 +377,13 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   ///
   /// - `(100, 105]` — supersaturation reads as saturated air (`1.0`);
   /// - `<= 0` — the missing-data sentinel: nothing;
-  /// - `(0, 1)` — almost certainly a mis-wired FRACTION (`0.95` would mean
-  ///   0.95% RH and fire a deep false depression): nothing;
+  /// - `< 5` — a physical-plausibility floor: dew-point math at near-zero
+  ///   moisture cannot indicate frost moisture, and everything in `(0, 1]`
+  ///   is almost certainly a mis-wired FRACTION (`1.0` — saturated air, the
+  ///   most common fraction value — would read as 1% RH and fire a deep
+  ///   false depression). Genuine sub-5% RH near freezing is
+  ///   meteorologically implausible, so the floor costs zero true
+  ///   positives: nothing;
   /// - `> 105`, `NaN`, `±inf` — implausible feed values: nothing.
   ///
   /// Absence (or corruption) of data is never presence of hazard — and never
@@ -387,9 +392,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     if (slot.tempCelsius > radiativeFrostAmbientCeilingCelsius) return false;
     final rhPercent = slot.humidityRH;
     if (rhPercent == null || !rhPercent.isFinite) return false;
-    if (rhPercent < 1.0 || rhPercent > 105.0) return false;
+    if (rhPercent < 5.0 || rhPercent > 105.0) return false;
     final fraction = rhPercent > 100.0 ? 1.0 : rhPercent / 100.0;
-    // Defensive domain belt (the guard already ensures (0.01, 1.0]): the
+    // Defensive domain belt (the guard already ensures [0.05, 1.0]): the
     // calibration throws outside (0, 1], and hazardOf must never throw.
     if (fraction <= 0.0 || fraction > 1.0) return false;
     final effective = computeEffectiveTemperatureCelsius(

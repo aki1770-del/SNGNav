@@ -4,9 +4,15 @@
 
 - Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can
   take `routing_engine` 0.5.0 (language-honoring turn-by-turn narration)
-  alongside `route_condition_forecast` — this pin was the one catalog link
-  blocking the Android reach vehicle (`sngnav-app`) from the Japanese
-  narration. No library code change (lib/ is byte-identical to 0.1.4).
+  alongside `route_condition_forecast` — this pin was the last CATALOG link
+  blocking the Android reach vehicle (`sngnav-app`) from resolving the
+  Japanese narration. Reach itself is still OPEN at this publish: the app
+  must additionally widen its own `routing_engine` pin and take
+  `voice_guidance` ^0.7.x, and the narration must be verified ON DEVICE
+  before any reach claim (publish ≠ reach). No library code change (lib/
+  is byte-identical to 0.1.4). Consumers who prefer English instructions
+  with default requests can pin `routing_engine: ^0.4.0` or pass
+  `language: 'en'` (see routing_engine 0.5.0's changelog).
 
 
 ## 0.1.4
