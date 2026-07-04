@@ -228,10 +228,14 @@ class NavigationSafetyConfig extends Equatable {
       // alert fires on ambient-temperature inputs that would today
       // pass the baseline check.
       if (effective <= base.warningTemperatureCelsius.toDouble()) {
-        final lift = (base.warningTemperatureCelsius - effective.floor()).clamp(
-          0,
-          10,
-        );
+        // .toInt() portability hardening: num.clamp is declared to return
+        // `num`; current SDKs special-case int.clamp(int, int) as int, but
+        // the explicit conversion keeps the line valid on SDKs without that
+        // special-casing. (Verified 2026-07-04: hosted 0.11.0 compiles fine
+        // in a Flutter consumer — this is hardening, not a shipped-bug fix.)
+        final lift = (base.warningTemperatureCelsius - effective.floor())
+            .clamp(0, 10)
+            .toInt();
         warningTemperature = base.warningTemperatureCelsius + lift;
       }
     }
