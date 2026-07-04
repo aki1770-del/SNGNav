@@ -15,7 +15,7 @@ packages:
       path: "packages/adaptive_reroute"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.5"
   analyzer:
     dependency: transitive
     description:
@@ -587,7 +587,7 @@ packages:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.0"
+    version: "0.11.1"
   nested:
     dependency: transitive
     description:
@@ -721,7 +721,7 @@ packages:
       path: "packages/pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.5.0"
   pretrip_source_digitraffic:
     dependency: "direct main"
     description:
@@ -788,14 +788,14 @@ packages:
       path: "packages/routing_bloc"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.4"
   routing_engine:
     dependency: "direct main"
     description:
       path: "packages/routing_engine"
       relative: true
     source: path
-    version: "0.4.2"
+    version: "0.5.0"
   shelf:
     dependency: transitive
     description:

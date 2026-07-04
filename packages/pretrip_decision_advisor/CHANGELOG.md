@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.0
+
+Humidity-aware black ice — the no-precipitation killer the ambient-only
+frost check missed.
+
+- **`SnowAwarePretripAdvisor.hazardOf` gains a radiative-frost condition**:
+  when a forecast slot carries relative humidity, the advisor computes the
+  Magnus effective road-surface estimate (via `navigation_safety_calibration`
+  — the family's single source of truth; first runtime dependency, per the
+  depend-don't-copy discipline) and flags **caution** when the surface
+  estimate crosses freezing even though the ambient air is above 0 °C
+  (freezing fog / hoar frost / clear-sky radiative cooling — no
+  precipitation required). Caution-add-only by construction (the estimate
+  is never above ambient): existing bands never lower.
+- New reason chip `blackIceRadiativeRisk` (EN + JA:
+  「放射冷却で路面だけが凍ることがあります(ブラックアイス)」), emitted only for
+  the above-zero-ambient window (at/below zero the existing freezing-air
+  chip already describes the slot).
+- Unit seam handled explicitly: `HourlyForecast.humidityRH` is PERCENT; the
+  calibration takes a FRACTION. Percent-door semantics mirrored:
+  supersaturation `(100, 105]` reads as saturated air; `<= 0`
+  (missing-data sentinel), non-finite, and `> 105` add NOTHING — absence
+  of data is never presence of hazard.
+- Honest bound, recorded openly in the tests: the calibration is
+  deliberately early-warning (dry air has a deep dew-point depression, so
+  e.g. 40% RH @ 5 °C flags caution); its module documents the surface-
+  cooling magnitude as UNVERIFIED-conservative.
+
+
 ## 0.4.0
 
 Add the destination-AREA condition read (the FAMILY-THREAD section) — a

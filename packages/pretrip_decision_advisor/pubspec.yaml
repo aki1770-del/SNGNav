@@ -2,7 +2,7 @@ name: pretrip_decision_advisor
 description: >-
   Pure Dart pre-trip departure-timing decision advisor for snow-zone
   navigation: a contract plus a working reference advisor and visibility merge.
-version: 0.4.0
+version: 0.5.0
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues
@@ -15,6 +15,12 @@ topics:
 
 environment:
   sdk: ^3.10.0
+
+dependencies:
+  # The family's single source of truth for the Magnus effective-temperature
+  # primitive (W5 discipline: depend on it, never byte-copy it). Pure Dart,
+  # dependency-free itself.
+  navigation_safety_calibration: ^0.1.2
 
 dev_dependencies:
   test: ^1.25.0

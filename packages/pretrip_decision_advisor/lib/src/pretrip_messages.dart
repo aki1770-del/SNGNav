@@ -104,6 +104,12 @@ abstract class PretripMessages {
   /// Subzero air ([tempCelsius] °C) around [at] — frost / black-ice risk.
   String freezingAir(int tempCelsius, String at);
 
+  /// Black-ice risk around [at] with ambient ABOVE freezing: high-humidity /
+  /// radiative-cooling conditions can take the road surface below 0 °C while
+  /// the air reads warmer (freezing fog, hoar frost — no precipitation
+  /// needed).
+  String blackIceRadiativeRisk(String at);
+
   /// Generic winter conditions around [at].
   String winterConditionsPossible(String at);
 
@@ -219,6 +225,11 @@ class _EnPretripMessages extends PretripMessages {
   String freezingAir(int tempCelsius, String at) =>
       'Freezing air ($tempCelsius °C) around $at — '
       'frost or black ice possible.';
+
+  @override
+  String blackIceRadiativeRisk(String at) =>
+      'Black ice possible around $at — the road surface can freeze '
+      'overnight even though the air is above 0 °C.';
 
   @override
   String winterConditionsPossible(String at) =>
@@ -362,6 +373,11 @@ class _JaPretripMessages extends PretripMessages {
   String freezingAir(int tempCelsius, String at) =>
       '$at頃、氷点下の気温($tempCelsius°C) — '
       '霜やブラックアイス(見えにくい薄い氷)の可能性があります。';
+
+  @override
+  String blackIceRadiativeRisk(String at) =>
+      '$at頃、路面凍結の可能性 — 気温が0°Cより高くても、'
+      '放射冷却で路面だけが凍ることがあります(ブラックアイス)。';
 
   @override
   String winterConditionsPossible(String at) =>

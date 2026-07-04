@@ -21,6 +21,9 @@
 /// driver. A school run or work shift is not ours to cancel.
 library;
 
+import 'package:navigation_safety_calibration/navigation_safety_calibration.dart'
+    show computeEffectiveTemperatureCelsius;
+
 import 'commute_shape.dart';
 import 'daylight.dart';
 import 'driver_profile_spec.dart';
@@ -334,10 +337,45 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     if (road == RoadConditionEstimate.slush ||
         coldRain ||
         (vis != null && vis < 500) ||
-        slot.tempCelsius <= frostTempCelsius) {
+        slot.tempCelsius <= frostTempCelsius ||
+        radiativeFrostRisk(slot)) {
       return HourHazard.caution;
     }
     return HourHazard.clear;
+  }
+
+  /// Humidity-aware black-ice risk with NO precipitation required — the
+  /// freezing-fog / hoar-frost killer the ambient-only frost check misses:
+  /// clear-sky radiative cooling can take the road surface below freezing
+  /// while the ambient air is still above 0 °C.
+  ///
+  /// Uses the family's single calibration source of truth (Magnus dew-point
+  /// depression; `computeEffectiveTemperatureCelsius` returns a CONSERVATIVE
+  /// road-surface estimate — deliberately early-warning; see the calibration
+  /// module's citations and UNVERIFIED-magnitude caveat). Caution-add-only by
+  /// construction: effective ≤ ambient always, so this can only ADD the
+  /// above-zero-ambient window, never remove an existing flag.
+  ///
+  /// Unit seam, handled explicitly: [HourlyForecast.humidityRH] is PERCENT;
+  /// the calibration takes a FRACTION `(0, 1]`. Mirrors the percent-door
+  /// semantics of `navigation_safety_core`: supersaturation `(100, 105]`
+  /// reads as saturated air (1.0); `<= 0` (missing-data sentinel) and
+  /// implausible values add NOTHING — absence of data is never presence
+  /// of hazard.
+  bool radiativeFrostRisk(HourlyForecast slot) {
+    final rhPercent = slot.humidityRH;
+    if (rhPercent == null ||
+        !rhPercent.isFinite ||
+        rhPercent <= 0.0 ||
+        rhPercent > 105.0) {
+      return false;
+    }
+    final fraction = rhPercent > 100.0 ? 1.0 : rhPercent / 100.0;
+    final effective = computeEffectiveTemperatureCelsius(
+      ambientCelsius: slot.tempCelsius,
+      humidityRH: fraction,
+    );
+    return effective <= frostTempCelsius;
   }
 
   /// Earliest whole-hour delay (up to [searchHorizon]) whose shifted trip
@@ -421,6 +459,11 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     }
     if (slot.tempCelsius <= frostTempCelsius) {
       return messages.freezingAir(slot.tempCelsius.round(), at);
+    }
+    // Above-zero ambient but the humidity-aware surface estimate crosses
+    // freezing — the black-ice window the ambient chip cannot describe.
+    if (radiativeFrostRisk(slot)) {
+      return messages.blackIceRadiativeRisk(at);
     }
     // Defensive fallback: unreachable given the current hazardOf ladder (any
     // slot that reaches _describe is caution+ and matches a branch above), but
