@@ -174,5 +174,27 @@ void main() {
       expect(ja[0], PretripMessages.ja.areaWarningCheckUnavailable());
       expect(ja[0].contains('可能性があります'), isTrue);
     });
+
+    test('warm benign slots never show a caution band on the mother\u2019s-area '
+        'surface (radiative-frost proportionality pin)', () {
+      // The family-thread surface consumes advisor.hazardOf; the 0.5.0
+      // radiative-frost condition is envelope-bounded (ambient <= +3.0),
+      // so a mild dry day must stay clear here — no cry-wolf toward the
+      // person-adjacent read.
+      final forecast = _forecast([
+        HourlyForecast(hour: now, tempCelsius: 15.0, humidityRH: 30),
+        HourlyForecast(
+            hour: now.add(const Duration(hours: 1)),
+            tempCelsius: 20.0,
+            humidityRH: 25),
+      ], now);
+
+      final r = summarizeAreaConditions(
+        forecast: forecast,
+        now: now,
+        areaLabel: 'Akita',
+      );
+      expect(r.areaHazard, HourHazard.clear);
+    });
   });
 }

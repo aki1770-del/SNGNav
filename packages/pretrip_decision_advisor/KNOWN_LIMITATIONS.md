@@ -1,6 +1,8 @@
 # Known Limitations
 
-> **0.2.0. Contract + working reference advisor (`SnowAwarePretripAdvisor`). Pure Dart — no weather fetching, no route engine.**
+> **0.5.0. Contract + working reference advisor (`SnowAwarePretripAdvisor`).
+> Pure Dart — no weather fetching, no route engine; one runtime dependency
+> (`navigation_safety_calibration`) since 0.5.0.**
 
 ## Scope
 
@@ -32,8 +34,23 @@ outside this package, so the package itself stays pure Dart.
   needing a richer profile model should adapt at its boundary, not
   push the dependency back into this interface.
 
+- **Humidity-aware black ice (0.5.0) is envelope-bounded and
+  UNVERIFIED-conservative.** `hazardOf` flags caution when the Magnus
+  effective road-surface estimate (dew point) is at/below 0 °C **and**
+  ambient is at/below `+3.0 °C` (`radiativeFrostAmbientCeilingCelsius` —
+  the calibration's documented "several degrees above 0 °C" radiative
+  envelope). Without the ceiling the dew-point test fires on benign dry
+  days (probe-measured: 20 °C at 25% RH) — the bound is load-bearing, not
+  cosmetic. The calibration's surface-cooling magnitude is documented
+  UNVERIFIED-conservative (early-warning direction). The condition reads
+  `HourlyForecast.humidityRH` as PERCENT and silently ignores (never
+  throws on) sentinels, sub-1% mis-wired fractions, supersaturation
+  beyond 105%, and non-finite values — one dirty slot must never crash a
+  briefing. This is the loudest behavior change in the package's history:
+  mornings that briefed CLEAR at 0.4.0 can brief caution at 0.5.0.
+
 ## When this file changes
 
-These constraints are current at 0.2.0. Re-evaluate them against the shipped
+These constraints are current at 0.5.0. Re-evaluate them against the shipped
 artifact whenever the contract surface or the reference advisor's behaviour
 changes; until then, treat every section here as a binding constraint.

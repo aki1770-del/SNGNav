@@ -18,3 +18,4 @@
 # adoption ledger, or a maintainer telling us). Remove only with a ledger note.
 example-app	local:example/pubspec.yaml
 jitreq-drunkenv2	github:Jitreq/drunkenv2:pubspec.yaml
+sngnav-app	github:aki1770-del/sngnav-app:pubspec.yaml

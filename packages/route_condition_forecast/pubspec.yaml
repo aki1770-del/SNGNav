@@ -3,7 +3,7 @@ description: >-
   Per-segment weather and hazard forecasting along a planned route.
   Projects driving_weather + fleet_hazard onto route segments. Pure
   Dart.
-version: 0.1.4
+version: 0.1.5
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -21,7 +21,7 @@ dependencies:
   latlong2: ^0.9.1
   driving_weather: ^0.4.0
   fleet_hazard: ^0.5.0
-  routing_engine: ^0.4.0
+  routing_engine: '>=0.4.0 <0.6.0'
 
 dev_dependencies:
   test: ^1.25.0

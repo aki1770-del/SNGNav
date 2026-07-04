@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.5
+
+- Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can
+  take `routing_engine` 0.5.0 (language-honoring turn-by-turn narration)
+  alongside `route_condition_forecast` — this pin was the one catalog link
+  blocking the Android reach vehicle (`sngnav-app`) from the Japanese
+  narration. No library code change (lib/ is byte-identical to 0.1.4).
+
+
 ## 0.1.4
 
 - deps: require `fleet_hazard: ^0.5.0` (the anonymized aggregate — `HazardZone`

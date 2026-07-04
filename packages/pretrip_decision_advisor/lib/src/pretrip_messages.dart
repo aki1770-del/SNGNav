@@ -228,8 +228,8 @@ class _EnPretripMessages extends PretripMessages {
 
   @override
   String blackIceRadiativeRisk(String at) =>
-      'Black ice possible around $at — the road surface can freeze '
-      'overnight even though the air is above 0 °C.';
+      'Black ice possible around $at — radiative cooling can freeze the '
+      'road surface even when the air is above 0 °C.';
 
   @override
   String winterConditionsPossible(String at) =>

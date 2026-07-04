@@ -1,14 +1,18 @@
 # pretrip_decision_advisor
 
-> **0.3.0. Contract + working reference advisor + localized reason chips.**
+> **0.5.0. Contract + working reference advisor + localized reason chips +
+> humidity-aware black-ice (radiative frost) condition.**
 >
 > This package ships an abstract contract, its data shapes, **and** a working
 > pure-Dart reference advisor (`SnowAwarePretripAdvisor`) plus a source-neutral
 > measured-visibility merge. `pub add`-ing it gives you a usable advisor, not
 > just types. It does not fetch weather or integrate a route engine — a
 > source-specific fetcher (which owns any HTTP dependency) stays outside this
-> package, so the package itself remains pure Dart — zero runtime dependencies
-> and no FFI, so the offline core runs on 32-bit ARM (`armv7`) car-class hardware.
+> package, so the package itself remains pure Dart with a single runtime
+> dependency — `navigation_safety_calibration`, the family's dependency-free
+> Magnus effective-temperature source of truth (added in 0.5.0 for the
+> humidity-aware black-ice condition; depend-don't-copy) — and no FFI, so the
+> offline core runs on 32-bit ARM (`armv7`) car-class hardware.
 > The pure-Dart core was run-verified on genuine `armv7` (`uname armv7l`, 32-bit
 > ARM Dart) producing the Akita briefing identical to the documented x86_64
 > output; see the [runnability proof](https://github.com/aki1770-del/SNGNav/blob/main/examples/edge_dev_akita_briefing/_capture/armv7_runnability_proof.txt).
@@ -249,6 +253,8 @@ because the cost of doing so is borne by the driver, not the advisor.
 
 ## Status
 
-0.3.0. Contract + working reference advisor, with localized reason chips.
+0.5.0. Contract + working reference advisor, localized reason chips, and the
+humidity-aware black-ice (radiative frost) condition bounded to the
+calibration's documented envelope.
 Interface stability is committed at this version within the bounds described in
 `KNOWN_LIMITATIONS.md`.
