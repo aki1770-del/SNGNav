@@ -768,10 +768,17 @@ constraint_admits() { # <constraint> <version> -> 0 yes, 1 no, 2 unparsed
   local c="$1" v="$2"
   c="${c//\'/}"; c="${c//\"/}"; c="$(echo "$c" | xargs)"
   if [[ "$c" == ^* ]]; then
-    local base="${c#^}" major upper minor
+    local base="${c#^}" major upper minor patch rest
+    # Guard: non-numeric caret bases are UNPARSED, never a crash (cert F1-adj).
+    [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]] || return 2
     major="${base%%.*}"
-    if [[ "$major" == 0 ]]; then
-      minor="${base#*.}"; minor="${minor%%.*}"
+    rest="${base#*.}"; minor="${rest%%.*}"
+    patch="${rest#*.}"; patch="${patch%%[-+]*}"
+    # Dart caret = leftmost-NON-ZERO component may not change (cert F2):
+    #   ^1.2.3 -> <2.0.0 ; ^0.3.0 -> <0.4.0 ; ^0.0.5 -> <0.0.6
+    if [[ "$major" == 0 && "$minor" == 0 ]]; then
+      upper="0.0.$((patch+1))"
+    elif [[ "$major" == 0 ]]; then
       upper="0.$((minor+1)).0"
     else
       upper="$((major+1)).0.0"
@@ -779,12 +786,17 @@ constraint_admits() { # <constraint> <version> -> 0 yes, 1 no, 2 unparsed
     if ver_ge "$v" "$base" && ver_lt "$v" "$upper"; then return 0; else return 1; fi
   fi
   if [[ "$c" =~ ^\>=([0-9][^[:space:]]*)[[:space:]]+\<([0-9][^[:space:]]*)$ ]]; then
-    if ver_ge "$v" "${BASH_REMATCH[1]}" && ver_lt "$v" "${BASH_REMATCH[2]}"; then return 0; else return 1; fi
+    # Copy BASH_REMATCH BEFORE calling helpers — ver_ge's own =~ clobbers it
+    # (cert F1: the range form crashed under set -u on the second bound).
+    local lo="${BASH_REMATCH[1]}" hi="${BASH_REMATCH[2]}"
+    if ver_ge "$v" "$lo" && ver_lt "$v" "$hi"; then return 0; else return 1; fi
   fi
   if [[ "$c" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
     [[ "$c" == "$v" ]] && return 0 || return 1
   fi
-  if [[ "$c" == "any" || -z "$c" ]]; then return 0; fi
+  if [[ "$c" == "any" ]]; then return 0; fi
+  # Empty is NOT 'any': a map-form dep (git:/path: on the next line) extracts
+  # as empty — a git-dep consumer never receives pub.dev releases (cert F5).
   return 2
 }
 
@@ -817,12 +829,26 @@ reach_gate() { # <pkgdir> <name> <staged-version>
   local sdir; sdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   local reg="$sdir/known_consumers.list" root; root="$(dirname "$sdir")"
   if [[ ! -f "$reg" ]]; then printf '    %-14s SKIP (no known_consumers.list)\n' "G8 reach"; return; fi
-  local left=0 out=""
+  # Disposition search scoped to the ACTUAL top CHANGELOG entry (first `## `
+  # heading to the next), not a fixed line window (cert F3: `-A30` both
+  # silently renewed stale waivers from the previous entry AND cut off long
+  # legitimate entries).
+  local top_entry=""
+  if [[ -f "$pkg/CHANGELOG.md" ]]; then
+    top_entry="$(awk '/^## /{n++; if(n==2) exit} n==1{print}' "$pkg/CHANGELOG.md")"
+  fi
+  local left=0 unparsed=0 out=""
   while IFS=$'\t' read -r consumer source; do
     [[ -z "$consumer" || "$consumer" == \#* ]] && continue
     local pubspec="" line c r
     case "$source" in
       local:*)
+        # A registered local consumer whose pubspec is MISSING is a broken
+        # thread, never a silent NO-DEP (cert F4: registry rot must be loud).
+        if [[ ! -f "$root/${source#local:}" ]]; then
+          out+="        $consumer  MISSING (registered local pubspec $root/${source#local:} not found — fix the registry or the path)"$'\n'
+          left=1; continue
+        fi
         pubspec="$(cat "$root/${source#local:}" 2>/dev/null)" || true ;;
       github:*)
         local rest="${source#github:}" repo path
@@ -844,9 +870,16 @@ reach_gate() { # <pkgdir> <name> <staged-version>
     if [[ $r -eq 0 ]]; then
       out+="        $consumer  RECEIVES ($(echo "$c" | xargs) admits $ver)"$'\n'
     elif [[ $r -eq 2 ]]; then
-      out+="        $consumer  UNPARSED constraint '$(echo "$c" | xargs)' — judge by hand"$'\n'
+      # UNPARSED must not silently ride a PASS headline (cert F7: "human
+      # judges" needs teeth). Acknowledge via the same G8_ACCEPT mechanism.
+      if [[ ",${G8_ACCEPT:-}," == *",$name:$consumer,"* ]]; then
+        out+="        $consumer  UNPARSED constraint '$(echo "$c" | xargs)' (acknowledged via G8_ACCEPT)"$'\n'
+      else
+        out+="        $consumer  UNPARSED constraint '$(echo "$c" | xargs)' — judge by hand, then acknowledge (G8_ACCEPT=$name:$consumer)"$'\n'
+        unparsed=1
+      fi
     else
-      if grep -A30 -m1 "^## " "$pkg/CHANGELOG.md" 2>/dev/null | grep -qi "reach-disposition($consumer)" \
+      if printf '%s' "$top_entry" | grep -qi "reach-disposition($consumer)" \
          || [[ ",${G8_ACCEPT:-}," == *",$name:$consumer,"* ]]; then
         out+="        $consumer  LEFT-BEHIND (accepted: recorded serve-decision) — pin $(echo "$c" | xargs) excludes $ver"$'\n'
       else
@@ -855,7 +888,13 @@ reach_gate() { # <pkgdir> <name> <staged-version>
       fi
     fi
   done < "$reg"
-  if [[ $left -eq 0 ]]; then printf '    %-14s PASS\n' "G8 reach"; else printf '    %-14s FAIL (a known consumer is LEFT-BEHIND with no recorded serve-decision)\n' "G8 reach"; fail=1; fi
+  if [[ $left -eq 0 && $unparsed -eq 0 ]]; then
+    printf '    %-14s PASS\n' "G8 reach"
+  elif [[ $left -eq 0 ]]; then
+    printf '    %-14s FAIL (an UNPARSED consumer constraint is unacknowledged — judge it, then G8_ACCEPT)\n' "G8 reach"; fail=1
+  else
+    printf '    %-14s FAIL (a known consumer is LEFT-BEHIND with no recorded serve-decision)\n' "G8 reach"; fail=1
+  fi
   printf '%s' "$out"
 }
 
