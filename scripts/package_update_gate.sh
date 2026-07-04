@@ -818,7 +818,8 @@ readme_pin_gate() { # <pkgdir> <name> <staged-version>
       printf '    %-14s FAIL (README pins %s which EXCLUDES this release %s)\n' "G9 readme-pin" "$(echo "$c" | xargs)" "$ver"
       bad=1; fail=1
     elif [[ $r -eq 2 ]]; then
-      printf '    %-14s WARN (README pin %s unparsed — judge by hand)\n' "G9 readme-pin" "$(echo "$c" | xargs)"
+      printf '    %-14s FAIL (README pin %s unparsed — rewrite the README pin to a parseable form)\n' "G9 readme-pin" "$(echo "$c" | xargs)"
+      bad=1; fail=1
     fi
   done <<< "$pins"
   [[ $bad -eq 0 ]] && printf '    %-14s PASS (README pin admits %s)\n' "G9 readme-pin" "$ver"
@@ -856,7 +857,11 @@ reach_gate() { # <pkgdir> <name> <staged-version>
         if ! pubspec="$(curl -fsSL --max-time 10 "https://raw.githubusercontent.com/$repo/HEAD/$path" 2>/dev/null)"; then
           out+="        $consumer  SKIP-NET (pubspec unreachable)"$'\n'; continue
         fi ;;
-      *) out+="        $consumer  UNPARSED source '$source'"$'\n'; continue ;;
+      *)
+        # Registry rot on the SCHEME field must not ride a green gate
+        # (re-cert condition 1 / Case S — the source-axis sibling of F4/F7).
+        out+="        $consumer  UNPARSED source '$source' — fix the registry line"$'\n'
+        unparsed=1; continue ;;
     esac
     # Read ONLY the `dependencies:` section — a bare `<name>:` key also appears
     # under `dependency_overrides:` (path overrides) and must not match.
@@ -893,7 +898,7 @@ reach_gate() { # <pkgdir> <name> <staged-version>
   elif [[ $left -eq 0 ]]; then
     printf '    %-14s FAIL (an UNPARSED consumer constraint is unacknowledged — judge it, then G8_ACCEPT)\n' "G8 reach"; fail=1
   else
-    printf '    %-14s FAIL (a known consumer is LEFT-BEHIND with no recorded serve-decision)\n' "G8 reach"; fail=1
+    printf '    %-14s FAIL (a known consumer is LEFT-BEHIND or MISSING with no recorded serve-decision)\n' "G8 reach"; fail=1
   fi
   printf '%s' "$out"
 }
