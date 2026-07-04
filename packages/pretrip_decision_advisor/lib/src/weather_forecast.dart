@@ -20,7 +20,12 @@ class HourlyForecast {
   /// Air temperature in Celsius.
   final double tempCelsius;
 
-  /// Relative humidity in percent. Null if unknown.
+  /// Relative humidity in percent (`95.0` for 95% RH). Null if unknown.
+  ///
+  /// UNIT WARNING: `navigation_safety_core`'s `DrivingContext.humidityRH`
+  /// is a FRACTION in `[0.0, 1.0]` under the same field name — do not
+  /// wire this value across directly; use
+  /// `DrivingContext.withPercentHumidity(humidityPercent: ...)`.
   final double? humidityRH;
 
   /// Precipitation rate in millimetres per hour. Null if unknown.

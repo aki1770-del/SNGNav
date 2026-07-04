@@ -49,4 +49,70 @@ void main() {
       expect(identical(a, b), isTrue);
     });
   });
+
+  group('DrivingContext.withPercentHumidity — the percent door', () {
+    // Weather APIs (MET Norway relative_humidity) and the pretrip_*
+    // packages carry RH in PERCENT; core's humidityRH is a FRACTION.
+    // This factory is the seam that cannot be wired wrong.
+    test('converts percent to the fraction contract', () {
+      final ctx = DrivingContext.withPercentHumidity(humidityPercent: 95.0);
+      expect(ctx.humidityRH, closeTo(0.95, 1e-12));
+    });
+
+    test('null percent stays null (unknown humidity)', () {
+      final ctx = DrivingContext.withPercentHumidity(ambientTempCelsius: 1.0);
+      expect(ctx.humidityRH, isNull);
+      expect(ctx.ambientTempCelsius, 1.0);
+    });
+
+    test('carries the other fields through unchanged', () {
+      final ctx = DrivingContext.withPercentHumidity(
+        speedMps: 8.0,
+        humidityPercent: 80.0,
+        timeSincePrecipitation: const Duration(minutes: 30),
+        ambientTempCelsius: -1.0,
+        vehicleClassToken: 'kei-car',
+      );
+      expect(ctx.speedMps, 8.0);
+      expect(ctx.humidityRH, closeTo(0.80, 1e-12));
+      expect(ctx.timeSincePrecipitation, const Duration(minutes: 30));
+      expect(ctx.ambientTempCelsius, -1.0);
+      expect(ctx.vehicleClassToken, 'kei-car');
+    });
+
+    test('rejects out-of-range and non-finite percent', () {
+      for (final bad in [0.0, -5.0, 100.1, 250.0, double.nan, double.infinity]) {
+        expect(
+          () => DrivingContext.withPercentHumidity(humidityPercent: bad),
+          throwsArgumentError,
+          reason: 'percent $bad must be rejected',
+        );
+      }
+      // 100% RH (saturated air) is a legal reading.
+      final saturated =
+          DrivingContext.withPercentHumidity(humidityPercent: 100.0);
+      expect(saturated.humidityRH, closeTo(1.0, 1e-12));
+    });
+
+    test('END-TO-END: a MET-Norway-style percent reading reaches the '
+        'black-ice calibration instead of throwing', () {
+      // This is the loaded-gun scenario the factory exists to close: the
+      // exact wiring that previously threw ArgumentError in bad weather.
+      final cfg = NavigationSafetyConfig.forProfileWithContext(
+        DriverProfile.snowZoneExperienced,
+        context: DrivingContext.withPercentHumidity(
+          humidityPercent: 95.0, // as MET Norway relative_humidity delivers
+          ambientTempCelsius: 1.0,
+          speedMps: 8.0,
+        ),
+      );
+      // The humidity-lifted warning temperature holds the caution-add-only
+      // invariant relative to the baseline.
+      final base = NavigationSafetyConfig.forProfile(
+        DriverProfile.snowZoneExperienced,
+      );
+      expect(cfg.warningTemperatureCelsius,
+          greaterThanOrEqualTo(base.warningTemperatureCelsius));
+    });
+  });
 }

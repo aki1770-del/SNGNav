@@ -54,6 +54,11 @@ class DrivingContext extends Equatable {
   /// Relative humidity as a fraction in `[0.0, 1.0]` (i.e. `0.85` for
   /// 85% RH). `null` means humidity is unknown; the temperature
   /// threshold falls back to the per-profile baseline.
+  ///
+  /// UNIT WARNING: weather APIs and the `pretrip_*` packages carry
+  /// relative humidity in PERCENT under the same field name. Percent
+  /// passed here throws in the downstream calibration. For a
+  /// percent-sourced reading use [DrivingContext.withPercentHumidity].
   final double? humidityRH;
 
   /// Duration since the last observed precipitation event. `null`
@@ -88,6 +93,12 @@ class DrivingContext extends Equatable {
   /// Construct a context value. Every field is optional. Pass `null`
   /// for any input you do not have; the factory will fall back to the
   /// per-profile baseline for that dimension.
+  ///
+  /// NOTE the unit of [humidityRH]: a FRACTION in `[0.0, 1.0]`. Weather
+  /// APIs and the `pretrip_*` packages carry relative humidity in
+  /// PERCENT (`95.0`) — passing percent here throws downstream in the
+  /// calibration. If your source is percent, use
+  /// [DrivingContext.withPercentHumidity].
   const DrivingContext({
     this.speedMps,
     this.humidityRH,
@@ -95,6 +106,44 @@ class DrivingContext extends Equatable {
     this.ambientTempCelsius,
     this.vehicleClassToken,
   });
+
+  /// Construct a context from a PERCENT relative-humidity reading
+  /// (`95.0` for 95% RH) — the meteorological convention used by
+  /// weather APIs (e.g. MET Norway `relative_humidity`) and by the
+  /// `pretrip_*` forecast models. Converts to the fraction contract of
+  /// [humidityRH] internally, so percent-sourced integrations have a
+  /// door that cannot be wired wrong.
+  ///
+  /// Throws [ArgumentError] if [humidityPercent] is outside `(0, 100]`
+  /// or is not finite.
+  factory DrivingContext.withPercentHumidity({
+    double? speedMps,
+    double? humidityPercent,
+    Duration? timeSincePrecipitation,
+    double? ambientTempCelsius,
+    String? vehicleClassToken,
+  }) {
+    double? fraction;
+    if (humidityPercent != null) {
+      if (!humidityPercent.isFinite ||
+          humidityPercent <= 0.0 ||
+          humidityPercent > 100.0) {
+        throw ArgumentError.value(
+          humidityPercent,
+          'humidityPercent',
+          'must lie in (0, 100]',
+        );
+      }
+      fraction = humidityPercent / 100.0;
+    }
+    return DrivingContext(
+      speedMps: speedMps,
+      humidityRH: fraction,
+      timeSincePrecipitation: timeSincePrecipitation,
+      ambientTempCelsius: ambientTempCelsius,
+      vehicleClassToken: vehicleClassToken,
+    );
+  }
 
   @override
   List<Object?> get props => [
