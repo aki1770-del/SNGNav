@@ -201,7 +201,26 @@ void main() {
         expect(result.maneuvers[2].type, 'arrive');
       });
 
-      test('builds human-readable instructions', () async {
+      test('builds human-readable English instructions when asked', () async {
+        // The English builder is exercised explicitly — the request default
+        // is 'ja-JP' (HER's locale) since the ja narration fix.
+        final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
+
+        final result = await engine.calculateRoute(const RouteRequest(
+          origin: _nagoya,
+          destination: _toyota,
+          language: 'en',
+        ));
+
+        expect(result.maneuvers[0].instruction, 'Depart on Route 153');
+        expect(result.maneuvers[1].instruction,
+            'Right onto Tokai-Kanjo Expressway');
+        expect(result.maneuvers[2].instruction, 'Arrive at destination');
+      });
+
+      test('default language (ja-JP) yields Japanese instructions', () async {
+        // HER's contract: the default request localizes; English never leaks
+        // to a Japanese driver by default.
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
         final result = await engine.calculateRoute(const RouteRequest(
@@ -209,10 +228,10 @@ void main() {
           destination: _toyota,
         ));
 
-        expect(result.maneuvers[0].instruction, 'Depart on Route 153');
+        expect(result.maneuvers[0].instruction, 'Route 153を出発');
         expect(result.maneuvers[1].instruction,
-            'Right onto Tokai-Kanjo Expressway');
-        expect(result.maneuvers[2].instruction, 'Arrive at destination');
+            'Tokai-Kanjo Expressway方面へ右折');
+        expect(result.maneuvers[2].instruction, '目的地に到着');
       });
 
       test('converts distance from meters to km', () async {
