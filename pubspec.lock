@@ -781,7 +781,7 @@ packages:
       path: "packages/route_condition_forecast"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.5"
   routing_bloc:
     dependency: "direct main"
     description:
