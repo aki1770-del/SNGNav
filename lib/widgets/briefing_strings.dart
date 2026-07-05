@@ -145,6 +145,33 @@ abstract class BriefingStrings {
   /// not to go.
   String borderWarningCheckIncomplete(String unreachableArea);
 
+  // --- Route bridge caution --------------------------------------------------
+  /// One-line caution: the fetched route crosses about [approxCount] mapped
+  /// bridge sites, and bridge decks freeze before the road surface does.
+  /// The count is APPROXIMATE BY CONSTRUCTION (a 30 m corridor match on OSM
+  /// data — see `bridge_corridor_read.dart`), so the phrasing MUST carry
+  /// 約/"About" and never read as an exact inventory. Rendered ONLY when a
+  /// REAL route delivered AND [approxCount] ≥ 1 AND the departure window is
+  /// cold enough to matter (window minimum ≤ the advisor's +3.0 °C
+  /// radiative-frost ceiling at either endpoint, or an Oct–Apr month —
+  /// warm point evidence never suppresses the season band);
+  /// NEVER rendered as an all-clear when the count is 0. The claim is SCOPED
+  /// to the bundled dataset's region (today: Akita prefecture — the provider
+  /// hides the section when the route leaves the data's coverage extent, and
+  /// this phrasing covers the residual in-extent border slivers a bbox cannot
+  /// exclude). A caution, not an
+  /// alarm — it names the physics; it never tells the driver not to go.
+  String bridgeCorridorCaution(int approxCount);
+
+  /// Source credit for the bridge dataset behind [bridgeCorridorCaution] —
+  /// an ODbL "produced work" notice (§4.3). The pre-trip briefing is
+  /// designed to be read at the kitchen table WITHOUT opening the map, so
+  /// the tile-layer OSM credit never reaches this surface; the caution card
+  /// carries its own, following the per-surface source-credit idiom
+  /// ([winterFooter], the visibility caption). The OSM mappers who charted
+  /// these bridges are edge developers too.
+  String get bridgeDataAttribution;
+
   // --- In-app place ENTRY (typed-place destination area) --------------------
   // The driver sets the destination AREA herself. All strings frame a PLACE,
   // never a person; English is the complete fallback.
@@ -277,6 +304,16 @@ class _EnBriefingStrings extends BriefingStrings {
   String borderWarningCheckIncomplete(String unreachableArea) =>
       'Could not check warnings for $unreachableArea (connectivity). A warning '
       'may be in effect there that is not shown here.';
+
+  @override
+  String bridgeCorridorCaution(int approxCount) =>
+      'About $approxCount bridge${approxCount == 1 ? '' : 's'} on your route '
+      'ahead within Akita Prefecture. Bridge decks freeze before the road '
+      'surface does.';
+
+  @override
+  String get bridgeDataAttribution =>
+      'Bridge data © OpenStreetMap contributors (ODbL)';
 
   @override
   String get setDestinationAreaButton => 'Set destination area';
@@ -450,6 +487,15 @@ class _JaBriefingStrings extends BriefingStrings {
   String borderWarningCheckIncomplete(String unreachableArea) =>
       '$unreachableAreaの警報を確認できませんでした（通信状況により）。'
       '周辺で警報が出ている可能性があります。';
+
+  @override
+  String bridgeCorridorCaution(int approxCount) =>
+      'この先、秋田県内の経路上に橋が約${approxCount}か所あります。'
+      '橋は路面より先に凍結します。';
+
+  @override
+  String get bridgeDataAttribution =>
+      '橋データ © OpenStreetMap contributors (ODbL)';
 
   @override
   String get setDestinationAreaButton => '目的地エリアを設定';

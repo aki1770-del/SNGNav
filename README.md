@@ -292,6 +292,34 @@ an honest *"Area conditions need the live forecast enabled for this build"* note
 the area card stays hidden. This is intentional — the live source is **opt-in**,
 never a default network dependency in the offline demo build.
 
+### Pre-trip route bridge-icing caution
+
+With a destination set, the pre-trip briefing can additionally count the mapped
+bridge sites on the driver's actual route — bridge decks freeze before the road
+surface does, so *「この先、秋田県内の経路上に橋が約N か所あります。橋は路面より先に凍結します。」*
+at the kitchen table lets her slow down before the deck, not after the slide.
+The route polyline comes from an OSRM server **you supply** — the app ships
+**no default server**, so there is no implicit traffic to any third party —
+and the bridge sites come from a bundled Akita-prefecture dataset
+(© OpenStreetMap contributors, ODbL; see `assets/bridges_akita.ATTRIBUTION.md` —
+the caution card carries the attribution):
+
+```bash
+flutter run -d linux -t lib/main.dart \
+  --dart-define=PRETRIP_FORECAST=met_norway \
+  --dart-define=PRETRIP_ROUTE_OSRM_URL=https://your-osrm.example/
+```
+
+The resolve is one-shot **per destination**: it fires at pre-trip initialization
+and again exactly once when the destination is set or changed in-app; clearing
+the destination clears the count and fetches nothing. There is no polling and
+no re-fetch on rebuild. Degradation is honest by design: without the define,
+without a destination, on any network or asset failure, or for a route that
+leaves the bundled data's coverage (today: Akita prefecture), the section is
+simply **absent** — no error banner, no substitute claim. The count is
+approximate by construction, and a zero count means "nothing to say", never an
+all-clear.
+
 ---
 
 ## Platform

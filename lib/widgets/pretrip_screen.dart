@@ -20,6 +20,7 @@ library;
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 
@@ -27,7 +28,9 @@ import '../providers/digitraffic_visibility.dart';
 import '../providers/jma_visibility.dart';
 import '../providers/met_norway_hourly_forecast.dart';
 import '../providers/pretrip_live_forecast.dart';
+import '../providers/pretrip_route_bridges.dart';
 import '../providers/winter_knowledge.dart';
+import '../services/bridge_corridor_read.dart';
 import '../services/saved_place_store.dart';
 import '../services/snow_aware_pretrip_advisor.dart';
 import 'briefing_strings.dart';
@@ -51,6 +54,12 @@ class PretripScreen extends StatefulWidget {
     this.destForecastProviderFactory,
     this.forecastSourceOverride,
     this.jmaAdvisoryFetchOverride,
+    this.metForecastFetchOverride,
+    this.routeBridgesOverride,
+    this.routeShapeFetchOverride,
+    this.bridgeCsvLoadOverride,
+    this.routeOsrmUrlOverride,
+    this.bridgeGateNowOverride,
     required this.surfaceState,
   });
 
@@ -80,6 +89,54 @@ class PretripScreen extends StatefulWidget {
     required double latitude,
     required double longitude,
   })? jmaAdvisoryFetchOverride;
+
+  /// Optional test seam: overrides the CURRENT-LOCATION live MET forecast
+  /// fetch at a point, so the briefing's live path — and everything gated on
+  /// it, e.g. the bridge caution's departure-window temperature gate — is
+  /// exercisable by a plain `flutter test` without a socket or a
+  /// `--dart-define`. Null in production ⇒ the compile-time `PRETRIP_FORECAST`
+  /// gate + the real [MetNorwayHourlyForecastProvider] are used, byte-for-byte
+  /// as before.
+  final Future<WeatherForecast?> Function()? metForecastFetchOverride;
+
+  /// Optional test seam: replaces the WHOLE opt-in route+asset bridge resolve
+  /// (the `PRETRIP_ROUTE_OSRM_URL` gate + one-shot OSRM fetch + bundled-asset
+  /// load) so the bridge caution is exercisable without network. Null in
+  /// production ⇒ the real one-shot resolve. Returning null ⇒ the section is
+  /// ABSENT (the honest floor, exactly as in production). For pinning the
+  /// production arm ITSELF (gate + saved-place + coordinate threading), use
+  /// the narrower seams below instead.
+  final Future<BridgeCorridorResult?> Function()? routeBridgesOverride;
+
+  /// Optional test seam (PRODUCTION-ARM): overrides ONLY the OSRM route-shape
+  /// fetch inside the real one-shot wiring, so the `PRETRIP_ROUTE_OSRM_URL`
+  /// gate, the memoized saved-place await, the no-destination return and the
+  /// origin/destination threading all run REAL in tests. Receives the exact
+  /// coordinates production threads into the fetch — a swapped pair would
+  /// ship a plausible-but-wrong count, which is why this seam exists. Null in
+  /// production ⇒ the real [fetchOsrmRouteShape].
+  final Future<List<LatLng>> Function({
+    required double originLat,
+    required double originLon,
+    required double destLat,
+    required double destLon,
+  })? routeShapeFetchOverride;
+
+  /// Optional test seam (PRODUCTION-ARM): overrides the bundled bridge-CSV
+  /// load inside the real wiring (pairs with [routeShapeFetchOverride]).
+  /// Null in production ⇒ [loadBridgeCsvAsset].
+  final Future<String> Function()? bridgeCsvLoadOverride;
+
+  /// Optional test seam (PRODUCTION-ARM): stands in for the compile-time
+  /// `PRETRIP_ROUTE_OSRM_URL` opt-in so a plain `flutter test` can exercise
+  /// the gate in both directions. Null in production ⇒ the compile-time
+  /// define (byte-for-byte unchanged).
+  final String? routeOsrmUrlOverride;
+
+  /// Optional test seam: the "now" the bridge caution's season band uses (its
+  /// no-cold-evidence arm is month-gated, Oct–Apr). Null in production ⇒
+  /// [DateTime.now] at build time.
+  final DateTime? bridgeGateNowOverride;
 
   /// The road-surface state the host's driving-condition assessment expects;
   /// drives the offline winter-driving guidance card. The host owns the
@@ -182,15 +239,48 @@ class _PretripScreenState extends State<PretripScreen> {
   void Function()? _pretripVisibilityClose;
   VisibilityObservation? _pretripVisibility;
 
+  // ROUTE BRIDGE CAUTION (additive opt-in):
+  // `--dart-define=PRETRIP_ROUTE_OSRM_URL=<url>` fetches the REAL route
+  // polyline ONCE PER DESTINATION EPOCH (origin = the briefing point,
+  // destination = the driver-set destination) via the existing OSRM engine,
+  // and counts the mapped bridge sites on it — bridge decks freeze before
+  // the road surface does. One epoch = one destination: the resolve fires at
+  // pre-trip initialization, and again exactly once when SHE sets a NEW
+  // destination in-app; clearing the destination clears the count and
+  // resolves NOTHING. ANY failure (no URL, no destination, network error,
+  // empty shape, missing asset) ⇒ the feature is ABSENT: no section, no
+  // error banner, no substitute claim. No Timer/Stream/poll and no re-fetch
+  // on rebuild — the same HER-action-only discipline as the destination-area
+  // read above.
+  static const String _pretripRouteOsrmUrl =
+      String.fromEnvironment('PRETRIP_ROUTE_OSRM_URL');
+
+  /// The corridor-match result for the CURRENT destination epoch; null until
+  /// (and unless) a real route AND the bridge dataset both delivered for that
+  /// epoch. Null ⇒ no bridge section.
+  BridgeCorridorResult? _routeBridges;
+
+  /// Destination identity, bumped by the two HER-action mutations
+  /// ([_setDestination] / [_clearDestination]). The route resolve (and the
+  /// destination-area read) can be in flight for up to ~15 s; if SHE changes
+  /// or clears the destination in that window, the late result describes the
+  /// PRIOR destination — landing it would be exactly the false claim the
+  /// clear-on-change contract forbids. [_initRouteBridges] and
+  /// [_initDestAreaCondition] capture this before their awaits and drop the
+  /// result on mismatch (honest absence); the fresh resolve the setter fires
+  /// owns the new epoch.
+  int _destEpoch = 0;
+
   // DESTINATION-AREA condition read (the FAMILY-THREAD section): the PUBLIC
   // weather + official advisory at a PLACE — "what conditions will SHE face in
   // her mother's area if she drives there", so she decides whether/when to go.
   //
   // The destination point comes ONLY from these static defines. It NEVER reads
   // a device location, a presence signal, or any person — and the fetch fires
-  // EXACTLY ONCE from initState (no Timer, no Stream, no scheduled refresh):
-  // background polling of "her area" would be 見守り-by-proxy, and is forbidden.
-  // Unparseable overrides ⇒ the feature is OFF (null), never a guessed point.
+  // one-shot from initState plus once per HER-action destination change (no
+  // Timer, no Stream, no scheduled refresh): background polling of "her area"
+  // would be 見守り-by-proxy, and is forbidden. Unparseable overrides ⇒ the
+  // feature is OFF (null), never a guessed point.
   static final double? _pretripDestLat =
       double.tryParse(const String.fromEnvironment('PRETRIP_DEST_LAT'));
   static final double? _pretripDestLon =
@@ -209,7 +299,7 @@ class _PretripScreenState extends State<PretripScreen> {
   double? _destLon = _pretripDestLon;
   String _destLabel = _pretripDestLabel;
   SavedPlaceStore? _savedPlaceStore;
-  bool _savedPlaceLoaded = false;
+  Future<void>? _savedPlaceLoad;
 
   void Function()? _destVisibilityClose;
   MetNorwayHourlyForecastProvider? _destForecastProvider;
@@ -217,6 +307,13 @@ class _PretripScreenState extends State<PretripScreen> {
   /// The destination-area read; null until a real fetch delivers (honest floor
   /// — the section is simply omitted), never a fabricated value.
   AreaConditionRead? _destAreaRead;
+
+  /// The raw DESTINATION-area forecast behind [_destAreaRead], kept so the
+  /// bridge caution's cold gate can consult the far endpoint too (a warm
+  /// coastal origin says nothing about inland decks; cold at either endpoint
+  /// arms the caution — caution-add-only, zero extra network). Cleared with
+  /// the read on every HER-action destination change.
+  WeatherForecast? _destLiveForecast;
 
   /// The JMA prefecture code resolved for the current dest read (or null). Kept
   /// as a locale-INDEPENDENT input so the human-readable area label is resolved
@@ -290,6 +387,7 @@ class _PretripScreenState extends State<PretripScreen> {
     _initPretripForecast();
     _initPretripVisibility();
     _initDestAreaCondition();
+    _initRouteBridges();
     _initWinterKnowledge();
   }
 
@@ -344,16 +442,26 @@ class _PretripScreenState extends State<PretripScreen> {
   /// demo forecast, and the caption keeps saying "demo" — a live source is
   /// never claimed that did not actually deliver.
   Future<void> _initPretripForecast() async {
-    if (_pretripForecastSource != 'met_norway') return; // not selected
-    final met = MetNorwayHourlyForecastProvider();
-    _pretripForecastProvider = met;
+    // Test seam: an injected MET fetch exercises the live path in a plain
+    // `flutter test`; production (null) keeps the compile-time gate + the real
+    // provider, byte-for-byte as before.
+    final metOverride = widget.metForecastFetchOverride;
+    if (metOverride == null && _pretripForecastSource != 'met_norway') {
+      return; // not selected
+    }
+    MetNorwayHourlyForecastProvider? met;
+    if (metOverride == null) {
+      met = MetNorwayHourlyForecastProvider();
+      _pretripForecastProvider = met;
+    }
     final result = await resolvePretripLiveForecast(
       latitude: _pretripLat,
       longitude: _pretripLon,
       now: DateTime.now(),
       window: _pretripWindow,
-      fetchMetForecast: () =>
-          met.fetchForecast(latitude: _pretripLat, longitude: _pretripLon),
+      fetchMetForecast: metOverride ??
+          () =>
+              met!.fetchForecast(latitude: _pretripLat, longitude: _pretripLon),
       fetchJmaAdvisories: () =>
           _fetchJmaAdvisories(latitude: _pretripLat, longitude: _pretripLon),
     );
@@ -399,14 +507,17 @@ class _PretripScreenState extends State<PretripScreen> {
     }
   }
 
-  /// Loads the driver-saved destination PLACE once (guarded by
-  /// [_savedPlaceLoaded] so the HER-action setter's re-fetch never re-loads and
-  /// clobbers the just-set fields). On a non-null saved place the live instance
-  /// fields are overwritten; on any failure the dart-define seed is kept (honest
-  /// floor). It loads a PLACE only — never a person.
-  Future<void> _loadSavedPlace() async {
-    if (_savedPlaceLoaded) return;
-    _savedPlaceLoaded = true;
+  /// Loads the driver-saved destination PLACE once (memoized future, so the
+  /// HER-action setter's re-fetch never re-loads and clobbers the just-set
+  /// fields — and so CONCURRENT initState callers, the dest-area read and the
+  /// route-bridge fetch, AWAIT the same single load instead of racing past a
+  /// boolean guard and reading not-yet-loaded fields). On a non-null saved
+  /// place the live instance fields are overwritten; on any failure the
+  /// dart-define seed is kept (honest floor). It loads a PLACE only — never a
+  /// person.
+  Future<void> _loadSavedPlace() => _savedPlaceLoad ??= _loadSavedPlaceOnce();
+
+  Future<void> _loadSavedPlaceOnce() async {
     try {
       _savedPlaceStore =
           widget.savedPlaceStore ?? await openDefaultSavedPlaceStore();
@@ -443,6 +554,15 @@ class _PretripScreenState extends State<PretripScreen> {
       _destLon = place.lon;
       _destLabel = place.label;
       _destAreaRead = null; // hide the stale area card until the re-fetch lands
+      _destLiveForecast = null; // stale far-endpoint evidence goes with it
+      // The bridge count described the route to the PRIOR destination; a stale
+      // count for the new route would be a false claim. Cleared IMMEDIATELY;
+      // exactly ONE fresh resolve then fires for the NEW epoch (below) —
+      // one-shot per destination epoch, never a poll. The epoch bump also
+      // drops an IN-FLIGHT resolve's late result (see [_destEpoch]) —
+      // clearing the field alone cannot stop that landing.
+      _routeBridges = null;
+      _destEpoch++;
     });
     // Persist the ONE record (best-effort; a save failure must not block the read).
     try {
@@ -453,9 +573,16 @@ class _PretripScreenState extends State<PretripScreen> {
       // Honest floor: the in-session place still drives the read even if the
       // write failed; nothing is fabricated.
     }
-    // Re-fetch + re-render for the new place. _loadSavedPlace is guarded, so this
-    // re-entry will NOT re-load and clobber the just-set fields.
-    await _initDestAreaCondition();
+    // Re-fetch + re-render for the new place — the area read AND exactly one
+    // fresh route-bridge resolve for the NEW epoch (same gates: URL opt-in,
+    // honest absence on any failure). Fired together, like initState, so the
+    // bridge caution never waits behind the area fetch. _loadSavedPlace is
+    // guarded, so these re-entries will NOT re-load and clobber the just-set
+    // fields.
+    await Future.wait([
+      _initDestAreaCondition(),
+      _initRouteBridges(),
+    ]);
   }
 
   /// HER-action: remove the saved destination AREA. Closes providers, clears the
@@ -470,6 +597,13 @@ class _PretripScreenState extends State<PretripScreen> {
       _destLon = null;
       _destLabel = '';
       _destAreaRead = null;
+      _destLiveForecast = null;
+      // No destination ⇒ no route ⇒ the bridge count no longer describes
+      // anything real. Cleared, and NO new resolve fires (nothing to route;
+      // a clear ends the epoch, it does not start one). The epoch bump also
+      // drops an IN-FLIGHT resolve's late result.
+      _routeBridges = null;
+      _destEpoch++;
     });
     try {
       _savedPlaceStore ??=
@@ -482,16 +616,20 @@ class _PretripScreenState extends State<PretripScreen> {
 
   /// Fetches the DESTINATION-AREA condition read (the FAMILY-THREAD section):
   /// the PUBLIC weather + official advisory at her mother's PLACE, so SHE
-  /// decides whether/when to drive there. ON-DEMAND ONLY — called EXACTLY ONCE
-  /// from [initState]; there is NO Timer, NO Stream, NO scheduled refresh and
-  /// NO notification: polling "her area" in the background would be 見守り-by-
-  /// proxy, which is forbidden. It watches no person — the point comes ONLY
-  /// from the static PRETRIP_DEST_* defines.
+  /// decides whether/when to drive there. ON-DEMAND ONLY — called one-shot
+  /// from [initState] plus once per HER-action destination change
+  /// ([_setDestination]); there is NO Timer, NO Stream, NO scheduled refresh
+  /// and NO notification: polling "her area" in the background would be
+  /// 見守り-by-proxy, which is forbidden. It watches no person — the point
+  /// comes ONLY from the static PRETRIP_DEST_* defines and the in-app
+  /// place entry.
   ///
   /// Gated on the SAME live-forecast opt-in as the briefing, plus a configured
   /// destination point. Degrades honestly on every failure path: a null forecast
   /// (or no opt-in) leaves [_destAreaRead] null and the section is omitted —
-  /// never a fabricated value.
+  /// never a fabricated value. A read that lands AFTER the destination changed
+  /// is DROPPED on the epoch guard ([_destEpoch]) — a stale area read must not
+  /// resurrect into the family card or the bridge caution's cold gate.
   Future<void> _initDestAreaCondition() async {
     // Load any driver-saved place FIRST (guarded so re-entry from the HER-action
     // setter won't clobber the just-set fields). Seeds _destLat/_destLon/_destLabel.
@@ -505,6 +643,11 @@ class _PretripScreenState extends State<PretripScreen> {
     }
     final destLat = _destLat!;
     final destLon = _destLon!;
+    // Captured AFTER the coords are read (the [_initRouteBridges] idiom) and
+    // BEFORE any await that can straddle a HER-action change: a read computed
+    // for the coords as they stand HERE is correct for this epoch; any later
+    // change/clear bumps the epoch and the landings below drop the stale read.
+    final epoch = _destEpoch;
 
     final met = (widget.destForecastProviderFactory ??
         MetNorwayHourlyForecastProvider.new)();
@@ -521,6 +664,16 @@ class _PretripScreenState extends State<PretripScreen> {
     );
     // Honest floor: no live forecast for the area ⇒ no section.
     if (!mounted || result.forecast == null) return;
+    if (epoch != _destEpoch) {
+      // The destination changed (or was cleared) while the area read was in
+      // flight: this forecast describes the PRIOR area. Landing it would
+      // resurrect stale data into the family card AND the bridge caution's
+      // cold gate ([_destLiveForecast]) — dropped instead; the setter's own
+      // re-fetch owns the new epoch.
+      debugPrint('pretrip dest area: destination changed during the read — '
+          'stale result dropped');
+      return;
+    }
 
     // Optional REAL measured visibility at the DEST point (real sensor or
     // nothing — never an estimate), gated on the same visibility opt-in.
@@ -543,7 +696,8 @@ class _PretripScreenState extends State<PretripScreen> {
     } catch (_) {
       destObs = null; // honest floor: no measured visibility, nothing estimated
     }
-    if (!mounted) return;
+    // Epoch re-checked: the visibility fetch above is a second straddle window.
+    if (!mounted || epoch != _destEpoch) return;
 
     // The human-readable PLACE label is resolved at RENDER time from the app's
     // Localizations locale (see [build]) so the area label and the rest of the
@@ -567,6 +721,8 @@ class _PretripScreenState extends State<PretripScreen> {
     );
     setState(() {
       _destAreaRead = read;
+      // Kept for the bridge caution's cold gate (far-endpoint evidence).
+      _destLiveForecast = result.forecast;
       _destAreaPrefCode = result.prefectureCode;
       // A border read where a sibling prefecture was unreachable: HER mother's
       // area read is PARTIAL. Carry the flag + the unreachable prefecture so the
@@ -575,6 +731,69 @@ class _PretripScreenState extends State<PretripScreen> {
       _destBorderCheckIncomplete = result.jmaBorderCheckIncomplete;
       _destUnreachableArea = result.jmaUnreachableArea;
     });
+  }
+
+  /// Fetches the route polyline once PER DESTINATION EPOCH — from [initState]
+  /// (a saved destination) and once per HER-action destination change
+  /// ([_setDestination]); nothing self-scheduled in the background, no
+  /// re-fetch on rebuild, and a clear ([_clearDestination]) resolves NOTHING
+  /// — and counts the mapped bridge sites on it. Opt-in twice over: the
+  /// `PRETRIP_ROUTE_OSRM_URL` dart-define must be set AND the driver must have
+  /// a destination. Every failure path leaves [_routeBridges] null — the
+  /// briefing simply has no bridge section, never an error banner and never a
+  /// substitute claim. A result landing after the epoch moved on is dropped
+  /// (see [_destEpoch]).
+  Future<void> _initRouteBridges() async {
+    final override = widget.routeBridgesOverride;
+    BridgeCorridorResult? result;
+    final int epoch;
+    if (override != null) {
+      epoch = _destEpoch;
+      result = await override();
+    } else {
+      final osrmUrl = widget.routeOsrmUrlOverride ?? _pretripRouteOsrmUrl;
+      if (osrmUrl.isEmpty) return; // not opted in
+      // Same load as the dest-area read (memoized — no double read), so the
+      // route destination is the driver-saved place, not just the seed.
+      await _loadSavedPlace();
+      final destLat = _destLat;
+      final destLon = _destLon;
+      if (destLat == null || destLon == null) return; // no destination set
+      // Captured AFTER the coords are read: a result computed for the coords
+      // as they stand HERE is correct for this epoch; any later HER-action
+      // change bumps the epoch and the landing below drops the result.
+      epoch = _destEpoch;
+      final fetchOverride = widget.routeShapeFetchOverride;
+      result = await resolvePretripRouteBridges(
+        fetchRouteShape: () => fetchOverride != null
+            ? fetchOverride(
+                originLat: _pretripLat,
+                originLon: _pretripLon,
+                destLat: destLat,
+                destLon: destLon,
+              )
+            : fetchOsrmRouteShape(
+                baseUrl: osrmUrl,
+                originLat: _pretripLat,
+                originLon: _pretripLon,
+                destLat: destLat,
+                destLon: destLon,
+              ),
+        loadBridgeCsv: widget.bridgeCsvLoadOverride ?? loadBridgeCsvAsset,
+      );
+    }
+    if (!mounted || result == null) return;
+    if (epoch != _destEpoch) {
+      // The destination changed (or was cleared) while this epoch's one-shot
+      // resolve was in flight: the count describes the route to the PRIOR
+      // destination. Landing it beside the NEW destination would be a false
+      // claim — dropped instead. On a change, the setter's own fresh resolve
+      // owns the new epoch; on a clear there is nothing to resolve.
+      debugPrint('pretrip route bridges: destination changed during the '
+          'one-shot resolve — stale result dropped');
+      return;
+    }
+    setState(() => _routeBridges = result);
   }
 
   @override
@@ -724,6 +943,26 @@ class _PretripScreenState extends State<PretripScreen> {
                   _pretripJmaUnreachableArea != null)
                 _borderIncompleteCaution(
                     context, strings, _pretripJmaUnreachableArea!),
+              // ROUTE BRIDGE caution: the real fetched route crosses about N
+              // mapped bridge sites, and bridge decks freeze before the road
+              // surface does. Shown only when a real route delivered, the
+              // count is ≥ 1, AND a frozen deck is plausible: window min ≤
+              // +3.0 °C at EITHER endpoint (origin live read, or the
+              // destination-area read the family section already fetched), or
+              // the season band otherwise — warm POINT evidence never
+              // suppresses the band (the decks are elsewhere on the route).
+              // Zero/no-data ⇒ NO section — never an all-clear.
+              if (_routeBridges != null &&
+                  shouldShowBridgeCaution(
+                    clusterCount: _routeBridges!.clusterCount,
+                    liveForecast: live,
+                    destForecast: _destLiveForecast,
+                    departure: departure,
+                    window: _pretripWindow,
+                    now: widget.bridgeGateNowOverride ?? DateTime.now(),
+                  ))
+                _bridgeCorridorCaution(
+                    context, strings, _routeBridges!.clusterCount),
               // In-app TYPED-PLACE ENTRY: the driver (HER) sets/changes the
               // destination AREA herself. ALWAYS visible — she must be able to
               // set the place the FIRST time, when _destAreaRead is still null.
@@ -780,6 +1019,62 @@ class _PretripScreenState extends State<PretripScreen> {
                     context, strings, _destUnreachableArea!),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// The one-line ROUTE BRIDGE caution: about [approxCount] mapped bridge
+  /// sites lie on the fetched route, and bridge decks freeze before the road
+  /// surface does. Same visual weight as [_borderIncompleteCaution] — a
+  /// caution, not an alarm. The count is approximate by construction and the
+  /// string says so (約/"About"); it never tells HER not to drive.
+  Widget _bridgeCorridorCaution(
+    BuildContext context,
+    BriefingStrings strings,
+    int approxCount,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      key: const Key('pretrip-bridge-corridor-caution'),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      color: theme.colorScheme.tertiaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.bridgeCorridorCaution(approxCount),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                  const SizedBox(height: 4),
+                  // ODbL produced-work notice: this surface never shows the
+                  // map's tile credit, so the card carries its own (the
+                  // winterFooter / visibility-caption source-credit idiom).
+                  Text(
+                    strings.bridgeDataAttribution,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

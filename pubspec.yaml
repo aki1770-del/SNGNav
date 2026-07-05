@@ -139,3 +139,8 @@ flutter:
     # from a CC BY-SA corpus (tool/winter_knowledge/). Drive-time lookup is a
     # deterministic, offline read — no LLM/network in the vehicle.
     - assets/winter_knowledge.json
+    # Akita drivable-class bridge centroids+bearings (© OpenStreetMap
+    # contributors, ODbL — separate DATA file so code stays BSD-3; see
+    # assets/bridges_akita.ATTRIBUTION.md). Generated offline by
+    # tool/generate_bridge_asset.dart; pre-trip bridge count is an offline read.
+    - assets/bridges_akita.csv.gz
