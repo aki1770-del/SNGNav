@@ -1,0 +1,27 @@
+name: drive_situation_fusion
+description: >-
+  Fuses a localization estimate and a weather advisory into
+  compound_failure_advisor's DriveSituation — the safety-critical position and
+  advisory seam, done once and tested.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - safety
+  - automotive
+  - driving
+  - weather
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  compound_failure_advisor: ^0.1.1
+  localization_fallback: ^0.1.1
+  condition_aggregator: ^0.0.7
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.1
