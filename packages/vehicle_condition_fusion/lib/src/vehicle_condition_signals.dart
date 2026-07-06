@@ -18,6 +18,7 @@ class VehicleConditionSignals extends Equatable {
     this.wiperIntensity,
     this.rainIntensity,
     this.airTempC,
+    this.humidityRH,
     this.speedKmh,
     this.escEngaged,
   });
@@ -48,11 +49,22 @@ class VehicleConditionSignals extends Equatable {
   /// Ambient outside air temperature (°C).
   final double? airTempC;
 
+  /// Ambient outside relative humidity, PERCENT `[0, 100]`.
+  ///
+  /// Load-bearing for radiative-frost black ice on the OFFLINE in-vehicle path
+  /// (the D3 compound-failure worst case): with a real air-temperature AND a
+  /// real humidity sensor, the shared classifier can detect the clear-sky
+  /// radiative-cooling window (surface below 0 °C while the air still reads
+  /// +1…+3 °C) that friction/traction signals only reveal AFTER the wheels have
+  /// already slipped. `null` when the vehicle does not publish it — a missing
+  /// humidity never fabricates a hazard; the classifier simply abstains.
+  final double? humidityRH;
+
   /// Vehicle speed (km/h) — carried for context; not used in classification.
   final double? speedKmh;
 
   // -------------------------------------------------------------------------
-  // COVESA VSS adapter (standard leaf paths → these seven fields).
+  // COVESA VSS adapter (standard leaf paths → these eight fields).
   // -------------------------------------------------------------------------
 
   /// VSS leaf path for [roadFriction] — most-probable road-friction estimate.
@@ -71,6 +83,9 @@ class VehicleConditionSignals extends Equatable {
 
   /// VSS leaf path for [airTempC] — ambient air temperature, Celsius.
   static const String vssAirTemperature = 'Vehicle.Exterior.AirTemperature';
+
+  /// VSS leaf path for [humidityRH] — ambient relative humidity, PERCENT.
+  static const String vssHumidity = 'Vehicle.Exterior.Humidity';
 
   /// VSS leaf path for [speedKmh] — vehicle speed, km/h.
   static const String vssSpeed = 'Vehicle.Speed';
@@ -92,6 +107,7 @@ class VehicleConditionSignals extends Equatable {
     vssAbsEngaged,
     vssEscEngaged,
     vssAirTemperature,
+    vssHumidity,
     vssSpeed,
     vssWiperIntensity,
     vssRainIntensity,
@@ -132,6 +148,12 @@ class VehicleConditionSignals extends Equatable {
   ///  * `Vehicle.ADAS.ESC.IsEngaged` → [escEngaged]; like TCS/ABS it contributes
   ///    to cold-slip ice risk (see `vehicleSignalsToWeatherCondition`).
   ///
+  /// **Now mapped (v0.4.0).**
+  ///  * `Vehicle.Exterior.Humidity` → [humidityRH] (PERCENT); with a real air
+  ///    temperature it lets the shared classifier detect radiative-frost black
+  ///    ice on the offline in-vehicle path — the D3 worst-case where friction
+  ///    signals only fire AFTER the wheels already slipped. Absent → `null`.
+  ///
   /// **Intentionally NOT mapped.**
   ///  * The `Vehicle.Exterior.RoadSurfaceCondition` family (VSS `master` /
   ///    unreleased v7) is **not** used because it is not in any released VSS
@@ -151,6 +173,7 @@ class VehicleConditionSignals extends Equatable {
       absEngaged: _asVssBool(leaves[vssAbsEngaged]),
       escEngaged: _asVssBool(leaves[vssEscEngaged]),
       airTempC: _asDouble(leaves[vssAirTemperature]),
+      humidityRH: _asDouble(leaves[vssHumidity]),
       speedKmh: _asDouble(leaves[vssSpeed]),
       wiperIntensity: _clampMinInt(_asInt(leaves[vssWiperIntensity]), 0),
       rainIntensity: _clampInt(_asInt(leaves[vssRainIntensity]), 0, 100),
@@ -210,7 +233,7 @@ class VehicleConditionSignals extends Equatable {
   /// Treats `this` as a newer *partial frame* from a source that re-sends only
   /// the signals that changed (the documented-primary KUKSA `subscribe` path),
   /// and returns a new, complete snapshot laid over [previous]: for **each of
-  /// the seven fields**, `this` (the newer frame)'s value is used when non-null,
+  /// the eight fields**, `this` (the newer frame)'s value is used when non-null,
   /// otherwise [previous]'s value is carried forward.
   ///
   /// A `null` in a partial frame therefore means **"unchanged — not re-sent this
@@ -238,6 +261,7 @@ class VehicleConditionSignals extends Equatable {
       wiperIntensity: wiperIntensity ?? previous.wiperIntensity,
       rainIntensity: rainIntensity ?? previous.rainIntensity,
       airTempC: airTempC ?? previous.airTempC,
+      humidityRH: humidityRH ?? previous.humidityRH,
       speedKmh: speedKmh ?? previous.speedKmh,
     );
   }
@@ -251,6 +275,7 @@ class VehicleConditionSignals extends Equatable {
         wiperIntensity,
         rainIntensity,
         airTempC,
+        humidityRH,
         speedKmh,
       ];
 }

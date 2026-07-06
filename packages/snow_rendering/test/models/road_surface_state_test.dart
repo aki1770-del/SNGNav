@@ -1,4 +1,5 @@
 import 'package:driving_weather/driving_weather.dart';
+import 'package:navigation_safety_calibration/navigation_safety_calibration.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 import 'package:test/test.dart';
 
@@ -8,6 +9,7 @@ WeatherCondition _condition({
   double temperatureCelsius = 5.0,
   double visibilityMeters = 10000,
   bool iceRisk = false,
+  double? humidityRH,
 }) => WeatherCondition(
   precipType: precipType,
   intensity: intensity,
@@ -15,6 +17,7 @@ WeatherCondition _condition({
   visibilityMeters: visibilityMeters,
   windSpeedKmh: 0,
   iceRisk: iceRisk,
+  humidityRH: humidityRH,
   timestamp: DateTime(2026),
 );
 
@@ -298,6 +301,140 @@ void main() {
         ),
         RoadSurfaceState.blackIce,
       );
+    });
+  });
+
+  group('RoadSurfaceState.fromCondition — radiative-frost black ice', () {
+    // The exact case the live in-drive screen used to classify DRY / full-grip
+    // while the pre-trip briefing (correctly) warned black ice. HER's Akita
+    // pre-dawn commute: clear, no precip, air a couple of degrees above zero,
+    // high humidity — a frosted bridge deck.
+    test('no precip, +2C, 70% RH -> blackIce (was DRY: the contradiction)', () {
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 2.0, humidityRH: 70.0),
+        ),
+        RoadSurfaceState.blackIce,
+      );
+    });
+
+    test('no precip, +0.5C, 90% RH -> blackIce', () {
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 0.5, humidityRH: 90.0),
+        ),
+        RoadSurfaceState.blackIce,
+      );
+    });
+
+    test('no precip, +2C, humidity ABSENT -> dry (humidity-gated, no fabrication)', () {
+      // Without humidity the classifier abstains rather than guessing — absence
+      // is never hazard, and never suppresses a colder classification either.
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 2.0),
+        ),
+        RoadSurfaceState.dry,
+      );
+    });
+
+    test('no precip, +2C, 95% RH -> dry (saturated air, dew point > 0, no cry-wolf)', () {
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 2.0, humidityRH: 95.0),
+        ),
+        RoadSurfaceState.dry,
+      );
+    });
+
+    test('no precip, +5C, 90% RH -> dry (above the ambient ceiling)', () {
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 5.0, humidityRH: 90.0),
+        ),
+        RoadSurfaceState.dry,
+      );
+    });
+
+    // --- Independent intent pins (literal expected, NOT derived from the
+    // function under test) for the dry->blackIce expansion this bond introduced.
+
+    test('no precip, -2C, 40% RH -> blackIce (sub-zero WITH humidity; was dry)', () {
+      // The single largest behavior change: at -2C (above the -3C residual-ice
+      // threshold) the road used to be dry/full-grip; with humidity present the
+      // dew point is ~-13.8C, so it is now correctly blackIce. Pinned by intent.
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: -2.0, humidityRH: 40.0),
+        ),
+        RoadSurfaceState.blackIce,
+      );
+    });
+
+    test('no precip, -2C, humidity ABSENT -> dry (unchanged; the companion)', () {
+      // Same -2C with no humidity feed still returns dry (pre-existing), so the
+      // dry->blackIce expansion is strictly humidity-gated.
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: -2.0),
+        ),
+        RoadSurfaceState.dry,
+      );
+    });
+
+    test('no precip, +2C, 30% RH -> blackIce (INTENDED: dry air fires deeper)', () {
+      // Documents intent (lens-3): the dew-point model fires MORE readily as
+      // humidity drops (drier air => deeper depression). +2C/30%RH -> dew point
+      // ~-13.8C -> blackIce. This is deliberate caution-add on a cold-dry clear
+      // morning; a future maintainer can revisit whether a higher moisture floor
+      // better matches real dry mornings (see KNOWN_LIMITATIONS.md).
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(temperatureCelsius: 2.0, humidityRH: 30.0),
+        ),
+        RoadSurfaceState.blackIce,
+      );
+    });
+
+    test('humidity does NOT override the snow branch (+3C snow stays slush)', () {
+      // The radiative-frost window is the no-precip case only; a melting-snow
+      // classification must not be flipped to black ice by high humidity.
+      expect(
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 3,
+            humidityRH: 95.0,
+          ),
+        ),
+        RoadSurfaceState.slush,
+      );
+    });
+
+    test('cross-path agreement: fromCondition matches the shared classifier', () {
+      // The whole point of the bond: the in-drive classifier and the pre-trip
+      // advisor call the SAME isRadiativeFrostBlackIce, so for the no-precip
+      // window they can never disagree. This asserts the equivalence directly
+      // across a matrix, including the previously-contradictory cases.
+      const temps = [-1.0, 0.0, 0.5, 1.0, 2.0, 2.5, 3.0, 3.01, 5.0];
+      const humidities = [null, 40.0, 60.0, 70.0, 80.0, 90.0, 95.0, 100.0];
+      for (final t in temps) {
+        for (final rh in humidities) {
+          final surface = RoadSurfaceState.fromCondition(
+            _condition(temperatureCelsius: t, humidityRH: rh),
+          );
+          final expectedBlackIce =
+              t <= -3 ||
+              isRadiativeFrostBlackIce(ambientCelsius: t, humidityRHPercent: rh);
+          expect(
+            surface == RoadSurfaceState.blackIce,
+            expectedBlackIce,
+            reason: 'no-precip t=$t rh=$rh: surface=$surface '
+                'expectedBlackIce=$expectedBlackIce',
+          );
+        }
+      }
     });
   });
 

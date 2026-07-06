@@ -13,13 +13,14 @@ import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
 
 void main() {
   group('VehicleConditionSignals.fromVss (standard COVESA VSS leaves)', () {
-    test('full map → all eight fields populated, friction ÷100', () {
+    test('full map → all nine fields populated, friction ÷100', () {
       final s = VehicleConditionSignals.fromVss(const {
         'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 25.0, // percent
         'Vehicle.ADAS.TCS.IsEngaged': true,
         'Vehicle.ADAS.ABS.IsEngaged': false,
         'Vehicle.ADAS.ESC.IsEngaged': true,
         'Vehicle.Exterior.AirTemperature': -3.0,
+        'Vehicle.Exterior.Humidity': 82.0,
         'Vehicle.Speed': 42.0,
         'Vehicle.Body.Windshield.Front.Wiping.Intensity': 3,
         'Vehicle.Body.Raindetection.Intensity': 80,
@@ -30,6 +31,7 @@ void main() {
       expect(s.absEngaged, isFalse);
       expect(s.escEngaged, isTrue);
       expect(s.airTempC, -3.0);
+      expect(s.humidityRH, 82.0);
       expect(s.speedKmh, 42.0);
       expect(s.wiperIntensity, 3);
       expect(s.rainIntensity, 80);
@@ -43,10 +45,42 @@ void main() {
       expect(s.absEngaged, isNull);
       expect(s.escEngaged, isNull);
       expect(s.airTempC, isNull);
+      expect(s.humidityRH, isNull);
       expect(s.speedKmh, isNull);
       expect(s.wiperIntensity, isNull);
       expect(s.rainIntensity, isNull);
       expect(s.hasAnySignal, isFalse);
+    });
+
+    test('Vehicle.Exterior.Humidity → humidityRH (the radiative-frost reach)', () {
+      // The offline D3-worst-case wire: a real exterior humidity sensor lets the
+      // shared classifier catch radiative-frost black ice BEFORE the wheels slip.
+      final s = VehicleConditionSignals.fromVss(const {
+        'Vehicle.Exterior.AirTemperature': 2.0,
+        'Vehicle.Exterior.Humidity': 70.0,
+      });
+      expect(s.airTempC, 2.0);
+      expect(s.humidityRH, 70.0);
+
+      // and it flows through to the WeatherCondition the classifier consumes
+      final w = vehicleSignalsToWeatherCondition(s);
+      expect(w.temperatureCelsius, 2.0);
+      expect(w.humidityRH, 70.0);
+    });
+
+    test('humidity absent → humidityRH null → never fabricated', () {
+      final s = VehicleConditionSignals.fromVss(const {
+        'Vehicle.Exterior.AirTemperature': 2.0,
+      });
+      expect(s.humidityRH, isNull);
+      expect(vehicleSignalsToWeatherCondition(s).humidityRH, isNull);
+    });
+
+    test('non-finite humidity (NaN) → null, never a fabricated value', () {
+      final s = VehicleConditionSignals.fromVss(const {
+        'Vehicle.Exterior.Humidity': double.nan,
+      });
+      expect(s.humidityRH, isNull);
     });
 
     test('partial map → only provided fields set, rest null (no fabrication)',
@@ -284,8 +318,8 @@ void main() {
       expect(s.escEngaged, isNull);
     });
 
-    test('recognizedVssPaths has exactly the 8 paths', () {
-      expect(VehicleConditionSignals.recognizedVssPaths, hasLength(8));
+    test('recognizedVssPaths has exactly the 9 paths', () {
+      expect(VehicleConditionSignals.recognizedVssPaths, hasLength(9));
       expect(
         VehicleConditionSignals.recognizedVssPaths.toSet(),
         {
@@ -294,6 +328,7 @@ void main() {
           'Vehicle.ADAS.ABS.IsEngaged',
           'Vehicle.ADAS.ESC.IsEngaged',
           'Vehicle.Exterior.AirTemperature',
+          'Vehicle.Exterior.Humidity',
           'Vehicle.Speed',
           'Vehicle.Body.Windshield.Front.Wiping.Intensity',
           'Vehicle.Body.Raindetection.Intensity',
@@ -311,6 +346,7 @@ void main() {
         VehicleConditionSignals.vssAbsEngaged: (s) => s.absEngaged,
         VehicleConditionSignals.vssEscEngaged: (s) => s.escEngaged,
         VehicleConditionSignals.vssAirTemperature: (s) => s.airTempC,
+        VehicleConditionSignals.vssHumidity: (s) => s.humidityRH,
         VehicleConditionSignals.vssSpeed: (s) => s.speedKmh,
         VehicleConditionSignals.vssWiperIntensity: (s) => s.wiperIntensity,
         VehicleConditionSignals.vssRainIntensity: (s) => s.rainIntensity,
@@ -347,6 +383,37 @@ void main() {
       final a = DrivingConditionAssessment.fromCondition(condition);
       expect(a.surfaceState, RoadSurfaceState.blackIce);
       expect(a.advisoryMessage.toLowerCase(), contains('ice'));
+    });
+
+    test('round-trip: radiative-frost VSS frame (+2C, 70% RH, NO slip) → blackIce', () {
+      // THE OFFLINE REACH PROOF. A real exterior temp + humidity frame with NO
+      // friction/traction event (roadFriction absent, no TCS/ABS/ESC) — i.e. the
+      // wheels have NOT slipped yet. Before this wire, this frame classified DRY
+      // ("Conditions normal"); now the shared radiative-frost classifier catches
+      // the black ice on the offline in-vehicle screen BEFORE the first slip.
+      final s = VehicleConditionSignals.fromVss(const {
+        'Vehicle.Exterior.AirTemperature': 2.0,
+        'Vehicle.Exterior.Humidity': 70.0,
+      });
+      final condition = vehicleSignalsToWeatherCondition(s);
+      expect(condition.iceRisk, isFalse, reason: 'no friction/traction slip yet');
+      expect(condition.humidityRH, 70.0);
+
+      final a = DrivingConditionAssessment.fromCondition(condition);
+      expect(a.surfaceState, RoadSurfaceState.blackIce);
+      expect(a.advisoryMessage, contains('Black ice risk'));
+    });
+
+    test('round-trip: same frame WITHOUT humidity → dry (honest abstention)', () {
+      // Same +2C frame but the vehicle has no humidity sensor: the classifier
+      // must NOT fabricate black ice — it abstains, exactly as before the wire.
+      final s = VehicleConditionSignals.fromVss(const {
+        'Vehicle.Exterior.AirTemperature': 2.0,
+      });
+      final a = DrivingConditionAssessment.fromCondition(
+        vehicleSignalsToWeatherCondition(s),
+      );
+      expect(a.surfaceState, RoadSurfaceState.dry);
     });
 
     test('round-trip: TCS engaged on a cold VSS frame → ice risk', () {

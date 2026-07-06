@@ -116,7 +116,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       'https://api.open-meteo.com/v1/forecast'
       '?latitude=$latitude'
       '&longitude=$longitude'
-      '&current=temperature_2m,weather_code,wind_speed_10m'
+      '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m'
       '&hourly=snowfall,visibility'
       '&forecast_days=1'
       '&timezone=Asia%2FTokyo',
@@ -145,6 +145,10 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     final temperature = (current['temperature_2m'] as num).toDouble();
     final weatherCode = (current['weather_code'] as num).toInt();
     final windSpeed = (current['wind_speed_10m'] as num).toDouble();
+    // Relative humidity in percent. Optional: older cached responses and other
+    // feeds may omit it — a missing value stays null (never fabricated), so the
+    // radiative-frost classifier simply abstains rather than guessing.
+    final humidityRH = (current['relative_humidity_2m'] as num?)?.toDouble();
 
     // Get current hour's snowfall and visibility from hourly data.
     final snowfallList = hourly['snowfall'] as List<dynamic>;
@@ -175,6 +179,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       visibilityMeters: visibility,
       windSpeedKmh: windSpeed,
       iceRisk: iceRisk,
+      humidityRH: humidityRH,
       timestamp: DateTime.now(),
     );
   }

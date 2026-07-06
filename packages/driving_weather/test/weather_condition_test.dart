@@ -21,12 +21,39 @@ void main() {
         10000.0,
         0.0,
         false,
+        null, // humidityRH — not measured on the clear baseline
         timestamp,
       ]);
       expect(
         clear.toString(),
         'WeatherCondition(none none, 5.0°C, vis=10000m, wind=0km/h)',
       );
+    });
+
+    test('humidityRH is carried, shows in toString, and affects equality', () {
+      final base = WeatherCondition(
+        precipType: PrecipitationType.none,
+        intensity: PrecipitationIntensity.none,
+        temperatureCelsius: 1.0,
+        visibilityMeters: 10000,
+        windSpeedKmh: 5,
+        humidityRH: 82.0,
+        timestamp: timestamp,
+      );
+      final noHumidity = WeatherCondition(
+        precipType: PrecipitationType.none,
+        intensity: PrecipitationIntensity.none,
+        temperatureCelsius: 1.0,
+        visibilityMeters: 10000,
+        windSpeedKmh: 5,
+        timestamp: timestamp,
+      );
+
+      expect(base.humidityRH, 82.0);
+      expect(noHumidity.humidityRH, isNull);
+      expect(base, isNot(equals(noHumidity))); // humidity is part of identity
+      expect(base.toString(), contains('RH=82%'));
+      expect(noHumidity.toString(), isNot(contains('RH=')));
     });
 
     test('snow with none intensity is not snowing', () {

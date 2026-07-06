@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.3
+
+- Add `isRadiativeFrostBlackIce({ambientCelsius, humidityRHPercent})` — the
+  single source of truth for the radiative-frost black-ice classification
+  (no-precipitation, above-zero-ambient window). Both the pre-trip advisor and
+  the in-drive road-surface classifier now call this one function so the two
+  surfaces can never disagree about black ice. Caution-add-only; never throws
+  (every rejected humidity class returns `false`); takes humidity in PERCENT and
+  adapts the percent→fraction boundary internally. Exposes the documented
+  envelope constants `radiativeFrostAmbientCeilingCelsius` (3.0 °C) and
+  `radiativeFrostSurfaceTempCelsius` (0.0 °C). No change to the existing
+  primitives.
+
 ## 0.1.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

@@ -119,6 +119,11 @@ WeatherCondition vehicleSignalsToWeatherCondition(
     visibilityMeters: _visibilityMetersForLevel(level),
     windSpeedKmh: 0.0, // not in the snow-safety signal set
     iceRisk: iceRisk,
+    // Real exterior humidity, when the vehicle publishes it. With the ambient
+    // temperature this lets the shared classifier catch radiative-frost black
+    // ice offline — BEFORE friction/traction fire (they only fire after a slip).
+    // Absent → null → the classifier abstains (never fabricated).
+    humidityRH: s.humidityRH,
     timestamp: timestamp ?? DateTime.now(),
   );
 }

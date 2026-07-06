@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.6
+
+- **Radiative-frost black ice on the in-drive surface classifier.**
+  `RoadSurfaceState.fromCondition` now recognises the no-precipitation,
+  above-zero-ambient black-ice window (clear-sky radiative cooling freezing the
+  road while the air still reads +1…+3 °C — the Akita pre-dawn bridge-deck
+  hazard). Previously this case classified as `dry` / full grip, directly
+  contradicting the pre-trip briefing's black-ice warning on the same morning.
+  The classifier now calls `navigation_safety_calibration`'s
+  `isRadiativeFrostBlackIce` — the SAME function the pre-trip advisor uses, so
+  **the two surfaces cannot disagree about the radiative-frost black-ice
+  determination when both are given the same temperature + humidity.** (This is
+  a scoped guarantee, not an absolute one: the surfaces can still differ on
+  other hazard classes, and on any feed that omits humidity the in-drive branch
+  abstains — see `KNOWN_LIMITATIONS.md`.) Humidity-gated and caution-add-only:
+  needs the new `WeatherCondition.humidityRH`; absent humidity abstains
+  (returns `dry`), so this never fabricates a hazard and never downgrades a
+  colder classification. Backward-compatible — the new behaviour only activates
+  when a `driving_weather ^0.4.4` feed supplies humidity, so consumers on
+  `^0.2.x` adopt this with no change. Adds a direct dependency on
+  `navigation_safety_calibration ^0.1.3`.
+- Known scope (see `KNOWN_LIMITATIONS.md`): the in-drive classifier runs
+  all-hours with no wind/time gate, and the primary live feeds (digitraffic,
+  KUKSA) do not yet supply humidity — so this fix does not yet change the live
+  in-drive screen for those feeds. It is a correct classifier that awaits a
+  humidity-bearing live feed + a cry-wolf (wind/time) calibration pass.
+
 ## 0.2.5
 
 - Non-breaking restore + honest correction of a mislabeled release. The 0.2.4

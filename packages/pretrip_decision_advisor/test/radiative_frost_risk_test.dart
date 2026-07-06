@@ -16,6 +16,7 @@
 ///     and the ceiling is the fix. This test pins the ceiling.
 library;
 
+import 'package:navigation_safety_calibration/navigation_safety_calibration.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:test/test.dart';
 
@@ -28,6 +29,29 @@ void main() {
         tempCelsius: temp,
         humidityRH: rh,
       );
+
+  group('radiativeFrostRisk delegates to the single source of truth', () {
+    // Anti-drift: the pre-trip advisor and the in-drive road-surface classifier
+    // must call the SAME isRadiativeFrostBlackIce. This asserts the pre-trip
+    // wrapper is exactly that function across a matrix — if anyone re-inlines a
+    // divergent copy, this fails.
+    test('matches isRadiativeFrostBlackIce for every (temp, rh)', () {
+      const temps = [-1.0, 0.0, 0.2, 0.5, 1.0, 2.0, 3.0, 3.1, 5.0, 20.0];
+      const humidities = [null, 0.0, 4.0, 25.0, 40.0, 60.0, 80.0, 95.0, 100.0, 120.0];
+      for (final t in temps) {
+        for (final rh in humidities) {
+          expect(
+            advisor.radiativeFrostRisk(slot(temp: t, rh: rh)),
+            isRadiativeFrostBlackIce(
+              ambientCelsius: t,
+              humidityRHPercent: rh,
+            ),
+            reason: 'divergence at temp=$t rh=$rh',
+          );
+        }
+      }
+    });
+  });
 
   group('radiativeFrostRisk — probe-measured pins inside the envelope', () {
     test('fires in the above-zero-ambient black-ice window', () {

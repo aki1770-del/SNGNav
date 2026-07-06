@@ -8,6 +8,7 @@ WeatherCondition _condition({
   double temperatureCelsius = 5.0,
   double visibilityMeters = 10000,
   bool iceRisk = false,
+  double? humidityRH,
 }) => WeatherCondition(
   precipType: precipType,
   intensity: intensity,
@@ -15,6 +16,7 @@ WeatherCondition _condition({
   visibilityMeters: visibilityMeters,
   windSpeedKmh: 0,
   iceRisk: iceRisk,
+  humidityRH: humidityRH,
   timestamp: DateTime(2026),
 );
 
@@ -24,6 +26,32 @@ void main() {
       final a = DrivingConditionAssessment.fromCondition(_condition());
       expect(a.surfaceState, RoadSurfaceState.dry);
       expect(a.gripFactor, 1.0);
+    });
+
+    test('radiative frost (+2C/70%RH no precip) → the assessment carries the black-ice advisory', () {
+      // UNIT scope: proves that when the classifier returns blackIce for the
+      // radiative-frost window, the assessment text is the black-ice advisory.
+      // This is NOT end-to-end: it does not prove the fix reaches HER's live
+      // screen — the live feeds (digitraffic, KUKSA) do not yet supply
+      // humidityRH, so on those feeds the classifier abstains. See
+      // KNOWN_LIMITATIONS.md (reach gap).
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(temperatureCelsius: 2.0, humidityRH: 70.0),
+      );
+      expect(a.surfaceState, RoadSurfaceState.blackIce);
+      expect(a.gripFactor, 0.15);
+      expect(a.advisoryMessage, contains('Black ice risk'));
+      expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
+    });
+
+    test('same conditions without humidity → still "Conditions normal" (honest abstention)', () {
+      // Without the humidity feed the classifier cannot see the frost and must
+      // not pretend to — absence is never a fabricated warning.
+      final a = DrivingConditionAssessment.fromCondition(
+        _condition(temperatureCelsius: 2.0),
+      );
+      expect(a.surfaceState, RoadSurfaceState.dry);
+      expect(a.advisoryMessage, 'Conditions normal');
     });
 
     test('gripFactor matches surfaceState.gripFactor', () {

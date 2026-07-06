@@ -88,6 +88,8 @@ dependency_overrides:
     path: packages/navigation_safety
   navigation_safety_core:
     path: packages/navigation_safety_core
+  navigation_safety_calibration:
+    path: packages/navigation_safety_calibration
   map_viewport_bloc:
     path: packages/map_viewport_bloc
   routing_bloc:

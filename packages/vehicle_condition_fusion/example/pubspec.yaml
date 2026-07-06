@@ -16,6 +16,19 @@ dependencies:
   vehicle_condition_fusion:
     path: ../
 
+# Monorepo development: resolve the humidity-bearing sibling packages locally
+# (the reach chain is unpublished until the release train lands). Published
+# releases resolve against pub.dev via the carets above.
+dependency_overrides:
+  driving_weather:
+    path: ../../driving_weather
+  driving_conditions:
+    path: ../../driving_conditions
+  snow_rendering:
+    path: ../../snow_rendering
+  navigation_safety_calibration:
+    path: ../../navigation_safety_calibration
+
 dev_dependencies:
   test: ^1.25.0
   # The KUKSA databroker bridge example (example/kuksa_databroker.dart) imports

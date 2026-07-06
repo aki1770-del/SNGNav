@@ -43,6 +43,8 @@ dependency_overrides:
     path: ../packages/navigation_safety
   navigation_safety_core:
     path: ../packages/navigation_safety_core
+  navigation_safety_calibration:
+    path: ../packages/navigation_safety_calibration
   navigation_safety_enums:
     path: ../packages/navigation_safety_enums
   offline_tiles:

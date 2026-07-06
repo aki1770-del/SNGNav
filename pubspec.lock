@@ -201,7 +201,7 @@ packages:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.4"
   dylib:
     dependency: transitive
     description:
@@ -574,13 +574,12 @@ packages:
     source: path
     version: "0.9.3"
   navigation_safety_calibration:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: navigation_safety_calibration
-      sha256: f7b3f6fa6588e9a77df7c4e32941041dbcec89ab82aeaa0466683bcf9e493691
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.2"
+      path: "packages/navigation_safety_calibration"
+      relative: true
+    source: path
+    version: "0.1.3"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
@@ -721,7 +720,7 @@ packages:
       path: "packages/pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.5.1"
   pretrip_source_digitraffic:
     dependency: "direct main"
     description:
@@ -839,7 +838,7 @@ packages:
       path: "packages/snow_rendering"
       relative: true
     source: path
-    version: "0.2.5"
+    version: "0.2.6"
   source_map_stack_trace:
     dependency: transitive
     description:
@@ -966,7 +965,7 @@ packages:
       path: "packages/vehicle_condition_fusion"
       relative: true
     source: path
-    version: "0.3.1"
+    version: "0.4.0"
   vm_service:
     dependency: transitive
     description:

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0
+
+- **Map `Vehicle.Exterior.Humidity` → `VehicleConditionSignals.humidityRH`**
+  (PERCENT) and pass it through `vehicleSignalsToWeatherCondition`. This is the
+  offline-path reach for radiative-frost black ice: with a real air temperature
+  AND a real humidity sensor the shared classifier
+  (`isRadiativeFrostBlackIce` via `DrivingConditionAssessment.fromCondition`)
+  can catch the clear-sky radiative-cooling window (surface below 0 °C while the
+  air still reads +1…+3 °C) on the D3 compound-failure worst case — BEFORE the
+  friction/TCS/ABS signals fire, which only reveal ice AFTER the wheels have
+  already slipped. Honest fail-safe unchanged: a vehicle that does not publish
+  humidity leaves `humidityRH` null and the classifier abstains — a missing
+  sensor never fabricates a hazard. `fromVss` now reads nine leaves; carry-
+  forward and equality include humidity. Requires `driving_weather ^0.4.4`.
+
 ## 0.3.1
 
 - **Runnable KUKSA-databroker bridge example** —

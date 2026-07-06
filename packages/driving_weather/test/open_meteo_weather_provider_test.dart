@@ -35,6 +35,7 @@ Map<String, dynamic> _buildResponse({
   double temperature = 5.0,
   int weatherCode = 0,
   double windSpeed = 10.0,
+  double? humidity,
   List<double>? snowfall,
   List<double>? visibility,
 }) {
@@ -46,6 +47,7 @@ Map<String, dynamic> _buildResponse({
   return {
     'current': {
       'temperature_2m': temperature,
+      if (humidity != null) 'relative_humidity_2m': humidity,
       'weather_code': weatherCode,
       'wind_speed_10m': windSpeed,
     },
@@ -90,6 +92,20 @@ void main() {
         expect(condition.intensity, PrecipitationIntensity.none);
         expect(condition.temperatureCelsius, 15.0);
         expect(condition.iceRisk, false);
+      });
+
+      test('relative_humidity_2m is parsed into humidityRH (percent)', () {
+        final json = _buildResponse(temperature: 1.0, humidity: 82.0);
+        final condition = OpenMeteoWeatherProvider.parseWeatherResponse(json);
+
+        expect(condition.humidityRH, 82.0);
+      });
+
+      test('humidityRH stays null when the feed omits humidity', () {
+        final json = _buildResponse(temperature: 1.0);
+        final condition = OpenMeteoWeatherProvider.parseWeatherResponse(json);
+
+        expect(condition.humidityRH, isNull);
       });
 
       test('light snow (code 71) → snow/light', () {

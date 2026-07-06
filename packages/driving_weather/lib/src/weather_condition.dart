@@ -60,6 +60,18 @@ class WeatherCondition extends Equatable {
   /// Whether road icing / black ice risk is present.
   final bool iceRisk;
 
+  /// Relative humidity in PERCENT `[0, 100]`, or `null` when the feed does not
+  /// supply it.
+  ///
+  /// Load-bearing for radiative-frost black ice: clear-sky cooling can drop the
+  /// road surface below freezing while the ambient air is still a few degrees
+  /// above 0 °C, and detecting that window needs humidity. `null` means "not
+  /// measured", never "dry": when it is absent the radiative-frost check simply
+  /// ABSTAINS (it neither fabricates a black-ice hazard nor changes the other,
+  /// non-humidity branches — freezing rain, sub-(-3 °C) residual ice, the
+  /// explicit `iceRisk` flag — which classify exactly as before).
+  final double? humidityRH;
+
   /// When this condition was observed.
   final DateTime timestamp;
 
@@ -70,6 +82,7 @@ class WeatherCondition extends Equatable {
     required this.visibilityMeters,
     required this.windSpeedKmh,
     this.iceRisk = false,
+    this.humidityRH,
     required this.timestamp,
   });
 
@@ -80,7 +93,8 @@ class WeatherCondition extends Equatable {
       temperatureCelsius = 5.0,
       visibilityMeters = 10000.0,
       windSpeedKmh = 0.0,
-      iceRisk = false;
+      iceRisk = false,
+      humidityRH = null;
 
   // ---------------------------------------------------------------------------
   // Convenience getters
@@ -112,6 +126,7 @@ class WeatherCondition extends Equatable {
     visibilityMeters,
     windSpeedKmh,
     iceRisk,
+    humidityRH,
     timestamp,
   ];
 
@@ -121,5 +136,6 @@ class WeatherCondition extends Equatable {
       '${temperatureCelsius.toStringAsFixed(1)}°C, '
       'vis=${visibilityMeters.toStringAsFixed(0)}m, '
       'wind=${windSpeedKmh.toStringAsFixed(0)}km/h'
+      '${humidityRH != null ? ", RH=${humidityRH!.toStringAsFixed(0)}%" : ""}'
       '${iceRisk ? ", ICE" : ""})';
 }

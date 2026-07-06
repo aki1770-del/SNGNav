@@ -22,7 +22,7 @@
 library;
 
 import 'package:navigation_safety_calibration/navigation_safety_calibration.dart'
-    show computeEffectiveTemperatureCelsius;
+    show isRadiativeFrostBlackIce;
 
 import 'commute_shape.dart';
 import 'daylight.dart';
@@ -356,53 +356,24 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   static const double radiativeFrostAmbientCeilingCelsius = 3.0;
 
   /// Humidity-aware black-ice risk with NO precipitation required — the
-  /// freezing-fog / hoar-frost killer the ambient-only frost check misses:
-  /// clear-sky radiative cooling can take the road surface below freezing
-  /// while the ambient air is still (a few degrees) above 0 °C.
+  /// clear-sky-radiative-cooling window the ambient-only frost check misses:
+  /// under dry-to-moderate humidity the road surface can cool below freezing
+  /// while the ambient air is still (a few degrees) above 0 °C. (It does NOT
+  /// cover near-saturated freezing fog above ~+1 °C; see the calibration doc.)
   ///
-  /// Uses the family's single calibration source of truth (Magnus dew-point
-  /// depression; `computeEffectiveTemperatureCelsius` returns a CONSERVATIVE
-  /// road-surface estimate — see the calibration module's citations and
-  /// UNVERIFIED-magnitude caveat), bounded by
-  /// [radiativeFrostAmbientCeilingCelsius]. Caution-add-only by construction:
-  /// the estimate never exceeds ambient, so this can only ADD the
-  /// above-zero-ambient window, never remove an existing flag.
-  ///
-  /// Unit seam, stated precisely: [HourlyForecast.humidityRH] is PERCENT; the
-  /// calibration takes a FRACTION `(0, 1]`. The guard ADAPTS the boundary
-  /// classes of `navigation_safety_core`'s percent door — it is NOT a mirror:
-  /// core THROWS on implausible input (an API argument error surfaces the
-  /// caller's bug), while a briefing must never crash on one dirty forecast
-  /// slot, so here EVERY rejected class simply adds nothing:
-  ///
-  /// - `(100, 105]` — supersaturation reads as saturated air (`1.0`);
-  /// - `<= 0` — the missing-data sentinel: nothing;
-  /// - `< 5` — a physical-plausibility floor: dew-point math at near-zero
-  ///   moisture cannot indicate frost moisture, and everything in `(0, 1]`
-  ///   is almost certainly a mis-wired FRACTION (`1.0` — saturated air, the
-  ///   most common fraction value — would read as 1% RH and fire a deep
-  ///   false depression). Genuine sub-5% RH near freezing is
-  ///   meteorologically implausible, so the floor costs zero true
-  ///   positives: nothing;
-  /// - `> 105`, `NaN`, `±inf` — implausible feed values: nothing.
-  ///
-  /// Absence (or corruption) of data is never presence of hazard — and never
-  /// an exception out of [hazardOf].
-  bool radiativeFrostRisk(HourlyForecast slot) {
-    if (slot.tempCelsius > radiativeFrostAmbientCeilingCelsius) return false;
-    final rhPercent = slot.humidityRH;
-    if (rhPercent == null || !rhPercent.isFinite) return false;
-    if (rhPercent < 5.0 || rhPercent > 105.0) return false;
-    final fraction = rhPercent > 100.0 ? 1.0 : rhPercent / 100.0;
-    // Defensive domain belt (the guard already ensures [0.05, 1.0]): the
-    // calibration throws outside (0, 1], and hazardOf must never throw.
-    if (fraction <= 0.0 || fraction > 1.0) return false;
-    final effective = computeEffectiveTemperatureCelsius(
-      ambientCelsius: slot.tempCelsius,
-      humidityRH: fraction,
-    );
-    return effective <= frostTempCelsius;
-  }
+  /// Delegates to the family's SINGLE source of truth,
+  /// `isRadiativeFrostBlackIce` in `navigation_safety_calibration` — the exact
+  /// same function the in-drive road-surface classifier
+  /// (`RoadSurfaceState.fromCondition`) calls, so the pre-trip briefing and the
+  /// live in-drive screen can never disagree about black ice. That function
+  /// owns the ceiling, the caution-add-only construction, the percent→fraction
+  /// door, and the never-throw / absence-is-never-hazard contract; see its
+  /// doc for the full rationale. [HourlyForecast.humidityRH] is PERCENT and is
+  /// passed through unchanged.
+  bool radiativeFrostRisk(HourlyForecast slot) => isRadiativeFrostBlackIce(
+    ambientCelsius: slot.tempCelsius,
+    humidityRHPercent: slot.humidityRH,
+  );
 
   /// Earliest whole-hour delay (up to [searchHorizon]) whose shifted trip
   /// window is fully forecast-covered and at worst [HourHazard.caution].

@@ -10,6 +10,8 @@
 library;
 
 import 'package:driving_weather/driving_weather.dart';
+import 'package:navigation_safety_calibration/navigation_safety_calibration.dart'
+    show isRadiativeFrostBlackIce;
 
 /// Road surface classification.
 enum RoadSurfaceState {
@@ -47,7 +49,26 @@ enum RoadSurfaceState {
 
     if (condition.precipType == PrecipitationType.none) {
       // Cold dry conditions can still have residual ice.
-      return temp <= -3 ? blackIce : dry;
+      if (temp <= -3) return blackIce;
+      // Radiative-frost black ice: with NO precipitation and the air still a
+      // few degrees ABOVE 0 °C, clear-sky cooling can drop the road surface
+      // below freezing (the classic Akita pre-dawn bridge-deck hazard). This
+      // calls the family's single calibration source of truth — the SAME
+      // function the pre-trip advisor uses — so, GIVEN THE SAME temperature +
+      // humidity, the in-drive classifier and the pre-trip briefing cannot
+      // disagree about this black-ice determination. Scope, stated honestly:
+      // this reconciles only the radiative-frost window; a feed that omits
+      // humidity abstains here (see KNOWN_LIMITATIONS.md), and there is no
+      // wind/time-of-day gate yet (all-hours). Humidity-gated and
+      // caution-add-only: absent humidity returns dry, never fabricating the
+      // hazard and never downgrading a colder classification.
+      if (isRadiativeFrostBlackIce(
+        ambientCelsius: temp,
+        humidityRHPercent: condition.humidityRH,
+      )) {
+        return blackIce;
+      }
+      return dry;
     }
 
     switch (condition.precipType) {

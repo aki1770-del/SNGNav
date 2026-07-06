@@ -3,7 +3,7 @@ description: >-
   Weather-to-rendering computation for driving safety apps — surface
   classification, particle parameters, visibility degradation. Pure
   Dart.
-version: 0.2.5
+version: 0.2.6
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -18,9 +18,21 @@ environment:
 
 dependencies:
   equatable: ^2.0.7
-  driving_weather: ^0.4.0
+  driving_weather: ^0.4.4
   navigation_safety_core: ^0.10.0
+  # The family's single source of truth for the radiative-frost black-ice
+  # classification (W5 discipline: depend on it, never byte-copy it) — so the
+  # in-drive surface classifier and the pre-trip advisor cannot drift.
+  navigation_safety_calibration: ^0.1.3
 
 dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
+
+# Monorepo development: resolve sibling packages locally; published releases
+# resolve against pub.dev via the caret constraints above.
+dependency_overrides:
+  driving_weather:
+    path: ../driving_weather
+  navigation_safety_calibration:
+    path: ../navigation_safety_calibration

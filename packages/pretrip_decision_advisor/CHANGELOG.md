@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1
+
+- Internal: `radiativeFrostRisk` now delegates to
+  `navigation_safety_calibration`'s `isRadiativeFrostBlackIce` — the SAME
+  function the in-drive road-surface classifier calls — instead of holding its
+  own inline copy of the ceiling + percent-guard + dew-point-threshold logic.
+  Behaviour is identical (guarded by an equivalence test); the change removes
+  the second independently-maintained copy that could have drifted from the
+  in-drive path, so the pre-trip briefing and the live in-drive screen are now
+  provably wired to one source of truth for black ice. Requires
+  `navigation_safety_calibration ^0.1.3`. No public API change.
+
 ## 0.5.0
 
 Humidity-aware black ice — the no-precipitation killer the ambient-only

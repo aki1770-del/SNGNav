@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.4
+
+- Add optional `WeatherCondition.humidityRH` (relative humidity in PERCENT,
+  nullable). This is the input the in-drive road-surface classifier needs to
+  detect radiative-frost black ice — clear-sky cooling that freezes the road
+  while the air is still a few degrees above 0 °C. `null` means "not measured",
+  never "dry", so absence never fabricates or suppresses a hazard.
+- `OpenMeteoWeatherProvider` now requests `relative_humidity_2m` and populates
+  `humidityRH`; responses that omit it resolve to `null`. Other providers that
+  construct `WeatherCondition` are unaffected (the field defaults to `null`).
+
 ## 0.4.3
 - docs: correct stale README install pin to current version (no API change).
 
