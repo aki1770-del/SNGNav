@@ -311,7 +311,8 @@ void main() {
     expect(weatherBloc.state.isHazardous, isTrue);
     expect(navigationBloc.state.hasSafetyAlert, isTrue);
     expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    expect(navigationBloc.state.alertMessage, contains('Black ice risk'));
+    // Feed ice flag → the precise, possibility-graded ja term.
+    expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
 
     await tester.pump(const Duration(seconds: 8));
     await tester.pump();
@@ -610,7 +611,8 @@ void main() {
     await tester.pump();
 
     expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    expect(navigationBloc.state.alertMessage, contains('Black ice risk'));
+    // Feed ice flag → the precise, possibility-graded ja term.
+    expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

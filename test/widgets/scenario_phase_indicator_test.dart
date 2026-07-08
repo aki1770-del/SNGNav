@@ -140,7 +140,11 @@ void main() {
       await tester.pump();
 
       expect(find.text('Ice Risk — Pass Descent'), findsOneWidget);
-      expect(find.text('Black ice warning, reduce speed'), findsOneWidget);
+      // ja-primary precise term (with a short EN tail for legibility).
+      expect(
+        find.text('ブラックアイスバーンに注意 — 減速 / black ice, reduce speed'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows correct icon for clear phase', (tester) async {

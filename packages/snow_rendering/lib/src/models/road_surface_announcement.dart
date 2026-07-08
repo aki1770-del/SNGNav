@@ -74,17 +74,22 @@ class RoadSurfaceAnnouncement {
   });
 }
 
-/// Announcement for the INVISIBLE-ice paths — radiative frost (clear
-/// sky, ambient a few degrees above zero, road surface frozen) and
-/// freezing rain — where the load-bearing fact is that the road looks
-/// merely wet or normal while frozen. This is JAF's defining
-/// description of ブラックアイスバーン, relayed verbatim on
-/// [RoadSurfaceAnnouncement.vocabulary].
+/// Announcement for the INVISIBLE-ice paths — where the load-bearing
+/// fact is that the road looks merely wet or normal while frozen. This
+/// is JAF's defining description of ブラックアイスバーン, relayed
+/// verbatim on [RoadSurfaceAnnouncement.vocabulary].
 ///
-/// Use this ONLY when the detection path itself implies invisibility
-/// (no visible precipitation on the road); during visible snowfall the
-/// general [RoadSurfaceState.blackIce] announcement applies instead —
-/// telling a driver in heavy snow that the road "looks wet" is false.
+/// Use this ONLY when the detection path itself implies invisibility.
+/// Today that is the radiative-frost window (clear sky, ambient a few
+/// degrees above zero, dew point at/below 0 °C) — the consumer selects
+/// this variant when its own gate knows it took that path. Freezing
+/// rain is ALSO an invisible-ice phenomenon, but no classifier path
+/// currently routes it here; a consumer wiring freezing-rain detection
+/// may use this variant deliberately. On every other path — including
+/// the feed ice flag, which typically fires during visible
+/// precipitation — the general [RoadSurfaceState.blackIce] announcement
+/// applies instead: telling a driver in falling snow that the road
+/// "looks wet" is false.
 final RoadSurfaceAnnouncement invisibleBlackIceAnnouncement =
     RoadSurfaceAnnouncement(
   jaSpokenText:

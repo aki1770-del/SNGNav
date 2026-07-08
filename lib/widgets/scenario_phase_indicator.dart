@@ -73,14 +73,19 @@ class ScenarioPhaseIndicator extends StatelessWidget {
   }
 
   static (String, String) _phaseInfo(WeatherCondition condition) {
-    if (condition.precipType == PrecipitationType.none) {
-      return ('Clear — City Departure', 'Route 153 east from Nagoya Station');
-    }
+    // Ice FIRST: a feed ice flag must never be masked by the no-precip
+    // branch — previously a no-precip condition with iceRisk showed
+    // "Clear — City Departure" beside the black-ice overlay, two surfaces
+    // contradicting each other in the same view. Description is
+    // ja-primary, matching the alert surface's precise vocabulary.
     if (condition.iceRisk) {
       return (
         'Ice Risk — Pass Descent',
-        'Black ice warning, reduce speed'
+        'ブラックアイスバーンに注意 — 減速 / black ice, reduce speed'
       );
+    }
+    if (condition.precipType == PrecipitationType.none) {
+      return ('Clear — City Departure', 'Route 153 east from Nagoya Station');
     }
     return switch (condition.intensity) {
       PrecipitationIntensity.light => (
@@ -105,10 +110,12 @@ class ScenarioPhaseIndicator extends StatelessWidget {
   }
 
   static IconData _phaseIcon(WeatherCondition condition) {
+    // Ice first — same ordering fix as _phaseInfo: never a sun icon over
+    // an ice-flagged road.
+    if (condition.iceRisk) return Icons.ac_unit;
     if (condition.precipType == PrecipitationType.none) {
       return Icons.wb_sunny;
     }
-    if (condition.iceRisk) return Icons.ac_unit;
     return switch (condition.intensity) {
       PrecipitationIntensity.light => Icons.cloud,
       PrecipitationIntensity.moderate => Icons.cloudy_snowing,

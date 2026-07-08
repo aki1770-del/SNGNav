@@ -11,7 +11,8 @@ Pure Dart — no Flutter dependency. Safe to use from any Dart environment.
 
 ## Features
 
-- `RoadSurfaceState` — six-state classification (dry, wet, slush, compactedSnow, blackIce, standingWater) with grip factors
+- `RoadSurfaceState` — six-state classification (dry, wet, slush, compactedSnow, blackIce, standingWater) with grip factors, including the humidity-gated radiative-frost black-ice window (clear sky, ambient a few degrees above 0 °C, road surface frozen)
+- `RoadSurfaceState.announcement` — driver-facing spoken lines (JA + EN) leading with the precise JP-domestic surface term (ブラックアイスバーン / 圧雪 / シャーベット), possibility-graded; plus `invisibleBlackIceAnnouncement` carrying the "looks merely wet" fact and the verbatim JAF advisory for invisible-ice paths
 - `DrivingConditionAssessment` — combined assessment with advisory message from a single `WeatherCondition`
 - `PrecipitationConfig` — particle count, velocity, size, and lifetime parameters by type and intensity
 - `VisibilityDegradation` — opacity and blur sigma from visibility distance in metres
@@ -21,7 +22,7 @@ Pure Dart — no Flutter dependency. Safe to use from any Dart environment.
 
 ```yaml
 dependencies:
-  snow_rendering: ^0.2.4
+  snow_rendering: ^0.2.7
 ```
 
 ## Quick Start
@@ -62,9 +63,9 @@ final stable = filter.update(RoadSurfaceState.fromCondition(condition));
 
 | State | Grip Factor | When |
 |-------|:-----------:|------|
-| dry | 1.0 | No precipitation, temp > -3°C |
+| dry | 1.0 | No precipitation, temp > -3°C, AND not the radiative-frost window below |
 | wet | 0.7 | Rain above freezing |
 | standingWater | 0.6 | Heavy rain, temp > 3°C |
 | slush | 0.5 | Melting snow or sleet |
 | compactedSnow | 0.3 | Cold heavy snow (temp < -2°C) |
-| blackIce | 0.15 | Ice risk flag, freezing rain, or temp ≤ -3°C |
+| blackIce | 0.15 | Ice risk flag, freezing rain, temp ≤ -3°C, **or radiative frost** — no precipitation with measured humidity putting the dew point at/below 0 °C while ambient is ≤ +3 °C (the clear-morning "looks dry but frozen" case; abstains when the feed supplies no humidity — see `KNOWN_LIMITATIONS.md`) |

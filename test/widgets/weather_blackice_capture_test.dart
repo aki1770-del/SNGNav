@@ -30,6 +30,7 @@ import 'package:navigation_safety/navigation_safety.dart';
 import 'package:sngnav_snow_scene/bloc/weather_bloc.dart';
 import 'package:sngnav_snow_scene/bloc/weather_event.dart';
 import 'package:sngnav_snow_scene/bloc/weather_state.dart';
+import 'package:sngnav_snow_scene/widgets/scenario_phase_indicator.dart';
 import 'package:sngnav_snow_scene/widgets/weather_status_bar.dart';
 
 class _MockWeatherBloc extends MockBloc<WeatherEvent, WeatherState>
@@ -168,6 +169,72 @@ void main() {
       tester,
       key: overlayKey,
       outPath: 'test/widgets/_capture/safety_overlay_blackice_ja.png',
+    );
+  });
+
+  testWidgets('ScenarioPhaseIndicator ice-first ordering JA capture',
+      (tester) async {
+    final hasCjk = await _loadCjk();
+    if (!hasCjk) {
+      markTestSkipped('No Noto CJK font on this host — skipping JA capture.');
+      return;
+    }
+
+    tester.view.physicalSize = const Size(700, 300);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // Feed ice flag with NO precipitation — previously this showed
+    // "Clear — City Departure" with a sun icon (the ordering bug); it must
+    // now show the ice phase with the ja-primary description.
+    final icedNoPrecip = WeatherCondition(
+      precipType: PrecipitationType.none,
+      intensity: PrecipitationIntensity.none,
+      temperatureCelsius: -2.0,
+      visibilityMeters: 8000,
+      windSpeedKmh: 10,
+      iceRisk: true,
+      timestamp: DateTime.now(),
+    );
+
+    final weatherBloc = _MockWeatherBloc();
+    whenListen(
+      weatherBloc,
+      const Stream<WeatherState>.empty(),
+      initialState: WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: icedNoPrecip,
+      ),
+    );
+
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(fontFamily: 'NotoSansCJK', useMaterial3: true),
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: BlocProvider<WeatherBloc>.value(
+            value: weatherBloc,
+            child: Center(
+              child: RepaintBoundary(
+                key: key,
+                child: const ScenarioPhaseIndicator(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.textContaining('Ice Risk'), findsOneWidget);
+    expect(find.textContaining('ブラックアイスバーン'), findsOneWidget);
+    expect(find.text('Clear — City Departure'), findsNothing);
+
+    await _capture(
+      tester,
+      key: key,
+      outPath: 'test/widgets/_capture/scenario_phase_ice_first_ja.png',
     );
   });
 }

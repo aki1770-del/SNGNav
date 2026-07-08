@@ -34,6 +34,12 @@ dev_dependencies:
 dependency_overrides:
   pretrip_decision_advisor:
     path: ../../packages/pretrip_decision_advisor
+  # pretrip 0.5.x needs navigation_safety_calibration ^0.1.3, which may be
+  # ahead of pub.dev while the release train is in flight — resolve the
+  # sibling locally so the QUICKSTART on-ramp never breaks for a cloning
+  # edge developer mid-train.
+  navigation_safety_calibration:
+    path: ../../packages/navigation_safety_calibration
 
 flutter:
   uses-material-design: true

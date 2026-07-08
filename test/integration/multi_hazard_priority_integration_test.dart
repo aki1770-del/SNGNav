@@ -302,7 +302,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-      expect(navigationBloc.state.alertMessage, contains('Heavy'));
+      // Heavy snow at −4 °C classifies as compacted snow — the alert now
+      // names the surface precisely (圧雪), ja-primary.
+      expect(navigationBloc.state.alertMessage, contains('圧雪'));
 
       await weatherController.close();
       await fleetController.close();
@@ -401,7 +403,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Black ice risk'));
+      // Feed ice flag → the precise, possibility-graded ja term.
+      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
 
       await weatherController.close();
       await fleetController.close();
@@ -448,7 +451,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Black ice risk'));
+      // Feed ice flag → the precise, possibility-graded ja term.
+      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
 
       await weatherController.close();
       await fleetController.close();

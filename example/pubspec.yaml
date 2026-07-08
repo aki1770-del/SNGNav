@@ -13,7 +13,7 @@ dependencies:
   flutter_bloc: ^9.1.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-  driving_weather: ^0.3.0
+  driving_weather: ^0.4.0
   map_viewport_bloc: ^0.3.0
   navigation_safety: ^0.9.0
   offline_tiles: ^0.4.0
