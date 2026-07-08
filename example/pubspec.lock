@@ -265,6 +265,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.20.2"
+  japanese_snow_vocabulary:
+    dependency: transitive
+    description:
+      name: japanese_snow_vocabulary
+      sha256: "74e120ad37932f63965c43174671d4ce246b14e6627bb403c38f17e7e6a651ec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   kalman_dr:
     dependency: "direct overridden"
     description:
@@ -570,7 +578,7 @@ packages:
       path: "../packages/snow_rendering"
       relative: true
     source: path
-    version: "0.2.6"
+    version: "0.2.7"
   source_span:
     dependency: transitive
     description:

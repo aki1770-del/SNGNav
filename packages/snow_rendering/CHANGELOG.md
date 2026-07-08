@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.7
+
+- **Precise surface vocabulary on the announcement seam.** New
+  `RoadSurfaceAnnouncement` + `RoadSurfaceState.announcement` extension: every
+  surface except `dry` (which yields `null` — nothing to announce) provides a
+  short spoken-style line (JA + EN) that leads with the precise JP-domestic
+  surface term — ブラックアイスバーン for `blackIce`, 圧雪 for
+  `compactedSnow`, シャーベット for `slush` — plus, for the snow-vocabulary
+  surfaces, the authoritative JAF entry from `japanese_snow_vocabulary`
+  (verbatim `safeDrivingResponseJa` for display surfaces; verbatim-relay
+  binding). This is package-level capability for consumers composing warning
+  surfaces; it does not itself speak or render anything.
+- **Certainty is graded, never asserted.** The classifier's black-ice
+  determinations are inferences (a feed flag or a dew-point heuristic), so
+  composed lines say 凍結しているおそれ ("may be frozen"), mirroring JAF's
+  own 可能性 phrasing — never flat certainty.
+- **Two black-ice variants, honest about visibility.** The general
+  `RoadSurfaceState.blackIce.announcement` is provenance-neutral: it is
+  reachable from a feed ice flag during visible snowfall, where claiming the
+  road "looks wet" would be false — so it carries neither a looks-wet spoken
+  line NOR the JAF vocabulary entry (whose verbatim advisory itself opens
+  with the looks-wet description). The separate top-level
+  `invisibleBlackIceAnnouncement` carries both — the looks-merely-wet spoken
+  fact and the verbatim JAF entry — and is intended ONLY for detection paths
+  that imply invisibility (radiative frost, freezing rain). Additive, no
+  breaking changes.
+
 ## 0.2.6
 
 - **Radiative-frost black ice on the in-drive surface classifier.**

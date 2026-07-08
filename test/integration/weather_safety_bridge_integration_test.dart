@@ -76,6 +76,19 @@ final _iceRisk = WeatherCondition(
   timestamp: _now,
 );
 
+/// HER's Akita radiative-frost morning: +2 °C, 70 % RH, clear sky, perfect
+/// visibility. Raw `isHazardous` is FALSE — only the measured-humidity
+/// classifier knows the road surface is frozen.
+final _radiativeFrost = WeatherCondition(
+  precipType: PrecipitationType.none,
+  intensity: PrecipitationIntensity.none,
+  temperatureCelsius: 2.0,
+  visibilityMeters: 10000,
+  windSpeedKmh: 5,
+  humidityRH: 70,
+  timestamp: _now,
+);
+
 final _lowVisibility = WeatherCondition(
   precipType: PrecipitationType.snow,
   intensity: PrecipitationIntensity.moderate,
@@ -170,6 +183,105 @@ void main() {
     });
 
     testWidgets(
+        'radiative frost (+2°C / 70% RH, raw isHazardous FALSE) → '
+        'dispatches SafetyAlertReceived(warning) with the looks-wet '
+        'ブラックアイスバーン line',
+        (tester) async {
+      final controller = StreamController<WeatherState>.broadcast();
+      whenListen(
+        weatherBloc,
+        controller.stream,
+        initialState: WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _clearCondition,
+        ),
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        navigationBloc: navigationBloc,
+        weatherBloc: weatherBloc,
+      ));
+      await tester.pump();
+
+      // The bond-#3 founding gap: this condition's raw isHazardous is
+      // false, so the pre-fix status bar stayed SILENT on the exact
+      // surface that looks safest.
+      expect(_radiativeFrost.isHazardous, isFalse);
+
+      controller.add(WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: _radiativeFrost,
+      ));
+      await tester.pumpAndSettle();
+
+      verify(() => navigationBloc.add(any(
+        that: isA<SafetyAlertReceived>()
+            // Dew-point INFERENCE, not a surface measurement → warning
+            // tier (critical stays reserved for the explicit feed flag).
+            .having((e) => e.severity, 'severity', AlertSeverity.warning)
+            .having(
+              (e) => e.message,
+              'message',
+              allOf(
+                startsWith('ブラックアイスバーン'),
+                // The invisible-ice fact, possibility-graded.
+                contains('濡れて見え'),
+                contains('おそれ'),
+              ),
+            ),
+      ))).called(1);
+
+      await controller.close();
+    });
+
+    testWidgets(
+        'standing radiative frost (alertable, not hazardous) ESCALATING to '
+        'feed ice risk fires a SECOND dispatch at critical', (tester) async {
+      // Pins the listenWhen escalation clause: without it, the widened
+      // predicate swallows the frost-morning-turns-hazardous transition
+      // (prev already alertable → no false→true edge) and HER standing
+      // warning never upgrades to the critical alert.
+      final controller = StreamController<WeatherState>.broadcast();
+      whenListen(
+        weatherBloc,
+        controller.stream,
+        initialState: WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _clearCondition,
+        ),
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        navigationBloc: navigationBloc,
+        weatherBloc: weatherBloc,
+      ));
+      await tester.pump();
+
+      controller.add(WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: _radiativeFrost,
+      ));
+      await tester.pumpAndSettle();
+
+      controller.add(WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: _iceRisk,
+      ));
+      await tester.pumpAndSettle();
+
+      verify(() => navigationBloc.add(any(
+        that: isA<SafetyAlertReceived>()
+            .having((e) => e.severity, 'severity', AlertSeverity.warning),
+      ))).called(1);
+      verify(() => navigationBloc.add(any(
+        that: isA<SafetyAlertReceived>()
+            .having((e) => e.severity, 'severity', AlertSeverity.critical),
+      ))).called(1);
+
+      await controller.close();
+    });
+
+    testWidgets(
         'heavy snow → dispatches SafetyAlertReceived(warning)',
         (tester) async {
       final controller = StreamController<WeatherState>.broadcast();
@@ -198,10 +310,12 @@ void main() {
       verify(() => navigationBloc.add(any(
         that: isA<SafetyAlertReceived>()
             .having((e) => e.severity, 'severity', AlertSeverity.warning)
+            // Heavy snow at −4 °C classifies as compacted snow (圧雪) —
+            // the message now names the surface the driver knows.
             .having(
               (e) => e.message,
               'message',
-              contains('Heavy'),
+              contains('圧雪'),
             ),
       ))).called(1);
 
@@ -347,7 +461,8 @@ void main() {
   });
 
   group('Weather → Safety bridge: hazard message content', () {
-    testWidgets('ice risk message mentions following distance', (tester) async {
+    testWidgets('ice risk message names ブラックアイスバーン precisely',
+        (tester) async {
       final controller = StreamController<WeatherState>.broadcast();
       whenListen(
         weatherBloc,
@@ -372,10 +487,21 @@ void main() {
 
       verify(() => navigationBloc.add(any(
         that: isA<SafetyAlertReceived>()
+            // The precise JAF term HER knows, ja-primary, possibility-
+            // graded, with an EN line. The feed-flagged path fires during
+            // visible precipitation, so it must NOT claim the road merely
+            // "looks wet" — that variant belongs to the invisible-ice
+            // window only.
             .having(
               (e) => e.message,
               'message',
-              contains('following distance'),
+              allOf(
+                startsWith('ブラックアイスバーン'),
+                contains('凍結'),
+                contains('おそれ'),
+                isNot(contains('濡れて見え')),
+                contains('Black ice'),
+              ),
             ),
       ))).called(1);
 
@@ -418,7 +544,7 @@ void main() {
       await controller.close();
     });
 
-    testWidgets('heavy precip message includes precipitation type',
+    testWidgets('heavy snow message names the classified surface (圧雪)',
         (tester) async {
       final controller = StreamController<WeatherState>.broadcast();
       whenListen(
@@ -447,7 +573,10 @@ void main() {
             .having(
               (e) => e.message,
               'message',
-              contains('snow'),
+              allOf(
+                contains('圧雪'),
+                contains('Compacted snow'),
+              ),
             ),
       ))).called(1);
 

@@ -79,6 +79,35 @@ final _lightRain = WeatherCondition(
   timestamp: _now,
 );
 
+/// Sub-zero clear day WITH measured humidity. The dew-point classifier
+/// (`isRadiativeFrostBlackIce`) is true for essentially every sub-zero
+/// ambient at any plausible humidity — so this fixture pins the cry-wolf
+/// contract against the humidity-carrying live feed (Open-Meteo supplies
+/// humidityRH): a cold clear day must NOT become a standing critical
+/// alert just because humidity is measured.
+final _coldButClearWithHumidity = WeatherCondition(
+  precipType: PrecipitationType.none,
+  intensity: PrecipitationIntensity.none,
+  temperatureCelsius: -5.0,
+  visibilityMeters: 10000,
+  windSpeedKmh: 5,
+  humidityRH: 70,
+  timestamp: _now,
+);
+
+/// Light snow at −1 °C with measured humidity, no feed ice flag, good
+/// visibility: not hazardous, and NOT the invisible-ice window (visible
+/// precipitation). Must stay silent.
+final _lightSnowSubZeroWithHumidity = WeatherCondition(
+  precipType: PrecipitationType.snow,
+  intensity: PrecipitationIntensity.light,
+  temperatureCelsius: -1.0,
+  visibilityMeters: 3000,
+  windSpeedKmh: 10,
+  humidityRH: 80,
+  timestamp: _now,
+);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -225,6 +254,63 @@ void main() {
       controller.add(WeatherState(
         status: WeatherStatus.monitoring,
         condition: _coldButClear,
+      ));
+      await tester.pumpAndSettle();
+
+      verifyNever(
+          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+
+      await controller.close();
+    });
+
+    testWidgets(
+        'freezing clear day WITH measured humidity never triggers alert '
+        '(sub-zero cry-wolf contract vs humidity-carrying feeds)',
+        (tester) async {
+      final controller = StreamController<WeatherState>.broadcast();
+      whenListen(
+        weatherBloc,
+        controller.stream,
+        initialState: const WeatherState.unavailable(),
+      );
+
+      await tester.pumpWidget(_buildWeatherWidget(
+        navigationBloc: navigationBloc,
+        weatherBloc: weatherBloc,
+      ));
+      await tester.pump();
+
+      controller.add(WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: _coldButClearWithHumidity,
+      ));
+      await tester.pumpAndSettle();
+
+      verifyNever(
+          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+
+      await controller.close();
+    });
+
+    testWidgets(
+        'light sub-zero snow WITH measured humidity (no ice flag) never '
+        'triggers alert', (tester) async {
+      final controller = StreamController<WeatherState>.broadcast();
+      whenListen(
+        weatherBloc,
+        controller.stream,
+        initialState: const WeatherState.unavailable(),
+      );
+
+      await tester.pumpWidget(_buildWeatherWidget(
+        navigationBloc: navigationBloc,
+        weatherBloc: weatherBloc,
+      ));
+      await tester.pump();
+
+      controller.add(WeatherState(
+        status: WeatherStatus.monitoring,
+        condition: _lightSnowSubZeroWithHumidity,
       ));
       await tester.pumpAndSettle();
 

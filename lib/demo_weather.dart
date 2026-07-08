@@ -12,6 +12,7 @@ library;
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:snow_rendering/snow_rendering.dart';
 
 import 'bloc/weather_bloc.dart';
 import 'bloc/weather_event.dart';
@@ -420,7 +421,12 @@ class _SafetyBanner extends StatelessWidget {
   }
 
   String _hazardMessage(WeatherCondition c) {
-    if (c.iceRisk) return 'Black ice risk — reduce speed immediately';
+    if (c.iceRisk) {
+      // Precise term from the catalog's JAF-grounded announcement seam —
+      // ja first (HER reads Japanese), EN kept for legibility.
+      final a = RoadSurfaceState.blackIce.announcement!;
+      return '${a.jaSpokenText}\n${a.enSpokenText}';
+    }
     if (c.visibilityMeters < 200) return 'Near-zero visibility — pull over if safe';
     if (c.intensity == PrecipitationIntensity.heavy) {
       return 'Heavy snow — visibility ${c.visibilityMeters.toStringAsFixed(0)}m';

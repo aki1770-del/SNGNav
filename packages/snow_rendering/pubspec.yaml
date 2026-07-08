@@ -3,7 +3,7 @@ description: >-
   Weather-to-rendering computation for driving safety apps — surface
   classification, particle parameters, visibility degradation. Pure
   Dart.
-version: 0.2.6
+version: 0.2.7
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -24,6 +24,10 @@ dependencies:
   # classification (W5 discipline: depend on it, never byte-copy it) — so the
   # in-drive surface classifier and the pre-trip advisor cannot drift.
   navigation_safety_calibration: ^0.1.3
+  # Precise JP-domestic surface vocabulary (JAF-authoritative) so the
+  # in-drive announcement can name the surface HER knows —
+  # ブラックアイスバーン, not a generic English "black ice risk".
+  japanese_snow_vocabulary: ^0.2.3
 
 dev_dependencies:
   test: ^1.25.0
@@ -36,3 +40,5 @@ dependency_overrides:
     path: ../driving_weather
   navigation_safety_calibration:
     path: ../navigation_safety_calibration
+  japanese_snow_vocabulary:
+    path: ../japanese_snow_vocabulary
