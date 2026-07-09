@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+
+- **Take pretrip_decision_advisor ^0.5.0.** The previous `^0.4.0` pin silently
+  excluded the 0.5.x line — hosted consumers of this adapter never received
+  the black-ice window and route-corridor bridge-icing pre-trip warnings
+  (橋は路面より先に凍結します) shipped there. No behavior change in this
+  package itself; the constraint widening is the release.
+
+
 ## 0.2.1 — 2026-06-26 — Example no longer crashes on first run
 
 - **Fix:** `example/main.dart` no longer crashes with an unhandled
