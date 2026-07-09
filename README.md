@@ -12,17 +12,17 @@ Navigation that doesn't abandon you when conditions fail unexpectedly.
 
 Start here: [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md), [ARCHITECTURE.md](ARCHITECTURE.md), [docs/arm_deployment.md](docs/arm_deployment.md), and [docs/local_routing.md](docs/local_routing.md).
 
-Latest article: [1005 Tests, Zero AI: Building Offline-First Navigation with Flutter on Embedded Linux](https://dev.to/aki1770del/1005-tests-zero-ai-building-offline-first-navigation-with-flutter-on-embedded-linux-43bf).
+Latest article: [Connecting Flutter to Vehicle Signals: Building a Dart SDK for Eclipse KUKSA](https://dev.to/aki1770del/connecting-flutter-to-vehicle-signals-building-a-dart-sdk-for-eclipse-kuksa-121l) · earlier: [1005 Tests, Zero AI: Building Offline-First Navigation with Flutter on Embedded Linux](https://dev.to/aki1770del/1005-tests-zero-ai-building-offline-first-navigation-with-flutter-on-embedded-linux-43bf).
 
 Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
 ```
 Status:    v0.6.0 (latest release tag)
-Tests:     ~2000 passing (root + all 19 published package suites + 2 publish_to:none; count drifts as suite grows)
+Tests:     3,160+ passing (root 1,263 + all 36 package suites; measured 2026-07-10; count drifts as the suite grows)
 Platform:  Linux desktop (Flutter 3.41.4 pinned in CI; SDK constraint ^3.10.0)
 Embedded:  ARM IVI build-verified 2026-05-23 (flutter-engine 3.38.3 + ivi-homescreen + flutter-sngnav recipe on cortexa15t2hf armv7 / Yocto scarthgap; runtime native-asset gaps documented for upstream meta-flutter)
 Safety:    ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 19 packages on pub.dev (+ 2 publish_to:none = 21 monorepo total), independent versions (see ROADMAP.md Current State for table)
+Ecosystem: 35 packages on pub.dev (+ 1 publish_to:none = 36 monorepo total), independent versions (see ROADMAP.md Current State for table)
 ```
 
 ## Why "Snow Guard"?
