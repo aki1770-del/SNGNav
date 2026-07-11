@@ -60,6 +60,7 @@ class PretripScreen extends StatefulWidget {
     this.bridgeCsvLoadOverride,
     this.routeOsrmUrlOverride,
     this.bridgeGateNowOverride,
+    this.pretripPointOverride,
     required this.surfaceState,
   });
 
@@ -98,6 +99,14 @@ class PretripScreen extends StatefulWidget {
   /// gate + the real [MetNorwayHourlyForecastProvider] are used, byte-for-byte
   /// as before.
   final Future<WeatherForecast?> Function()? metForecastFetchOverride;
+
+  /// Optional test seam: overrides the CURRENT-LOCATION forecast point (the
+  /// compile-time `PRETRIP_LAT`/`PRETRIP_LON` defines), so the Japan
+  /// snow-zone routing — and everything gated on it, e.g. the JMA warning
+  /// lanes — is exercisable at an Akita point by a plain `flutter test`.
+  /// Null in production ⇒ the compile-time defines are used, byte-for-byte
+  /// as before.
+  final ({double lat, double lon})? pretripPointOverride;
 
   /// Optional test seam: replaces the WHOLE opt-in route+asset bridge resolve
   /// (the `PRETRIP_ROUTE_OSRM_URL` gate + one-shot OSRM fetch + bundled-asset
@@ -186,12 +195,19 @@ class _PretripScreenState extends State<PretripScreen> {
       String.fromEnvironment('PRETRIP_FORECAST');
   // Forecast point — defaults to the app's Nagoya map center. Unparseable
   // overrides fall back to the default rather than guessing a location.
-  static final double _pretripLat = double.tryParse(
+  static final double _pretripLatDefault = double.tryParse(
           const String.fromEnvironment('PRETRIP_LAT')) ??
       35.1709;
-  static final double _pretripLon = double.tryParse(
+  static final double _pretripLonDefault = double.tryParse(
           const String.fromEnvironment('PRETRIP_LON')) ??
       136.8815;
+
+  // The effective point: the test seam wins when supplied; production is the
+  // compile-time define, byte-for-byte as before.
+  double get _pretripLat =>
+      widget.pretripPointOverride?.lat ?? _pretripLatDefault;
+  double get _pretripLon =>
+      widget.pretripPointOverride?.lon ?? _pretripLonDefault;
 
   MetNorwayHourlyForecastProvider? _pretripForecastProvider;
 
@@ -214,6 +230,11 @@ class _PretripScreenState extends State<PretripScreen> {
   // a complete warning check, even when a real warning DID merge.
   bool _pretripJmaBorderCheckIncomplete = false;
   String? _pretripJmaUnreachableArea;
+
+  // In-force NON-snow JMA warnings (0.4.0 turmoil classes: 大雨 / 暴風・強風 /
+  // 雷 / 濃霧) at HER current location — relayed verbatim as advisory cards,
+  // highest severity first. Never merged into the road-condition band.
+  List<Advisory> _pretripJmaTurmoilAdvisories = const <Advisory>[];
   static const Duration _pretripWindow = Duration(minutes: 30);
 
   // MEASURED VISIBILITY (additive opt-in on top of the live forecast):
@@ -480,6 +501,9 @@ class _PretripScreenState extends State<PretripScreen> {
       // "all warnings checked"), even when a real warning DID merge.
       _pretripJmaBorderCheckIncomplete = result.jmaBorderCheckIncomplete;
       _pretripJmaUnreachableArea = result.jmaUnreachableArea;
+      // Turmoil-class warnings (e.g. 大雨危険警報) ride their own card lane —
+      // a fetched in-force warning is never silently dropped.
+      _pretripJmaTurmoilAdvisories = result.jmaTurmoilAdvisories;
     });
   }
 
@@ -934,6 +958,15 @@ class _PretripScreenState extends State<PretripScreen> {
                   lang: locale.languageCode,
                 ),
               ),
+              // IN-FORCE JMA TURMOIL WARNINGS (0.4.0 widening): downpour /
+              // typhoon-wind / thunder / fog warnings at HER current location,
+              // relayed VERBATIM as cards (Article 17 β) — a fetched in-force
+              // 大雨危険警報 must reach HER, never be silently dropped. These
+              // never touch the road-condition band (that inference would be
+              // fabrication); they inform, the driver always drives.
+              if (live != null && _pretripJmaTurmoilAdvisories.isNotEmpty)
+                _jmaTurmoilWarningsCard(
+                    context, strings, _pretripJmaTurmoilAdvisories),
               // PARTIAL-READ caution for HER CURRENT location: a border read
               // where a sibling prefecture was unreachable. HER must SEE that
               // the official-warning check was incomplete — over-warn, never a
@@ -1072,6 +1105,70 @@ class _PretripScreenState extends State<PretripScreen> {
                         color: theme.colorScheme.onTertiaryContainer),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// In-force JMA NON-snow warnings (0.4.0 turmoil classes), relayed verbatim
+  /// — one row per warning, highest severity first, prefecture-labeled. The
+  /// card is visual-only (no spoken/audio path from this surface) per the
+  /// adapter's severity-gated modality guidance; it informs, it never tells
+  /// HER not to drive. Card color escalates only when a 警報-class
+  /// (severe/extreme) warning is present; 注意報-only stays caution-toned.
+  Widget _jmaTurmoilWarningsCard(
+    BuildContext context,
+    BriefingStrings strings,
+    List<Advisory> advisories,
+  ) {
+    final theme = Theme.of(context);
+    final highImpact = advisories.any((a) => a.isHighImpact);
+    final bg = highImpact
+        ? theme.colorScheme.errorContainer
+        : theme.colorScheme.tertiaryContainer;
+    final fg = highImpact
+        ? theme.colorScheme.onErrorContainer
+        : theme.colorScheme.onTertiaryContainer;
+    return Card(
+      key: const Key('pretrip-jma-turmoil-warnings'),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      color: bg,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.campaign_outlined, size: 18, color: fg),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    strings.jmaWarningsInForceHeader,
+                    style: theme.textTheme.titleSmall?.copyWith(color: fg),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            for (final a in advisories)
+              Padding(
+                padding: const EdgeInsets.only(left: 26, bottom: 2),
+                child: Text(
+                  strings.jmaWarningWithArea(a.eventClass, a.areaDescription),
+                  style: theme.textTheme.bodyMedium?.copyWith(color: fg),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 26),
+              child: Text(
+                strings.jmaWarningsVerbatimNote,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: fg.withValues(alpha: 0.8)),
               ),
             ),
           ],

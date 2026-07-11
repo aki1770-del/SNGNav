@@ -107,10 +107,12 @@ void main() {
             reason: 'Maneuver ${m.index} has empty instruction');
       }
 
-      // Depart instruction should mention a road name or "Depart".
+      // Depart instruction reads as a departure in the narration language —
+      // ja-primary 出発 since the routing_engine 0.5.0 ja narration release
+      // (2026-07-04); 'depart' kept for an en-locale run.
       expect(
         result.maneuvers.first.instruction.toLowerCase(),
-        contains('depart'),
+        anyOf(contains('depart'), contains('出発')),
       );
     });
   });

@@ -138,7 +138,8 @@ void main() {
     );
   });
 
-  test('T5 non-snow event: rain warning rejected → no-advisory', () async {
+  test('T5 non-snow event: rain warning adds NO road band (no-advisory '
+      'status) but IS carried verbatim on the turmoil card lane', () async {
     final base = tempOnlyBase();
     final result = await resolvePretripLiveForecast(
       latitude: akitaLat,
@@ -152,6 +153,96 @@ void main() {
     expect(
       result.forecast!.hourly.map((s) => s.estimatedRoadCondition),
       base.hourly.map((s) => s.estimatedRoadCondition),
+    );
+    // The 0.4.0 widening: the fetched in-force warning is NOT silently
+    // dropped — it rides the card lane, wording verbatim.
+    expect(
+      result.jmaTurmoilAdvisories.map((a) => a.eventClass),
+      ['大雨警報'],
+    );
+  });
+
+  test('T13 turmoil ordering: 強風注意報 + 大雨危険警報 carried highest '
+      'severity first (extreme before moderate), verbatim', () async {
+    final base = tempOnlyBase();
+    final kiken = Advisory(
+      source: AdvisorySource.jmaJapan,
+      eventClass: '大雨危険警報',
+      severity: AdvisorySeverity.extreme,
+      certainty: AdvisoryCertainty.observed,
+      urgency: AdvisoryUrgency.immediate,
+      areaDescription: '秋田県',
+      effective: null,
+      expires: null,
+      headline: '大雨危険警報',
+      description: '大雨危険警報',
+    );
+    final kyoufuu = Advisory(
+      source: AdvisorySource.jmaJapan,
+      eventClass: '強風注意報',
+      severity: AdvisorySeverity.moderate,
+      certainty: AdvisoryCertainty.observed,
+      urgency: AdvisoryUrgency.immediate,
+      areaDescription: '秋田県',
+      effective: null,
+      expires: null,
+      headline: '強風注意報',
+      description: '強風注意報',
+    );
+    final result = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      // Moderate listed FIRST in the fetch order — the lane must re-order.
+      fetchJmaAdvisories: jmaStub([kyoufuu, kiken]),
+    );
+    expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
+    expect(
+      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
+      ['大雨危険警報', '強風注意報'],
+    );
+  });
+
+  test('T14 turmoil beside a merged snow warning: 大雪警報 merges the road '
+      'band AND the 大雨警報 still rides the card lane', () async {
+    final base = tempOnlyBase();
+    final result = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      fetchJmaAdvisories: jmaStub([adv('大雪警報'), adv('大雨警報')]),
+    );
+    expect(result.status, PretripLiveStatus.japanJmaMerged);
+    expect(result.jmaEventName, '大雪警報');
+    // The snow class does NOT leak onto the card lane; the rain class does.
+    expect(
+      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
+      ['大雨警報'],
+    );
+  });
+
+  test('T15 the incomplete-read notice never rides the turmoil card lane '
+      '(it has its own flag)', () async {
+    final base = tempOnlyBase();
+    final result = await resolvePretripLiveForecast(
+      latitude: akitaLat,
+      longitude: akitaLon,
+      now: now,
+      window: window,
+      fetchMetForecast: metStub(base),
+      fetchJmaAdvisories: jmaStub([
+        adv('大雨警報'),
+        buildIncompleteReadNotice(const ['060000']),
+      ]),
+    );
+    expect(result.jmaBorderCheckIncomplete, isTrue);
+    expect(
+      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
+      ['大雨警報'],
     );
   });
 

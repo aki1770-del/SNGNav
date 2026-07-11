@@ -55,6 +55,16 @@ class PretripLiveResult {
   /// [jmaBorderCheckIncomplete] is true.
   final String? jmaUnreachableArea;
 
+  /// In-force JMA warnings of the NON-snow surfaced classes (0.4.0 turmoil
+  /// widening: 大雨 / 暴風・強風 / 雷 / 濃霧 — e.g. a 大雨危険警報 during a
+  /// summer downpour), carried VERBATIM for advisory-card relay (Article 17 β).
+  /// These NEVER merge a road-condition band (a downpour warning is not a
+  /// road-surface state — that inference would be fabrication); they exist so
+  /// a fetched in-force warning is never silently dropped between the adapter
+  /// and HER. Ordered highest severity first. Empty on the global MET arm, the
+  /// JMA-failed arm, and whenever nothing beyond the snow classes is in force.
+  final List<Advisory> jmaTurmoilAdvisories;
+
   const PretripLiveResult({
     this.forecast,
     this.departure,
@@ -63,7 +73,26 @@ class PretripLiveResult {
     this.prefectureCode,
     this.jmaBorderCheckIncomplete = false,
     this.jmaUnreachableArea,
+    this.jmaTurmoilAdvisories = const <Advisory>[],
   });
+}
+
+/// Severity display rank — highest first — for ordering turmoil advisory
+/// cards. Unknown ranks LAST (an unclassifiable suffix must not outrank a
+/// real 警報).
+int _severityRank(AdvisorySeverity s) {
+  switch (s) {
+    case AdvisorySeverity.extreme:
+      return 0;
+    case AdvisorySeverity.severe:
+      return 1;
+    case AdvisorySeverity.moderate:
+      return 2;
+    case AdvisorySeverity.minor:
+      return 3;
+    case AdvisorySeverity.unknown:
+      return 4;
+  }
 }
 
 T? _firstWhereOrNull<T>(Iterable<T> it, bool Function(T) test) {
@@ -135,6 +164,18 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
           advisories,
           (a) => roadConditionForJmaSnowAdvisory(a.eventClass) != null,
         );
+        // NON-snow surfaced warnings (0.4.0 turmoil classes) — carried
+        // verbatim for card relay, highest severity first. The in-band
+        // incomplete-read notice is NOT a weather warning and is excluded
+        // (it is carried via the dedicated flag above). Snow classes are
+        // excluded: they belong to the road-condition merge lane.
+        final turmoil = advisories
+            .where((a) =>
+                a.eventClass != kJmaIncompleteReadEventClass &&
+                roadConditionForJmaSnowAdvisory(a.eventClass) == null)
+            .toList()
+          ..sort((a, b) =>
+              _severityRank(a.severity).compareTo(_severityRank(b.severity)));
         if (snow == null) {
           // No reachable snow warning. Still honour a partial read: if a sibling
           // was unreachable, this is NOT a clean all-clear — carry the flag so
@@ -146,6 +187,9 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
             prefectureCode: code,
             jmaBorderCheckIncomplete: borderIncomplete,
             jmaUnreachableArea: unreachableArea,
+            // No snow warning, but a turmoil-class warning (e.g. 大雨危険警報)
+            // may still be in force — it reaches HER as a card, never dropped.
+            jmaTurmoilAdvisories: turmoil,
           );
         }
         // BINDING: JMA only ADDS a road-condition band into null/unknown
@@ -167,6 +211,7 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
           // merged 着雪注意報 is shown, and HER is told 秋田県 could not be checked.
           jmaBorderCheckIncomplete: borderIncomplete,
           jmaUnreachableArea: unreachableArea,
+          jmaTurmoilAdvisories: turmoil,
         );
       } catch (_) {
         // ANY JMA failure (fetch/parse/timeout/init) → keep the MET base,

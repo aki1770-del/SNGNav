@@ -145,6 +145,22 @@ abstract class BriefingStrings {
   /// not to go.
   String borderWarningCheckIncomplete(String unreachableArea);
 
+  // --- JMA turmoil warnings card (0.4.0 widening) ---------------------------
+  /// Header for the in-force JMA non-snow warnings card (downpour /
+  /// typhoon-wind / thunder / fog — e.g. 大雨危険警報 during a summer
+  /// downpour). Snow-class warnings do NOT ride this card (they merge into
+  /// the road-condition band); this card exists so a fetched in-force
+  /// warning is never silently dropped between the adapter and the driver.
+  String get jmaWarningsInForceHeader;
+
+  /// One warning row: the publisher's verbatim event name + prefecture-level
+  /// area label (Article 17 β verbatim relay — never re-summarized).
+  String jmaWarningWithArea(String eventName, String area);
+
+  /// Honesty footer: the wording is JMA's own, relayed verbatim, and the
+  /// warnings are prefecture-level (not road- or route-level).
+  String get jmaWarningsVerbatimNote;
+
   // --- Route bridge caution --------------------------------------------------
   /// One-line caution: the fetched route crosses about [approxCount] mapped
   /// bridge sites, and bridge decks freeze before the road surface does.
@@ -304,6 +320,18 @@ class _EnBriefingStrings extends BriefingStrings {
   String borderWarningCheckIncomplete(String unreachableArea) =>
       'Could not check warnings for $unreachableArea (connectivity). A warning '
       'may be in effect there that is not shown here.';
+
+  @override
+  String get jmaWarningsInForceHeader => 'JMA warnings in effect';
+
+  @override
+  String jmaWarningWithArea(String eventName, String area) =>
+      '$eventName ($area)';
+
+  @override
+  String get jmaWarningsVerbatimNote =>
+      'Official JMA wording, shown as issued. Warnings are prefecture-level, '
+      'not road or route status.';
 
   @override
   String bridgeCorridorCaution(int approxCount) =>
@@ -487,6 +515,18 @@ class _JaBriefingStrings extends BriefingStrings {
   String borderWarningCheckIncomplete(String unreachableArea) =>
       '$unreachableAreaの警報を確認できませんでした（通信状況により）。'
       '周辺で警報が出ている可能性があります。';
+
+  @override
+  String get jmaWarningsInForceHeader => '気象庁 発表中の警報・注意報';
+
+  @override
+  String jmaWarningWithArea(String eventName, String area) =>
+      '$eventName（$area）';
+
+  @override
+  String get jmaWarningsVerbatimNote =>
+      '気象庁の発表をそのまま表示しています。警報・注意報は県単位で、'
+      '道路や経路の状態ではありません。';
 
   @override
   String bridgeCorridorCaution(int approxCount) =>
