@@ -466,40 +466,113 @@ void main() {
       await engine.dispose();
     });
 
-    test('missing maneuver location defaults to (0, 0)', () async {
-      final engine = OsrmRoutingEngine(
-        baseUrl: 'http://test',
-        client: MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'code': 'Ok',
-              'routes': [
+    /// Builds an OSRM response whose single step carries [maneuver] verbatim.
+    MockClient osrmWithManeuver(Map<String, dynamic> maneuver) => MockClient(
+      (_) async => http.Response(
+        jsonEncode({
+          'code': 'Ok',
+          'routes': [
+            {
+              'geometry': '_p~iF~ps|U',
+              'distance': 100,
+              'duration': 10,
+              'legs': [
                 {
-                  'geometry': '_p~iF~ps|U',
-                  'distance': 100,
-                  'duration': 10,
-                  'legs': [
+                  'steps': [
                     {
-                      'steps': [
-                        {
-                          'name': 'Test',
-                          'distance': 100,
-                          'duration': 10,
-                          'maneuver': {'type': 'depart'},
-                        },
-                      ],
+                      'name': 'Test',
+                      'distance': 100,
+                      'duration': 10,
+                      'maneuver': maneuver,
                     },
                   ],
                 },
               ],
-            }),
-            200,
-          ),
-        ),
+            },
+          ],
+        }),
+        200,
+      ),
+    );
+
+    // Absence of a location is absence of a position — never Null Island.
+    // Up to 0.5.0 every case below silently produced LatLng(0, 0), a real
+    // coordinate in the Gulf of Guinea, which the beta app copied straight
+    // into driver narration.
+    test('missing maneuver location yields NO position (never 0,0)', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithManeuver({'type': 'depart'}),
       );
 
       final result = await engine.calculateRoute(_request);
-      expect(result.maneuvers.first.position, const LatLng(0, 0));
+      final m = result.maneuvers.first;
+
+      expect(m.position, isNull);
+      expect(m.hasPosition, isFalse);
+      // The fabrication this release removes — asserted explicitly so the old
+      // behaviour cannot return unnoticed.
+      expect(m.position, isNot(const LatLng(0, 0)));
+
+      // The loom refuses the FALSE thread, not the whole cloth.
+      expect(m.instruction, isNotEmpty);
+      expect(m.lengthKm, closeTo(0.1, 0.001));
+      expect(m.timeSeconds, closeTo(10, 0.001));
+
+      await engine.dispose();
+    });
+
+    test('short maneuver location ([lon] only) yields NO position', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithManeuver({
+          'type': 'depart',
+          'location': [140.1],
+        }),
+      );
+
+      final result = await engine.calculateRoute(_request);
+
+      expect(result.maneuvers.first.position, isNull);
+
+      await engine.dispose();
+    });
+
+    test('non-numeric maneuver location yields NO position (never throws)',
+        () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithManeuver({
+          'type': 'depart',
+          'location': ['nan', null],
+        }),
+      );
+
+      final result = await engine.calculateRoute(_request);
+
+      expect(result.maneuvers.first.position, isNull);
+      expect(result.maneuvers.first.instruction, isNotEmpty);
+
+      await engine.dispose();
+    });
+
+    test('a well-formed maneuver location still yields a REAL position',
+        () async {
+      // The honest-absence contract must not make every position absent.
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithManeuver({
+          'type': 'depart',
+          'location': [140.1026, 39.7186], // [lon, lat] — Akita
+        }),
+      );
+
+      final result = await engine.calculateRoute(_request);
+      final m = result.maneuvers.first;
+
+      expect(m.hasPosition, isTrue);
+      expect(m.position!.latitude, closeTo(39.7186, 1e-6));
+      expect(m.position!.longitude, closeTo(140.1026, 1e-6));
 
       await engine.dispose();
     });

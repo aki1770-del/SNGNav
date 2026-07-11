@@ -36,43 +36,42 @@ Future<void> _loadRealFont() async {
   await loader.load();
 }
 
-const _liveCaption = 'LIVE forecast — data: MET Norway (CC BY 4.0), '
+const _liveCaption =
+    'LIVE forecast — data: MET Norway (CC BY 4.0), '
     'lat 35.1709 lon 136.8815. '
     'No visibility/surface data in this product — hazard signal from '
     'temperature + precipitation only.';
 
 Map<String, dynamic> _winterShaped() => {
-      'properties': {
-        'meta': {'updated_at': '2026-01-01T05:30:00Z'},
-        'timeseries': [
-          for (final (h, t, p) in [
-            (7, -4.0, 2.5),
-            (8, -3.0, 1.0),
-            (9, -1.0, 0.0),
-            (10, 0.0, 0.0),
-          ])
-            {
-              'time': '2026-01-01T0$h:00:00Z',
-              'data': {
-                'instant': {
-                  'details': {
-                    'air_temperature': t,
-                    'relative_humidity': 85.0,
-                  },
-                },
-                'next_1_hours': {
-                  'summary': {'symbol_code': p > 0 ? 'snow' : 'clearsky_day'},
-                  'details': {'precipitation_amount': p},
-                },
-              },
+  'properties': {
+    'meta': {'updated_at': '2026-01-01T05:30:00Z'},
+    'timeseries': [
+      for (final (h, t, p) in [
+        (7, -4.0, 2.5),
+        (8, -3.0, 1.0),
+        (9, -1.0, 0.0),
+        (10, 0.0, 0.0),
+      ])
+        {
+          'time': '2026-01-01T0$h:00:00Z',
+          'data': {
+            'instant': {
+              'details': {'air_temperature': t, 'relative_humidity': 85.0},
             },
-        ],
-      },
-    };
+            'next_1_hours': {
+              'summary': {'symbol_code': p > 0 ? 'snow' : 'clearsky_day'},
+              'details': {'precipitation_amount': p},
+            },
+          },
+        },
+    ],
+  },
+};
 
 // The caption main.dart composes when a measured visibility observation is
 // merged (Digitraffic, departure-hour only).
-const _measuredCaption = 'LIVE forecast — data: MET Norway (CC BY 4.0), '
+const _measuredCaption =
+    'LIVE forecast — data: MET Norway (CC BY 4.0), '
     'lat 60.2 lon 24.6. '
     'No visibility/surface data in this product — hazard signal from '
     'temperature + precipitation. '
@@ -84,14 +83,19 @@ void main() {
 
   setUpAll(() {
     final real = mapLocationForecastToWeatherForecast(
-      jsonDecode(File(_fixturePath).readAsStringSync())
-          as Map<String, dynamic>,
+      jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, dynamic>,
     )!;
     final winter = mapLocationForecastToWeatherForecast(_winterShaped())!;
-    cases['live_real_nagoya'] =
-        (real, DateTime.utc(2026, 6, 12, 9, 15).toLocal(), _liveCaption);
-    cases['live_winter_shaped'] =
-        (winter, DateTime.utc(2026, 1, 1, 7, 15).toLocal(), _liveCaption);
+    cases['live_real_nagoya'] = (
+      real,
+      DateTime.utc(2026, 6, 12, 9, 15).toLocal(),
+      _liveCaption,
+    );
+    cases['live_winter_shaped'] = (
+      winter,
+      DateTime.utc(2026, 1, 1, 7, 15).toLocal(),
+      _liveCaption,
+    );
     // Measured 80 m visibility merged into the departure hour: the severe
     // band a forecast alone can never reach (0/620, 2026-06-12 quant run).
     final dep = DateTime.utc(2026, 1, 1, 7, 15).toLocal();
@@ -168,8 +172,9 @@ void main() {
       await tester.pump();
 
       await tester.runAsync(() async {
-        final boundary = boundaryKey.currentContext!.findRenderObject()
-            as RenderRepaintBoundary;
+        final boundary =
+            boundaryKey.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
         final image = await boundary.toImage(pixelRatio: 1.0);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         expect(bytes, isNotNull);
@@ -178,8 +183,10 @@ void main() {
         file.writeAsBytesSync(bytes!.buffer.asUint8List());
         expect(file.lengthSync(), greaterThan(0));
         // ignore: avoid_print
-        print('CAPTURE $name: ${file.path} '
-            '${file.lengthSync()} bytes ${image.width}x${image.height}');
+        print(
+          'CAPTURE $name: ${file.path} '
+          '${file.lengthSync()} bytes ${image.width}x${image.height}',
+        );
       });
 
       expect(tester.takeException(), isNull);

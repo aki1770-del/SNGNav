@@ -12,13 +12,14 @@ WeatherCondition _condition({
       temperatureCelsius: 5.0,
       visibilityMeters: 10000,
       windSpeedKmh: 0,
+      source: ObservationSource.measured,
       timestamp: DateTime(2026),
     );
 
 void main() {
   group('PrecipitationConfig.fromCondition', () {
     test('no precip → none', () {
-      final config = PrecipitationConfig.fromCondition(_condition());
+      final config = PrecipitationConfig.fromCondition(_condition())!;
       expect(config, PrecipitationConfig.none);
       expect(config.particleCount, 0);
     });
@@ -27,7 +28,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.light,
-      ));
+      ))!;
       expect(config.particleCount, 150);
       expect(config.minVelocity, 2.0);
       expect(config.maxVelocity, 4.0);
@@ -40,7 +41,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.rain,
         intensity: PrecipitationIntensity.heavy,
-      ));
+      ))!;
       expect(config.particleCount, 500);
       expect(config.minVelocity, 7.0);
       expect(config.maxVelocity, 12.0);
@@ -53,7 +54,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.sleet,
         intensity: PrecipitationIntensity.moderate,
-      ));
+      ))!;
       expect(config.particleCount, 300);
       expect(config.minVelocity, 4.0);
       expect(config.maxVelocity, 8.0);
@@ -66,7 +67,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.hail,
         intensity: PrecipitationIntensity.light,
-      ));
+      ))!;
       expect(config.particleCount, 150);
       expect(config.minVelocity, 8.0);
       expect(config.maxVelocity, 15.0);
@@ -79,7 +80,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.none,
         intensity: PrecipitationIntensity.heavy,
-      ));
+      ))!;
       expect(config, PrecipitationConfig.none);
     });
 
@@ -87,7 +88,7 @@ void main() {
       final config = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.none,
-      ));
+      ))!;
       expect(config, PrecipitationConfig.none);
     });
 
@@ -95,11 +96,11 @@ void main() {
       final a = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.light,
-      ));
+      ))!;
       final b = PrecipitationConfig.fromCondition(_condition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.light,
-      ));
+      ))!;
       expect(a, equals(b));
     });
   });

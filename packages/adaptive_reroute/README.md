@@ -27,7 +27,14 @@ Pure Dart. No Flutter.
   detour-distance limits and routing-engine constraints is the calling
   routing engine's responsibility.
 - **`RerouteDecision`** — typed result with `shouldReroute`, human-readable
-  `reason`, and `detourWaypoints` ready to hand back to a routing engine.
+  `reason`, `detourWaypoints` ready to hand back to a routing engine, and
+  `confidence` (`double?`). It reports **one of three** facts: *reroute*,
+  *no hazard found on the assessed route*, or ***could not assess the route***
+  (`isAssessed == false`, `confidence == null`).
+  **`shouldReroute == false` does not mean the route is safe** — it is also what
+  you get when the conditions were unknown. Read `isAssessed` first. (Before
+  0.2.0 there were only two outcomes and an unknown route was reported as
+  *"Route is clear"* at `confidence = 1.0`; see CHANGELOG.)
 - **`AdaptiveRerouteConfig`** — knobs for the hazard look-ahead window
   (`hazardWindowSeconds`), the minimum forecast confidence to act
   (`minConfidenceToAct`), and the detour waypoint offset distance
@@ -51,7 +58,7 @@ currently ships:
 
 ```yaml
 dependencies:
-  adaptive_reroute: ^0.1.0
+  adaptive_reroute: ^0.2.0
 ```
 
 You'll also need
@@ -75,6 +82,15 @@ final decision = evaluator.evaluate(
   currentPosition: currentLatLng,
 );
 
+// FIRST: did we actually have conditions to judge? `shouldReroute == false`
+// is ALSO what you get when the route could not be assessed at all — do not
+// paint that as a clear road.
+if (!decision.isAssessed) {
+  print('Route conditions unknown: ${decision.reason}');
+  // Tell the driver the road ahead could not be assessed. Not an all-clear.
+  return;
+}
+
 if (decision.shouldReroute) {
   print('Rerouting: ${decision.reason}');
   // Hand decision.detourWaypoints to your RoutingEngine to compute
@@ -86,6 +102,10 @@ if (decision.shouldReroute) {
       waypoints: decision.detourWaypoints,
     ),
   );
+} else {
+  // Assessed, and nothing found. `confidence` is inherited from the forecast
+  // (the weakest segment along the route) — never a manufactured 1.0.
+  print('No hazard found (confidence ${decision.confidence!}).');
 }
 ```
 

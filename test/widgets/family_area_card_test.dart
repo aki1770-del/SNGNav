@@ -29,15 +29,15 @@ const _personTokens = <String>[
 ];
 
 AreaConditionRead _read() => const AreaConditionRead(
-      areaHazard: HourHazard.elevated,
-      forecastCovered: true,
-      officialWarningVerbatim: '大雪警報',
-      warningCheckAvailable: true,
-      measuredVisibilityMeters: 80,
-      visibilityStationName: '秋田',
-      visibilityDistanceKm: 5,
-      areaLabel: 'Akita',
-    );
+  areaHazard: HourHazard.elevated,
+  forecastCovered: true,
+  officialWarningVerbatim: '大雪警報',
+  warningCheckAvailable: true,
+  measuredVisibilityMeters: 80,
+  visibilityStationName: '秋田',
+  visibilityDistanceKm: 5,
+  areaLabel: 'Akita',
+);
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -85,52 +85,78 @@ Future<void> _pumpRead(
 }
 
 void main() {
-  testWidgets('renders place label + chips + honesty note (en)',
-      (tester) async {
-    await _pump(tester,
-        strings: BriefingStrings.en, messages: PretripMessages.en);
+  testWidgets('renders place label + chips + honesty note (en)', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      strings: BriefingStrings.en,
+      messages: PretripMessages.en,
+    );
 
     expect(find.text('Conditions in the destination area'), findsOneWidget);
     expect(find.text('Area: Akita'), findsOneWidget);
-    expect(find.textContaining('Official winter warning or advisory in effect'),
-        findsOneWidget);
-    expect(find.textContaining('Forecast hazard for this area'),
-        findsOneWidget);
-    expect(find.textContaining('Nearest measured visibility ~80 m'),
-        findsOneWidget);
+    expect(
+      find.textContaining('Official winter warning or advisory in effect'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Forecast hazard for this area'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Nearest measured visibility ~80 m'),
+      findsOneWidget,
+    );
     expect(find.textContaining('not road or route status'), findsOneWidget);
   });
 
-  testWidgets('is NOT a second briefing card: no switch, no wait/delay/go-no-go',
-      (tester) async {
-    await _pump(tester,
-        strings: BriefingStrings.en, messages: PretripMessages.en);
+  testWidgets(
+    'is NOT a second briefing card: no switch, no wait/delay/go-no-go',
+    (tester) async {
+      await _pump(
+        tester,
+        strings: BriefingStrings.en,
+        messages: PretripMessages.en,
+      );
 
-    expect(find.byType(SwitchListTile), findsNothing);
-    for (final banned in const ['wait', 'delay', "don't go", 'go-no-go']) {
-      expect(find.textContaining(banned), findsNothing,
-          reason: 'the area section must not urge/deter a trip ($banned)');
-    }
-  });
+      expect(find.byType(SwitchListTile), findsNothing);
+      for (final banned in const ['wait', 'delay', "don't go", 'go-no-go']) {
+        expect(
+          find.textContaining(banned),
+          findsNothing,
+          reason: 'the area section must not urge/deter a trip ($banned)',
+        );
+      }
+    },
+  );
 
-  testWidgets('reaches HER mother in Japanese, with no person token',
-      (tester) async {
-    await _pump(tester,
-        strings: BriefingStrings.ja, messages: PretripMessages.ja);
+  testWidgets('reaches HER mother in Japanese, with no person token', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      strings: BriefingStrings.ja,
+      messages: PretripMessages.ja,
+    );
 
     expect(find.text('目的地周辺の状況'), findsOneWidget);
     expect(find.textContaining('道路や経路の状況ではありません'), findsOneWidget);
 
     for (final token in _personTokens) {
-      expect(find.textContaining(token), findsNothing,
-          reason: 'no person token may appear ($token)');
+      expect(
+        find.textContaining(token),
+        findsNothing,
+        reason: 'no person token may appear ($token)',
+      );
     }
   });
 
   // Honest-gap rendering: an uncovered window / a failed warning-check / no
   // measured visibility must render an HONEST gap, never an implied "all clear".
-  testWidgets('honest gap: forecast not covered renders the not-covered line',
-      (tester) async {
+  testWidgets('honest gap: forecast not covered renders the not-covered line', (
+    tester,
+  ) async {
     await _pumpRead(
       tester,
       const AreaConditionRead(
@@ -145,59 +171,68 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('No forecast available for this area'),
-        findsOneWidget);
+    expect(
+      find.textContaining('No forecast available for this area'),
+      findsOneWidget,
+    );
     // No band word may be implied when the window is not covered.
     expect(find.textContaining('Forecast hazard for this area'), findsNothing);
   });
 
-  testWidgets('honest gap: warning-check unavailable shows the caveat, not "no"',
-      (tester) async {
-    await _pumpRead(
-      tester,
-      const AreaConditionRead(
-        areaHazard: HourHazard.caution,
-        forecastCovered: true,
-        officialWarningVerbatim: null,
-        warningCheckAvailable: false,
-        measuredVisibilityMeters: null,
-        visibilityStationName: null,
-        visibilityDistanceKm: null,
-        areaLabel: 'Akita',
-      ),
-    );
+  testWidgets(
+    'honest gap: warning-check unavailable shows the caveat, not "no"',
+    (tester) async {
+      await _pumpRead(
+        tester,
+        const AreaConditionRead(
+          areaHazard: HourHazard.caution,
+          forecastCovered: true,
+          officialWarningVerbatim: null,
+          warningCheckAvailable: false,
+          measuredVisibilityMeters: null,
+          visibilityStationName: null,
+          visibilityDistanceKm: null,
+          areaLabel: 'Akita',
+        ),
+      );
 
-    expect(find.textContaining('may be in effect that'), findsOneWidget);
-    // Must NOT assert a verified negative when the check did not happen.
-    expect(find.textContaining('No active snow warning'), findsNothing);
-  });
+      expect(find.textContaining('may be in effect that'), findsOneWidget);
+      // Must NOT assert a verified negative when the check did not happen.
+      expect(find.textContaining('No active snow warning'), findsNothing);
+    },
+  );
 
-  testWidgets('honest gap: no measured visibility shows the none line, no number',
-      (tester) async {
-    await _pumpRead(
-      tester,
-      const AreaConditionRead(
-        areaHazard: HourHazard.caution,
-        forecastCovered: true,
-        officialWarningVerbatim: null,
-        warningCheckAvailable: true,
-        measuredVisibilityMeters: null,
-        visibilityStationName: null,
-        visibilityDistanceKm: null,
-        areaLabel: 'Akita',
-      ),
-    );
+  testWidgets(
+    'honest gap: no measured visibility shows the none line, no number',
+    (tester) async {
+      await _pumpRead(
+        tester,
+        const AreaConditionRead(
+          areaHazard: HourHazard.caution,
+          forecastCovered: true,
+          officialWarningVerbatim: null,
+          warningCheckAvailable: true,
+          measuredVisibilityMeters: null,
+          visibilityStationName: null,
+          visibilityDistanceKm: null,
+          areaLabel: 'Akita',
+        ),
+      );
 
-    expect(find.textContaining('No measured visibility available for this area'),
-        findsOneWidget);
-    expect(find.textContaining('Nearest measured visibility'), findsNothing);
-  });
+      expect(
+        find.textContaining('No measured visibility available for this area'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Nearest measured visibility'), findsNothing);
+    },
+  );
 
   test('areaResolutionNote states the claim ceiling (en + ja)', () {
-    expect(BriefingStrings.en.areaResolutionNote,
-        contains('not road or route status'));
-    expect(BriefingStrings.ja.areaResolutionNote,
-        contains('道路や経路の状況ではありません'));
+    expect(
+      BriefingStrings.en.areaResolutionNote,
+      contains('not road or route status'),
+    );
+    expect(BriefingStrings.ja.areaResolutionNote, contains('道路や経路の状況ではありません'));
   });
 
   // No-background guard (by source structure): the dest fetch must be invoked
@@ -218,14 +253,18 @@ void main() {
     // `Timer.periodic(d, (_) => _initDestAreaCondition())` is also counted) and
     // subtract the single declaration; the remainder is the invocation count.
     final all = RegExp(r'_initDestAreaCondition\(').allMatches(src).length;
-    final decl = RegExp(r'Future<void>\s+_initDestAreaCondition\(')
-        .allMatches(src)
-        .length;
+    final decl = RegExp(
+      r'Future<void>\s+_initDestAreaCondition\(',
+    ).allMatches(src).length;
     expect(decl, 1, reason: 'exactly one method declaration expected');
-    expect(all - decl, 2,
-        reason: 'the dest read must have exactly TWO invocation sites — '
-            'initState + the single HER-action setter; a scheduled caller '
-            'would be 見守り-by-proxy');
+    expect(
+      all - decl,
+      2,
+      reason:
+          'the dest read must have exactly TWO invocation sites — '
+          'initState + the single HER-action setter; a scheduled caller '
+          'would be 見守り-by-proxy',
+    );
 
     // One invocation is inside initState.
     final initStart = src.indexOf('void initState()');
@@ -233,14 +272,18 @@ void main() {
     final initEnd = src.indexOf('\n  }', initStart);
     expect(initEnd, greaterThan(initStart));
     expect(
-        src.substring(initStart, initEnd).contains('_initDestAreaCondition('),
-        isTrue,
-        reason: 'the dest read must be invoked from initState');
+      src.substring(initStart, initEnd).contains('_initDestAreaCondition('),
+      isTrue,
+      reason: 'the dest read must be invoked from initState',
+    );
 
     // The other invocation is inside the HER-action setter _setDestination.
     final setStart = src.indexOf('Future<void> _setDestination(');
-    expect(setStart, greaterThan(-1),
-        reason: 'the single HER-action setter must exist');
+    expect(
+      setStart,
+      greaterThan(-1),
+      reason: 'the single HER-action setter must exist',
+    );
 
     // Neither the read method NOR the HER-action setter may self-schedule a
     // background refresh. Slice each body from its declaration to the NEXT
@@ -249,10 +292,14 @@ void main() {
     String bodySliceFrom(String declStr) {
       final start = src.indexOf(declStr);
       expect(start, greaterThan(-1));
-      final nextDecl = RegExp(r'\n  (?:Future<void>|void|Widget)\s+\w+\(')
-          .firstMatch(src.substring(start + 1));
-      expect(nextDecl, isNotNull,
-          reason: 'a following method declaration must bound the body slice');
+      final nextDecl = RegExp(
+        r'\n  (?:Future<void>|void|Widget)\s+\w+\(',
+      ).firstMatch(src.substring(start + 1));
+      expect(
+        nextDecl,
+        isNotNull,
+        reason: 'a following method declaration must bound the body slice',
+      );
       return src.substring(start, start + 1 + nextDecl!.start);
     }
 
@@ -268,22 +315,35 @@ void main() {
         '.listen(',
         'Notification',
       ]) {
-        expect(body.contains(bg), isFalse,
-            reason: 'the dest path must have no background scheduling ($bg) '
-                'in $declStr');
+        expect(
+          body.contains(bg),
+          isFalse,
+          reason:
+              'the dest path must have no background scheduling ($bg) '
+              'in $declStr',
+        );
       }
     }
   });
 
-  test('the section render is guarded on a non-null read, built exactly once',
-      () {
-    final src = File('lib/widgets/pretrip_screen.dart').readAsStringSync();
-    expect(src.contains('if (_destAreaRead != null)'), isTrue,
-        reason: 'FamilyAreaCard must only build when a real read delivered — '
-            'with DEST defines unset, _destAreaRead is null and it is omitted');
-    // Exactly one FamilyAreaCard build site, so no second UNCONDITIONAL card can
-    // bypass the null-guard.
-    expect('FamilyAreaCard('.allMatches(src).length, 1,
-        reason: 'exactly one FamilyAreaCard build site, under the null guard');
-  });
+  test(
+    'the section render is guarded on a non-null read, built exactly once',
+    () {
+      final src = File('lib/widgets/pretrip_screen.dart').readAsStringSync();
+      expect(
+        src.contains('if (_destAreaRead != null)'),
+        isTrue,
+        reason:
+            'FamilyAreaCard must only build when a real read delivered — '
+            'with DEST defines unset, _destAreaRead is null and it is omitted',
+      );
+      // Exactly one FamilyAreaCard build site, so no second UNCONDITIONAL card can
+      // bypass the null-guard.
+      expect(
+        'FamilyAreaCard('.allMatches(src).length,
+        1,
+        reason: 'exactly one FamilyAreaCard build site, under the null guard',
+      );
+    },
+  );
 }

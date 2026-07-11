@@ -153,8 +153,10 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 1,
       );
-      expect(state.currentManeuver!.instruction,
-          equals('Turn right onto Route 248'));
+      expect(
+        state.currentManeuver!.instruction,
+        equals('Turn right onto Route 248'),
+      );
     });
 
     test('currentManeuver null when no route', () {
@@ -177,8 +179,10 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 0,
       );
-      expect(state.nextManeuver!.instruction,
-          equals('Turn right onto Route 248'));
+      expect(
+        state.nextManeuver!.instruction,
+        equals('Turn right onto Route 248'),
+      );
     });
 
     test('nextManeuver null at last maneuver', () {
@@ -292,17 +296,12 @@ void main() {
     test('events are equatable', () {
       expect(
         NavigationStarted(route: _testRoute, destinationLabel: 'Toyota'),
-        equals(NavigationStarted(
-            route: _testRoute, destinationLabel: 'Toyota')),
+        equals(
+          NavigationStarted(route: _testRoute, destinationLabel: 'Toyota'),
+        ),
       );
-      expect(
-        const NavigationStopped(),
-        equals(const NavigationStopped()),
-      );
-      expect(
-        const ManeuverAdvanced(),
-        equals(const ManeuverAdvanced()),
-      );
+      expect(const NavigationStopped(), equals(const NavigationStopped()));
+      expect(const ManeuverAdvanced(), equals(const ManeuverAdvanced()));
       expect(
         const RouteDeviationDetected(reason: 'off-route'),
         equals(const RouteDeviationDetected(reason: 'off-route')),
@@ -317,9 +316,14 @@ void main() {
   group('AlertSeverity', () {
     test('has three levels', () {
       expect(AlertSeverity.values.length, equals(3));
-      expect(AlertSeverity.values,
-          containsAll([AlertSeverity.info, AlertSeverity.warning,
-                       AlertSeverity.critical]));
+      expect(
+        AlertSeverity.values,
+        containsAll([
+          AlertSeverity.info,
+          AlertSeverity.warning,
+          AlertSeverity.critical,
+        ]),
+      );
     });
   });
 
@@ -335,10 +339,9 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'idle → navigating on start',
       build: NavigationBloc.new,
-      act: (bloc) => bloc.add(NavigationStarted(
-        route: _testRoute,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        NavigationStarted(route: _testRoute, destinationLabel: 'Toyota HQ'),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)
@@ -375,10 +378,8 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'deviated → idle on stop',
       build: NavigationBloc.new,
-      seed: () => NavigationState(
-        status: NavigationStatus.deviated,
-        route: _testRoute,
-      ),
+      seed: () =>
+          NavigationState(status: NavigationStatus.deviated, route: _testRoute),
       act: (bloc) => bloc.add(const NavigationStopped()),
       expect: () => [const NavigationState.idle()],
     );
@@ -438,12 +439,21 @@ void main() {
         bloc.add(const ManeuverAdvanced()); // 2 → arrived
       },
       expect: () => [
-        isA<NavigationState>()
-            .having((s) => s.currentManeuverIndex, 'index', 1),
-        isA<NavigationState>()
-            .having((s) => s.currentManeuverIndex, 'index', 2),
-        isA<NavigationState>()
-            .having((s) => s.status, 'status', NavigationStatus.arrived),
+        isA<NavigationState>().having(
+          (s) => s.currentManeuverIndex,
+          'index',
+          1,
+        ),
+        isA<NavigationState>().having(
+          (s) => s.currentManeuverIndex,
+          'index',
+          2,
+        ),
+        isA<NavigationState>().having(
+          (s) => s.status,
+          'status',
+          NavigationStatus.arrived,
+        ),
       ],
     );
 
@@ -457,8 +467,11 @@ void main() {
       ),
       act: (bloc) => bloc.add(const ManeuverAdvanced()),
       expect: () => [
-        isA<NavigationState>()
-            .having((s) => s.status, 'status', NavigationStatus.arrived),
+        isA<NavigationState>().having(
+          (s) => s.status,
+          'status',
+          NavigationStatus.arrived,
+        ),
       ],
     );
 
@@ -503,8 +516,8 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 1,
       ),
-      act: (bloc) => bloc.add(
-          const RouteDeviationDetected(reason: 'off-route')),
+      act: (bloc) =>
+          bloc.add(const RouteDeviationDetected(reason: 'off-route')),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.deviated)
@@ -528,8 +541,7 @@ void main() {
         currentManeuverIndex: 1,
         destinationLabel: 'Toyota HQ',
       ),
-      act: (bloc) =>
-          bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)
@@ -546,16 +558,14 @@ void main() {
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) =>
-          bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
       expect: () => <NavigationState>[],
     );
 
     blocTest<NavigationBloc, NavigationState>(
       'reroute ignored when idle',
       build: NavigationBloc.new,
-      act: (bloc) =>
-          bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
+      act: (bloc) => bloc.add(RerouteCompleted(newRoute: _rerouteResult)),
       expect: () => <NavigationState>[],
     );
   });
@@ -569,10 +579,12 @@ void main() {
         route: _testRoute,
         currentManeuverIndex: 1,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Icy road conditions ahead',
-        severity: AlertSeverity.warning,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Icy road conditions ahead',
+          severity: AlertSeverity.warning,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)
@@ -586,16 +598,21 @@ void main() {
     blocTest<NavigationBloc, NavigationState>(
       'alert received while idle (weather can arrive before nav)',
       build: NavigationBloc.new,
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Snow expected in 30 minutes',
-        severity: AlertSeverity.info,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Snow expected in 30 minutes',
+          severity: AlertSeverity.info,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.idle)
             .having((s) => s.hasSafetyAlert, 'hasAlert', isTrue)
-            .having((s) => s.alertMessage, 'msg',
-                'Snow expected in 30 minutes'),
+            .having(
+              (s) => s.alertMessage,
+              'msg',
+              'Snow expected in 30 minutes',
+            ),
       ],
     );
 
@@ -606,11 +623,13 @@ void main() {
         status: NavigationStatus.navigating,
         route: _testRoute,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'Visibility zero — pull over immediately',
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'Visibility zero — pull over immediately',
+          severity: AlertSeverity.critical,
+          dismissible: false,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.alertSeverity, 'sev', AlertSeverity.critical)
@@ -660,11 +679,13 @@ void main() {
         alertMessage: 'Old alert',
         alertSeverity: AlertSeverity.info,
       ),
-      act: (bloc) => bloc.add(const SafetyAlertReceived(
-        message: 'New critical alert',
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      )),
+      act: (bloc) => bloc.add(
+        const SafetyAlertReceived(
+          message: 'New critical alert',
+          severity: AlertSeverity.critical,
+          dismissible: false,
+        ),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.alertMessage, 'msg', 'New critical alert')
@@ -680,10 +701,9 @@ void main() {
         alertMessage: 'Snow warning active',
         alertSeverity: AlertSeverity.warning,
       ),
-      act: (bloc) => bloc.add(NavigationStarted(
-        route: _testRoute,
-        destinationLabel: 'Toyota HQ',
-      )),
+      act: (bloc) => bloc.add(
+        NavigationStarted(route: _testRoute, destinationLabel: 'Toyota HQ'),
+      ),
       expect: () => [
         isA<NavigationState>()
             .having((s) => s.status, 'status', NavigationStatus.navigating)

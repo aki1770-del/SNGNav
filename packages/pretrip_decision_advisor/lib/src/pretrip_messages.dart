@@ -149,7 +149,13 @@ abstract class PretripMessages {
   String areaForecastNotCovered();
 
   /// Nearest MEASURED visibility for the area (numbers pass through verbatim).
-  String areaMeasuredVisibility(int meters, String station, int km);
+  ///
+  /// [station] and [km] are NULLABLE, and null means NOT KNOWN — never zero and
+  /// never "at your location". The whole point of carrying the station name and
+  /// its distance is that she can discount a reading taken 40 km away;
+  /// substituting `0` for an unknown distance made the LEAST trustworthy reading
+  /// look like the MOST trustworthy one.
+  String areaMeasuredVisibility(int meters, String? station, int? km);
 
   /// No measured visibility available for the area.
   String areaNoMeasuredVisibility();
@@ -289,6 +295,9 @@ class _EnPretripMessages extends PretripMessages {
         return 'elevated';
       case HourHazard.severe:
         return 'severe';
+      case HourHazard.unknown:
+        // Never a band. The forecast did not cover this window.
+        return 'not assessed';
     }
   }
 
@@ -297,8 +306,21 @@ class _EnPretripMessages extends PretripMessages {
       'No forecast available for this area in the hours ahead.';
 
   @override
-  String areaMeasuredVisibility(int meters, String station, int km) =>
-      'Nearest measured visibility ~$meters m ($station, ~$km km away).';
+  String areaMeasuredVisibility(int meters, String? station, int? km) {
+    if (station != null && km != null) {
+      return 'Nearest measured visibility ~$meters m ($station, ~$km km away).';
+    }
+    if (station != null) {
+      return 'Nearest measured visibility ~$meters m ($station; distance from '
+          'you not known).';
+    }
+    if (km != null) {
+      return 'Nearest measured visibility ~$meters m (~$km km away; station '
+          'not named).';
+    }
+    return 'Nearest measured visibility ~$meters m (reporting station and its '
+        'distance from you are not known).';
+  }
 
   @override
   String areaNoMeasuredVisibility() =>
@@ -432,6 +454,9 @@ class _JaPretripMessages extends PretripMessages {
         return '警戒';
       case HourHazard.severe:
         return '重度';
+      case HourHazard.unknown:
+        // 帯を主張しない。予報が窓を覆っていない。
+        return '判定できません';
     }
   }
 
@@ -440,8 +465,18 @@ class _JaPretripMessages extends PretripMessages {
       'この先の時間帯について、この地域の予報データはありません。';
 
   @override
-  String areaMeasuredVisibility(int meters, String station, int km) =>
-      '最寄りの計測視程: 約${meters}m($station、約${km}km先)。';
+  String areaMeasuredVisibility(int meters, String? station, int? km) {
+    if (station != null && km != null) {
+      return '最寄りの計測視程: 約${meters}m($station、約${km}km先)。';
+    }
+    if (station != null) {
+      return '最寄りの計測視程: 約${meters}m($station、現在地からの距離は不明)。';
+    }
+    if (km != null) {
+      return '最寄りの計測視程: 約${meters}m(約${km}km先、観測地点名は不明)。';
+    }
+    return '最寄りの計測視程: 約${meters}m(観測地点および現在地からの距離は不明)。';
+  }
 
   @override
   String areaNoMeasuredVisibility() =>

@@ -3,7 +3,7 @@ description: >-
   Safety-calibrated fusion of in-vehicle signals (road friction, TCS/ABS,
   wiper/rain, ambient temperature) into a driving-condition hazard verdict,
   with an honest-degradation rail. Pure Dart, no Flutter, no databroker SDK.
-version: 0.4.0
+version: 0.5.0
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues
@@ -18,8 +18,8 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  driving_conditions: ^0.5.2
-  driving_weather: ^0.4.4
+  driving_conditions: ^0.6.0
+  driving_weather: ^0.5.0
   equatable: ^2.0.7
 
 dev_dependencies:

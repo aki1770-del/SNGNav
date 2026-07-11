@@ -132,12 +132,14 @@ void main() {
         HourHazard.caution: 'caution',
         HourHazard.elevated: 'elevated',
         HourHazard.severe: 'severe',
+        HourHazard.unknown: 'not assessed',
       };
       const jaWords = {
         HourHazard.clear: '危険の兆候なし',
         HourHazard.caution: '注意',
         HourHazard.elevated: '警戒',
         HourHazard.severe: '重度',
+        HourHazard.unknown: '判定できません',
       };
 
       test('each band maps to its correct word, bands stay distinct', () {

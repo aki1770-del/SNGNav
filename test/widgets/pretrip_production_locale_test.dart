@@ -13,9 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sngnav_snow_scene/main.dart' as main_app;
 
 void main() {
-  testWidgets(
-      'pre-trip view resolves Japanese reason chips from the ja locale',
-      (tester) async {
+  testWidgets('pre-trip view resolves Japanese reason chips from the ja locale', (
+    tester,
+  ) async {
     // Force the platform locale to Japanese; MaterialApp resolves it against
     // its supportedLocales ([en, ja]) to ja.
     tester.platformDispatcher.localesTestValue = const [Locale('ja')];
@@ -33,9 +33,15 @@ void main() {
     // that chip ends in ホワイトアウト状態です — present ONLY if the advisor was given
     // the ja messages table. Drop the `messages:` wiring and this chip reverts
     // to the English "whiteout conditions" and this assertion fails.
-    expect(find.textContaining('ホワイトアウト'), findsWidgets,
-        reason: 'the JA whiteout reason chip must render under the ja locale');
-    expect(find.textContaining('whiteout conditions'), findsNothing,
-        reason: 'no English reason chip should leak under the ja locale');
+    expect(
+      find.textContaining('ホワイトアウト'),
+      findsWidgets,
+      reason: 'the JA whiteout reason chip must render under the ja locale',
+    );
+    expect(
+      find.textContaining('whiteout conditions'),
+      findsNothing,
+      reason: 'no English reason chip should leak under the ja locale',
+    );
   });
 }

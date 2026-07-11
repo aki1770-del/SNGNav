@@ -45,17 +45,20 @@ void main() {
     });
 
     test('calculates Nagoya → Toyota route with real geometry', () async {
-      final result = await engine.calculateRoute(const RouteRequest(
-        origin: nagoya,
-        destination: toyota,
-      ));
+      final result = await engine.calculateRoute(
+        const RouteRequest(origin: nagoya, destination: toyota),
+      );
 
       debugPrint('Route: ${result.summary}');
       debugPrint('Distance: ${result.totalDistanceKm.toStringAsFixed(1)} km');
-      debugPrint('Duration: ${(result.totalTimeSeconds / 60).toStringAsFixed(0)} min');
+      debugPrint(
+        'Duration: ${(result.totalTimeSeconds / 60).toStringAsFixed(0)} min',
+      );
       debugPrint('Geometry points: ${result.shape.length}');
       debugPrint('Maneuvers: ${result.maneuvers.length}');
-      debugPrint('Latency: ${result.engineInfo.queryLatency.inMilliseconds} ms');
+      debugPrint(
+        'Latency: ${result.engineInfo.queryLatency.inMilliseconds} ms',
+      );
 
       // Nagoya → Toyota is ~25-40 km by road.
       expect(result.totalDistanceKm, greaterThan(20));
@@ -75,10 +78,7 @@ void main() {
       expect(result.engineInfo.name, 'osrm');
 
       // Latency should be reasonable (< 5s for public demo).
-      expect(
-        result.engineInfo.queryLatency.inMilliseconds,
-        lessThan(5000),
-      );
+      expect(result.engineInfo.queryLatency.inMilliseconds, lessThan(5000));
 
       // Start point should be near Nagoya.
       expect(result.shape.first.latitude, closeTo(35.17, 0.05));
@@ -90,21 +90,25 @@ void main() {
     });
 
     test('maneuver instructions are human-readable', () async {
-      final result = await engine.calculateRoute(const RouteRequest(
-        origin: nagoya,
-        destination: toyota,
-      ));
+      final result = await engine.calculateRoute(
+        const RouteRequest(origin: nagoya, destination: toyota),
+      );
 
       debugPrint('--- Maneuvers ---');
       for (final m in result.maneuvers) {
-        debugPrint('  [${m.index}] ${m.type}: ${m.instruction} '
-            '(${m.lengthKm.toStringAsFixed(1)} km)');
+        debugPrint(
+          '  [${m.index}] ${m.type}: ${m.instruction} '
+          '(${m.lengthKm.toStringAsFixed(1)} km)',
+        );
       }
 
       // Every maneuver should have a non-empty instruction.
       for (final m in result.maneuvers) {
-        expect(m.instruction, isNotEmpty,
-            reason: 'Maneuver ${m.index} has empty instruction');
+        expect(
+          m.instruction,
+          isNotEmpty,
+          reason: 'Maneuver ${m.index} has empty instruction',
+        );
       }
 
       // Depart instruction reads as a departure in the narration language —

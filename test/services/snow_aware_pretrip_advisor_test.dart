@@ -14,26 +14,24 @@ void main() {
     double? precip,
     double? vis,
     RoadConditionEstimate? road,
-  }) =>
-      HourlyForecast(
-        hour: DateTime(2026, 1, 1, hour),
-        tempCelsius: temp,
-        precipitationMmPerHour: precip,
-        visibilityMeters: vis,
-        estimatedRoadCondition: road,
-      );
+  }) => HourlyForecast(
+    hour: DateTime(2026, 1, 1, hour),
+    tempCelsius: temp,
+    precipitationMmPerHour: precip,
+    visibilityMeters: vis,
+    estimatedRoadCondition: road,
+  );
 
   CommuteShape commute({
     CommuteFlexibility flexibility = CommuteFlexibility.discretionary,
     Duration duration = const Duration(minutes: 30),
     DateTime? departure,
-  }) =>
-      CommuteShape(
-        plannedDeparture: departure ?? dep,
-        plannedDuration: duration,
-        routeIdentifiers: const ['r1'],
-        flexibility: flexibility,
-      );
+  }) => CommuteShape(
+    plannedDeparture: departure ?? dep,
+    plannedDuration: duration,
+    routeIdentifiers: const ['r1'],
+    flexibility: flexibility,
+  );
 
   const profile = DriverProfileSpec(
     profileTag: 'test',
@@ -95,8 +93,7 @@ void main() {
       expect(b.verdict, PretripVerdict.clear);
     });
 
-    test(
-        'subzero dry air is caution, never clear — frost/black-ice risk, '
+    test('subzero dry air is caution, never clear — frost/black-ice risk, '
         'consistent with the in-trip Subzero advisory class', () {
       // Temperature is REAL data (the one required field), not a null field:
       // a −10 °C forecast reading "no winter hazard signals" was the
@@ -160,10 +157,7 @@ void main() {
         profile: profile,
       );
       expect(b.verdict, PretripVerdict.waitAdvised);
-      expect(
-        b.recommendation!.strength,
-        RecommendationStrength.advisoryStrong,
-      );
+      expect(b.recommendation!.strength, RecommendationStrength.advisoryStrong);
       // 07:15 + 2h → 09:15 window sits in the clear 09:00/10:00 slots.
       expect(b.recommendation!.suggestedDelay, const Duration(hours: 2));
       expect(
@@ -186,10 +180,7 @@ void main() {
         b.recommendation!.suggestedDelay,
         const Duration(hours: 2, minutes: 30),
       );
-      expect(
-        b.recommendation!.strength,
-        RecommendationStrength.advisoryStrong,
-      );
+      expect(b.recommendation!.strength, RecommendationStrength.advisoryStrong);
     });
 
     test('elevated hazard with better window is a weak wait', () {
@@ -217,10 +208,7 @@ void main() {
       );
       expect(b.verdict, PretripVerdict.hazardPersists);
       expect(b.recommendation!.suggestedDelay, Duration.zero);
-      expect(
-        b.chips.any((c) => c.contains('needed today')),
-        isTrue,
-      );
+      expect(b.chips.any((c) => c.contains('needed today')), isTrue);
     });
   });
 
@@ -241,10 +229,7 @@ void main() {
       expect(b.verdict, PretripVerdict.requiredTripHazard);
       expect(b.recommendation!.strength, RecommendationStrength.honestyMode);
       expect(b.recommendation!.suggestedDelay, Duration.zero);
-      expect(
-        b.chips.any((c) => c.contains('required')),
-        isTrue,
-      );
+      expect(b.chips.any((c) => c.contains('required')), isTrue);
     });
 
     test('unknown flexibility is treated like required (no urged delay)', () {
@@ -280,16 +265,17 @@ void main() {
         commute: commute(),
         profile: profile,
       );
-      expect(
-        b.chips.any((c) => c.contains('check conditions again')),
-        isTrue,
-      );
+      expect(b.chips.any((c) => c.contains('check conditions again')), isTrue);
     });
   });
 
   group('contract conformance', () {
     test('advise() returns the same recommendation brief() carries', () {
-      final f = forecast([slot(7, vis: 80), slot(8, vis: 3000), slot(9, vis: 5000)]);
+      final f = forecast([
+        slot(7, vis: 80),
+        slot(8, vis: 3000),
+        slot(9, vis: 5000),
+      ]);
       final c = commute();
       final rec = advisor.advise(forecast: f, commute: c, profile: profile);
       final b = advisor.brief(forecast: f, commute: c, profile: profile);

@@ -394,10 +394,7 @@ void main() {
       await provider.start();
 
       final errors = <Object>[];
-      final sub = provider.positions.listen(
-        (_) {},
-        onError: errors.add,
-      );
+      final sub = provider.positions.listen((_) {}, onError: errors.add);
 
       mockGps.emitError(Exception('D-Bus connection lost'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -412,10 +409,7 @@ void main() {
       await provider.start();
 
       final errors = <Object>[];
-      final sub = provider.positions.listen(
-        (_) {},
-        onError: errors.add,
-      );
+      final sub = provider.positions.listen((_) {}, onError: errors.add);
 
       // Get DR active first.
       mockGps.emitPosition(_gpsFix);
@@ -703,8 +697,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       final postAccuracy = positions.last.accuracy;
 
-      expect(postAccuracy, lessThan(drAccuracy),
-          reason: 'GPS fix should recover accuracy');
+      expect(
+        postAccuracy,
+        lessThan(drAccuracy),
+        reason: 'GPS fix should recover accuracy',
+      );
 
       await sub.cancel();
     });

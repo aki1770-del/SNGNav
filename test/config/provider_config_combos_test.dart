@@ -44,7 +44,10 @@ void main() {
 
       expect(weather, isA<SimulatedWeatherProvider>());
       expect(location, isA<DeadReckoningProvider>());
-      expect(routing, isNull); // mock routing returns null (caller provides mock)
+      expect(
+        routing,
+        isNull,
+      ); // mock routing returns null (caller provides mock)
 
       weather.dispose();
       await location.dispose();

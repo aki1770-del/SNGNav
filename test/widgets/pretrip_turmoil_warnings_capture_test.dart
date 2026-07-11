@@ -68,23 +68,24 @@ WeatherForecast _cannedTempOnly() {
 }
 
 Advisory _adv(String eventClass, AdvisorySeverity severity) => Advisory(
-      source: AdvisorySource.jmaJapan,
-      eventClass: eventClass,
-      severity: severity,
-      certainty: AdvisoryCertainty.observed,
-      urgency: AdvisoryUrgency.immediate,
-      areaDescription: '秋田県',
-      effective: null,
-      expires: null,
-      headline: eventClass,
-      description: eventClass,
-    );
+  source: AdvisorySource.jmaJapan,
+  eventClass: eventClass,
+  severity: severity,
+  certainty: AdvisoryCertainty.observed,
+  urgency: AdvisoryUrgency.immediate,
+  areaDescription: '秋田県',
+  effective: null,
+  expires: null,
+  headline: eventClass,
+  description: eventClass,
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('capture: turmoil warnings card, ja, real CJK glyphs',
-      (tester) async {
+  testWidgets('capture: turmoil warnings card, ja, real CJK glyphs', (
+    tester,
+  ) async {
     final cjk = await _loadCjk();
     // A tall phone-ish viewport so the card region is capturable below the
     // briefing card.
@@ -116,11 +117,11 @@ void main() {
             body: PretripScreen(
               pretripPointOverride: (lat: 39.72, lon: 140.10), // Akita
               metForecastFetchOverride: () async => _cannedTempOnly(),
-              jmaAdvisoryFetchOverride: ({
-                required double latitude,
-                required double longitude,
-              }) async =>
-                  [
+              jmaAdvisoryFetchOverride:
+                  ({
+                    required double latitude,
+                    required double longitude,
+                  }) async => [
                     _adv('強風注意報', AdvisorySeverity.moderate),
                     _adv('大雨危険警報', AdvisorySeverity.extreme),
                   ],
@@ -133,7 +134,8 @@ void main() {
     await tester.pump();
     for (var i = 0; i < 12; i++) {
       await tester.runAsync(
-          () async => Future<void>.delayed(const Duration(milliseconds: 20)));
+        () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
     }
@@ -147,8 +149,9 @@ void main() {
     expect(find.text('強風注意報（秋田県）'), findsOneWidget);
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -157,9 +160,11 @@ void main() {
       final file = File('${dir.path}/pretrip_turmoil_warnings_ja.png');
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       // ignore: avoid_print
-      print('CAPTURE pretrip_turmoil_warnings_ja: ${file.absolute.path} '
-          '${file.lengthSync()} bytes ${image.width}x${image.height} '
-          'cjk=$cjk');
+      print(
+        'CAPTURE pretrip_turmoil_warnings_ja: ${file.absolute.path} '
+        '${file.lengthSync()} bytes ${image.width}x${image.height} '
+        'cjk=$cjk',
+      );
     });
 
     final ex = tester.takeException();

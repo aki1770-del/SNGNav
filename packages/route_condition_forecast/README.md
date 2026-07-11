@@ -19,14 +19,22 @@ segment by segment.
 
 Pure Dart. No Flutter.
 
+> **0.2.0 fixes a safety defect present through 0.1.5.** A route whose segments
+> carried unmeasured weather answered `hasAnyHazard == false` — i.e. it declared
+> itself CLEAR — and that answer flowed into `adaptive_reroute`, which reported
+> "Route is clear" with `confidence: 1.0`. Verdicts are now tri-state and the
+> bool accessor is gone; `if (forecast.hasAnyHazard)` will not compile. Read the
+> [CHANGELOG](CHANGELOG.md) before upgrading — the compile error is the fix.
+
 ## What it gives you
 
 - **`RouteSegmenter`** — splits a route into time-aware segments.
 - **`RouteConditionForecaster`** — projects forecast conditions onto
   segments with ETA weighting; flags hazard intersections.
 - **`RouteForecast`** — typed result with per-segment condition snapshots,
-  hazard intersections, and convenience accessors (`hasAnyHazard`,
-  `firstHazardEtaSeconds`).
+  hazard intersections, and a **tri-state** `SafetyVerdict get hazard`
+  (`hazardous` / `notHazardous` / **`unknown`**), plus
+  `firstHazardEtaSeconds`, `firstUnassessedSegment`, `coversWholeRoute`.
 - **`ForecastProvider`** — pluggable; ships with
   `CurrentConditionsForecastProvider` (uses current weather as best estimate)
   for cases where no time-series forecast source is available.
@@ -35,7 +43,7 @@ Pure Dart. No Flutter.
 
 ```yaml
 dependencies:
-  route_condition_forecast: ^0.1.0
+  route_condition_forecast: ^0.2.0
 ```
 
 ## Use
@@ -50,8 +58,19 @@ final forecaster = RouteConditionForecaster(
 
 final forecast = await forecaster.forecast(routeResult);
 
-if (forecast.hasAnyHazard) {
-  print('Hazard at ${forecast.firstHazardEtaSeconds} seconds in.');
+// TRI-STATE. `unknown` is not "clear": it means the route could not be
+// assessed (an unmeasured segment, or a maneuver that carried no position and
+// so was never forecast at all).
+//
+// Do NOT write `forecast.hazard == SafetyVerdict.hazardous ? warn() : allClear()`
+// — that puts `unknown` back in the all-clear branch, which IS the defect.
+switch (forecast.hazard) {
+  case SafetyVerdict.hazardous:
+    print('Hazard at ${forecast.firstHazardEtaSeconds} seconds in.');
+  case SafetyVerdict.unknown:
+    print('Route conditions unknown — the route could not be assessed.');
+  case SafetyVerdict.notHazardous:
+    print('Route assessed, no hazard found.');
 }
 
 for (final segment in forecast.segments) {

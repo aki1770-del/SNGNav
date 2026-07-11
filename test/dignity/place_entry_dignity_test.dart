@@ -41,8 +41,11 @@ void main() {
       test('${entry.key} contains no person-signal token', () {
         final lower = entry.value.toLowerCase();
         for (final token in forbidden) {
-          expect(lower.contains(token), isFalse,
-              reason: '${entry.key} must not contain "$token"');
+          expect(
+            lower.contains(token),
+            isFalse,
+            reason: '${entry.key} must not contain "$token"',
+          );
         }
       });
     }
@@ -102,24 +105,40 @@ void main() {
       final classStart = src.indexOf('class SavedPlaceStore');
       expect(classStart, greaterThan(-1));
       final after = src.indexOf('\nFuture<SavedPlaceStore>', classStart);
-      final classBody =
-          src.substring(classStart, after > -1 ? after : src.length);
-      final methodNames = RegExp(r'Future<[^>]+>\s+(\w+)\s*\(')
-          .allMatches(classBody)
-          .map((m) => m.group(1)!)
-          .toSet();
+      final classBody = src.substring(
+        classStart,
+        after > -1 ? after : src.length,
+      );
+      final methodNames = RegExp(
+        r'Future<[^>]+>\s+(\w+)\s*\(',
+      ).allMatches(classBody).map((m) => m.group(1)!).toSet();
       expect(methodNames, isNotEmpty);
-      expect(methodNames.difference({'load', 'save', 'clear'}), isEmpty,
-          reason: 'store public surface must be EXACTLY {load, save, clear}; '
-              'found extra: $methodNames');
+      expect(
+        methodNames.difference({'load', 'save', 'clear'}),
+        isEmpty,
+        reason:
+            'store public surface must be EXACTLY {load, save, clear}; '
+            'found extra: $methodNames',
+      );
       for (final name in methodNames) {
         final n = name.toLowerCase();
         for (final banned in const [
-          'time', 'saved', 'edited', 'count', 'log',
-          'history', 'list', 'append', 'query', 'access',
+          'time',
+          'saved',
+          'edited',
+          'count',
+          'log',
+          'history',
+          'list',
+          'append',
+          'query',
+          'access',
         ]) {
-          expect(n.contains(banned), isFalse,
-              reason: 'no behavioral-log method name ($banned) in "$name"');
+          expect(
+            n.contains(banned),
+            isFalse,
+            reason: 'no behavioral-log method name ($banned) in "$name"',
+          );
         }
       }
     });
@@ -152,22 +171,32 @@ void main() {
 
   group('subject is a PLACE, never a person', () {
     test('no person-status word in feature sources', () {
-      const forbidden = <String>['mom', 'お母さん', 'arrived', 'is home', '安否', '見守'];
+      const forbidden = <String>[
+        'mom',
+        'お母さん',
+        'arrived',
+        'is home',
+        '安否',
+        '見守',
+      ];
       for (final entry in featureSources.entries) {
         final lower = entry.value.toLowerCase();
         for (final token in forbidden) {
-          expect(lower.contains(token.toLowerCase()), isFalse,
-              reason: '${entry.key} must not contain "$token"');
+          expect(
+            lower.contains(token.toLowerCase()),
+            isFalse,
+            reason: '${entry.key} must not contain "$token"',
+          );
         }
       }
     });
 
-    testWidgets('PlaceEntryDialog seeds an EMPTY default label', (tester) async {
+    testWidgets('PlaceEntryDialog seeds an EMPTY default label', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: PlaceEntryDialog(strings: BriefingStrings.en),
-          ),
+          home: Scaffold(body: PlaceEntryDialog(strings: BriefingStrings.en)),
         ),
       );
       await tester.pump();
@@ -191,14 +220,14 @@ void main() {
   // exactly where a future regression would wire a person-location plugin. The
   // 3-file feature scan above would NOT catch it, so encode the binding "zero
   // person-location import" invariant where the dest path actually lives.
-  group('no person-location signal on the dest path (lib-wide + dest-path files)',
-      () {
+  group('no person-location signal on the dest path (lib-wide + dest-path files)', () {
     // Match the PACKAGE-IMPORT shape, not bare tokens: 'location' appears 300+×
     // in the legitimate serial-NMEA vehicle GPS and 'presence' twice in
     // disavowal comments — a blanket substring scan would false-positive on
     // today's clean code.
     final personPackage = RegExp(
-        r'package:(geolocator|flutter_contacts|contacts|location_share|geofence|nearby|find_?my|presence)');
+      r'package:(geolocator|flutter_contacts|contacts|location_share|geofence|nearby|find_?my|presence)',
+    );
 
     bool isImportLine(String line) {
       final t = line.trimLeft();
@@ -215,9 +244,13 @@ void main() {
           }
         }
       }
-      expect(offenders, isEmpty,
-          reason: 'a person-location package anywhere in lib/ would put a person '
-              'signal on the dest path; found: $offenders');
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'a person-location package anywhere in lib/ would put a person '
+            'signal on the dest path; found: $offenders',
+      );
     });
 
     test('dest-path files import/export lines carry no person-signal token', () {
@@ -248,9 +281,13 @@ void main() {
           if (!isImportLine(line)) continue;
           final lower = line.toLowerCase();
           for (final token in forbidden) {
-            expect(lower.contains(token), isFalse,
-                reason: '$file must not import a person-signal package '
-                    '($token): ${line.trim()}');
+            expect(
+              lower.contains(token),
+              isFalse,
+              reason:
+                  '$file must not import a person-signal package '
+                  '($token): ${line.trim()}',
+            );
           }
         }
       }
@@ -262,8 +299,7 @@ void main() {
   // Timer/Stream/scheduled refresh. A poller added to the dest path turns a
   // once-only read into recurring surveillance of her mother's area
   // (見守り-by-proxy) and contains NO person token, so the token scans miss it.
-  group('no scheduled/background re-read of the area (見守り-by-proxy refusal)',
-      () {
+  group('no scheduled/background re-read of the area (見守り-by-proxy refusal)', () {
     test('the dest-area path has no recurring-read primitive', () {
       // The dest-path methods were lifted into the shared PretripScreen; the
       // dignity claim binds wherever the code lives.
@@ -282,12 +318,19 @@ void main() {
       // top-level method declaration (a STRUCTURAL boundary, not a sibling name).
       String bodyOf(String declStr) {
         final start = src.indexOf(declStr);
-        expect(start, greaterThan(-1),
-            reason: 'expected $declStr in lib/main.dart');
-        final next = RegExp(r'\n  (?:Future<[^>]*>|void|Widget)\s+\w+\(')
-            .firstMatch(src.substring(start + 1));
-        expect(next, isNotNull,
-            reason: 'a following method declaration must bound $declStr');
+        expect(
+          start,
+          greaterThan(-1),
+          reason: 'expected $declStr in lib/main.dart',
+        );
+        final next = RegExp(
+          r'\n  (?:Future<[^>]*>|void|Widget)\s+\w+\(',
+        ).firstMatch(src.substring(start + 1));
+        expect(
+          next,
+          isNotNull,
+          reason: 'a following method declaration must bound $declStr',
+        );
         return stripComments(src.substring(start, start + 1 + next!.start));
       }
 
@@ -305,9 +348,13 @@ void main() {
           'Notification',
           'scheduleRefresh',
         ]) {
-          expect(body.contains(bg), isFalse,
-              reason: 'the dest path ($declStr) must have no background '
-                  'scheduling ($bg) — polling her area is 見守り-by-proxy');
+          expect(
+            body.contains(bg),
+            isFalse,
+            reason:
+                'the dest path ($declStr) must have no background '
+                'scheduling ($bg) — polling her area is 見守り-by-proxy',
+          );
         }
       }
     });

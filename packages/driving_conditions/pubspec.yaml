@@ -3,7 +3,7 @@ description: >-
   Turn weather data into driving safety guidance. Road surface classification,
   grip estimation, visibility degradation, and Monte Carlo safety scoring.
   Pure Dart, no Flutter dependency.
-version: 0.5.4
+version: 0.6.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -18,10 +18,10 @@ environment:
 
 dependencies:
   equatable: ^2.0.7
-  driving_weather: ^0.4.0
+  driving_weather: ^0.5.0
   fleet_hazard: ^0.5.0
   navigation_safety_core: ^0.10.0
-  snow_rendering: ^0.2.1
+  snow_rendering: ^0.3.0
 
 dev_dependencies:
   latlong2: ^0.9.1
@@ -33,3 +33,11 @@ dev_dependencies:
 dependency_overrides:
   navigation_safety_core:
     path: ../navigation_safety_core
+  driving_weather:
+    path: ../driving_weather
+  snow_rendering:
+    path: ../snow_rendering
+  navigation_safety_calibration:
+    path: ../navigation_safety_calibration
+  japanese_snow_vocabulary:
+    path: ../japanese_snow_vocabulary

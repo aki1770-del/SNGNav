@@ -90,8 +90,9 @@ Future<void> _capture(
 }
 
 void main() {
-  testWidgets('place-entry UI JA capture — tile (unset + set) + dialog',
-      (tester) async {
+  testWidgets('place-entry UI JA capture — tile (unset + set) + dialog', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');

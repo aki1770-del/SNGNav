@@ -236,14 +236,10 @@ void main() {
       final at0 = state.accuracyAt(_baseTime);
       expect(at0, equals(5.0)); // base accuracy
 
-      final at10 = state.accuracyAt(
-        _baseTime.add(const Duration(seconds: 10)),
-      );
+      final at10 = state.accuracyAt(_baseTime.add(const Duration(seconds: 10)));
       expect(at10, equals(55.0)); // 5 + 5*10
 
-      final at30 = state.accuracyAt(
-        _baseTime.add(const Duration(seconds: 30)),
-      );
+      final at30 = state.accuracyAt(_baseTime.add(const Duration(seconds: 30)));
       expect(at30, equals(155.0)); // 5 + 5*30
     });
 
@@ -300,9 +296,7 @@ void main() {
       // 5 + 5*100 = 505 (over cap)
       // The method uses DateTime.now() so we test the concept via accuracyAt
       final state = DeadReckoningState.fromGeoPosition(_northboundFix)!;
-      final at99 = state.accuracyAt(
-        _baseTime.add(const Duration(seconds: 99)),
-      );
+      final at99 = state.accuracyAt(_baseTime.add(const Duration(seconds: 99)));
       expect(at99, equals(500.0)); // exactly at cap
 
       final at100 = state.accuracyAt(

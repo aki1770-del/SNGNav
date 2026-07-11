@@ -4,6 +4,13 @@
 [![CI](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml/badge.svg)](https://github.com/aki1770-del/SNGNav/actions/workflows/ci.yml)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
+> **0.6.0 fixes a safety defect present through 0.5.0.** A maneuver whose
+> location could not be parsed silently carried `const LatLng(0, 0)` — Null
+> Island, a real coordinate in the Gulf of Guinea. `RouteManeuver.position` is
+> now nullable, so `position: m.position` will not compile until you write the
+> guard. Read the [CHANGELOG](CHANGELOG.md) before upgrading — the compile error
+> is the fix.
+
 **One routing API, multiple backends.** Switch between OSRM, Valhalla, or your
 own engine without rewriting app logic.
 
@@ -25,7 +32,7 @@ server today and a local server tomorrow — same code, same interface.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.5.0
+  routing_engine: ^0.6.0
   latlong2: ^0.9.1          # for LatLng coordinates
 ```
 
@@ -170,8 +177,34 @@ class MyRoutingEngine implements RoutingEngine {
 | `RoutingEngine` | Abstract interface for route calculation, availability checks, and cleanup. |
 | `RouteRequest` | Defines origin, destination, and optional waypoints for a route query. |
 | `RouteResult` | Returns maneuvers, geometry, distance, duration, and engine metadata. |
+| `RouteManeuver` | One step: instruction, type, length, time, and a **nullable** `position`. |
 | `EngineInfo` | Reports engine name, version, and observed query latency. |
 | `OsrmRoutingEngine` / `ValhallaRoutingEngine` | Concrete implementations for OSRM and Valhalla backends. |
+
+### An unknown maneuver position is `null`
+
+`RouteManeuver.position` is `LatLng?`. **`null` means the engine gave us no
+usable coordinate for that maneuver** — a missing/short `maneuver.location`
+(OSRM), or a `begin_shape_index` that does not resolve against the decoded
+polyline (Valhalla). It never means "the origin", and it is never
+`LatLng(0, 0)`.
+
+```dart
+for (final m in result.maneuvers) {
+  if (m.hasPosition) {
+    map.addMarker(m.position!);
+    speak('${m.instruction} — ${m.lengthKm} km ahead');
+  } else {
+    // No position. Announce the turn; do NOT invent a place for it.
+    speak(m.instruction);
+  }
+}
+```
+
+Up to 0.5.0 both engines silently substituted `LatLng(0, 0)` here, so a parse
+failure was indistinguishable from a real location. See the CHANGELOG for
+0.6.0. The rest of a positionless maneuver (`instruction`, `lengthKm`,
+`timeSeconds`) is still valid — do not discard it.
 
 ## Works With
 

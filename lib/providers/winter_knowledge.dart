@@ -115,9 +115,17 @@ class WinterKnowledge {
   }
 
   /// Convenience: the card for a live assessment's surface state.
+  ///
+  /// `null` when the surface could not be classified (snow_rendering 0.3.0:
+  /// `DrivingConditionAssessment.surfaceState` is nullable). There is no winter
+  /// card for a road nobody measured — and inventing the `dry` card, which is
+  /// what the old non-nullable path did, is exactly the defect.
   WinterCard? cardForAssessment(DrivingConditionAssessment a,
-          {String lang = 'en'}) =>
-      cardFor(a.surfaceState, lang: lang);
+      {String lang = 'en'}) {
+    final surface = a.surfaceState;
+    if (surface == null) return null;
+    return cardFor(surface, lang: lang);
+  }
 
   /// States that have a baked card.
   Iterable<String> get states => _cards.keys;

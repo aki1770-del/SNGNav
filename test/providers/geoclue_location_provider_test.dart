@@ -7,9 +7,7 @@ import 'package:kalman_dr/kalman_dr.dart';
 import 'package:sngnav_snow_scene/providers/geoclue_location_provider.dart';
 
 class _FakeGeoClueSession implements GeoClueSession {
-  _FakeGeoClueSession({
-    this.availableAccuracyLevel,
-  });
+  _FakeGeoClueSession({this.availableAccuracyLevel});
 
   final int? availableAccuracyLevel;
   GeoPosition? nextPosition;
@@ -121,9 +119,7 @@ void main() {
 
     test('throws clearly when GeoClue services are disabled', () async {
       session = _FakeGeoClueSession(availableAccuracyLevel: 0);
-      provider = GeoClueLocationProvider(
-        sessionFactory: () => session,
-      );
+      provider = GeoClueLocationProvider(sessionFactory: () => session);
       addTearDown(provider.dispose);
 
       await expectLater(
@@ -165,9 +161,12 @@ void main() {
 
     test('surfaces read failures on the positions stream', () async {
       Object? streamError;
-      provider.positions.listen((_) {}, onError: (Object error) {
-        streamError = error;
-      });
+      provider.positions.listen(
+        (_) {},
+        onError: (Object error) {
+          streamError = error;
+        },
+      );
 
       await provider.start();
       session.throwOnRead = true;

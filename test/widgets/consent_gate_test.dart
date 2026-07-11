@@ -86,8 +86,9 @@ void main() {
     });
 
     testWidgets('shows "Fleet: ..." when idle/loading', (tester) async {
-      when(() => bloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(
+        () => bloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -95,10 +96,12 @@ void main() {
     });
 
     testWidgets('shows "Fleet: ERR" when error', (tester) async {
-      when(() => bloc.state).thenReturn(const ConsentState(
-        status: ConsentBlocStatus.error,
-        errorMessage: 'Service unavailable',
-      ));
+      when(() => bloc.state).thenReturn(
+        const ConsentState(
+          status: ConsentBlocStatus.error,
+          errorMessage: 'Service unavailable',
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -130,10 +133,14 @@ void main() {
       await tester.pumpWidget(_buildWidget(bloc));
       await tester.tap(find.text('Fleet: OFF'));
 
-      verify(() => bloc.add(const ConsentGrantRequested(
+      verify(
+        () => bloc.add(
+          const ConsentGrantRequested(
             purpose: ConsentPurpose.fleetLocation,
             jurisdiction: Jurisdiction.appi,
-          ))).called(1);
+          ),
+        ),
+      ).called(1);
     });
 
     testWidgets('tap ON → dispatches ConsentRevokeRequested', (tester) async {
@@ -142,17 +149,22 @@ void main() {
       await tester.pumpWidget(_buildWidget(bloc));
       await tester.tap(find.text('Fleet: ON'));
 
-      verify(() => bloc.add(const ConsentRevokeRequested(
-            purpose: ConsentPurpose.fleetLocation,
-          ))).called(1);
+      verify(
+        () => bloc.add(
+          const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
+        ),
+      ).called(1);
     });
 
-    testWidgets('tap ERR → dispatches ConsentLoadRequested (retry)',
-        (tester) async {
-      when(() => bloc.state).thenReturn(const ConsentState(
-        status: ConsentBlocStatus.error,
-        errorMessage: 'fail',
-      ));
+    testWidgets('tap ERR → dispatches ConsentLoadRequested (retry)', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        const ConsentState(
+          status: ConsentBlocStatus.error,
+          errorMessage: 'fail',
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
       await tester.tap(find.text('Fleet: ERR'));
@@ -160,12 +172,13 @@ void main() {
       verify(() => bloc.add(const ConsentLoadRequested())).called(1);
     });
 
-    testWidgets('shows "Fleet: OFF" when no consent records (Jidoka)',
-        (tester) async {
+    testWidgets('shows "Fleet: OFF" when no consent records (Jidoka)', (
+      tester,
+    ) async {
       // Ready but empty map — Jidoka: unknown = denied
-      when(() => bloc.state).thenReturn(const ConsentState(
-        status: ConsentBlocStatus.ready,
-      ));
+      when(
+        () => bloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.ready));
 
       await tester.pumpWidget(_buildWidget(bloc));
 

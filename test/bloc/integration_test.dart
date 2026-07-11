@@ -104,82 +104,110 @@ void main() {
       await mapBloc.close();
     });
 
-    test('full lifecycle: request → route → navigate → advance → arrive → clear', () async {
-      // --- Step 1: User requests a route (widget dispatches to RoutingBloc) ---
-      routingBloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        destinationLabel: 'Toyota HQ',
-      ));
+    test(
+      'full lifecycle: request → route → navigate → advance → arrive → clear',
+      () async {
+        // --- Step 1: User requests a route (widget dispatches to RoutingBloc) ---
+        routingBloc.add(
+          const RouteRequested(
+            origin: _nagoya,
+            destination: _toyota,
+            destinationLabel: 'Toyota HQ',
+          ),
+        );
 
-      // Wait for RoutingBloc to reach routeActive
-      await expectLater(
-        routingBloc.stream,
-        emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.routeActive),
-        ]),
-      );
+        // Wait for RoutingBloc to reach routeActive
+        await expectLater(
+          routingBloc.stream,
+          emitsInOrder([
+            isA<RoutingState>().having(
+              (s) => s.status,
+              'status',
+              RoutingStatus.loading,
+            ),
+            isA<RoutingState>().having(
+              (s) => s.status,
+              'status',
+              RoutingStatus.routeActive,
+            ),
+          ]),
+        );
 
-      // --- Step 2: Widget reads RoutingBloc → dispatches to NavigationBloc + MapBloc ---
-      // (This is what a BlocListener in the widget tree would do)
-      final route = routingBloc.state.route!;
+        // --- Step 2: Widget reads RoutingBloc → dispatches to NavigationBloc + MapBloc ---
+        // (This is what a BlocListener in the widget tree would do)
+        final route = routingBloc.state.route!;
 
-      navigationBloc.add(NavigationStarted(
-        route: route.toNavigationRoute(),
-        destinationLabel: 'Toyota HQ',
-      ));
+        navigationBloc.add(
+          NavigationStarted(
+            route: route.toNavigationRoute(),
+            destinationLabel: 'Toyota HQ',
+          ),
+        );
 
-      // Widget also fits map to route bounds
-      mapBloc.add(FitToBounds(
-        southWest: LatLng(
-          route.shape.map((p) => p.latitude).reduce((a, b) => a < b ? a : b),
-          route.shape.map((p) => p.longitude).reduce((a, b) => a < b ? a : b),
-        ),
-        northEast: LatLng(
-          route.shape.map((p) => p.latitude).reduce((a, b) => a > b ? a : b),
-          route.shape.map((p) => p.longitude).reduce((a, b) => a > b ? a : b),
-        ),
-      ));
+        // Widget also fits map to route bounds
+        mapBloc.add(
+          FitToBounds(
+            southWest: LatLng(
+              route.shape
+                  .map((p) => p.latitude)
+                  .reduce((a, b) => a < b ? a : b),
+              route.shape
+                  .map((p) => p.longitude)
+                  .reduce((a, b) => a < b ? a : b),
+            ),
+            northEast: LatLng(
+              route.shape
+                  .map((p) => p.latitude)
+                  .reduce((a, b) => a > b ? a : b),
+              route.shape
+                  .map((p) => p.longitude)
+                  .reduce((a, b) => a > b ? a : b),
+            ),
+          ),
+        );
 
-      await Future<void>.delayed(Duration.zero); // let BLoCs process
+        await Future<void>.delayed(Duration.zero); // let BLoCs process
 
-      // Verify NavigationBloc is navigating
-      expect(navigationBloc.state.status, equals(NavigationStatus.navigating));
-      expect(navigationBloc.state.route, equals(route.toNavigationRoute()));
-      expect(navigationBloc.state.currentManeuverIndex, equals(0));
-      expect(navigationBloc.state.destinationLabel, equals('Toyota HQ'));
+        // Verify NavigationBloc is navigating
+        expect(
+          navigationBloc.state.status,
+          equals(NavigationStatus.navigating),
+        );
+        expect(navigationBloc.state.route, equals(route.toNavigationRoute()));
+        expect(navigationBloc.state.currentManeuverIndex, equals(0));
+        expect(navigationBloc.state.destinationLabel, equals('Toyota HQ'));
 
-      // Verify MapBloc is in overview mode with bounds
-      expect(mapBloc.state.cameraMode, equals(CameraMode.overview));
-      expect(mapBloc.state.hasFitBounds, isTrue);
+        // Verify MapBloc is in overview mode with bounds
+        expect(mapBloc.state.cameraMode, equals(CameraMode.overview));
+        expect(mapBloc.state.hasFitBounds, isTrue);
 
-      // --- Step 3: Driver advances through maneuvers ---
-      navigationBloc.add(const ManeuverAdvanced()); // index 0 → 1
-      await Future<void>.delayed(Duration.zero);
-      navigationBloc.add(const ManeuverAdvanced()); // index 1 (last) → arrived
+        // --- Step 3: Driver advances through maneuvers ---
+        navigationBloc.add(const ManeuverAdvanced()); // index 0 → 1
+        await Future<void>.delayed(Duration.zero);
+        navigationBloc.add(
+          const ManeuverAdvanced(),
+        ); // index 1 (last) → arrived
 
-      await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
-      // Last maneuver → arrived
-      expect(navigationBloc.state.status, equals(NavigationStatus.arrived));
-      expect(navigationBloc.state.progress, equals(1.0));
+        // Last maneuver → arrived
+        expect(navigationBloc.state.status, equals(NavigationStatus.arrived));
+        expect(navigationBloc.state.progress, equals(1.0));
 
-      // --- Step 4: User clears route ---
-      routingBloc.add(const RouteClearRequested());
-      navigationBloc.add(const NavigationStopped());
-      mapBloc.add(const CameraModeChanged(CameraMode.freeLook));
+        // --- Step 4: User clears route ---
+        routingBloc.add(const RouteClearRequested());
+        navigationBloc.add(const NavigationStopped());
+        mapBloc.add(const CameraModeChanged(CameraMode.freeLook));
 
-      await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
-      // All BLoCs back to initial/idle states
-      expect(routingBloc.state.status, equals(RoutingStatus.idle));
-      expect(navigationBloc.state.status, equals(NavigationStatus.idle));
-      expect(mapBloc.state.cameraMode, equals(CameraMode.freeLook));
-      expect(mapBloc.state.hasFitBounds, isFalse);
-    });
+        // All BLoCs back to initial/idle states
+        expect(routingBloc.state.status, equals(RoutingStatus.idle));
+        expect(navigationBloc.state.status, equals(NavigationStatus.idle));
+        expect(mapBloc.state.cameraMode, equals(CameraMode.freeLook));
+        expect(mapBloc.state.hasFitBounds, isFalse);
+      },
+    );
   });
 
   group('Cross-BLoC workflow: location → map follow', () {
@@ -187,9 +215,7 @@ void main() {
     late MapBloc mapBloc;
 
     setUp(() {
-      locationBloc = LocationBloc(
-        provider: _MockLocationProvider(),
-      );
+      locationBloc = LocationBloc(provider: _MockLocationProvider());
       mapBloc = MapBloc();
       mapBloc.add(const MapInitialized(center: _nagoya, zoom: 14.0));
     });
@@ -237,20 +263,24 @@ void main() {
 
     test('weather alert arrives during active navigation', () async {
       // Start navigation
-      navigationBloc.add(NavigationStarted(
-        route: _defaultRoute.toNavigationRoute(),
-        destinationLabel: 'Toyota HQ',
-      ));
+      navigationBloc.add(
+        NavigationStarted(
+          route: _defaultRoute.toNavigationRoute(),
+          destinationLabel: 'Toyota HQ',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(navigationBloc.state.isNavigating, isTrue);
       expect(navigationBloc.state.hasSafetyAlert, isFalse);
 
       // Weather system sends alert
-      navigationBloc.add(const SafetyAlertReceived(
-        message: 'Heavy snow warning — Aichi mountain pass',
-        severity: AlertSeverity.warning,
-      ));
+      navigationBloc.add(
+        const SafetyAlertReceived(
+          message: 'Heavy snow warning — Aichi mountain pass',
+          severity: AlertSeverity.warning,
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       // Navigation continues with alert overlay
@@ -284,18 +314,23 @@ void main() {
     });
 
     test('routing error does not start navigation', () async {
-      routingBloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-      ));
+      routingBloc.add(
+        const RouteRequested(origin: _nagoya, destination: _toyota),
+      );
 
       await expectLater(
         routingBloc.stream,
         emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.error),
+          isA<RoutingState>().having(
+            (s) => s.status,
+            'status',
+            RoutingStatus.loading,
+          ),
+          isA<RoutingState>().having(
+            (s) => s.status,
+            'status',
+            RoutingStatus.error,
+          ),
         ]),
       );
 
@@ -329,12 +364,15 @@ void main() {
       expect(mapBloc.state.isLayerVisible(MapLayerType.fleet), isTrue);
 
       // User toggles can disable hazard/weather, but not safety.
-      mapBloc.add(const LayerToggled(
-          layer: MapLayerType.weather, visible: false));
-      mapBloc.add(const LayerToggled(
-          layer: MapLayerType.hazard, visible: false));
-      mapBloc.add(const LayerToggled(
-          layer: MapLayerType.safety, visible: false));
+      mapBloc.add(
+        const LayerToggled(layer: MapLayerType.weather, visible: false),
+      );
+      mapBloc.add(
+        const LayerToggled(layer: MapLayerType.hazard, visible: false),
+      );
+      mapBloc.add(
+        const LayerToggled(layer: MapLayerType.safety, visible: false),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(mapBloc.state.isLayerVisible(MapLayerType.route), isTrue);
@@ -406,17 +444,22 @@ void main() {
       final engine = MockRoutingEngine()..resultToReturn = osrmRoute;
       final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        destinationLabel: 'Toyota HQ',
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _toyota,
+          destinationLabel: 'Toyota HQ',
+        ),
+      );
 
       await expectLater(
         bloc.stream,
         emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
+          isA<RoutingState>().having(
+            (s) => s.status,
+            'status',
+            RoutingStatus.loading,
+          ),
           isA<RoutingState>()
               .having((s) => s.status, 'status', RoutingStatus.routeActive)
               .having((s) => s.route?.engineInfo.name, 'engine', 'osrm'),
@@ -425,10 +468,12 @@ void main() {
 
       // NavigationBloc accepts the route without caring about engine.
       final navBloc = NavigationBloc();
-      navBloc.add(NavigationStarted(
-        route: bloc.state.route!.toNavigationRoute(),
-        destinationLabel: 'Toyota HQ',
-      ));
+      navBloc.add(
+        NavigationStarted(
+          route: bloc.state.route!.toNavigationRoute(),
+          destinationLabel: 'Toyota HQ',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(navBloc.state.status, NavigationStatus.navigating);
@@ -443,17 +488,22 @@ void main() {
       final engine = MockRoutingEngine()..resultToReturn = valhallaRoute;
       final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RouteRequested(
-        origin: _nagoya,
-        destination: _toyota,
-        destinationLabel: 'Toyota HQ',
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: _nagoya,
+          destination: _toyota,
+          destinationLabel: 'Toyota HQ',
+        ),
+      );
 
       await expectLater(
         bloc.stream,
         emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
+          isA<RoutingState>().having(
+            (s) => s.status,
+            'status',
+            RoutingStatus.loading,
+          ),
           isA<RoutingState>()
               .having((s) => s.status, 'status', RoutingStatus.routeActive)
               .having((s) => s.route?.engineInfo.name, 'engine', 'valhalla'),
@@ -462,10 +512,12 @@ void main() {
 
       // NavigationBloc accepts Valhalla route identically.
       final navBloc = NavigationBloc();
-      navBloc.add(NavigationStarted(
-        route: bloc.state.route!.toNavigationRoute(),
-        destinationLabel: 'Toyota HQ',
-      ));
+      navBloc.add(
+        NavigationStarted(
+          route: bloc.state.route!.toNavigationRoute(),
+          destinationLabel: 'Toyota HQ',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(navBloc.state.status, NavigationStatus.navigating);

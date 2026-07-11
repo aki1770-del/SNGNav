@@ -160,15 +160,19 @@ void main() {
     // must run inside tester.runAsync — awaiting it bare in the fake-async
     // test zone deadlocks under load (established repo capture pattern).
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()!
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 2.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       final out = File('test/widgets/_capture/maneuver_narration_ja.png')
         ..createSync(recursive: true)
         ..writeAsBytesSync(bytes!.buffer.asUint8List());
-      expect(out.lengthSync(), greaterThan(10000),
-          reason: 'capture must be a real render, not a blank frame');
+      expect(
+        out.lengthSync(),
+        greaterThan(10000),
+        reason: 'capture must be a real render, not a blank frame',
+      );
     });
   });
 }

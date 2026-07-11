@@ -1,5 +1,12 @@
 # vehicle_condition_fusion
 
+> **0.5.0 fixes a safety defect present through 0.3.1 (the last published
+> release). If you shipped 0.3.1 or earlier, a vehicle with no air-temperature
+> signal was reported as `+5.0 °C` — i.e. NOT freezing — and a road with no
+> precipitation signal was reported as `dry`, grip 1.0, "Conditions normal".
+> Read the [CHANGELOG](CHANGELOG.md) before upgrading; the upgrade is a
+> deliberate breaking change and the compile errors are the fix.**
+
 Safety-calibrated fusion of a vehicle's **own** signals into a driving-condition
 hazard verdict, with an **honest-degradation** rail. Pure Dart — **no Flutter,
 no databroker SDK, no protobuf, no gRPC.**
@@ -44,7 +51,10 @@ Future<void> main() async {
   await for (final update in fusion.conditions) {
     if (update.isAvailable) {
       final a = update.assessment!;
-      print('${a.surfaceState.name.padRight(13)} ${a.advisoryMessage}');
+      // `surfaceState` is NULLABLE (snow_rendering 0.3.0): a road the fusion
+      // could not classify has NO surface — it is not `dry`.
+      final surface = a.surfaceState?.name ?? 'not measured';
+      print('${surface.padRight(13)} ${a.advisoryMessage}');
     } else {
       print('— drive ended (${update.unavailableReason}) —');
       break;
@@ -148,7 +158,8 @@ final fusion = VehicleConditionFusion.fromPartialFrames(
 - `vehicleSignalsToWeatherCondition(...)` — a pure, total, deterministic mapping
   to a `WeatherCondition` (no LLM, no prose, no ad-hoc heuristic), with named
   calibration thresholds: `kIcyFrictionThreshold` (0.3), `kColdSlipCelsius`
-  (2.0), `kAssumedAboveFreezingCelsius` (5.0).
+  (2.0). (`kAssumedAboveFreezingCelsius` is **REMOVED** in 0.5.0 — see the
+  CHANGELOG. An absent air temperature is now `null`, not +5 °C.)
 - `VehicleConditionFusion` — a stream processor:
   `Stream<VehicleConditionSignals>` → `Stream<VehicleConditionUpdate>`. It fuses
   via `DrivingConditionAssessment.fromCondition`, debounces road-surface flicker
@@ -179,35 +190,52 @@ fusion.conditions.listen((u) {
 source.add(const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5));
 ```
 
-## Calibration rules (preserved verbatim from the source pipeline)
+## Calibration rules
 
-- **temperature** = ambient air temp, or `kAssumedAboveFreezingCelsius` (5 °C)
-  when absent — a *missing* temperature never fabricates ice.
+- **temperature** = the ambient air temperature the vehicle published, or
+  **`null` when it published none**. `null` means NOT MEASURED — it does not
+  mean "above freezing".
+
+  Up to 0.3.1 this read: *"temperature = ambient air temp, or
+  `kAssumedAboveFreezingCelsius` (5 °C) when absent — a missing temperature
+  never fabricates ice."* That sentence is true, and it is beside the point: the
+  missing signal was instead fabricating the **absence** of ice. The constant is
+  removed.
+- **wind** = **`null`, always**. There is no wind signal in the snow-safety set.
+  Up to 0.3.1 the code said so in a comment and then emitted `0.0 km/h` anyway.
 - **precipitation** present iff wiper/rain-sensor say so; type is `snow` when
   temperature ≤ 0 °C else `rain` (temperature disambiguates what the wiper
-  cannot).
-- **ice risk** iff a *direct* road measurement says so — friction below
-  `kIcyFrictionThreshold`, **or** TCS/ABS/ESC engaged at/below
-  `kColdSlipCelsius`.
+  cannot). With no wiper/rain signal the precipitation type is `null` — NOT
+  `none`, which is a claim.
+- **ice risk** is **tri-state** (`bool?`): `true` iff a *direct* road measurement
+  says so — friction below `kIcyFrictionThreshold`, **or** TCS/ABS/ESC engaged
+  at/below `kColdSlipCelsius`; `false` iff those inputs were measured and did not
+  fire; **`null` when they were not measured at all**. `null` is not "no ice".
 
 ## Honest bounds — read this
 
 - **The visibility value is a DOCUMENTED PROXY, not a measurement.** A vehicle
   has no meteorological visibility sensor; the visibility metres here are
   derived from precipitation intensity (wiper / rain-sensor) as an explicit,
-  typed cue. Treat it as a glanceable hint, not a sensor reading. Because it is
-  a **precipitation-intensity proxy only** — there is no wind signal in the set,
-  so `windSpeedKmh` is hard-set to `0.0` — it **cannot** represent a wind-driven
-  whiteout (地吹雪 / ground blizzard), where blowing snow collapses visibility
-  with little or no falling precipitation. The bundled severe phase is therefore
-  a heavy-snow, low-visibility drive (~300 m proxy), **not** a true whiteout.
+  typed cue, and are marked `ObservationSource.derived`. Treat it as a
+  glanceable hint, not a sensor reading. Because it is a **precipitation-intensity
+  proxy only** — there is no wind signal in the set, so `windSpeedKmh` is `null`
+  (0.5.0; it was hard-set to `0.0` up to 0.3.1) — it **cannot** represent a
+  wind-driven whiteout (地吹雪 / ground blizzard), where blowing snow collapses
+  visibility with little or no falling precipitation. The bundled severe phase is
+  therefore a heavy-snow, low-visibility drive (~300 m proxy), **not** a true
+  whiteout.
 - **Reads only — never commands.** This package only *interprets* signals; it
   never writes to or commands the vehicle.
 - **Offline / vehicle-local.** No network, no GPS, no cloud weather — just the
   signals you feed it.
-- **No fabrication.** A snapshot with no real signal is *not emitted*; a source
-  error or end-of-stream surfaces a `VehicleConditionUpdate.unavailable` marker
-  so the caller can keep its offline default and stop claiming "live".
+- **No fabrication (0.5.0 — this was NOT true up to 0.3.1).** A snapshot with no
+  real signal is *not emitted*; a source error or end-of-stream surfaces a
+  `VehicleConditionUpdate.unavailable` marker so the caller can keep its offline
+  default and stop claiming "live". **And**, new in 0.5.0: a signal the vehicle
+  did not publish is `null` all the way through — never +5 °C, never 0 km/h,
+  never "no ice", never `dry`. Through 0.3.1 those four values were manufactured,
+  and this section said "No fabrication" while they were. See the CHANGELOG.
 
 ## The input seam — bring any source
 

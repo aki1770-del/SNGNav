@@ -78,9 +78,7 @@ Widget _buildWidget(List<FleetReport> reports) {
           initialCenter: LatLng(35.10, 137.15),
           initialZoom: 10,
         ),
-        children: [
-          FleetLayer(reports: reports),
-        ],
+        children: [FleetLayer(reports: reports)],
       ),
     ),
   );
@@ -133,8 +131,9 @@ void main() {
       expect(tooltipWidget.message, contains('icy'));
     });
 
-    testWidgets('snowy report renders orange marker with snow icon',
-        (tester) async {
+    testWidgets('snowy report renders orange marker with snow icon', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildWidget([_snowyReport]));
 
       // Hazard marker should have cloudy_snowing icon
@@ -163,15 +162,18 @@ void main() {
       expect(tooltipWidget.message, contains('unknown'));
     });
 
-    testWidgets('multiple reports render correct count of markers',
-        (tester) async {
-      await tester.pumpWidget(_buildWidget([
-        _dryReport,
-        _wetReport,
-        _snowyReport,
-        _icyReport,
-        _unknownReport,
-      ]));
+    testWidgets('multiple reports render correct count of markers', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildWidget([
+          _dryReport,
+          _wetReport,
+          _snowyReport,
+          _icyReport,
+          _unknownReport,
+        ]),
+      );
 
       // 5 tooltips = 5 vehicle markers
       expect(find.byType(Tooltip), findsNWidgets(5));

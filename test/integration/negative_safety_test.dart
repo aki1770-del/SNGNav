@@ -41,7 +41,7 @@ class MockWeatherBloc extends MockBloc<WeatherEvent, WeatherState>
 
 final _now = DateTime.now();
 
-final _clear = WeatherCondition.clear(timestamp: _now);
+final _clear = WeatherCondition.simulatedClear(timestamp: _now);
 
 final _lightSnow = WeatherCondition(
   precipType: PrecipitationType.snow,
@@ -50,6 +50,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _moderateSnow = WeatherCondition(
@@ -59,6 +61,8 @@ final _moderateSnow = WeatherCondition(
   visibilityMeters: 800,
   windSpeedKmh: 30,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _coldButClear = WeatherCondition(
@@ -68,6 +72,8 @@ final _coldButClear = WeatherCondition(
   visibilityMeters: 10000,
   windSpeedKmh: 5,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _lightRain = WeatherCondition(
@@ -77,6 +83,8 @@ final _lightRain = WeatherCondition(
   visibilityMeters: 5000,
   windSpeedKmh: 10,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 /// Sub-zero clear day WITH measured humidity. The dew-point classifier
@@ -93,6 +101,8 @@ final _coldButClearWithHumidity = WeatherCondition(
   windSpeedKmh: 5,
   humidityRH: 70,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 /// Light snow at −1 °C with measured humidity, no feed ice flag, good
@@ -106,6 +116,8 @@ final _lightSnowSubZeroWithHumidity = WeatherCondition(
   windSpeedKmh: 10,
   humidityRH: 80,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 // ---------------------------------------------------------------------------
@@ -138,18 +150,16 @@ void main() {
   late MockWeatherBloc weatherBloc;
 
   setUpAll(() {
-    registerFallbackValue(const SafetyAlertReceived(
-      message: '',
-      severity: AlertSeverity.info,
-    ));
+    registerFallbackValue(
+      const SafetyAlertReceived(message: '', severity: AlertSeverity.info),
+    );
   });
 
   setUp(() {
     navigationBloc = MockNavigationBloc();
     weatherBloc = MockWeatherBloc();
 
-    when(() => navigationBloc.state)
-        .thenReturn(const NavigationState.idle());
+    when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
   });
 
   // =========================================================================
@@ -165,20 +175,22 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _clear,
-      ));
+      controller.add(
+        WeatherState(status: WeatherStatus.monitoring, condition: _clear),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
@@ -191,26 +203,29 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+      controller.add(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
 
-    testWidgets('moderate snow (vis 800m) never triggers safety alert',
-        (tester) async {
+    testWidgets('moderate snow (vis 800m) never triggers safety alert', (
+      tester,
+    ) async {
       final controller = StreamController<WeatherState>.broadcast();
       whenListen(
         weatherBloc,
@@ -218,26 +233,32 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _moderateSnow,
-      ));
+      controller.add(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _moderateSnow,
+        ),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
 
-    testWidgets('freezing but clear never triggers safety alert',
-        (tester) async {
+    testWidgets('freezing but clear never triggers safety alert', (
+      tester,
+    ) async {
       final controller = StreamController<WeatherState>.broadcast();
       whenListen(
         weatherBloc,
@@ -245,80 +266,98 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _coldButClear,
-      ));
+      controller.add(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _coldButClear,
+        ),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
 
     testWidgets(
-        'freezing clear day WITH measured humidity never triggers alert '
-        '(sub-zero cry-wolf contract vs humidity-carrying feeds)',
-        (tester) async {
-      final controller = StreamController<WeatherState>.broadcast();
-      whenListen(
-        weatherBloc,
-        controller.stream,
-        initialState: const WeatherState.unavailable(),
-      );
+      'freezing clear day WITH measured humidity never triggers alert '
+      '(sub-zero cry-wolf contract vs humidity-carrying feeds)',
+      (tester) async {
+        final controller = StreamController<WeatherState>.broadcast();
+        whenListen(
+          weatherBloc,
+          controller.stream,
+          initialState: const WeatherState.unavailable(),
+        );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildWeatherWidget(
+            navigationBloc: navigationBloc,
+            weatherBloc: weatherBloc,
+          ),
+        );
+        await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _coldButClearWithHumidity,
-      ));
-      await tester.pumpAndSettle();
+        controller.add(
+          WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _coldButClearWithHumidity,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        verifyNever(
+          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+        );
 
-      await controller.close();
-    });
+        await controller.close();
+      },
+    );
 
     testWidgets(
-        'light sub-zero snow WITH measured humidity (no ice flag) never '
-        'triggers alert', (tester) async {
-      final controller = StreamController<WeatherState>.broadcast();
-      whenListen(
-        weatherBloc,
-        controller.stream,
-        initialState: const WeatherState.unavailable(),
-      );
+      'light sub-zero snow WITH measured humidity (no ice flag) never '
+      'triggers alert',
+      (tester) async {
+        final controller = StreamController<WeatherState>.broadcast();
+        whenListen(
+          weatherBloc,
+          controller.stream,
+          initialState: const WeatherState.unavailable(),
+        );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildWeatherWidget(
+            navigationBloc: navigationBloc,
+            weatherBloc: weatherBloc,
+          ),
+        );
+        await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnowSubZeroWithHumidity,
-      ));
-      await tester.pumpAndSettle();
+        controller.add(
+          WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _lightSnowSubZeroWithHumidity,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        verifyNever(
+          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+        );
 
-      await controller.close();
-    });
+        await controller.close();
+      },
+    );
 
     testWidgets('light rain never triggers safety alert', (tester) async {
       final controller = StreamController<WeatherState>.broadcast();
@@ -328,26 +367,29 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightRain,
-      ));
+      controller.add(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightRain),
+      );
       await tester.pumpAndSettle();
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
 
-    testWidgets('cycling through all safe conditions never triggers alert',
-        (tester) async {
+    testWidgets('cycling through all safe conditions never triggers alert', (
+      tester,
+    ) async {
       final controller = StreamController<WeatherState>.broadcast();
       whenListen(
         weatherBloc,
@@ -355,10 +397,12 @@ void main() {
         initialState: const WeatherState.unavailable(),
       );
 
-      await tester.pumpWidget(_buildWeatherWidget(
-        navigationBloc: navigationBloc,
-        weatherBloc: weatherBloc,
-      ));
+      await tester.pumpWidget(
+        _buildWeatherWidget(
+          navigationBloc: navigationBloc,
+          weatherBloc: weatherBloc,
+        ),
+      );
       await tester.pump();
 
       // Cycle: unavailable → clear → light snow → moderate → cold/clear → light rain
@@ -369,15 +413,15 @@ void main() {
         _coldButClear,
         _lightRain,
       ]) {
-        controller.add(WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: condition,
-        ));
+        controller.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: condition),
+        );
         await tester.pumpAndSettle();
       }
 
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await controller.close();
     });
@@ -396,9 +440,14 @@ void main() {
         visibilityMeters: 200,
         windSpeedKmh: 20,
         timestamp: _now,
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      expect(condition.isHazardous, isFalse,
-          reason: 'visibility < 200 is hazardous, 200 exactly is not');
+      expect(
+        condition.hazard,
+        SafetyVerdict.notHazardous,
+        reason: 'visibility < 200 is hazardous, 200 exactly is not',
+      );
     });
 
     test('visibility 199m IS hazardous (boundary)', () {
@@ -409,22 +458,30 @@ void main() {
         visibilityMeters: 199,
         windSpeedKmh: 20,
         timestamp: _now,
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      expect(condition.isHazardous, isTrue);
+      expect(condition.hazard, SafetyVerdict.hazardous);
     });
 
     test('moderate intensity is NOT hazardous (without ice/low vis)', () {
-      expect(_moderateSnow.isHazardous, isFalse,
-          reason: 'moderate snow at 800m vis is not hazardous');
+      expect(
+        _moderateSnow.hazard,
+        SafetyVerdict.notHazardous,
+        reason: 'moderate snow at 800m vis is not hazardous',
+      );
     });
 
     test('light intensity is NOT hazardous', () {
-      expect(_lightSnow.isHazardous, isFalse);
+      expect(_lightSnow.hazard, SafetyVerdict.notHazardous);
     });
 
     test('clear is NOT hazardous even when freezing', () {
-      expect(_coldButClear.isHazardous, isFalse,
-          reason: 'sub-zero temperature alone does not trigger hazard');
+      expect(
+        _coldButClear.hazard,
+        SafetyVerdict.notHazardous,
+        reason: 'sub-zero temperature alone does not trigger hazard',
+      );
     });
 
     test('iceRisk=false does not make non-heavy condition hazardous', () {
@@ -436,8 +493,9 @@ void main() {
         windSpeedKmh: 20,
         iceRisk: false,
         timestamp: _now,
+        source: ObservationSource.measured,
       );
-      expect(condition.isHazardous, isFalse);
+      expect(condition.hazard, SafetyVerdict.notHazardous);
     });
   });
 
@@ -451,32 +509,42 @@ void main() {
     });
 
     test('fresh DR state is not accuracy-exceeded', () {
-      final state = DeadReckoningState.fromGeoPosition(GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: 5.0,
-        speed: 16.67,
-        heading: 90.0,
-        timestamp: DateTime.now(),
-      ));
+      final state = DeadReckoningState.fromGeoPosition(
+        GeoPosition(
+          latitude: 35.17,
+          longitude: 136.88,
+          accuracy: 5.0,
+          speed: 16.67,
+          heading: 90.0,
+          timestamp: DateTime.now(),
+        ),
+      );
       expect(state, isNotNull, reason: 'valid GPS fix should create DR state');
-      expect(state!.isAccuracyExceeded, isFalse,
-          reason: 'fresh GPS fix should not trigger safety cap');
+      expect(
+        state!.isAccuracyExceeded,
+        isFalse,
+        reason: 'fresh GPS fix should not trigger safety cap',
+      );
     });
 
     test('DR state with high base accuracy is closer to cap', () {
-      final state = DeadReckoningState.fromGeoPosition(GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: 400.0,
-        speed: 16.67,
-        heading: 90.0,
-        timestamp: DateTime.now().subtract(const Duration(seconds: 25)),
-      ));
+      final state = DeadReckoningState.fromGeoPosition(
+        GeoPosition(
+          latitude: 35.17,
+          longitude: 136.88,
+          accuracy: 400.0,
+          speed: 16.67,
+          heading: 90.0,
+          timestamp: DateTime.now().subtract(const Duration(seconds: 25)),
+        ),
+      );
       expect(state, isNotNull);
       // 400m base + 5m/s × 25s = 525m → exceeded
-      expect(state!.isAccuracyExceeded, isTrue,
-          reason: 'high base + time should exceed 500m cap');
+      expect(
+        state!.isAccuracyExceeded,
+        isTrue,
+        reason: 'high base + time should exceed 500m cap',
+      );
     });
 
     test('Kalman filter reports accuracy-exceeded after extended DR', () {
@@ -493,8 +561,11 @@ void main() {
         kf.predict(const Duration(seconds: 1));
       }
 
-      expect(kf.isAccuracyExceeded, isTrue,
-          reason: '5 minutes of DR should exceed safety cap');
+      expect(
+        kf.isAccuracyExceeded,
+        isTrue,
+        reason: '5 minutes of DR should exceed safety cap',
+      );
     });
 
     test('Kalman filter NOT accuracy-exceeded after short DR', () {
@@ -511,8 +582,11 @@ void main() {
         kf.predict(const Duration(seconds: 1));
       }
 
-      expect(kf.isAccuracyExceeded, isFalse,
-          reason: '10 seconds of DR should be well within safety cap');
+      expect(
+        kf.isAccuracyExceeded,
+        isFalse,
+        reason: '10 seconds of DR should be well within safety cap',
+      );
     });
 
     test('Kalman filter accuracy grows monotonically during DR', () {
@@ -528,8 +602,11 @@ void main() {
       for (var i = 0; i < 30; i++) {
         kf.predict(const Duration(seconds: 1));
         final accuracy = kf.accuracyMetres;
-        expect(accuracy, greaterThanOrEqualTo(prevAccuracy),
-            reason: 'DR accuracy must grow (never improve without GPS)');
+        expect(
+          accuracy,
+          greaterThanOrEqualTo(prevAccuracy),
+          reason: 'DR accuracy must grow (never improve without GPS)',
+        );
         prevAccuracy = accuracy;
       }
     });

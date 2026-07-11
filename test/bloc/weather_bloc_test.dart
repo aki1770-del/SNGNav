@@ -20,14 +20,14 @@ import 'package:sngnav_snow_scene/bloc/weather_state.dart';
 // Mock provider — controllable stream for testing
 // ---------------------------------------------------------------------------
 class MockWeatherProvider implements WeatherProvider {
-  final _controller = StreamController<WeatherCondition>.broadcast();
+  final _controller = StreamController<WeatherReading>.broadcast();
   bool started = false;
   bool stopped = false;
   bool disposed = false;
   bool shouldThrowOnStart = false;
 
   @override
-  Stream<WeatherCondition> get conditions => _controller.stream;
+  Stream<WeatherReading> get conditions => _controller.stream;
 
   @override
   Future<void> startMonitoring() async {
@@ -49,7 +49,25 @@ class MockWeatherProvider implements WeatherProvider {
   }
 
   void emitCondition(WeatherCondition condition) {
-    _controller.add(condition);
+    // driving_weather 0.5.0: the stream carries a sealed WeatherReading. A
+    // condition the provider actually fetched is a WeatherObserved.
+    _controller.add(WeatherObserved(condition));
+  }
+
+  /// The provider could not refresh: the LAST KNOWN condition, with its age.
+  void emitStale(WeatherCondition lastKnown, Duration age) {
+    _controller.add(
+      WeatherStale(
+        lastKnown: lastKnown,
+        observedAt: DateTime.now().subtract(age),
+        age: age,
+      ),
+    );
+  }
+
+  /// The provider has no condition at all.
+  void emitUnavailable() {
+    _controller.add(WeatherUnavailable(since: DateTime.now()));
   }
 
   void emitError(Object error) {
@@ -62,7 +80,7 @@ class MockWeatherProvider implements WeatherProvider {
 // ---------------------------------------------------------------------------
 final _ts = DateTime(2026, 2, 27, 10, 0);
 
-final _clearCondition = WeatherCondition.clear(timestamp: _ts);
+final _clearCondition = WeatherCondition.simulatedClear(timestamp: _ts);
 
 final _lightSnow = WeatherCondition(
   precipType: PrecipitationType.snow,
@@ -71,6 +89,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: _ts,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _heavySnow = WeatherCondition(
@@ -80,6 +100,8 @@ final _heavySnow = WeatherCondition(
   visibilityMeters: 150,
   windSpeedKmh: 45,
   timestamp: _ts,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _iceRisk = WeatherCondition(
@@ -90,6 +112,7 @@ final _iceRisk = WeatherCondition(
   windSpeedKmh: 20,
   iceRisk: true,
   timestamp: _ts,
+  source: ObservationSource.measured,
 );
 
 final _rain = WeatherCondition(
@@ -99,6 +122,8 @@ final _rain = WeatherCondition(
   visibilityMeters: 2000,
   windSpeedKmh: 25,
   timestamp: _ts,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _zeroVisibility = WeatherCondition(
@@ -108,6 +133,8 @@ final _zeroVisibility = WeatherCondition(
   visibilityMeters: 100,
   windSpeedKmh: 30,
   timestamp: _ts,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 void main() {
@@ -125,41 +152,44 @@ void main() {
     });
 
     test('isSnowing returns true for snow with intensity', () {
-      expect(_lightSnow.isSnowing, true);
-      expect(_heavySnow.isSnowing, true);
+      expect(_lightSnow.snowing, SafetyVerdict.hazardous);
+      expect(_heavySnow.snowing, SafetyVerdict.hazardous);
     });
 
     test('isSnowing returns false for clear and rain', () {
-      expect(_clearCondition.isSnowing, false);
-      expect(_rain.isSnowing, false);
+      expect(_clearCondition.snowing, SafetyVerdict.notHazardous);
+      expect(_rain.snowing, SafetyVerdict.notHazardous);
     });
 
     test('hasReducedVisibility true when < 1000m', () {
-      expect(_heavySnow.hasReducedVisibility, true); // 150m
-      expect(_iceRisk.hasReducedVisibility, true); // 500m
-      expect(_lightSnow.hasReducedVisibility, false); // 3000m
-      expect(_clearCondition.hasReducedVisibility, false); // 10000m
+      expect(_heavySnow.reducedVisibility, SafetyVerdict.hazardous); // 150m
+      expect(_iceRisk.reducedVisibility, SafetyVerdict.hazardous); // 500m
+      expect(_lightSnow.reducedVisibility, SafetyVerdict.notHazardous); // 3000m
+      expect(
+        _clearCondition.reducedVisibility,
+        SafetyVerdict.notHazardous,
+      ); // 10000m
     });
 
     test('isHazardous true for heavy precip', () {
-      expect(_heavySnow.isHazardous, true);
+      expect(_heavySnow.hazard, SafetyVerdict.hazardous);
     });
 
     test('isHazardous true for ice risk', () {
-      expect(_iceRisk.isHazardous, true);
+      expect(_iceRisk.hazard, SafetyVerdict.hazardous);
     });
 
     test('isHazardous true for very low visibility', () {
-      expect(_zeroVisibility.isHazardous, true); // 100m < 200m
+      expect(_zeroVisibility.hazard, SafetyVerdict.hazardous); // 100m < 200m
     });
 
     test('isHazardous false for light snow', () {
-      expect(_lightSnow.isHazardous, false);
+      expect(_lightSnow.hazard, SafetyVerdict.notHazardous);
     });
 
     test('isFreezing true at and below 0°C', () {
-      expect(_heavySnow.isFreezing, true); // -4°C
-      expect(_iceRisk.isFreezing, true); // -3°C
+      expect(_heavySnow.freezing, SafetyVerdict.hazardous); // -4°C
+      expect(_iceRisk.freezing, SafetyVerdict.hazardous); // -3°C
       expect(
         WeatherCondition(
           precipType: PrecipitationType.snow,
@@ -168,14 +198,16 @@ void main() {
           visibilityMeters: 5000,
           windSpeedKmh: 10,
           timestamp: _ts,
-        ).isFreezing,
-        true,
+          source: ObservationSource.measured,
+          iceRisk: false,
+        ).freezing,
+        SafetyVerdict.hazardous,
       ); // exactly 0°C
     });
 
     test('isFreezing false above 0°C', () {
-      expect(_lightSnow.isFreezing, false); // 1°C
-      expect(_clearCondition.isFreezing, false); // 5°C
+      expect(_lightSnow.freezing, SafetyVerdict.notHazardous); // 1°C
+      expect(_clearCondition.freezing, SafetyVerdict.notHazardous); // 5°C
     });
 
     test('toString includes key fields', () {
@@ -193,6 +225,8 @@ void main() {
         visibilityMeters: 3000,
         windSpeedKmh: 15,
         timestamp: _ts,
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
       expect(a, equals(_lightSnow));
     });
@@ -215,12 +249,23 @@ void main() {
       expect(state.hasCondition, false);
     });
 
-    test('convenience getters return false when no condition', () {
+    test('NO condition is UNKNOWN — never "not hazardous"', () {
+      // This test used to assert `false` for all four. That was the defect,
+      // written down as a requirement: with no data at all, the app said "not
+      // hazardous" — the calm chrome over a road nobody had looked at. The
+      // library removed the bool getters for exactly this reason; the app then
+      // re-added them with `?? false`, and this test certified it.
       const state = WeatherState.unavailable();
-      expect(state.isHazardous, false);
-      expect(state.isSnowing, false);
-      expect(state.hasIceRisk, false);
-      expect(state.hasReducedVisibility, false);
+      expect(state.hazard, SafetyVerdict.unknown);
+      expect(state.snowing, SafetyVerdict.unknown);
+      expect(state.reducedVisibility, SafetyVerdict.unknown);
+
+      // `iceRisk` is `bool?` — null = NOT MEASURED, never "no ice".
+      expect(state.iceRisk, isNull);
+      expect(state.hasIceRisk, isFalse); // positive-evidence only
+      expect(state.isHazardous, isFalse); // positive-evidence only
+      // …and the state SAYS it does not know, which is what the UI renders.
+      expect(state.isConditionUnknown, isTrue);
     });
 
     test('convenience getters delegate to condition', () {
@@ -228,9 +273,9 @@ void main() {
         status: WeatherStatus.monitoring,
         condition: _heavySnow,
       );
-      expect(state.isHazardous, true);
-      expect(state.isSnowing, true);
-      expect(state.hasReducedVisibility, true);
+      expect(state.hazard, SafetyVerdict.hazardous);
+      expect(state.snowing, SafetyVerdict.hazardous);
+      expect(state.reducedVisibility, SafetyVerdict.hazardous);
     });
 
     test('hasIceRisk delegates correctly', () {
@@ -304,8 +349,11 @@ void main() {
       final provider = SimulatedWeatherProvider(
         interval: const Duration(milliseconds: 50),
       );
+      // driving_weather 0.5.0: the stream carries a sealed WeatherReading.
       final conditions = <WeatherCondition>[];
-      provider.conditions.listen(conditions.add);
+      provider.conditions.listen((r) {
+        if (r is WeatherObserved) conditions.add(r.condition);
+      });
 
       await provider.startMonitoring();
       // First condition emitted immediately
@@ -320,8 +368,11 @@ void main() {
       final provider = SimulatedWeatherProvider(
         interval: const Duration(milliseconds: 20),
       );
+      // driving_weather 0.5.0: the stream carries a sealed WeatherReading.
       final conditions = <WeatherCondition>[];
-      provider.conditions.listen(conditions.add);
+      provider.conditions.listen((r) {
+        if (r is WeatherObserved) conditions.add(r.condition);
+      });
 
       await provider.startMonitoring();
       // Wait for all 6 phases + 1 cycle restart
@@ -345,8 +396,11 @@ void main() {
       final provider = SimulatedWeatherProvider(
         interval: const Duration(milliseconds: 20),
       );
+      // driving_weather 0.5.0: the stream carries a sealed WeatherReading.
       final conditions = <WeatherCondition>[];
-      provider.conditions.listen(conditions.add);
+      provider.conditions.listen((r) {
+        if (r is WeatherObserved) conditions.add(r.condition);
+      });
 
       await provider.startMonitoring();
       await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -432,14 +486,15 @@ void main() {
       },
       expect: () => [
         // monitoring (empty)
-        isA<WeatherState>()
-            .having((s) => s.condition, 'condition', isNull),
+        isA<WeatherState>().having((s) => s.condition, 'condition', isNull),
         // clear
-        isA<WeatherState>()
-            .having((s) => s.condition, 'condition', _clearCondition),
+        isA<WeatherState>().having(
+          (s) => s.condition,
+          'condition',
+          _clearCondition,
+        ),
         // light snow
-        isA<WeatherState>()
-            .having((s) => s.condition, 'condition', _lightSnow),
+        isA<WeatherState>().having((s) => s.condition, 'condition', _lightSnow),
         // heavy snow
         isA<WeatherState>()
             .having((s) => s.condition, 'condition', _heavySnow)
@@ -459,11 +514,13 @@ void main() {
       },
       expect: () => [
         // monitoring (empty)
-        isA<WeatherState>()
-            .having((s) => s.status, 'status', WeatherStatus.monitoring),
+        isA<WeatherState>().having(
+          (s) => s.status,
+          'status',
+          WeatherStatus.monitoring,
+        ),
         // monitoring (light snow)
-        isA<WeatherState>()
-            .having((s) => s.condition, 'condition', _lightSnow),
+        isA<WeatherState>().having((s) => s.condition, 'condition', _lightSnow),
         // stopped
         const WeatherState.unavailable(),
       ],
@@ -481,8 +538,11 @@ void main() {
         bloc.add(const WeatherMonitorStarted()); // duplicate — ignored
       },
       expect: () => [
-        isA<WeatherState>()
-            .having((s) => s.status, 'status', WeatherStatus.monitoring),
+        isA<WeatherState>().having(
+          (s) => s.status,
+          'status',
+          WeatherStatus.monitoring,
+        ),
         // No second emission — idempotent
       ],
     );
@@ -496,8 +556,11 @@ void main() {
       act: (bloc) => bloc.add(const WeatherMonitorStarted()),
       expect: () => [
         // First: monitoring attempt
-        isA<WeatherState>()
-            .having((s) => s.status, 'status', WeatherStatus.monitoring),
+        isA<WeatherState>().having(
+          (s) => s.status,
+          'status',
+          WeatherStatus.monitoring,
+        ),
         // Then: error
         isA<WeatherState>()
             .having((s) => s.status, 'status', WeatherStatus.error)
@@ -518,8 +581,11 @@ void main() {
         provider.emitError(Exception('Sensor failure'));
       },
       expect: () => [
-        isA<WeatherState>()
-            .having((s) => s.status, 'status', WeatherStatus.monitoring),
+        isA<WeatherState>().having(
+          (s) => s.status,
+          'status',
+          WeatherStatus.monitoring,
+        ),
         isA<WeatherState>()
             .having((s) => s.status, 'status', WeatherStatus.error)
             .having(
@@ -544,11 +610,13 @@ void main() {
       },
       expect: () => [
         // Back to monitoring
-        isA<WeatherState>()
-            .having((s) => s.status, 'status', WeatherStatus.monitoring),
+        isA<WeatherState>().having(
+          (s) => s.status,
+          'status',
+          WeatherStatus.monitoring,
+        ),
         // Condition received
-        isA<WeatherState>()
-            .having((s) => s.condition, 'condition', _lightSnow),
+        isA<WeatherState>().having((s) => s.condition, 'condition', _lightSnow),
       ],
     );
 
@@ -561,8 +629,7 @@ void main() {
         provider.emitCondition(_iceRisk);
       },
       expect: () => [
-        isA<WeatherState>()
-            .having((s) => s.isHazardous, 'isHazardous', false),
+        isA<WeatherState>().having((s) => s.isHazardous, 'isHazardous', false),
         isA<WeatherState>()
             .having((s) => s.isHazardous, 'isHazardous', true)
             .having((s) => s.hasIceRisk, 'hasIceRisk', true)

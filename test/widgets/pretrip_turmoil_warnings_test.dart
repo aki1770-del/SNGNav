@@ -54,17 +54,17 @@ WeatherForecast _cannedTempOnly() {
 }
 
 Advisory _adv(String eventClass, AdvisorySeverity severity) => Advisory(
-      source: AdvisorySource.jmaJapan,
-      eventClass: eventClass,
-      severity: severity,
-      certainty: AdvisoryCertainty.observed,
-      urgency: AdvisoryUrgency.immediate,
-      areaDescription: '秋田県',
-      effective: null,
-      expires: null,
-      headline: eventClass,
-      description: eventClass,
-    );
+  source: AdvisorySource.jmaJapan,
+  eventClass: eventClass,
+  severity: severity,
+  certainty: AdvisoryCertainty.observed,
+  urgency: AdvisoryUrgency.immediate,
+  areaDescription: '秋田県',
+  effective: null,
+  expires: null,
+  headline: eventClass,
+  description: eventClass,
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -80,7 +80,8 @@ void main() {
     Future<void> flush([int cycles = 12]) async {
       for (var i = 0; i < cycles; i++) {
         await tester.runAsync(
-            () async => Future<void>.delayed(const Duration(milliseconds: 20)));
+          () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 60));
       }
@@ -103,11 +104,9 @@ void main() {
           body: PretripScreen(
             pretripPointOverride: (lat: 39.72, lon: 140.10), // Akita
             metForecastFetchOverride: () async => _cannedTempOnly(),
-            jmaAdvisoryFetchOverride: ({
-              required double latitude,
-              required double longitude,
-            }) async =>
-                jmaAdvisories,
+            jmaAdvisoryFetchOverride:
+                ({required double latitude, required double longitude}) async =>
+                    jmaAdvisories,
             surfaceState: RoadSurfaceState.dry,
           ),
         ),
@@ -117,42 +116,45 @@ void main() {
     await flush();
   }
 
-  testWidgets(
-    'in-force 大雨危険警報 + 強風注意報 REACH HER verbatim, highest severity '
-    'first, with the verbatim-relay honesty note',
-    (tester) async {
-      await pumpAtAkita(
-        tester,
-        jmaAdvisories: [
-          // Moderate FIRST in fetch order — the lane must show extreme first.
-          _adv('強風注意報', AdvisorySeverity.moderate),
-          _adv('大雨危険警報', AdvisorySeverity.extreme),
-        ],
-      );
+  testWidgets('in-force 大雨危険警報 + 強風注意報 REACH HER verbatim, highest severity '
+      'first, with the verbatim-relay honesty note', (tester) async {
+    await pumpAtAkita(
+      tester,
+      jmaAdvisories: [
+        // Moderate FIRST in fetch order — the lane must show extreme first.
+        _adv('強風注意報', AdvisorySeverity.moderate),
+        _adv('大雨危険警報', AdvisorySeverity.extreme),
+      ],
+    );
 
-      expect(find.byKey(const Key('pretrip-jma-turmoil-warnings')),
-          findsOneWidget);
-      // Verbatim relay (Article 17 β): JMA's own words, prefecture-labeled.
-      expect(find.text('大雨危険警報（秋田県）'), findsOneWidget);
-      expect(find.text('強風注意報（秋田県）'), findsOneWidget);
-      // Highest severity renders ABOVE: the extreme card row precedes the
-      // moderate one in the rendered tree.
-      final kikenY = tester.getTopLeft(find.text('大雨危険警報（秋田県）')).dy;
-      final kyoufuuY = tester.getTopLeft(find.text('強風注意報（秋田県）')).dy;
-      expect(kikenY, lessThan(kyoufuuY),
-          reason: 'the extreme 危険警報 must render above the 注意報');
-      // The honesty note: verbatim wording, prefecture-level scope.
-      expect(find.textContaining('気象庁の発表をそのまま表示しています'),
-          findsOneWidget);
-    },
-  );
+    expect(
+      find.byKey(const Key('pretrip-jma-turmoil-warnings')),
+      findsOneWidget,
+    );
+    // Verbatim relay (Article 17 β): JMA's own words, prefecture-labeled.
+    expect(find.text('大雨危険警報（秋田県）'), findsOneWidget);
+    expect(find.text('強風注意報（秋田県）'), findsOneWidget);
+    // Highest severity renders ABOVE: the extreme card row precedes the
+    // moderate one in the rendered tree.
+    final kikenY = tester.getTopLeft(find.text('大雨危険警報（秋田県）')).dy;
+    final kyoufuuY = tester.getTopLeft(find.text('強風注意報（秋田県）')).dy;
+    expect(
+      kikenY,
+      lessThan(kyoufuuY),
+      reason: 'the extreme 危険警報 must render above the 注意報',
+    );
+    // The honesty note: verbatim wording, prefecture-level scope.
+    expect(find.textContaining('気象庁の発表をそのまま表示しています'), findsOneWidget);
+  });
 
   testWidgets(
     'no in-force warning → NO turmoil card (never an empty warning frame)',
     (tester) async {
       await pumpAtAkita(tester, jmaAdvisories: const []);
-      expect(find.byKey(const Key('pretrip-jma-turmoil-warnings')),
-          findsNothing);
+      expect(
+        find.byKey(const Key('pretrip-jma-turmoil-warnings')),
+        findsNothing,
+      );
     },
   );
 
@@ -164,8 +166,10 @@ void main() {
         tester,
         jmaAdvisories: [_adv('大雪警報', AdvisorySeverity.severe)],
       );
-      expect(find.byKey(const Key('pretrip-jma-turmoil-warnings')),
-          findsNothing);
+      expect(
+        find.byKey(const Key('pretrip-jma-turmoil-warnings')),
+        findsNothing,
+      );
     },
   );
 }

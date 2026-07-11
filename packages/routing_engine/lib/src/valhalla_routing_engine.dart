@@ -147,7 +147,16 @@ class ValhallaRoutingEngine implements RoutingEngine {
       final maneuvers = legMap['maneuvers'] as List<dynamic>? ?? [];
       for (final m in maneuvers) {
         final mMap = m as Map<String, dynamic>;
-        final shapeIdx = mMap['begin_shape_index'] as int? ?? 0;
+        // A begin_shape_index we cannot resolve against the decoded polyline
+        // (missing, negative, or past the end) means the maneuver's position
+        // is UNKNOWN. Up to 0.5.0 this substituted const LatLng(0, 0) — Null
+        // Island — presenting a fabricated coordinate as a real one. Absence
+        // is null; the instruction, length and time remain valid.
+        final shapeIdx = mMap['begin_shape_index'] as int?;
+        final position =
+            (shapeIdx != null && shapeIdx >= 0 && shapeIdx < allPoints.length)
+            ? allPoints[shapeIdx]
+            : null;
         allManeuvers.add(
           RouteManeuver(
             index: maneuverIndex++,
@@ -155,9 +164,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
             type: _maneuverTypeString(mMap['type'] as int? ?? 0),
             lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
             timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
-            position: shapeIdx < allPoints.length
-                ? allPoints[shapeIdx]
-                : const LatLng(0, 0),
+            position: position,
           ),
         );
       }

@@ -41,6 +41,7 @@ void main() {
       visibilityMeters: 10000,
       windSpeedKmh: 0,
       iceRisk: false,
+      source: ObservationSource.measured,
       timestamp: t,
     );
     icy = WeatherCondition(
@@ -50,6 +51,7 @@ void main() {
       visibilityMeters: 50,
       windSpeedKmh: 30,
       iceRisk: true,
+      source: ObservationSource.measured,
       timestamp: t,
     );
   });
@@ -69,7 +71,12 @@ void main() {
       );
       final result = await forecaster.forecast(empty);
       expect(result.segments, isEmpty);
-      expect(result.hasAnyHazard, isFalse);
+      // INVERTED in 0.2.0. Up to 0.1.5 this asserted `hasAnyHazard == false`,
+      // i.e. it CERTIFIED that a route we forecast nothing about is CLEAR.
+      // Forecasting nothing is not the same as forecasting good news.
+      expect(result.hazard, SafetyVerdict.unknown);
+      expect(result.hazard, isNot(SafetyVerdict.notHazardous));
+      expect(result.minimumConfidence, isNull); // was a fabricated 1.0
     });
 
     test('clear conditions produce non-hazardous forecast', () async {
@@ -82,7 +89,9 @@ void main() {
       );
       final result = await forecaster.forecast(route);
 
-      expect(result.hasAnyHazard, isFalse);
+      // `clear` here is a FULLY MEASURED benign condition, so the negative
+      // verdict is earned and still fires.
+      expect(result.hazard, SafetyVerdict.notHazardous);
       expect(result.firstHazardSegment, isNull);
       expect(result.firstHazardEtaSeconds, isNull);
     });
@@ -97,8 +106,8 @@ void main() {
       );
       final result = await forecaster.forecast(route);
 
-      expect(result.hasAnyHazard, isTrue);
-      expect(result.hasWeatherHazard, isTrue);
+      expect(result.hazard, SafetyVerdict.hazardous);
+      expect(result.weatherHazard, SafetyVerdict.hazardous);
       expect(result.firstHazardSegment, isNotNull);
       expect(result.firstHazardEtaSeconds, closeTo(0.0, 1e-9));
     });

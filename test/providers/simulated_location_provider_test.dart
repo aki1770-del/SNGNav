@@ -82,9 +82,7 @@ void main() {
 
         await provider.start();
 
-        final pos = await completer.future.timeout(
-          const Duration(seconds: 2),
-        );
+        final pos = await completer.future.timeout(const Duration(seconds: 2));
         // First position should be in the Nagoya–Okazaki corridor.
         // On CI runners, timer jitter may advance 1-2 steps before
         // the first listener callback fires.
@@ -100,9 +98,7 @@ void main() {
 
         await provider.start();
 
-        final pos = await completer.future.timeout(
-          const Duration(seconds: 2),
-        );
+        final pos = await completer.future.timeout(const Duration(seconds: 2));
         expect(pos.isNavigationGrade, isTrue);
         expect(pos.accuracy, 5.0);
       });
@@ -115,9 +111,7 @@ void main() {
 
         await provider.start();
 
-        final pos = await completer.future.timeout(
-          const Duration(seconds: 2),
-        );
+        final pos = await completer.future.timeout(const Duration(seconds: 2));
         expect(pos.speed, closeTo(11.11, 0.01));
         expect(pos.speedKmh, closeTo(40.0, 0.1));
       });
@@ -169,8 +163,11 @@ void main() {
           // City phase follows OSRM route — headings vary (SE to E).
           expect(pos.heading, greaterThanOrEqualTo(0.0));
           expect(pos.heading, lessThan(360.0));
-          expect(pos.speed, closeTo(11.11, 0.01),
-              reason: 'City phase speed should be 40 km/h');
+          expect(
+            pos.speed,
+            closeTo(11.11, 0.01),
+            reason: 'City phase speed should be 40 km/h',
+          );
         }
       });
 
@@ -194,8 +191,11 @@ void main() {
         final route153Positions = positions
             .where((pos) => (pos.speed - 19.44).abs() < 0.1)
             .toList();
-        expect(route153Positions, isNotEmpty,
-            reason: 'Should have at least one position at 70 km/h');
+        expect(
+          route153Positions,
+          isNotEmpty,
+          reason: 'Should have at least one position at 70 km/h',
+        );
       });
 
       test('mountain phase has higher speed than city', () async {
@@ -242,11 +242,13 @@ void main() {
         // Check that there's a gap — no position near tunnel coords.
         // Tunnel waypoints: lon 137.1088–137.1527.
         final tunnelPositions = positions
-            .where((p) =>
-                p.longitude >= 137.10 && p.longitude <= 137.16)
+            .where((p) => p.longitude >= 137.10 && p.longitude <= 137.16)
             .toList();
-        expect(tunnelPositions, isEmpty,
-            reason: 'Tunnel positions should not be emitted');
+        expect(
+          tunnelPositions,
+          isEmpty,
+          reason: 'Tunnel positions should not be emitted',
+        );
       });
 
       test('tunnel disabled: all 20 waypoints emit', () async {
@@ -267,11 +269,13 @@ void main() {
         // Should include tunnel-area positions.
         // Tunnel waypoints: lon 137.1088–137.1527.
         final tunnelPositions = positions
-            .where((p) =>
-                p.longitude >= 137.10 && p.longitude <= 137.16)
+            .where((p) => p.longitude >= 137.10 && p.longitude <= 137.16)
             .toList();
-        expect(tunnelPositions, isNotEmpty,
-            reason: 'With tunnel disabled, all positions should emit');
+        expect(
+          tunnelPositions,
+          isNotEmpty,
+          reason: 'With tunnel disabled, all positions should emit',
+        );
       });
     });
 
@@ -311,8 +315,11 @@ void main() {
         final countAfterStop = positions.length;
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        expect(positions.length, countAfterStop,
-            reason: 'No new positions after stop()');
+        expect(
+          positions.length,
+          countAfterStop,
+          reason: 'No new positions after stop()',
+        );
       });
 
       test('stop is idempotent', () async {
@@ -364,15 +371,14 @@ void main() {
 
         await provider.start();
 
-        final pos = await completer.future.timeout(
-          const Duration(seconds: 2),
-        );
+        final pos = await completer.future.timeout(const Duration(seconds: 2));
         final after = DateTime.now();
 
-        expect(pos.timestamp.isAfter(before) || pos.timestamp == before,
-            isTrue);
-        expect(pos.timestamp.isBefore(after) || pos.timestamp == after,
-            isTrue);
+        expect(
+          pos.timestamp.isAfter(before) || pos.timestamp == before,
+          isTrue,
+        );
+        expect(pos.timestamp.isBefore(after) || pos.timestamp == after, isTrue);
       });
     });
   });

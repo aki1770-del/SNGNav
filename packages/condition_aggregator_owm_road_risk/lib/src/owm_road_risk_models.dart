@@ -78,8 +78,23 @@ class OwmRoadRiskAlert extends Equatable {
     required this.description,
   });
 
-  /// Parse one entry from `alerts[]`. Tolerant of missing fields;
-  /// missing values default to safe sentinels rather than throwing.
+  /// Parse one entry from `alerts[]`.
+  ///
+  /// **There is no such thing as a "safe sentinel".** This doc used to say the
+  /// parser "defaults missing values to safe sentinels rather than throwing" —
+  /// that sentence is the exact ideology the Measured-or-Absent contract exists
+  /// to retire, and leaving it in a published package teaches the next author to
+  /// fabricate. What the code ACTUALLY does, stated plainly:
+  ///
+  /// * a missing `event_level` is parsed as `0`, and `0` is mapped by
+  ///   [OwmRoadRiskMapper] to [AdvisorySeverity.unknown] — **never** to a low
+  ///   severity. An unstated severity is not a benign one.
+  /// * the string fields fall back to `''`, and an empty `event` surfaces as
+  ///   the headline `'(no headline)'` — i.e. "the publisher sent no headline",
+  ///   which is what it means. It is NOT a claim about the road.
+  ///
+  /// Nothing here manufactures a measurement. The severity path is the one that
+  /// can reach a driver, and it says `unknown` when the publisher did not say.
   factory OwmRoadRiskAlert.fromJson(Map<String, dynamic> json) {
     return OwmRoadRiskAlert(
       event: (json['event'] as String?) ?? '',

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.7.3
+
+- Widen the `routing_engine` constraint to `>=0.4.0 <0.7.0` so this package can
+  resolve alongside `routing_engine` 0.6.0 and `route_condition_forecast` 0.2.0.
+
+  `routing_engine` 0.6.0 fixes a safety defect: `RouteManeuver.position` was
+  silently returning `const LatLng(0, 0)` — Null Island, a real coordinate in
+  the Gulf of Guinea — for a maneuver whose location failed to parse. It is now
+  nullable. **This package's `lib/` reads no maneuver position**, so 0.6.0 is
+  source-compatible and this is a PATCH release, not a breaking one.
+
+  The widen is not cosmetic: for a 0.x package a caret does not admit the next
+  minor, so without it `route_condition_forecast` 0.2.0 (which pins
+  `>=0.6.0`) and this package had an EMPTY intersection — a consumer combining
+  voice guidance with route condition forecasting would have hit a hard
+  `version solving failed`.
+
+- The example app now guards the nullable position: a maneuver with no location
+  is not given a substitute coordinate.
+
 ## 0.7.2
 
 - Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so voice guidance

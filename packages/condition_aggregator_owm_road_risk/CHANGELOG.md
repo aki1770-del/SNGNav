@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.5
+
+### Docs: "safe sentinels" was the wrong doctrine, in a published package
+
+`OwmRoadRiskAlert.fromJson`'s dartdoc claimed the parser is *"tolerant of missing
+fields; missing values default to safe sentinels rather than throwing."*
+
+**There is no such thing as a safe sentinel.** The severity path here happens to
+be honest already (a missing `event_level` parses as `0`, which
+`OwmRoadRiskMapper` maps to `AdvisorySeverity.unknown` — never to a LOW
+severity), so this was not a live fabrication. But the sentence is the exact
+ideology the Measured-or-Absent contract exists to retire, sitting in a published
+package, teaching the next author to do it again.
+
+The doc now states what the code actually does. No behaviour change.
+
 ## 0.1.4 — Doc honesty
 
 - Docs: refresh stale README install pins (`condition_aggregator: ^0.0.3 → ^0.0.5` to match the pubspec dependency; self-pin `^0.1.0 → ^0.1.4`).

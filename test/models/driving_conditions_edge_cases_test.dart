@@ -10,31 +10,36 @@ WeatherCondition _condition({
   double temperatureCelsius = 5.0,
   double visibilityMeters = 10000,
   bool iceRisk = false,
-}) =>
-    WeatherCondition(
-      precipType: precipType,
-      intensity: intensity,
-      temperatureCelsius: temperatureCelsius,
-      visibilityMeters: visibilityMeters,
-      windSpeedKmh: 0,
-      iceRisk: iceRisk,
-      timestamp: DateTime(2026),
-    );
+}) => WeatherCondition(
+  precipType: precipType,
+  intensity: intensity,
+  temperatureCelsius: temperatureCelsius,
+  visibilityMeters: visibilityMeters,
+  windSpeedKmh: 0,
+  iceRisk: iceRisk,
+  timestamp: DateTime(2026),
+  source: ObservationSource.measured,
+);
 
 void main() {
   group('RoadSurfaceState.fromCondition', () {
     test('clear warm returns dry', () {
-      expect(RoadSurfaceState.fromCondition(_condition()), RoadSurfaceState.dry);
+      expect(
+        RoadSurfaceState.fromCondition(_condition()),
+        RoadSurfaceState.dry,
+      );
     });
 
     test('iceRisk overrides all other branches', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 20,
-          iceRisk: true,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 20,
+            iceRisk: true,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
@@ -55,129 +60,153 @@ void main() {
 
     test('rain at 0C returns blackIce', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 0,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 0,
+          ),
+        ),
         RoadSurfaceState.blackIce,
       );
     });
 
     test('rain at 1C returns wet', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 1,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 1,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('heavy rain at exactly 3C returns wet', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 3,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
 
     test('heavy rain above 3C returns standingWater', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.rain,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: 4,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: 4,
+          ),
+        ),
         RoadSurfaceState.standingWater,
       );
     });
 
     test('snow above 2C returns slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: 3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 3,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('snow at exactly 2C returns slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: 2,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 2,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('snow at exactly -2C returns slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -2,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -2,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('moderate snow below -2C returns compactedSnow', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -3,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -3,
+          ),
+        ),
         RoadSurfaceState.compactedSnow,
       );
     });
 
     test('light snow below -2C still returns slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: -5,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: -5,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('sleet returns slush', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.sleet,
-          intensity: PrecipitationIntensity.moderate,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.sleet,
+            intensity: PrecipitationIntensity.moderate,
+          ),
+        ),
         RoadSurfaceState.slush,
       );
     });
 
     test('heavy hail returns standingWater', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.hail,
-          intensity: PrecipitationIntensity.heavy,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.hail,
+            intensity: PrecipitationIntensity.heavy,
+          ),
+        ),
         RoadSurfaceState.standingWater,
       );
     });
 
     test('moderate hail returns wet', () {
       expect(
-        RoadSurfaceState.fromCondition(_condition(
-          precipType: PrecipitationType.hail,
-          intensity: PrecipitationIntensity.moderate,
-        )),
+        RoadSurfaceState.fromCondition(
+          _condition(
+            precipType: PrecipitationType.hail,
+            intensity: PrecipitationIntensity.moderate,
+          ),
+        ),
         RoadSurfaceState.wet,
       );
     });
@@ -294,17 +323,11 @@ void main() {
     });
 
     test('1000m visibility returns clear', () {
-      expect(
-        VisibilityDegradation.compute(1000),
-        VisibilityDegradation.clear,
-      );
+      expect(VisibilityDegradation.compute(1000), VisibilityDegradation.clear);
     });
 
     test('very high visibility remains clear', () {
-      expect(
-        VisibilityDegradation.compute(10000),
-        VisibilityDegradation.clear,
-      );
+      expect(VisibilityDegradation.compute(10000), VisibilityDegradation.clear);
     });
 
     test('equal inputs produce equal outputs', () {

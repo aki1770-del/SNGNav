@@ -16,7 +16,7 @@ void main() {
     accuracy: 5,
     timestamp: DateTime(2026, 3, 12),
   );
-  final condition = WeatherCondition.clear(
+  final condition = WeatherCondition.simulatedClear(
     timestamp: DateTime(2026, 3, 12),
   );
 
@@ -63,7 +63,9 @@ void main() {
 
     test('condition and error events expose payload props', () {
       expect(WeatherConditionReceived(condition).props, [condition]);
-      expect(const WeatherErrorOccurred('network down').props, ['network down']);
+      expect(const WeatherErrorOccurred('network down').props, [
+        'network down',
+      ]);
     });
   });
 }

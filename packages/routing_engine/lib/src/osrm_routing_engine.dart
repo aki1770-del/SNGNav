@@ -117,12 +117,17 @@ class OsrmRoutingEngine implements RoutingEngine {
         final stepMap = step as Map<String, dynamic>;
         final maneuver = stepMap['maneuver'] as Map<String, dynamic>? ?? {};
         final location = maneuver['location'] as List<dynamic>?;
-        final position = location != null && location.length >= 2
-            ? LatLng(
-                (location[1] as num).toDouble(),
-                (location[0] as num).toDouble(),
-              )
-            : const LatLng(0, 0);
+        // A maneuver whose location OSRM did not give us has NO position.
+        // Up to 0.5.0 this substituted const LatLng(0, 0) — Null Island, off
+        // the coast of Africa — which the consumer then narrated and plotted
+        // as a real place. An unknown position is null; the instruction and
+        // distance remain valid.
+        final hasPair = location != null && location.length >= 2;
+        final lat = hasPair && location[1] is num ? location[1] as num : null;
+        final lon = hasPair && location[0] is num ? location[0] as num : null;
+        final position = (lat != null && lon != null)
+            ? LatLng(lat.toDouble(), lon.toDouble())
+            : null;
 
         final stepDistanceM = (stepMap['distance'] as num?)?.toDouble() ?? 0;
         final stepDurationS = (stepMap['duration'] as num?)?.toDouble() ?? 0;

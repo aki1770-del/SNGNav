@@ -24,16 +24,23 @@ import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
 
 // --- mock Datapoint builders (the only place that touches generated types) ---
 
-Datapoint _floatDp(String path, double v) =>
-    Datapoint(raw: pb.Datapoint(value: pb.Value(float: v)), path: path);
+Datapoint _floatDp(String path, double v) => Datapoint(
+  raw: pb.Datapoint(value: pb.Value(float: v)),
+  path: path,
+);
 
-Datapoint _boolDp(String path, bool v) =>
-    Datapoint(raw: pb.Datapoint(value: pb.Value(bool_12: v)), path: path);
+Datapoint _boolDp(String path, bool v) => Datapoint(
+  raw: pb.Datapoint(value: pb.Value(bool_12: v)),
+  path: path,
+);
 
-Datapoint _intDp(String path, int v) =>
-    Datapoint(raw: pb.Datapoint(value: pb.Value(int32: v)), path: path);
+Datapoint _intDp(String path, int v) => Datapoint(
+  raw: pb.Datapoint(value: pb.Value(int32: v)),
+  path: path,
+);
 
-Datapoint _valuelessDp(String path) => Datapoint(raw: pb.Datapoint(), path: path);
+Datapoint _valuelessDp(String path) =>
+    Datapoint(raw: pb.Datapoint(), path: path);
 
 void main() {
   group('vehicleSignalsFromDatapoints (KUKSA decode adapter)', () {
@@ -70,79 +77,92 @@ void main() {
     });
   });
 
-  group('vehicleSignalsToWeatherCondition + assessment fusion (deterministic)',
-      () {
-    DrivingConditionAssessment assess(VehicleConditionSignals s) =>
-        DrivingConditionAssessment.fromCondition(
-          vehicleSignalsToWeatherCondition(s),
+  group(
+    'vehicleSignalsToWeatherCondition + assessment fusion (deterministic)',
+    () {
+      DrivingConditionAssessment assess(VehicleConditionSignals s) =>
+          DrivingConditionAssessment.fromCondition(
+            vehicleSignalsToWeatherCondition(s),
+          );
+
+      test('low road friction → black ice + ice advisory', () {
+        final a = assess(
+          const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
         );
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+        expect(a.advisoryMessage.toLowerCase(), contains('ice'));
+      });
 
-    test('low road friction → black ice + ice advisory', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-      expect(a.advisoryMessage.toLowerCase(), contains('ice'));
-    });
+      test('heavy snowfall, adequate grip → compacted snow + fog wall', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.5, // not below the icy threshold
+            wiperIntensity: 5, // heavy
+            airTempC: -5.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.compactedSnow);
+        // heavy precip → 300 m visibility proxy → strong fog opacity
+        expect(a.visibility!.opacity, greaterThan(0.5));
+      });
 
-    test('heavy snowfall, adequate grip → compacted snow + fog wall', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.5, // not below the icy threshold
-        wiperIntensity: 5, // heavy
-        airTempC: -5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.compactedSnow);
-      // heavy precip → 300 m visibility proxy → strong fog opacity
-      expect(a.visibility.opacity, greaterThan(0.5));
-    });
+      test('moderate rain, warm, good grip → wet + mild fog', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.9,
+            wiperIntensity: 4, // moderate
+            airTempC: 8.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.wet);
+        // moderate precip → 800 m → some, but not heavy, fog
+        expect(a.visibility!.opacity, greaterThan(0.0));
+        expect(a.visibility!.opacity, lessThan(0.5));
+      });
 
-    test('moderate rain, warm, good grip → wet + mild fog', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.9,
-        wiperIntensity: 4, // moderate
-        airTempC: 8.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.wet);
-      // moderate precip → 800 m → some, but not heavy, fog
-      expect(a.visibility.opacity, greaterThan(0.0));
-      expect(a.visibility.opacity, lessThan(0.5));
-    });
+      test('TCS engaged on a COLD road → ice risk → black ice', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.6, // not itself below the icy threshold
+            tcsEngaged: true,
+            airTempC: 0.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+      });
 
-    test('TCS engaged on a COLD road → ice risk → black ice', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.6, // not itself below the icy threshold
-        tcsEngaged: true,
-        airTempC: 0.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-    });
-
-    test('TCS engaged on a WARM road → NOT ice (aquaplaning, not freezing)',
+      test(
+        'TCS engaged on a WARM road → NOT ice (aquaplaning, not freezing)',
         () {
-      final a = assess(const VehicleConditionSignals(
-        tcsEngaged: true,
-        wiperIntensity: 4, // moderate rain
-        airTempC: 12.0,
-      ));
-      expect(a.surfaceState, isNot(RoadSurfaceState.blackIce));
-    });
+          final a = assess(
+            const VehicleConditionSignals(
+              tcsEngaged: true,
+              wiperIntensity: 4, // moderate rain
+              airTempC: 12.0,
+            ),
+          );
+          expect(a.surfaceState, isNot(RoadSurfaceState.blackIce));
+        },
+      );
 
-    test('dry, warm, full grip, no precip → dry + normal advisory', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.95,
-        wiperIntensity: 0,
-        airTempC: 5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.dry);
-    });
+      test('dry, warm, full grip, no precip → dry + normal advisory', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.95,
+            wiperIntensity: 0,
+            airTempC: 5.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.dry);
+      });
 
-    test('missing temperature + low friction → still black ice '
-        '(friction is a direct measurement)', () {
-      final a = assess(const VehicleConditionSignals(roadFriction: 0.2));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-    });
-  });
+      test('missing temperature + low friction → still black ice '
+          '(friction is a direct measurement)', () {
+        final a = assess(const VehicleConditionSignals(roadFriction: 0.2));
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+      });
+    },
+  );
 
   group('KuksaConditionProvider (injected stream)', () {
     test('emits a fused live assessment from a snapshot', () async {
@@ -209,9 +229,15 @@ void main() {
     test('HysteresisFilter debounces a single-frame surface flip', () async {
       final source = StreamController<Map<String, Datapoint>>();
       final provider = KuksaConditionProvider(updates: source.stream);
-      final surfaces = <RoadSurfaceState>[];
+      // NULLABLE (snow_rendering 0.3.0). The baseline frames carry friction and
+      // air temperature but NO wiper signal — so the precipitation type was
+      // never measured, and the surface CANNOT be classified. Up to 0.2.7 those
+      // frames fell through to `RoadSurfaceState.dry` (gripFactor 1.0,
+      // "Conditions normal") — a confident claim about a road whose
+      // precipitation nobody had observed. The honest answer is `null`.
+      final surfaces = <RoadSurfaceState?>[];
       final sub = provider.conditions.listen((u) {
-        if (u.assessment != null) surfaces.add(u.assessment!.surfaceState);
+        surfaces.add(u.assessment?.surfaceState);
       });
 
       // dry baseline
@@ -221,16 +247,26 @@ void main() {
       });
       await pumpEventQueue();
       // one icy reading (should be HELD — below the hysteresis threshold)
-      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2)});
+      source.add({
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+      });
       await pumpEventQueue();
       // a second icy reading (now persists → flip allowed)
-      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2)});
+      source.add({
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+      });
       await pumpEventQueue();
 
-      // dry, then HELD dry (flicker suppressed), then black ice.
+      // unknown (precipitation never measured), then HELD unknown (the
+      // single-frame icy flip is debounced — the hysteresis still works), then
+      // black ice once the icy reading PERSISTS.
+      //
+      // The load-bearing change from 0.2.7: the first two are `null`, not
+      // `dry`. Absence is no longer maximum grip. The POSITIVE evidence (a
+      // persisted low-friction cold reading) still fires — the asymmetry holds.
       expect(surfaces, [
-        RoadSurfaceState.dry,
-        RoadSurfaceState.dry,
+        null,
+        null,
         RoadSurfaceState.blackIce,
       ]);
 
@@ -239,44 +275,53 @@ void main() {
       await source.close();
     });
 
-    test('does NOT emit when no signal is decodable (never fabricates)',
-        () async {
-      final source = StreamController<Map<String, Datapoint>>();
-      final provider = KuksaConditionProvider(updates: source.stream);
-      final results = <KuksaConditionUpdate>[];
-      final sub = provider.conditions.listen(results.add);
+    test(
+      'does NOT emit when no signal is decodable (never fabricates)',
+      () async {
+        final source = StreamController<Map<String, Datapoint>>();
+        final provider = KuksaConditionProvider(updates: source.stream);
+        final results = <KuksaConditionUpdate>[];
+        final sub = provider.conditions.listen(results.add);
 
-      source.add({}); // empty cycle
-      source.add({kAirTemperature: _valuelessDp(kAirTemperature)}); // value-less
-      await pumpEventQueue();
+        source.add({}); // empty cycle
+        source.add({
+          kAirTemperature: _valuelessDp(kAirTemperature),
+        }); // value-less
+        await pumpEventQueue();
 
-      expect(results, isEmpty);
+        expect(results, isEmpty);
 
-      await sub.cancel();
-      await provider.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await provider.dispose();
+        await source.close();
+      },
+    );
 
-    test('honest fallback: a stream ERROR surfaces unavailable, no throw',
-        () async {
-      final source = StreamController<Map<String, Datapoint>>();
-      final provider = KuksaConditionProvider(updates: source.stream);
-      final results = <KuksaConditionUpdate>[];
-      final sub = provider.conditions.listen(results.add);
+    test(
+      'honest fallback: a stream ERROR surfaces unavailable, no throw',
+      () async {
+        final source = StreamController<Map<String, Datapoint>>();
+        final provider = KuksaConditionProvider(updates: source.stream);
+        final results = <KuksaConditionUpdate>[];
+        final sub = provider.conditions.listen(results.add);
 
-      source.addError('connection refused');
-      await pumpEventQueue();
+        source.addError('connection refused');
+        await pumpEventQueue();
 
-      expect(results, hasLength(1));
-      expect(results.single.isAvailable, isFalse);
-      expect(results.single.assessment, isNull);
-      expect(provider.available, isFalse);
-      expect(results.single.unavailableReason, contains('connection refused'));
+        expect(results, hasLength(1));
+        expect(results.single.isAvailable, isFalse);
+        expect(results.single.assessment, isNull);
+        expect(provider.available, isFalse);
+        expect(
+          results.single.unavailableReason,
+          contains('connection refused'),
+        );
 
-      await sub.cancel();
-      await provider.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await provider.dispose();
+        await source.close();
+      },
+    );
 
     test('honest fallback: stream DONE surfaces unavailable', () async {
       final source = StreamController<Map<String, Datapoint>>();

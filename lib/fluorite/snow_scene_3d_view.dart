@@ -434,7 +434,12 @@ class _RoadAheadPainter extends CustomPainter {
     // --- Draw distance from visibility degradation ---------------------------
     // opacity 0.0 (clear, vis ≥ 1000m) → far draw distance; opacity 0.9
     // (whiteout) → road fades very close. Map opacity [0..0.9] → drawZ.
-    final visOpacity = assessment.visibility.opacity; // 0.0 .. 0.9
+    // `visibility` is nullable (snow_rendering 0.3.0): an unmeasured visibility
+    // has no degradation model. Treating it as 0.0 would paint a crystal-clear
+    // scene for air nobody measured — the fabrication, rendered. Fall back to a
+    // MILD haze so the scene never looks confidently clear about a road it
+    // could not assess; the advisory chip carries the honest words.
+    final visOpacity = assessment.visibility?.opacity ?? _unmeasuredHaze;
     final drawZ = _lerp(_maxZ, 18.0, (visOpacity / 0.9).clamp(0.0, 1.0));
 
     _paintSky(canvas, size, cam);
@@ -516,7 +521,7 @@ class _RoadAheadPainter extends CustomPainter {
   // the higher up the fog wall climbs from the road's vanishing point — the
   // road visibly fades where she can no longer see.
   void _paintFog(Canvas canvas, Size size, _PinholeCamera cam, double drawZ) {
-    final visOpacity = assessment.visibility.opacity; // 0..0.9
+    final visOpacity = assessment.visibility?.opacity ?? _unmeasuredHaze;
     if (visOpacity <= 0.001) return; // perfectly clear — no fog wall
 
     // Screen y where the far edge of the visible road sits.
@@ -544,11 +549,17 @@ class _RoadAheadPainter extends CustomPainter {
   // deterministic sample (not the full count — this is a glance cue, not a
   // physics sim), scaled so heavier precip = denser screen.
   void _paintPrecipitation(Canvas canvas, Size size) {
+    // `null` = precipitation was not measured. We draw NOTHING rather than
+    // inventing particles — and, critically, rather than drawing the clean
+    // no-snow scene as though we had checked. The unmeasured slate road + the
+    // haze + the advisory chip carry that fact instead.
     final config = assessment.precipitation;
+    if (config == null) return;
     if (config.particleCount <= 0) return;
 
     // Map real particleCount (0..500) to a drawable on-screen sample (0..160).
-    final sampleCount = (config.particleCount / 500.0 * 160).round().clamp(0, 160);
+    final sampleCount =
+        (config.particleCount / 500.0 * 160).round().clamp(0, 160);
     final rng = math.Random(config.particleCount); // deterministic per condition
     final paint = Paint()..color = Colors.white.withValues(alpha: 0.7);
 
@@ -601,7 +612,12 @@ class _RoadAheadPainter extends CustomPainter {
   }
 
   // Road surface state → a legible road tint.
-  Color _surfaceColor(RoadSurfaceState state) {
+  /// `null` = the surface could not be classified. It is NOT `dry`.
+  ///
+  /// A road nobody measured must not be painted as clean dark asphalt — that
+  /// picture IS the green light. It gets its own slate, so the scene looks
+  /// visibly un-assessed rather than visibly fine.
+  Color _surfaceColor(RoadSurfaceState? state) {
     return switch (state) {
       RoadSurfaceState.dry => const Color(0xFF3C4248), // dark asphalt
       RoadSurfaceState.wet => const Color(0xFF2E4250), // dark, sheen-blue
@@ -609,8 +625,17 @@ class _RoadAheadPainter extends CustomPainter {
       RoadSurfaceState.slush => const Color(0xFF6B7178), // grey-brown mush
       RoadSurfaceState.compactedSnow => const Color(0xFFD7DEE5), // white-grey
       RoadSurfaceState.blackIce => const Color(0xFF7FA6C9), // pale icy blue sheen
+      null => const Color(0xFF55606A), // unmeasured — flat, uncommitted slate
     };
   }
+
+  /// The haze drawn when visibility was NOT measured.
+  ///
+  /// Deliberately mild (well below the 0.9 whiteout end): it must not cry wolf
+  /// — an unmeasured sky is not a whiteout — but it must also not render as the
+  /// confident crystal clarity of a measured 10 km. It is the visual form of
+  /// "we do not know", which is what the advisory chip says in words.
+  static const double _unmeasuredHaze = 0.12;
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;
 

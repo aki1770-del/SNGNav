@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.6.0
+
+### Safety defect in 0.5.1 and earlier — please read
+
+**Up to and including 0.5.1, a trip with ZERO forecast data reported its peak
+hazard as `HourHazard.clear`.**
+
+```dart
+// snow_aware_pretrip_advisor.dart, 0.5.1
+if (window.isEmpty) {
+  return const PretripBriefing(
+    verdict: PretripVerdict.noData,
+    chips: [],
+    recommendation: null,
+    peakHazard: HourHazard.clear,   // <-- for a morning nobody forecast
+  );
+}
+```
+
+`HourHazard` had no `unknown` member and `peakHazard` is a non-nullable public
+field, so there was nowhere to put "we do not know". An integrator rendering
+`briefing.peakHazard` — which this catalog's own example does
+(`pretrip_source_met_norway/example/main.dart`: `print('Peak hazard:
+${briefing.peakHazard.name}')`, with no verdict check) — printed **"clear"** for
+a trip with no forecast at all.
+
+This is the same empty-feed → confident-positive defect as
+`WeatherCondition.clear()` in `driving_weather` ≤ 0.4.4, in the package that
+speaks to the driver **before she leaves**. `AreaConditionRead.areaHazard` had
+the same hole: an uncovered window was reported as `HourHazard.clear` "as a
+non-asserted placeholder".
+
+pub.dev versions are immutable: we cannot withdraw the affected releases. This
+note is the recall.
+
+### Breaking
+
+- **`HourHazard.unknown` added** (declared LAST, so the `clear < caution <
+  elevated < severe` ordering used by the peak reduce and the better-window
+  search is untouched). It is never produced by `hazardOf` — it is only ever the
+  answer when there was nothing to classify. Exhaustive switches over
+  `HourHazard` will fail to compile until you decide what to show. That compile
+  error is the fix.
+- `PretripBriefing.peakHazard` is `HourHazard.unknown` on a `noData` verdict.
+- `AreaConditionRead.areaHazard` is `HourHazard.unknown` when `forecastCovered`
+  is false.
+- **`PretripMessages.areaMeasuredVisibility(int meters, String? station, int? km)`**
+  — station and distance are now NULLABLE. Passing `?? 0` for an unknown station
+  distance told the driver the observation was taken **at her location**, which
+  made the least trustworthy reading look like the most trustworthy one. `null`
+  now renders "distance from you not known" (ja: 「現在地からの距離は不明」).
+
 ## 0.5.1
 
 - Internal: `radiativeFrostRisk` now delegates to

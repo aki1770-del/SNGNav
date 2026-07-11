@@ -7,7 +7,7 @@ packages:
       path: "../../adaptive_reroute"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.2.0"
   archive:
     dependency: transitive
     description:
@@ -93,21 +93,21 @@ packages:
       path: "../../condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.7"
   condition_aggregator_jma:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   condition_aggregator_met_norway:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_met_norway"
       relative: true
     source: path
-    version: "0.0.5"
+    version: "0.0.6"
   condition_aggregator_nws:
     dependency: "direct overridden"
     description:
@@ -121,7 +121,7 @@ packages:
       path: "../../condition_aggregator_owm_road_risk"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.5"
   crypto:
     dependency: transitive
     description:
@@ -152,7 +152,7 @@ packages:
       path: "../../driving_conditions"
       relative: true
     source: path
-    version: "0.5.4"
+    version: "0.6.0"
   driving_consent:
     dependency: "direct overridden"
     description:
@@ -166,7 +166,7 @@ packages:
       path: "../../driving_weather"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.5.0"
   equatable:
     dependency: transitive
     description:
@@ -424,7 +424,7 @@ packages:
       path: "../../nav2_safety_layer"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.3"
   navigation_lend_mode_experiment:
     dependency: "direct overridden"
     description:
@@ -445,7 +445,7 @@ packages:
       path: "../../navigation_safety_calibration"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.3"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
@@ -584,7 +584,7 @@ packages:
       path: "../../pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.6.0"
   proj4dart:
     dependency: transitive
     description:
@@ -630,21 +630,21 @@ packages:
       path: "../../route_condition_forecast"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.2.0"
   routing_bloc:
     dependency: "direct overridden"
     description:
       path: "../../routing_bloc"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.4.5"
   routing_engine:
     dependency: "direct main"
     description:
       path: "../../routing_engine"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   simple_sparse_list:
     dependency: transitive
     description:
@@ -664,7 +664,7 @@ packages:
       path: "../../snow_rendering"
       relative: true
     source: path
-    version: "0.2.5"
+    version: "0.3.0"
   source_span:
     dependency: transitive
     description:
@@ -767,7 +767,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.7.2"
+    version: "0.7.3"
   web:
     dependency: transitive
     description:

@@ -52,8 +52,7 @@ class FakeMetProvider extends MetNorwayHourlyForecastProvider {
   Future<WeatherForecast?> fetchForecast({
     required double latitude,
     required double longitude,
-  }) async =>
-      _forecast;
+  }) async => _forecast;
 }
 
 WeatherForecast _cannedTempOnly() {
@@ -80,17 +79,17 @@ WeatherForecast _cannedTempOnly() {
 }
 
 Advisory _adv(String eventClass) => Advisory(
-      source: AdvisorySource.jmaJapan,
-      eventClass: eventClass,
-      severity: AdvisorySeverity.moderate,
-      certainty: AdvisoryCertainty.observed,
-      urgency: AdvisoryUrgency.immediate,
-      areaDescription: '秋田県',
-      effective: null,
-      expires: null,
-      headline: eventClass,
-      description: eventClass,
-    );
+  source: AdvisorySource.jmaJapan,
+  eventClass: eventClass,
+  severity: AdvisorySeverity.moderate,
+  certainty: AdvisoryCertainty.observed,
+  urgency: AdvisoryUrgency.immediate,
+  areaDescription: '秋田県',
+  effective: null,
+  expires: null,
+  headline: eventClass,
+  description: eventClass,
+);
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -108,8 +107,9 @@ void main() {
     );
   });
 
-  testWidgets('CAPTURE: JMA partial-read caution reaches HER (ja)',
-      (tester) async {
+  testWidgets('CAPTURE: JMA partial-read caution reaches HER (ja)', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');
@@ -123,7 +123,9 @@ void main() {
     await tester.runAsync(() async {
       tmp = await Directory.systemTemp.createTemp('border_incomplete_capture');
       store = SavedPlaceStore(File('${tmp.path}/sngnav/saved_place.json'));
-      await store.save(const SavedPlace(lat: 39.72, lon: 140.10, label: '母の地域'));
+      await store.save(
+        const SavedPlace(lat: 39.72, lon: 140.10, label: '母の地域'),
+      );
     });
     addTearDown(() async {
       await tester.runAsync(() async {
@@ -162,11 +164,11 @@ void main() {
               destForecastProviderFactory: () =>
                   FakeMetProvider(_cannedTempOnly()),
               forecastSourceOverride: 'met_norway',
-              jmaAdvisoryFetchOverride: ({
-                required double latitude,
-                required double longitude,
-              }) async =>
-                  [
+              jmaAdvisoryFetchOverride:
+                  ({
+                    required double latitude,
+                    required double longitude,
+                  }) async => [
                     _adv('着雪注意報'),
                     buildIncompleteReadNotice(const ['050000']),
                   ],
@@ -179,29 +181,36 @@ void main() {
     await tester.pump();
     for (var i = 0; i < 12; i++) {
       await tester.runAsync(
-          () async => Future<void>.delayed(const Duration(milliseconds: 20)));
+        () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
     }
 
     // Guard: the caution actually reached the tree before we capture.
-    expect(find.byKey(const Key('pretrip-border-incomplete-caution')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pretrip-border-incomplete-caution')),
+      findsOneWidget,
+    );
     expect(find.textContaining('秋田県の警報を確認できませんでした'), findsOneWidget);
     expect(find.textContaining('着雪注意報'), findsWidgets);
 
     await tester.runAsync(() async {
       final boundary =
-          boundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
-      final dir = Directory('test/widgets/_capture')..createSync(recursive: true);
+      final dir = Directory('test/widgets/_capture')
+        ..createSync(recursive: true);
       final file = File('${dir.path}/pretrip_border_incomplete_ja.png');
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       // ignore: avoid_print
-      print('CAPTURE pretrip_border_incomplete_ja: ${file.absolute.path} '
-          '${file.lengthSync()} bytes ${image.width}x${image.height}');
+      print(
+        'CAPTURE pretrip_border_incomplete_ja: ${file.absolute.path} '
+        '${file.lengthSync()} bytes ${image.width}x${image.height}',
+      );
     });
 
     final ex = tester.takeException();

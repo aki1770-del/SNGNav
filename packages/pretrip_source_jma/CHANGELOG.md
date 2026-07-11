@@ -2,6 +2,13 @@
 
 ## 0.2.1
 
+- Widen the `pretrip_decision_advisor` constraint to `'>=0.5.0 <0.7.0'` so this
+  package resolves against `pretrip_decision_advisor` 0.6.0 (which adds
+  `HourHazard.unknown` — a trip with NO forecast no longer reports its peak
+  hazard as `clear`). This package's `lib/` reads neither changed symbol, so
+  0.6.0 is source-compatible; for a 0.x package a caret does not admit the next
+  minor, so without the widen `^0.5.0` and 0.6.0 have an EMPTY intersection.
+
 - **Take pretrip_decision_advisor ^0.5.0.** The previous `^0.4.0` pin silently
   excluded the 0.5.x line — hosted consumers of this adapter never received
   the black-ice window and route-corridor bridge-icing pre-trip warnings

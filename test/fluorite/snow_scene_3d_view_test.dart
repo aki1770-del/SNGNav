@@ -20,7 +20,7 @@ import 'package:sngnav_snow_scene/fluorite/snow_scene_3d_view.dart';
 void main() {
   // Clear: no precip, full visibility, +5°C → dry road, no fog, no particles.
   final clear = DrivingConditionAssessment.fromCondition(
-    WeatherCondition.clear(timestamp: DateTime(2026, 1, 1)),
+    WeatherCondition.simulatedClear(timestamp: DateTime(2026, 1, 1)),
   );
 
   // Severe: heavy snow, freezing, ice risk, near-zero visibility → black ice
@@ -34,21 +34,23 @@ void main() {
       windSpeedKmh: 45,
       iceRisk: true,
       timestamp: DateTime(2026, 1, 1),
+      source: ObservationSource.measured,
     ),
   );
 
   Widget host(DrivingConditionAssessment a) => MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 480,
-            child: SnowScene3DView(assessment: a),
-          ),
-        ),
-      );
+    home: Scaffold(
+      body: SizedBox(
+        width: 800,
+        height: 480,
+        child: SnowScene3DView(assessment: a),
+      ),
+    ),
+  );
 
-  testWidgets('builds and paints the CLEAR scene without throwing',
-      (tester) async {
+  testWidgets('builds and paints the CLEAR scene without throwing', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(clear));
     await tester.pump();
     expect(find.byType(SnowScene3DView), findsOneWidget);
@@ -56,8 +58,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('builds and paints the SEVERE scene without throwing',
-      (tester) async {
+  testWidgets('builds and paints the SEVERE scene without throwing', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(severe));
     await tester.pump();
     expect(find.byType(SnowScene3DView), findsOneWidget);
@@ -76,21 +79,26 @@ void main() {
     expect(find.textContaining('turning back'), findsNothing);
   });
 
-  testWidgets('the two conditions produce DIFFERENT driving data (scene must change)',
-      (tester) async {
-    // The painter repaints when the assessment differs; assert the inputs that
-    // drive the scene actually contrast.
-    expect(clear.surfaceState, RoadSurfaceState.dry);
-    expect(severe.surfaceState, RoadSurfaceState.blackIce);
-    expect(clear.visibility.opacity, 0.0); // no fog
-    expect(severe.visibility.opacity, greaterThan(0.5)); // heavy fog
-    expect(clear.precipitation.particleCount, 0); // no particles
-    expect(severe.precipitation.particleCount, greaterThan(0));
-    expect(clear, isNot(equals(severe)));
+  testWidgets(
+    'the two conditions produce DIFFERENT driving data (scene must change)',
+    (tester) async {
+      // The painter repaints when the assessment differs; assert the inputs that
+      // drive the scene actually contrast.
+      expect(clear.surfaceState, RoadSurfaceState.dry);
+      expect(severe.surfaceState, RoadSurfaceState.blackIce);
+      // Nullable in snow_rendering 0.3.0: a road that could not be classified
+      // has NO visibility model and NO precipitation model. These fixtures are
+      // fully measured, so both are present — the `!` asserts exactly that.
+      expect(clear.visibility!.opacity, 0.0); // no fog
+      expect(severe.visibility!.opacity, greaterThan(0.5)); // heavy fog
+      expect(clear.precipitation!.particleCount, 0); // no particles
+      expect(severe.precipitation!.particleCount, greaterThan(0));
+      expect(clear, isNot(equals(severe)));
 
-    // And both render without throwing when swapped in place.
-    await tester.pumpWidget(host(clear));
-    await tester.pumpWidget(host(severe));
-    expect(tester.takeException(), isNull);
-  });
+      // And both render without throwing when swapped in place.
+      await tester.pumpWidget(host(clear));
+      await tester.pumpWidget(host(severe));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

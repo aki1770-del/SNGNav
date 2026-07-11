@@ -18,7 +18,11 @@ import 'package:sngnav_snow_scene/navigation/route_follower.dart';
 double _degToRad(double d) => d * math.pi / 180.0;
 
 /// Offset a point by metres north / east (flat-earth approximation).
-LatLng _offset(LatLng origin, {double northMetres = 0.0, double eastMetres = 0.0}) {
+LatLng _offset(
+  LatLng origin, {
+  double northMetres = 0.0,
+  double eastMetres = 0.0,
+}) {
   const double latPerMetre = 1.0 / 111320.0;
   final double lonPerMetre =
       1.0 / (111320.0 * math.cos(_degToRad(origin.latitude)));
@@ -60,15 +64,14 @@ GeoPosition _pos(
   double accuracy = 5.0,
   double speedMs = double.nan,
   double heading = double.nan,
-}) =>
-    GeoPosition(
-      latitude: latLng.latitude,
-      longitude: latLng.longitude,
-      accuracy: accuracy,
-      speed: speedMs,
-      heading: heading,
-      timestamp: DateTime.utc(2026, 4, 7),
-    );
+}) => GeoPosition(
+  latitude: latLng.latitude,
+  longitude: latLng.longitude,
+  accuracy: accuracy,
+  speed: speedMs,
+  heading: heading,
+  timestamp: DateTime.utc(2026, 4, 7),
+);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -140,10 +143,14 @@ void main() {
       final p3 = rf.update(_pos(_offset(onRoute, northMetres: 3.0)));
 
       // All three snapped points should be within 1 m of each other longitudinally.
-      expect((p1.snappedLatLng.longitude - p2.snappedLatLng.longitude).abs(),
-          lessThan(0.0001));
-      expect((p1.snappedLatLng.longitude - p3.snappedLatLng.longitude).abs(),
-          lessThan(0.0001));
+      expect(
+        (p1.snappedLatLng.longitude - p2.snappedLatLng.longitude).abs(),
+        lessThan(0.0001),
+      );
+      expect(
+        (p1.snappedLatLng.longitude - p3.snappedLatLng.longitude).abs(),
+        lessThan(0.0001),
+      );
 
       // None should be off-route (5 m < 50 m threshold).
       expect(p1.isOffRoute, isFalse);
@@ -161,14 +168,19 @@ void main() {
       final LatLng forward = _offset(shape[5], eastMetres: 50.0);
       rf.update(_pos(forward));
 
-      final double progressAfterForward = rf.update(_pos(forward)).progressFraction;
+      final double progressAfterForward = rf
+          .update(_pos(forward))
+          .progressFraction;
 
       // Now GPS jumps backward 10 m (within allowance — 10 < 50 m).
       final LatLng backward = _offset(forward, eastMetres: -10.0);
       final snap = rf.update(_pos(backward));
 
       // Snapped position must not retreat more than the allowance.
-      expect(snap.progressFraction, greaterThanOrEqualTo(progressAfterForward - 0.05));
+      expect(
+        snap.progressFraction,
+        greaterThanOrEqualTo(progressAfterForward - 0.05),
+      );
     });
 
     test('GPS moves backward 80 m (> allowance) → segment index clamped', () {
@@ -193,20 +205,23 @@ void main() {
 
   // =========================================================================
   group('RouteFollower — off-route detection', () {
-    test('position 60 m from route → off-route flagged, raw position returned', () {
-      final shape = _straightEastRoad(segCount: 10, segLenMetres: 100.0);
-      final rf = RouteFollower(shape: shape, offRouteThresholdMetres: 50.0);
+    test(
+      'position 60 m from route → off-route flagged, raw position returned',
+      () {
+        final shape = _straightEastRoad(segCount: 10, segLenMetres: 100.0);
+        final rf = RouteFollower(shape: shape, offRouteThresholdMetres: 50.0);
 
-      // 60 m north of route midpoint.
-      final LatLng offRoute = _offset(shape[5], northMetres: 60.0);
-      final snap = rf.update(_pos(offRoute));
+        // 60 m north of route midpoint.
+        final LatLng offRoute = _offset(shape[5], northMetres: 60.0);
+        final snap = rf.update(_pos(offRoute));
 
-      expect(snap.isOffRoute, isTrue);
-      expect(snap.distanceFromRoute, greaterThan(50.0));
-      // rawLatLng must match the input exactly.
-      expect(snap.rawLatLng.latitude, closeTo(offRoute.latitude, 1e-9));
-      expect(snap.rawLatLng.longitude, closeTo(offRoute.longitude, 1e-9));
-    });
+        expect(snap.isOffRoute, isTrue);
+        expect(snap.distanceFromRoute, greaterThan(50.0));
+        // rawLatLng must match the input exactly.
+        expect(snap.rawLatLng.latitude, closeTo(offRoute.latitude, 1e-9));
+        expect(snap.rawLatLng.longitude, closeTo(offRoute.longitude, 1e-9));
+      },
+    );
 
     test('position 30 m from route → on-route', () {
       final shape = _straightEastRoad(segCount: 10, segLenMetres: 100.0);

@@ -1,5 +1,99 @@
 # Changelog
 
+## 0.2.0
+
+### Safety defect in 0.1.5 and earlier — please read
+
+**Up to and including 0.1.5, a route whose weather was never measured reported
+itself as CLEAR.**
+
+`RouteForecast.hasAnyHazard` and `SegmentConditionForecast.isHazardous` were
+`bool`. A `bool` cannot say "I do not know", so it resolved absence to `false` —
+and for a hazard question, `false` is the "clear road" branch. Concretely:
+
+- `driving_weather` up to 0.4.4 could hand us a `WeatherCondition` full of
+  fabricated values (`+5.0 °C`, visibility `10000 m`, `iceRisk: false`) whenever
+  a feed came back empty;
+- every segment carrying it answered `isHazardous == false`;
+- `hasAnyHazard` therefore answered `false` — **the route is clear**;
+- and `adaptive_reroute` turned that into `RerouteDecision.clear()` with
+  `confidence: 1.0`.
+
+A route nobody had looked at was presented to the driver as verified safe, with
+total certainty. An **empty** forecast (zero segments) also answered
+`hasAnyHazard == false`, and `minimumConfidence` returned **1.0** — perfect
+confidence, derived from nothing.
+
+pub.dev versions are immutable. This note is the recall.
+
+### Breaking: hazard verdicts are tri-state
+
+- `SegmentConditionForecast.isHazardous` (`bool`) → **`hazard`
+  (`SafetyVerdict`)**.
+- `SegmentConditionForecast.hasWeatherHazard` (`bool`) → **`weatherHazard`
+  (`SafetyVerdict`)**.
+- `RouteForecast.hasAnyHazard` (`bool`) → **`hazard` (`SafetyVerdict`)**.
+- `RouteForecast.hasWeatherHazard` (`bool`) → **`weatherHazard`
+  (`SafetyVerdict`)**.
+- `RouteForecast.minimumConfidence` (`double`) → **`double?`** (`null` for an
+  empty forecast; it used to return a fabricated `1.0`).
+
+`if (forecast.hasAnyHazard)` no longer compiles. You must now handle
+`SafetyVerdict.unknown` explicitly, and Dart's exhaustive `switch` will refuse
+code that does not. **Do not write `== SafetyVerdict.hazardous ? warn() :
+allClear()`** — that puts `unknown` back in the all-clear branch, which is the
+defect.
+
+Resolution order (the contract's asymmetry):
+
+- ANY hazardous segment ⇒ `hazardous` — positive evidence fires even when the
+  rest of the route is unknown;
+- else incomplete coverage or ANY unknown segment ⇒ `unknown` — a route is only
+  as assessed as its least-assessed segment;
+- else `notHazardous`.
+
+An **empty** forecast is `unknown`, not clear. Forecasting nothing is not the
+same as forecasting good news.
+
+### New: the forecast admits where it could not look
+
+- `SegmentConditionForecast.isUnassessed`
+- `RouteForecast.firstUnassessedSegment`, `unassessedSegmentCount`
+- `RouteForecast.unlocatableManeuverCount`, `coversWholeRoute`
+
+`routing_engine` 0.6.0 makes `RouteManeuver.position` nullable (`null` = the
+engine returned no usable coordinate; up to 0.5.0 it silently substituted
+`const LatLng(0, 0)` — Null Island, a real place in the Gulf of Guinea).
+`RouteSegmenter.byManeuver` now **skips** a maneuver with no position rather
+than anchoring a segment to a fabricated coordinate — which would have queried
+the weather in the Atlantic and attributed the answer to a road in Akita.
+
+Skipping is itself an absence, so it is reported, not hidden: a route with any
+unlocatable maneuver has `coversWholeRoute == false` and its `hazard` is
+`unknown` even if every segment we *could* forecast came back benign. A silently
+short forecast reads exactly like a clear one.
+
+### Migration
+
+| 0.1.5 | 0.2.0 | On `unknown` |
+| --- | --- | --- |
+| `forecast.hasAnyHazard` (`bool`) | `forecast.hazard` (`SafetyVerdict`) | Tell the driver the route could not be assessed. Do not proceed as if clear. |
+| `segment.isHazardous` (`bool`) | `segment.hazard` (`SafetyVerdict`) | — |
+| `segment.hasWeatherHazard` | `segment.weatherHazard` | — |
+| `forecast.minimumConfidence` (`double`) | `double?` | `null` = no segments; there is no confidence to report. |
+
+`firstHazardSegment == null` does **not** mean the route is clear — it means no
+segment carried positive evidence of a hazard. Check `hazard` and
+`firstUnassessedSegment` before saying anything reassuring.
+
+### Also
+
+- Requires `driving_weather: ^0.5.0` and `routing_engine: >=0.6.0 <0.7.0`.
+- One pre-existing test **certified the defect** and has been inverted: it
+  asserted that an empty forecast reports `hasAnyHazard == false`. It now asserts
+  `hazard == SafetyVerdict.unknown`.
+- Behaviour on fully measured, fully located routes is unchanged.
+
 ## 0.1.5
 
 - Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can

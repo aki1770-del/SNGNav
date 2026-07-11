@@ -216,8 +216,8 @@ String _describe(int step, VehicleConditionUpdate update) {
 
   final line1 = 'step ${step.toString().padLeft(2)}  '
       'fric=$fric temp=$temp tcs=$tcs wiper=$wiper'
-      '  →  ${a.surfaceState.name}$marker';
-  final line2 = '          grip=${a.gripFactor.toStringAsFixed(2)}  '
+      '  →  ${a.surfaceState?.name ?? 'unknown'}$marker';
+  final line2 = '          grip=${a.gripFactor?.toStringAsFixed(2) ?? '?'}  '
       '“${a.advisoryMessage}”';
   return '$line1\n$line2';
 }

@@ -33,30 +33,32 @@ void main() {
       windSpeedKmh: 45,
       iceRisk: true,
       timestamp: DateTime(2026, 1, 1),
+      source: ObservationSource.measured,
     ),
   );
 
   GeoPosition pos(double accuracy) => GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: accuracy,
-        speed: 14,
-        heading: 90,
-        timestamp: DateTime(2026, 1, 1, 7, 15),
-      );
+    latitude: 35.17,
+    longitude: 136.88,
+    accuracy: accuracy,
+    speed: 14,
+    heading: 90,
+    timestamp: DateTime(2026, 1, 1, 7, 15),
+  );
 
   Widget host(LocationState? location) => MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 480,
-            child: SnowScene3DView(assessment: severe, location: location),
-          ),
-        ),
-      );
+    home: Scaffold(
+      body: SizedBox(
+        width: 800,
+        height: 480,
+        child: SnowScene3DView(assessment: severe, location: location),
+      ),
+    ),
+  );
 
-  testWidgets('FIX: navigation-grade fix shows NO degradation overlay',
-      (tester) async {
+  testWidgets('FIX: navigation-grade fix shows NO degradation overlay', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(LocationState(quality: LocationQuality.fix, position: pos(8))),
     );
@@ -68,8 +70,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('FIX (null location) also shows NO degradation overlay',
-      (tester) async {
+  testWidgets('FIX (null location) also shows NO degradation overlay', (
+    tester,
+  ) async {
     await tester.pumpWidget(host(null));
     await tester.pump();
 
@@ -78,65 +81,84 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('DEAD RECKONING: shows "GPS lost — position estimated" + accuracy',
-      (tester) async {
+  testWidgets(
+    'DEAD RECKONING: shows "GPS lost — position estimated" + accuracy',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          LocationState(
+            quality: LocationQuality.degraded,
+            isDeadReckoning: true,
+            position: pos(220),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.textContaining('GPS lost — position estimated'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('±220 m'), findsOneWidget);
+      // Not the unavailable floor — a usable (if uncertain) position remains.
+      expect(find.text('POSITION UNAVAILABLE'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('DEGRADED (not DR): shows "position approximate" banner', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      host(LocationState(
-        quality: LocationQuality.degraded,
-        isDeadReckoning: true,
-        position: pos(220),
-      )),
+      host(
+        LocationState(quality: LocationQuality.degraded, position: pos(120)),
+      ),
     );
     await tester.pump();
 
-    expect(find.textContaining('GPS lost — position estimated'), findsOneWidget);
-    expect(find.textContaining('±220 m'), findsOneWidget);
-    // Not the unavailable floor — a usable (if uncertain) position remains.
-    expect(find.text('POSITION UNAVAILABLE'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('DEGRADED (not DR): shows "position approximate" banner',
-      (tester) async {
-    await tester.pumpWidget(
-      host(LocationState(quality: LocationQuality.degraded, position: pos(120))),
+    expect(
+      find.textContaining('GPS degraded — position approximate'),
+      findsOneWidget,
     );
-    await tester.pump();
-
-    expect(find.textContaining('GPS degraded — position approximate'),
-        findsOneWidget);
     expect(find.textContaining('±120 m'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('ERROR (DR 500m cap exceeded): shows POSITION UNAVAILABLE floor',
-      (tester) async {
-    await tester.pumpWidget(
-      host(const LocationState(
-        quality: LocationQuality.error,
-        errorMessage: 'Dead reckoning exceeded 500 m safety cap',
-      )),
-    );
-    await tester.pump();
+  testWidgets(
+    'ERROR (DR 500m cap exceeded): shows POSITION UNAVAILABLE floor',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          const LocationState(
+            quality: LocationQuality.error,
+            errorMessage: 'Dead reckoning exceeded 500 m safety cap',
+          ),
+        ),
+      );
+      await tester.pump();
 
-    expect(find.text('POSITION UNAVAILABLE'), findsOneWidget);
-    expect(find.textContaining('safety cap'), findsOneWidget);
-    // The confident-road banner must NOT be shown alongside the floor.
-    expect(find.textContaining('position estimated'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('POSITION UNAVAILABLE'), findsOneWidget);
+      expect(find.textContaining('safety cap'), findsOneWidget);
+      // The confident-road banner must NOT be shown alongside the floor.
+      expect(find.textContaining('position estimated'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('uncertainty scrim thickens with accuracy (220m > 80m)',
-      (tester) async {
+  testWidgets('uncertainty scrim thickens with accuracy (220m > 80m)', (
+    tester,
+  ) async {
     // Pull the scrim opacity out of the rendered DecoratedBox for each
     // accuracy; the worse fix must produce the heavier (more opaque) scrim.
     Future<double> scrimAlphaFor(double accuracy) async {
       await tester.pumpWidget(
-        host(LocationState(
-          quality: LocationQuality.degraded,
-          isDeadReckoning: true,
-          position: pos(accuracy),
-        )),
+        host(
+          LocationState(
+            quality: LocationQuality.degraded,
+            isDeadReckoning: true,
+            position: pos(accuracy),
+          ),
+        ),
       );
       await tester.pump();
       // The uncertainty fog is the white (RGB 0xE9EEF2) DecoratedBox scrim.
@@ -145,16 +167,24 @@ void main() {
           .map((b) => b.decoration)
           .whereType<BoxDecoration>()
           .where((d) {
-        final c = d.color;
-        return c != null && (c.toARGB32() & 0x00FFFFFF) == 0xE9EEF2;
-      }).toList();
-      expect(boxes, isNotEmpty, reason: 'uncertainty fog scrim must be present');
+            final c = d.color;
+            return c != null && (c.toARGB32() & 0x00FFFFFF) == 0xE9EEF2;
+          })
+          .toList();
+      expect(
+        boxes,
+        isNotEmpty,
+        reason: 'uncertainty fog scrim must be present',
+      );
       return boxes.first.color!.a;
     }
 
     final near = await scrimAlphaFor(80);
     final far = await scrimAlphaFor(220);
-    expect(far, greaterThan(near),
-        reason: 'larger confidence radius → thicker uncertainty fog');
+    expect(
+      far,
+      greaterThan(near),
+      reason: 'larger confidence radius → thicker uncertainty fog',
+    );
   });
 }

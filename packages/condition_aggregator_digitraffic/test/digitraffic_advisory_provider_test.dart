@@ -240,7 +240,13 @@ void main() {
       final advisory = mapTrafficAnnouncementFeatureToAdvisory(feature);
       expect(advisory, isNotNull);
       expect(advisory!.eventClass, 'hypothetical_future_class');
-      expect(advisory.severity, AdvisorySeverity.minor);
+      // An event class we cannot classify has an UNKNOWN severity, not a minor
+      // one. Asserting "minor" for an announcement type we have never seen is
+      // an asserted benign severity — if Fintraffic publishes a new
+      // severe-class type tomorrow, every driver on this adapter would be told
+      // "minor" until somebody noticed.
+      expect(advisory.severity, isNot(AdvisorySeverity.minor));
+      expect(advisory.severity, AdvisorySeverity.unknown);
       expect(advisory.certainty, AdvisoryCertainty.possible);
       expect(advisory.urgency, AdvisoryUrgency.unknown);
     });

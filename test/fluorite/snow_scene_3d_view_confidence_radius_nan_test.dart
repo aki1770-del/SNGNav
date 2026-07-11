@@ -39,7 +39,7 @@ void main() {
   // honest GPS-degradation overlay (fog scrim + degrade banner) renders on its
   // own and can be observed in isolation.
   final clear = DrivingConditionAssessment.fromCondition(
-    WeatherCondition.clear(timestamp: DateTime(2026, 1, 1)),
+    WeatherCondition.simulatedClear(timestamp: DateTime(2026, 1, 1)),
   );
 
   // A degraded location whose coordinate is VALID (finite, map-placeable) but
@@ -56,14 +56,14 @@ void main() {
   );
 
   Widget host(LocationState location) => MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 800,
-            height: 480,
-            child: SnowScene3DView(assessment: clear, location: location),
-          ),
-        ),
-      );
+    home: Scaffold(
+      body: SizedBox(
+        width: 800,
+        height: 480,
+        child: SnowScene3DView(assessment: clear, location: location),
+      ),
+    ),
+  );
 
   // The uncertainty-fog scrim base colour (snow_scene_3d_view.dart:202).
   const scrimBase = Color(0xFFE9EEF2);
@@ -73,63 +73,84 @@ void main() {
       (c.b - scrimBase.b).abs() < 0.01;
 
   testWidgets(
-      'a NaN confidenceRadius renders a FINITE scrim opacity (clamp -> max-fog)',
-      (tester) async {
-    await tester.pumpWidget(host(nanRadius));
-    await tester.pump();
+    'a NaN confidenceRadius renders a FINITE scrim opacity (clamp -> max-fog)',
+    (tester) async {
+      await tester.pumpWidget(host(nanRadius));
+      await tester.pump();
 
-    // The view built and painted — a non-finite opacity would have produced a
-    // broken/garbage scrim, not a clean render.
-    expect(tester.takeException(), isNull);
+      // The view built and painted — a non-finite opacity would have produced a
+      // broken/garbage scrim, not a clean render.
+      expect(tester.takeException(), isNull);
 
-    // Locate the fog scrim by its base colour and read the ACTUAL rendered
-    // alpha the driver sees.
-    final scrims = tester
-        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
-        .map((d) => d.decoration)
-        .whereType<BoxDecoration>()
-        .map((b) => b.color)
-        .whereType<Color>()
-        .where(rgbMatches)
-        .toList();
+      // Locate the fog scrim by its base colour and read the ACTUAL rendered
+      // alpha the driver sees.
+      final scrims = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .map((b) => b.color)
+          .whereType<Color>()
+          .where(rgbMatches)
+          .toList();
 
-    expect(scrims, isNotEmpty,
-        reason: 'the uncertainty-fog scrim must be rendered for a degraded fix');
-    for (final c in scrims) {
-      expect(c.a.isFinite, isTrue,
-          reason: 'a NaN confidenceRadius must NOT yield a non-finite scrim '
-              'opacity — the scene must degrade honestly, not break');
-      // NaN clamps the uncertainty to 1.0 → max fog (_lerp(0.14, 0.62, 1.0)).
-      expect(c.a, closeTo(0.62, 0.001),
-          reason: 'an unknown (NaN) confidence radius reads as MAX uncertainty '
-              '(thickest fog), never as a clear/confident scene');
-    }
-  });
-
-  testWidgets(
-      'a NaN confidenceRadius SUPPRESSES the ±N m label (never shows "±NaN m")',
-      (tester) async {
-    await tester.pumpWidget(host(nanRadius));
-    await tester.pump();
-    expect(tester.takeException(), isNull);
-
-    // The degrade banner is present (a degraded fix), but it carries NO numeric
-    // accuracy suffix — HER must never read a nonsensical "±NaN m".
-    expect(find.textContaining('NaN'), findsNothing,
-        reason: 'a NaN confidence radius must never be rendered as text');
-    expect(find.textContaining('±'), findsNothing,
-        reason: 'the ±N m suffix must be suppressed for an unknown radius');
-
-    // And the honest base banner IS shown (the overlay did render).
-    expect(find.textContaining('GPS degraded'), findsOneWidget,
-        reason: 'the degrade banner must still tell HER the position is '
-            'approximate, just without a bogus number');
-  });
+      expect(
+        scrims,
+        isNotEmpty,
+        reason: 'the uncertainty-fog scrim must be rendered for a degraded fix',
+      );
+      for (final c in scrims) {
+        expect(
+          c.a.isFinite,
+          isTrue,
+          reason:
+              'a NaN confidenceRadius must NOT yield a non-finite scrim '
+              'opacity — the scene must degrade honestly, not break',
+        );
+        // NaN clamps the uncertainty to 1.0 → max fog (_lerp(0.14, 0.62, 1.0)).
+        expect(
+          c.a,
+          closeTo(0.62, 0.001),
+          reason:
+              'an unknown (NaN) confidence radius reads as MAX uncertainty '
+              '(thickest fog), never as a clear/confident scene',
+        );
+      }
+    },
+  );
 
   testWidgets(
-      'a FINITE confidence radius STILL renders the ±N m label '
-      '(the suppression is NaN-specific, not a blanket drop)',
-      (tester) async {
+    'a NaN confidenceRadius SUPPRESSES the ±N m label (never shows "±NaN m")',
+    (tester) async {
+      await tester.pumpWidget(host(nanRadius));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // The degrade banner is present (a degraded fix), but it carries NO numeric
+      // accuracy suffix — HER must never read a nonsensical "±NaN m".
+      expect(
+        find.textContaining('NaN'),
+        findsNothing,
+        reason: 'a NaN confidence radius must never be rendered as text',
+      );
+      expect(
+        find.textContaining('±'),
+        findsNothing,
+        reason: 'the ±N m suffix must be suppressed for an unknown radius',
+      );
+
+      // And the honest base banner IS shown (the overlay did render).
+      expect(
+        find.textContaining('GPS degraded'),
+        findsOneWidget,
+        reason:
+            'the degrade banner must still tell HER the position is '
+            'approximate, just without a bogus number',
+      );
+    },
+  );
+
+  testWidgets('a FINITE confidence radius STILL renders the ±N m label '
+      '(the suppression is NaN-specific, not a blanket drop)', (tester) async {
     final finiteRadius = LocationState(
       quality: LocationQuality.degraded,
       position: GeoPosition(

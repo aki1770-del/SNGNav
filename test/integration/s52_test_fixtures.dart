@@ -80,7 +80,7 @@ class S52TestFixtures {
     engineInfo: EngineInfo(name: 'mock-s52'),
   );
 
-  static final WeatherCondition clearWeather = WeatherCondition.clear(
+  static final WeatherCondition clearWeather = WeatherCondition.simulatedClear(
     timestamp: timestamp,
   );
 
@@ -91,6 +91,8 @@ class S52TestFixtures {
     visibilityMeters: 2200,
     windSpeedKmh: 12,
     timestamp: timestamp,
+    source: ObservationSource.measured,
+    iceRisk: false,
   );
 
   static final WeatherCondition moderateSnowWeather = WeatherCondition(
@@ -100,6 +102,8 @@ class S52TestFixtures {
     visibilityMeters: 700,
     windSpeedKmh: 20,
     timestamp: timestamp,
+    source: ObservationSource.measured,
+    iceRisk: false,
   );
 
   static final WeatherCondition blackIceWeather = WeatherCondition(
@@ -110,6 +114,7 @@ class S52TestFixtures {
     windSpeedKmh: 8,
     iceRisk: true,
     timestamp: timestamp,
+    source: ObservationSource.measured,
   );
 
   static final List<WeatherCondition> clearToSnowTransition = [
@@ -121,6 +126,8 @@ class S52TestFixtures {
       visibilityMeters: 2500,
       windSpeedKmh: 10,
       timestamp: timestamp,
+      source: ObservationSource.measured,
+      iceRisk: false,
     ),
     WeatherCondition(
       precipType: PrecipitationType.snow,
@@ -129,6 +136,8 @@ class S52TestFixtures {
       visibilityMeters: 300,
       windSpeedKmh: 28,
       timestamp: timestamp,
+      source: ObservationSource.measured,
+      iceRisk: false,
     ),
     WeatherCondition(
       precipType: PrecipitationType.snow,
@@ -137,6 +146,8 @@ class S52TestFixtures {
       visibilityMeters: 250,
       windSpeedKmh: 30,
       timestamp: timestamp,
+      source: ObservationSource.measured,
+      iceRisk: false,
     ),
   ];
 

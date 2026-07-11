@@ -38,8 +38,9 @@ void main() {
     }
   });
 
-  testWidgets('the black-ice morning briefs caution with the 放射冷却 chip',
-      (tester) async {
+  testWidgets('the black-ice morning briefs caution with the 放射冷却 chip', (
+    tester,
+  ) async {
     if (!fontLoaded) {
       markTestSkipped('No Noto CJK font on this host — skipping JA render.');
       return;
@@ -54,20 +55,23 @@ void main() {
     final forecast = WeatherForecast(
       hourly: [
         HourlyForecast(
-            hour: DateTime(2026, 1, 15, 6),
-            tempCelsius: 0.5,
-            humidityRH: 95,
-            visibilityMeters: 9000),
+          hour: DateTime(2026, 1, 15, 6),
+          tempCelsius: 0.5,
+          humidityRH: 95,
+          visibilityMeters: 9000,
+        ),
         HourlyForecast(
-            hour: DateTime(2026, 1, 15, 7),
-            tempCelsius: 1.0,
-            humidityRH: 95,
-            visibilityMeters: 10000),
+          hour: DateTime(2026, 1, 15, 7),
+          tempCelsius: 1.0,
+          humidityRH: 95,
+          visibilityMeters: 10000,
+        ),
         HourlyForecast(
-            hour: DateTime(2026, 1, 15, 8),
-            tempCelsius: 2.0,
-            humidityRH: 95,
-            visibilityMeters: 10000),
+          hour: DateTime(2026, 1, 15, 8),
+          tempCelsius: 2.0,
+          humidityRH: 95,
+          visibilityMeters: 10000,
+        ),
       ],
       issuedAt: issued,
     );
@@ -81,7 +85,9 @@ void main() {
       forecast: forecast,
       commute: commute,
       profile: const DriverProfileSpec(
-          profileTag: 'akita', reactionTimeSeconds: 1.5),
+        profileTag: 'akita',
+        reactionTimeSeconds: 1.5,
+      ),
     );
 
     final boundaryKey = GlobalKey();
@@ -119,8 +125,9 @@ void main() {
     // Capture for the go-and-LOOK step (repo pattern: runAsync for the
     // real-async image work).
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()!
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 2.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       final out = File('test/widgets/_capture/pretrip_blackice_morning_ja.png')

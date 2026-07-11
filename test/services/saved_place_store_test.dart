@@ -34,20 +34,22 @@ void main() {
       expect(loaded.label, 'Akita');
     });
 
-    test('overwrite-in-place: save A then B => load==B AND a single Map',
-        () async {
-      await store.save(const SavedPlace(lat: 1, lon: 2, label: 'A'));
-      await store.save(const SavedPlace(lat: 3, lon: 4, label: 'B'));
-      final loaded = (await store.load()).place;
-      expect(loaded!.label, 'B');
-      expect(loaded.lat, 3);
-      expect(loaded.lon, 4);
+    test(
+      'overwrite-in-place: save A then B => load==B AND a single Map',
+      () async {
+        await store.save(const SavedPlace(lat: 1, lon: 2, label: 'A'));
+        await store.save(const SavedPlace(lat: 3, lon: 4, label: 'B'));
+        final loaded = (await store.load()).place;
+        expect(loaded!.label, 'B');
+        expect(loaded.lat, 3);
+        expect(loaded.lon, 4);
 
-      // The file decodes to a SINGLE Map, never a List (no append/accumulation).
-      final decoded = jsonDecode(await file.readAsString());
-      expect(decoded, isA<Map<String, Object?>>());
-      expect(decoded, isNot(isA<List<Object?>>()));
-    });
+        // The file decodes to a SINGLE Map, never a List (no append/accumulation).
+        final decoded = jsonDecode(await file.readAsString());
+        expect(decoded, isA<Map<String, Object?>>());
+        expect(decoded, isNot(isA<List<Object?>>()));
+      },
+    );
 
     test('save never appends: file length not monotonically growing across '
         'repeated identical saves', () async {
@@ -91,40 +93,44 @@ void main() {
     // Finding 11 (durable clear): a deliberate removal must survive a restart as
     // a TOMBSTONE — distinct from a never-written store — so the build-time
     // PRETRIP_DEST_* seed can NOT resurrect a place the driver removed.
-    test('clear writes a durable tombstone: load reports cleared, not absent',
-        () async {
-      await store.save(const SavedPlace(lat: 1, lon: 2, label: 'x'));
-      expect((await store.load()).place, isNotNull);
-      await store.clear();
-      // The record persists (so the removal is durable across a restart) and is
-      // a tombstone: NO place, AND `cleared` is true (distinguishable from a
-      // fresh, never-written store which is absent + not cleared).
-      expect(await file.exists(), isTrue);
-      final afterClear = await store.load();
-      expect(afterClear.place, isNull);
-      expect(afterClear.cleared, isTrue);
-      // The tombstone carries no place fields, no behavioral log.
-      final decoded = jsonDecode(await file.readAsString()) as Map;
-      expect(decoded['cleared'], isTrue);
-      expect(decoded.containsKey('lat'), isFalse);
-      expect(decoded.containsKey('lon'), isFalse);
-      // Idempotent: clear again does not throw and stays a tombstone.
-      await store.clear();
-      final afterSecond = await store.load();
-      expect(afterSecond.place, isNull);
-      expect(afterSecond.cleared, isTrue);
-    });
+    test(
+      'clear writes a durable tombstone: load reports cleared, not absent',
+      () async {
+        await store.save(const SavedPlace(lat: 1, lon: 2, label: 'x'));
+        expect((await store.load()).place, isNotNull);
+        await store.clear();
+        // The record persists (so the removal is durable across a restart) and is
+        // a tombstone: NO place, AND `cleared` is true (distinguishable from a
+        // fresh, never-written store which is absent + not cleared).
+        expect(await file.exists(), isTrue);
+        final afterClear = await store.load();
+        expect(afterClear.place, isNull);
+        expect(afterClear.cleared, isTrue);
+        // The tombstone carries no place fields, no behavioral log.
+        final decoded = jsonDecode(await file.readAsString()) as Map;
+        expect(decoded['cleared'], isTrue);
+        expect(decoded.containsKey('lat'), isFalse);
+        expect(decoded.containsKey('lon'), isFalse);
+        // Idempotent: clear again does not throw and stays a tombstone.
+        await store.clear();
+        final afterSecond = await store.load();
+        expect(afterSecond.place, isNull);
+        expect(afterSecond.cleared, isTrue);
+      },
+    );
 
     // The tombstone is reversible: saving a real place again overwrites it.
-    test('save after clear overwrites the tombstone with a real place',
-        () async {
-      await store.clear();
-      expect((await store.load()).cleared, isTrue);
-      await store.save(const SavedPlace(lat: 5, lon: 6, label: 'y'));
-      final r = await store.load();
-      expect(r.cleared, isFalse);
-      expect(r.place!.label, 'y');
-    });
+    test(
+      'save after clear overwrites the tombstone with a real place',
+      () async {
+        await store.clear();
+        expect((await store.load()).cleared, isTrue);
+        await store.save(const SavedPlace(lat: 5, lon: 6, label: 'y'));
+        final r = await store.load();
+        expect(r.cleared, isFalse);
+        expect(r.place!.label, 'y');
+      },
+    );
   });
 
   group('SavedPlace.fromJson rejects bad input', () {
@@ -135,19 +141,24 @@ void main() {
     });
 
     test('NaN / inf => null', () {
-      expect(SavedPlace.fromJson({'lat': double.nan, 'lon': 2, 'label': 'a'}),
-          isNull);
       expect(
-          SavedPlace.fromJson(
-              {'lat': 1, 'lon': double.infinity, 'label': 'a'}),
-          isNull);
+        SavedPlace.fromJson({'lat': double.nan, 'lon': 2, 'label': 'a'}),
+        isNull,
+      );
+      expect(
+        SavedPlace.fromJson({'lat': 1, 'lon': double.infinity, 'label': 'a'}),
+        isNull,
+      );
     });
 
     test('out-of-range lat/lon => null', () {
       expect(SavedPlace.fromJson({'lat': 91, 'lon': 0, 'label': 'a'}), isNull);
       expect(SavedPlace.fromJson({'lat': -91, 'lon': 0, 'label': 'a'}), isNull);
       expect(SavedPlace.fromJson({'lat': 0, 'lon': 181, 'label': 'a'}), isNull);
-      expect(SavedPlace.fromJson({'lat': 0, 'lon': -181, 'label': 'a'}), isNull);
+      expect(
+        SavedPlace.fromJson({'lat': 0, 'lon': -181, 'label': 'a'}),
+        isNull,
+      );
     });
 
     test('valid (incl. empty label) => SavedPlace', () {
@@ -157,8 +168,11 @@ void main() {
     });
 
     test('toJson keys are EXACTLY {v,lat,lon,label}', () {
-      final keys =
-          const SavedPlace(lat: 1, lon: 2, label: 'a').toJson().keys.toSet();
+      final keys = const SavedPlace(
+        lat: 1,
+        lon: 2,
+        label: 'a',
+      ).toJson().keys.toSet();
       expect(keys, {'v', 'lat', 'lon', 'label'});
     });
   });

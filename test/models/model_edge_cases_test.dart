@@ -228,9 +228,15 @@ void main() {
 
     test('different costing → not equal', () {
       const r1 = RouteRequest(
-          origin: _nagoya, destination: _toyota, costing: 'auto');
+        origin: _nagoya,
+        destination: _toyota,
+        costing: 'auto',
+      );
       const r2 = RouteRequest(
-          origin: _nagoya, destination: _toyota, costing: 'bicycle');
+        origin: _nagoya,
+        destination: _toyota,
+        costing: 'bicycle',
+      );
       expect(r1, isNot(equals(r2)));
     });
   });
@@ -258,7 +264,9 @@ void main() {
 
       test('unknown → false', () {
         expect(
-            _fleetReport(condition: RoadCondition.unknown).isHazard, isFalse);
+          _fleetReport(condition: RoadCondition.unknown).isHazard,
+          isFalse,
+        );
       });
     });
 
@@ -281,14 +289,8 @@ void main() {
         final report = _fleetReport(
           timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
         );
-        expect(
-          report.isRecent(maxAge: const Duration(minutes: 2)),
-          isFalse,
-        );
-        expect(
-          report.isRecent(maxAge: const Duration(minutes: 5)),
-          isTrue,
-        );
+        expect(report.isRecent(maxAge: const Duration(minutes: 2)), isFalse);
+        expect(report.isRecent(maxAge: const Duration(minutes: 5)), isTrue);
       });
 
       test('report from the future is recent', () {
@@ -311,8 +313,10 @@ void main() {
 
     group('toString', () {
       test('includes vehicleId and condition', () {
-        final s = _fleetReport(vehicleId: 'abc', condition: RoadCondition.icy)
-            .toString();
+        final s = _fleetReport(
+          vehicleId: 'abc',
+          condition: RoadCondition.icy,
+        ).toString();
         expect(s, contains('abc'));
         expect(s, contains('icy'));
       });
@@ -656,20 +660,19 @@ void main() {
 
     group('all three purposes', () {
       test('fleetLocation purpose', () {
-        final r = ConsentRecord.unknown(
-            purpose: ConsentPurpose.fleetLocation);
+        final r = ConsentRecord.unknown(purpose: ConsentPurpose.fleetLocation);
         expect(r.purpose, ConsentPurpose.fleetLocation);
       });
 
       test('weatherTelemetry purpose', () {
         final r = ConsentRecord.unknown(
-            purpose: ConsentPurpose.weatherTelemetry);
+          purpose: ConsentPurpose.weatherTelemetry,
+        );
         expect(r.purpose, ConsentPurpose.weatherTelemetry);
       });
 
       test('diagnostics purpose', () {
-        final r = ConsentRecord.unknown(
-            purpose: ConsentPurpose.diagnostics);
+        final r = ConsentRecord.unknown(purpose: ConsentPurpose.diagnostics);
         expect(r.purpose, ConsentPurpose.diagnostics);
       });
     });

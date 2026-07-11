@@ -33,14 +33,42 @@ class SegmentConditionForecast extends Equatable {
     required this.confidence,
   });
 
-  /// True if weather is hazardous OR a fleet hazard zone intersects this segment.
-  bool get isHazardous => condition.isHazardous || hazardZones.isNotEmpty;
+  /// Is this segment hazardous? **Tri-state — see [SafetyVerdict].**
+  ///
+  /// Up to 0.1.5 this was `bool get isHazardous => condition.isHazardous || ...`.
+  /// A `bool` cannot say "I do not know", so a segment whose weather was never
+  /// measured silently reported `false` — **not hazardous** — and a route made
+  /// entirely of unmeasured segments reported itself CLEAR. That is the
+  /// fabrication defect arriving one layer downstream of where it was fixed.
+  ///
+  /// The asymmetry (contract O2) holds here too:
+  /// * a fleet hazard zone, or hazardous weather, is POSITIVE evidence and
+  ///   fires even if everything else about the segment is unknown;
+  /// * [SafetyVerdict.notHazardous] requires actually KNOWING the weather;
+  /// * otherwise [SafetyVerdict.unknown] — which propagates upward and, in
+  ///   `adaptive_reroute`, becomes "could not assess" rather than "route clear".
+  SafetyVerdict get hazard {
+    // A reported fleet hazard zone is a real observation. It fires regardless
+    // of what the weather feed did or did not say.
+    if (hazardZones.isNotEmpty) return SafetyVerdict.hazardous;
+    return condition.hazard;
+  }
 
   /// True if at least one fleet hazard zone overlaps this segment.
+  ///
+  /// This stays a `bool` honestly: we always know whether we hold zones. An
+  /// empty list means no zone was REPORTED here, which is a fact about our
+  /// fleet data, not a claim that the road is safe.
   bool get hasFleetHazard => hazardZones.isNotEmpty;
 
-  /// True if weather alone (ignoring fleet data) classifies this segment as risky.
-  bool get hasWeatherHazard => condition.isHazardous;
+  /// The weather-only verdict for this segment (ignoring fleet data).
+  ///
+  /// [SafetyVerdict.unknown] when the forecast for this segment carried no
+  /// measurements — never `false`/"clear".
+  SafetyVerdict get weatherHazard => condition.hazard;
+
+  /// True when this segment's conditions could not be assessed at all.
+  bool get isUnassessed => hazard == SafetyVerdict.unknown;
 
   /// Highest fleet hazard severity present, or null if no fleet hazards.
   HazardSeverity? get worstFleetSeverity {
@@ -62,6 +90,6 @@ class SegmentConditionForecast extends Equatable {
   @override
   String toString() =>
       'SegmentConditionForecast(seg=${segment.index}, '
-      'hazardous=$isHazardous, eta=${etaSeconds.toStringAsFixed(0)}s, '
+      'hazard=${hazard.name}, eta=${etaSeconds.toStringAsFixed(0)}s, '
       'conf=${confidence.toStringAsFixed(2)})';
 }

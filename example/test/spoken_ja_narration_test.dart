@@ -99,7 +99,10 @@ void main() {
       type: m.type,
       lengthKm: m.lengthKm,
       timeSeconds: m.timeSeconds,
-      position: m.position,
+      // routing_engine 0.6.0: nullable. This fixture's maneuver carries a real
+      // position; a positionless one could not enter NavigationManeuver at all
+      // (and must never be given a substitute coordinate).
+      position: m.position!,
     );
 
     // 3. The formatter passes a non-empty instruction VERBATIM.

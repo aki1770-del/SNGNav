@@ -129,14 +129,10 @@ Widget _buildScaffold({
 
 void main() {
   setUpAll(() {
-    registerFallbackValue(const MapInitialized(
-      center: LatLng(0, 0),
-      zoom: 1,
-    ));
-    registerFallbackValue(const SafetyAlertReceived(
-      message: '',
-      severity: AlertSeverity.info,
-    ));
+    registerFallbackValue(const MapInitialized(center: LatLng(0, 0), zoom: 1));
+    registerFallbackValue(
+      const SafetyAlertReceived(message: '', severity: AlertSeverity.info),
+    );
     registerFallbackValue(const ManeuverAdvanced());
   });
 
@@ -158,115 +154,118 @@ void main() {
       consentBloc = MockConsentBloc();
       fleetBloc = MockFleetBloc();
 
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-      when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
-      when(() => mapBloc.state)
-          .thenReturn(MapState.loading());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
-      when(() => consentBloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
-      when(() => fleetBloc.state)
-          .thenReturn(const FleetState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(() => mapBloc.state).thenReturn(MapState.loading());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
+      when(
+        () => consentBloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
     });
 
     testWidgets(
-        'dispatches SafetyAlertReceived(critical) when fleet reports icy conditions',
-        (tester) async {
-      final fleetController = StreamController<FleetState>.broadcast();
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
+      'dispatches SafetyAlertReceived(critical) when fleet reports icy conditions',
+      (tester) async {
+        final fleetController = StreamController<FleetState>.broadcast();
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
 
-      // Fleet transitions from no hazards to icy hazard
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-003': _dryReport,
-        },
-      ));
-      await tester.pumpAndSettle();
+        // Fleet transitions from no hazards to icy hazard
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-001': _icyReport, 'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify SafetyAlertReceived with critical severity
-      verify(() => navigationBloc.add(any(
-        that: isA<SafetyAlertReceived>()
-            .having((e) => e.severity, 'severity', AlertSeverity.critical)
-            .having(
-              (e) => e.message,
-              'message',
-              contains('icy'),
+        // Verify SafetyAlertReceived with critical severity
+        verify(
+          () => navigationBloc.add(
+            any(
+              that: isA<SafetyAlertReceived>()
+                  .having((e) => e.severity, 'severity', AlertSeverity.critical)
+                  .having((e) => e.message, 'message', contains('icy')),
             ),
-      ))).called(1);
+          ),
+        ).called(1);
 
-      await fleetController.close();
-    });
+        await fleetController.close();
+      },
+    );
 
     testWidgets(
-        'dispatches SafetyAlertReceived(warning) when fleet reports snowy (no icy)',
-        (tester) async {
-      final fleetController = StreamController<FleetState>.broadcast();
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
+      'dispatches SafetyAlertReceived(warning) when fleet reports snowy (no icy)',
+      (tester) async {
+        final fleetController = StreamController<FleetState>.broadcast();
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
 
-      // Fleet transitions to snowy hazard (no icy)
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-002': _snowyReport,
-          'V-003': _dryReport,
-        },
-      ));
-      await tester.pumpAndSettle();
+        // Fleet transitions to snowy hazard (no icy)
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-002': _snowyReport, 'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify SafetyAlertReceived with warning severity
-      verify(() => navigationBloc.add(any(
-        that: isA<SafetyAlertReceived>()
-            .having((e) => e.severity, 'severity', AlertSeverity.warning)
-            .having(
-              (e) => e.message,
-              'message',
-              contains('snowy'),
+        // Verify SafetyAlertReceived with warning severity
+        verify(
+          () => navigationBloc.add(
+            any(
+              that: isA<SafetyAlertReceived>()
+                  .having((e) => e.severity, 'severity', AlertSeverity.warning)
+                  .having((e) => e.message, 'message', contains('snowy')),
             ),
-      ))).called(1);
+          ),
+        ).called(1);
 
-      await fleetController.close();
-    });
+        await fleetController.close();
+      },
+    );
 
-    testWidgets(
-        'does NOT dispatch safety alert when fleet has no hazards',
-        (tester) async {
+    testWidgets('does NOT dispatch safety alert when fleet has no hazards', (
+      tester,
+    ) async {
       final fleetController = StreamController<FleetState>.broadcast();
       whenListen(
         fleetBloc,
@@ -274,41 +273,43 @@ void main() {
         initialState: const FleetState.idle(),
       );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
+      await tester.pumpWidget(
+        _buildScaffold(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
       await tester.pump();
 
       // Fleet starts listening with only dry reports — no hazards
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-003': _dryReport},
-      ));
+      fleetController.add(
+        FleetState(
+          status: FleetStatus.listening,
+          activeReports: {'V-003': _dryReport},
+        ),
+      );
       await tester.pumpAndSettle();
 
       // No safety alert dispatched
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await fleetController.close();
     });
 
-    testWidgets(
-        'does NOT re-dispatch when fleet stays in hazardous state',
-        (tester) async {
+    testWidgets('does NOT re-dispatch when fleet stays in hazardous state', (
+      tester,
+    ) async {
       // Start already with hazards
       final initialHazardState = FleetState(
         status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-003': _dryReport,
-        },
+        activeReports: {'V-001': _icyReport, 'V-003': _dryReport},
       );
 
       final fleetController = StreamController<FleetState>.broadcast();
@@ -318,32 +319,37 @@ void main() {
         initialState: initialHazardState,
       );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
+      await tester.pumpWidget(
+        _buildScaffold(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
       await tester.pump();
 
       // Another hazard report arrives — still hazardous
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-002': _snowyReport,
-          'V-003': _dryReport,
-        },
-      ));
+      fleetController.add(
+        FleetState(
+          status: FleetStatus.listening,
+          activeReports: {
+            'V-001': _icyReport,
+            'V-002': _snowyReport,
+            'V-003': _dryReport,
+          },
+        ),
+      );
       await tester.pumpAndSettle();
 
       // listenWhen: !prev.hasHazards && curr.hasHazards
       // Since prev already had hazards, NO new alert should be dispatched
       verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+      );
 
       await fleetController.close();
     });
@@ -356,35 +362,39 @@ void main() {
         initialState: const FleetState.idle(),
       );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
+      await tester.pumpWidget(
+        _buildScaffold(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
       await tester.pump();
 
       // Two hazard reports
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-002': _snowyReport,
-        },
-      ));
+      fleetController.add(
+        FleetState(
+          status: FleetStatus.listening,
+          activeReports: {'V-001': _icyReport, 'V-002': _snowyReport},
+        ),
+      );
       await tester.pumpAndSettle();
 
-      verify(() => navigationBloc.add(any(
-        that: isA<SafetyAlertReceived>()
-            .having(
+      verify(
+        () => navigationBloc.add(
+          any(
+            that: isA<SafetyAlertReceived>().having(
               (e) => e.message,
               'message',
               contains('2 vehicles reporting'),
             ),
-      ))).called(1);
+          ),
+        ),
+      ).called(1);
 
       await fleetController.close();
     });
@@ -408,71 +418,82 @@ void main() {
       consentBloc = MockConsentBloc();
       fleetBloc = MockFleetBloc();
 
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-      when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
-      when(() => mapBloc.state)
-          .thenReturn(MapState.loading());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
-      when(() => consentBloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
-      when(() => fleetBloc.state)
-          .thenReturn(const FleetState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(() => mapBloc.state).thenReturn(MapState.loading());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
+      when(
+        () => consentBloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
     });
 
     testWidgets(
-        'fleet idle → listening (dry only) → hazard arrives → safety alert',
-        (tester) async {
-      final fleetController = StreamController<FleetState>.broadcast();
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
+      'fleet idle → listening (dry only) → hazard arrives → safety alert',
+      (tester) async {
+        final fleetController = StreamController<FleetState>.broadcast();
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
 
-      // Step 1: Fleet starts listening with dry reports only
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-003': _dryReport},
-      ));
-      await tester.pumpAndSettle();
+        // Step 1: Fleet starts listening with dry reports only
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // No alert yet — no hazards
-      verifyNever(
-          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())));
+        // No alert yet — no hazards
+        verifyNever(
+          () => navigationBloc.add(any(that: isA<SafetyAlertReceived>())),
+        );
 
-      // Step 2: Icy report arrives → hasHazards transitions false→true
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-003': _dryReport,
-        },
-      ));
-      await tester.pumpAndSettle();
+        // Step 2: Icy report arrives → hasHazards transitions false→true
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-001': _icyReport, 'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Now the safety alert should fire
-      verify(() => navigationBloc.add(any(
-        that: isA<SafetyAlertReceived>()
-            .having((e) => e.severity, 'severity', AlertSeverity.critical),
-      ))).called(1);
+        // Now the safety alert should fire
+        verify(
+          () => navigationBloc.add(
+            any(
+              that: isA<SafetyAlertReceived>().having(
+                (e) => e.severity,
+                'severity',
+                AlertSeverity.critical,
+              ),
+            ),
+          ),
+        ).called(1);
 
-      await fleetController.close();
-    });
+        await fleetController.close();
+      },
+    );
   });
 }

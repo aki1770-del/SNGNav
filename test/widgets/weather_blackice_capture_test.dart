@@ -64,6 +64,7 @@ final _radiativeFrost = WeatherCondition(
   windSpeedKmh: 5,
   humidityRH: 70,
   timestamp: DateTime.now(),
+  source: ObservationSource.measured,
 );
 
 Future<void> _capture(
@@ -86,8 +87,9 @@ Future<void> _capture(
 }
 
 void main() {
-  testWidgets('WeatherStatusBar + SafetyOverlay black-ice JA capture',
-      (tester) async {
+  testWidgets('WeatherStatusBar + SafetyOverlay black-ice JA capture', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');
@@ -131,17 +133,12 @@ void main() {
             ],
             child: Column(
               children: [
-                RepaintBoundary(
-                  key: barKey,
-                  child: const WeatherStatusBar(),
-                ),
+                RepaintBoundary(key: barKey, child: const WeatherStatusBar()),
                 const SizedBox(height: 24),
                 Expanded(
                   child: RepaintBoundary(
                     key: overlayKey,
-                    child: const Stack(
-                      children: [SafetyOverlay()],
-                    ),
+                    child: const Stack(children: [SafetyOverlay()]),
                   ),
                 ),
               ],
@@ -172,8 +169,9 @@ void main() {
     );
   });
 
-  testWidgets('ScenarioPhaseIndicator ice-first ordering JA capture',
-      (tester) async {
+  testWidgets('ScenarioPhaseIndicator ice-first ordering JA capture', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     if (!hasCjk) {
       markTestSkipped('No Noto CJK font on this host — skipping JA capture.');
@@ -195,6 +193,7 @@ void main() {
       windSpeedKmh: 10,
       iceRisk: true,
       timestamp: DateTime.now(),
+      source: ObservationSource.measured,
     );
 
     final weatherBloc = _MockWeatherBloc();

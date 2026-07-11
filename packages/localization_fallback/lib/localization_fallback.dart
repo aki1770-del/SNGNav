@@ -10,6 +10,7 @@ export 'src/estimate_basis.dart';
 export 'src/localization_config.dart';
 export 'src/localization_controller.dart';
 export 'src/localization_estimate.dart';
+export 'src/localization_messages.dart';
 export 'src/localization_mode.dart';
 export 'src/raw_fix.dart';
 export 'src/trust_signal.dart';

@@ -101,7 +101,15 @@ void _printBriefing(WeatherForecast forecast) {
   );
 
   print('Verdict: ${briefing.verdict.name}');
-  print('Peak hazard: ${briefing.peakHazard.name}');
+  // Guard the verdict FIRST. Up to pretrip_decision_advisor 0.5.1 this line
+  // printed "clear" for a trip with ZERO forecast data — `peakHazard` was
+  // hardcoded to HourHazard.clear on the noData branch, and this example had no
+  // verdict check. An unforecast morning is not a clear morning.
+  if (briefing.verdict == PretripVerdict.noData) {
+    print('Peak hazard: not assessed — no forecast covers this trip window');
+  } else {
+    print('Peak hazard: ${briefing.peakHazard.name}');
+  }
   // Attribution is REQUIRED wherever the data is shown:
   //   Data from MET Norway (https://api.met.no/) —
   //   data dual-licensed under NLOD 2.0 AND CC BY 4.0.

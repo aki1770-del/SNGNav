@@ -23,27 +23,30 @@ SimulationResult _scoreFor(
   return simulator.simulate(
     runs: runs,
     speed: speed,
-    gripFactor: assessment.gripFactor,
-    surface: assessment.surfaceState,
-    visibilityMeters: condition.visibilityMeters,
+    gripFactor: assessment.gripFactor!,
+    surface: assessment.surfaceState!,
+    visibilityMeters: condition.visibilityMeters!,
     seed: seed,
   );
 }
 
 void main() {
   group('S52 Flow 1: weather -> conditions -> safety', () {
-    test('shared fixtures cover clear, rain, snow, and black ice scenarios', () {
-      expect(S52TestFixtures.clearWeather.precipType, PrecipitationType.none);
-      expect(
-        S52TestFixtures.lightRainWeather.precipType,
-        PrecipitationType.rain,
-      );
-      expect(
-        S52TestFixtures.moderateSnowWeather.precipType,
-        PrecipitationType.snow,
-      );
-      expect(S52TestFixtures.blackIceWeather.iceRisk, isTrue);
-    });
+    test(
+      'shared fixtures cover clear, rain, snow, and black ice scenarios',
+      () {
+        expect(S52TestFixtures.clearWeather.precipType, PrecipitationType.none);
+        expect(
+          S52TestFixtures.lightRainWeather.precipType,
+          PrecipitationType.rain,
+        );
+        expect(
+          S52TestFixtures.moderateSnowWeather.precipType,
+          PrecipitationType.snow,
+        );
+        expect(S52TestFixtures.blackIceWeather.iceRisk, isTrue);
+      },
+    );
 
     test('weather conditions map to the expected driving assessments', () {
       final clearAssessment = _assessment(S52TestFixtures.clearWeather);
@@ -73,48 +76,57 @@ void main() {
       );
     });
 
-    test('deterministic safety scoring degrades across worsening conditions', () {
-      final config = NavigationSafetyConfig();
+    test(
+      'deterministic safety scoring degrades across worsening conditions',
+      () {
+        final config = NavigationSafetyConfig();
 
-      final clearScore = _scoreFor(
-        S52TestFixtures.clearWeather,
-        seed: S52TestFixtures.safetySeed,
-      );
-      final rainScore = _scoreFor(
-        S52TestFixtures.lightRainWeather,
-        seed: S52TestFixtures.safetySeed,
-      );
-      final snowScore = _scoreFor(
-        S52TestFixtures.moderateSnowWeather,
-        seed: S52TestFixtures.safetySeed,
-      );
-      final blackIceScore = _scoreFor(
-        S52TestFixtures.blackIceWeather,
-        seed: S52TestFixtures.safetySeed,
-        speed: 70,
-      );
-
-      expect(
-        _scoreFor(
+        final clearScore = _scoreFor(
           S52TestFixtures.clearWeather,
           seed: S52TestFixtures.safetySeed,
-        ),
-        equals(clearScore),
-      );
+        );
+        final rainScore = _scoreFor(
+          S52TestFixtures.lightRainWeather,
+          seed: S52TestFixtures.safetySeed,
+        );
+        final snowScore = _scoreFor(
+          S52TestFixtures.moderateSnowWeather,
+          seed: S52TestFixtures.safetySeed,
+        );
+        final blackIceScore = _scoreFor(
+          S52TestFixtures.blackIceWeather,
+          seed: S52TestFixtures.safetySeed,
+          speed: 70,
+        );
 
-      expect(rainScore.score.overall, lessThan(clearScore.score.overall));
-      expect(snowScore.score.overall, lessThan(rainScore.score.overall));
-      expect(blackIceScore.score.overall, lessThan(snowScore.score.overall));
+        expect(
+          _scoreFor(
+            S52TestFixtures.clearWeather,
+            seed: S52TestFixtures.safetySeed,
+          ),
+          equals(clearScore),
+        );
 
-      expect(clearScore.score.toAlertSeverity(config), isNull);
-      expect(snowScore.score.toAlertSeverity(config), isNotNull);
-      expect(blackIceScore.score.toAlertSeverity(config), AlertSeverity.critical);
-    });
+        expect(rainScore.score.overall, lessThan(clearScore.score.overall));
+        expect(snowScore.score.overall, lessThan(rainScore.score.overall));
+        expect(blackIceScore.score.overall, lessThan(snowScore.score.overall));
+
+        expect(clearScore.score.toAlertSeverity(config), isNull);
+        expect(snowScore.score.toAlertSeverity(config), isNotNull);
+        expect(
+          blackIceScore.score.toAlertSeverity(config),
+          AlertSeverity.critical,
+        );
+      },
+    );
 
     test('hysteresis prevents immediate clear-to-snow oscillation', () {
       final filter = HysteresisFilter<RoadSurfaceState>();
+      // `fromCondition` returns RoadSurfaceState? in snow_rendering 0.3.0 — a
+      // road it cannot classify has no surface. These fixtures are fully
+      // measured, so every one classifies; `!` pins that.
       final states = S52TestFixtures.clearToSnowTransition
-          .map(RoadSurfaceState.fromCondition)
+          .map((c) => RoadSurfaceState.fromCondition(c)!)
           .toList();
 
       final outputs = states.map(filter.update).toList();

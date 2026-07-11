@@ -45,8 +45,7 @@ class FakeMetProvider extends MetNorwayHourlyForecastProvider {
   Future<WeatherForecast?> fetchForecast({
     required double latitude,
     required double longitude,
-  }) async =>
-      _forecast;
+  }) async => _forecast;
 }
 
 WeatherForecast _cannedTempOnly() {
@@ -75,17 +74,17 @@ WeatherForecast _cannedTempOnly() {
 }
 
 Advisory _adv(String eventClass) => Advisory(
-      source: AdvisorySource.jmaJapan,
-      eventClass: eventClass,
-      severity: AdvisorySeverity.moderate,
-      certainty: AdvisoryCertainty.observed,
-      urgency: AdvisoryUrgency.immediate,
-      areaDescription: '秋田県',
-      effective: null,
-      expires: null,
-      headline: eventClass,
-      description: eventClass,
-    );
+  source: AdvisorySource.jmaJapan,
+  eventClass: eventClass,
+  severity: AdvisorySeverity.moderate,
+  certainty: AdvisoryCertainty.observed,
+  urgency: AdvisoryUrgency.immediate,
+  areaDescription: '秋田県',
+  effective: null,
+  expires: null,
+  headline: eventClass,
+  description: eventClass,
+);
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -118,11 +117,9 @@ void main() {
       store = SavedPlaceStore(File('${tmp.path}/sngnav/saved_place.json'));
       // Seed HER mother's area (Akita, 39.72/140.10 → JMA snow-zone) so the
       // family-thread read fires from initState with no dialog interaction.
-      await store.save(const SavedPlace(
-        lat: 39.72,
-        lon: 140.10,
-        label: '母の地域',
-      ));
+      await store.save(
+        const SavedPlace(lat: 39.72, lon: 140.10, label: '母の地域'),
+      );
     });
     addTearDown(() async {
       await tester.runAsync(() async {
@@ -133,7 +130,8 @@ void main() {
     Future<void> flush([int cycles = 12]) async {
       for (var i = 0; i < cycles; i++) {
         await tester.runAsync(
-            () async => Future<void>.delayed(const Duration(milliseconds: 20)));
+          () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 60));
       }
@@ -159,11 +157,9 @@ void main() {
             destForecastProviderFactory: () =>
                 FakeMetProvider(_cannedTempOnly()),
             forecastSourceOverride: 'met_norway',
-            jmaAdvisoryFetchOverride: ({
-              required double latitude,
-              required double longitude,
-            }) async =>
-                jmaAdvisories,
+            jmaAdvisoryFetchOverride:
+                ({required double latitude, required double longitude}) async =>
+                    jmaAdvisories,
             surfaceState: RoadSurfaceState.compactedSnow,
           ),
         ),
@@ -185,8 +181,10 @@ void main() {
       );
 
       // 1) The partial-read caution REACHES HER, naming the unreachable area.
-      expect(find.byKey(const Key('pretrip-border-incomplete-caution')),
-          findsOneWidget);
+      expect(
+        find.byKey(const Key('pretrip-border-incomplete-caution')),
+        findsOneWidget,
+      );
       expect(
         find.textContaining('秋田県の警報を確認できませんでした'),
         findsOneWidget,
@@ -203,20 +201,21 @@ void main() {
     },
   );
 
-  testWidgets(
-    'COMPLETE read: real warning shown, NO partial-read caution',
-    (tester) async {
-      await pumpForAkita(
-        tester,
-        jmaAdvisories: [_adv('着雪注意報')], // clean, complete — no notice
-      );
+  testWidgets('COMPLETE read: real warning shown, NO partial-read caution', (
+    tester,
+  ) async {
+    await pumpForAkita(
+      tester,
+      jmaAdvisories: [_adv('着雪注意報')], // clean, complete — no notice
+    );
 
-      // The real warning still reaches HER...
-      expect(find.textContaining('着雪注意報'), findsWidgets);
-      // ...and NO false caution is shown (a complete check stays clean).
-      expect(find.byKey(const Key('pretrip-border-incomplete-caution')),
-          findsNothing);
-      expect(find.textContaining('確認できませんでした'), findsNothing);
-    },
-  );
+    // The real warning still reaches HER...
+    expect(find.textContaining('着雪注意報'), findsWidgets);
+    // ...and NO false caution is shown (a complete check stays clean).
+    expect(
+      find.byKey(const Key('pretrip-border-incomplete-caution')),
+      findsNothing,
+    );
+    expect(find.textContaining('確認できませんでした'), findsNothing);
+  });
 }

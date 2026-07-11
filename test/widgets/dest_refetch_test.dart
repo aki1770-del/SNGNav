@@ -26,8 +26,7 @@ class FakeMetProvider extends MetNorwayHourlyForecastProvider {
   Future<WeatherForecast?> fetchForecast({
     required double latitude,
     required double longitude,
-  }) async =>
-      _forecast;
+  }) async => _forecast;
 
   @override
   void close() {
@@ -117,7 +116,8 @@ void main() {
         final ex = tester.takeException();
         if (ex == null) return;
         final s = ex.toString();
-        final benign = ex is MissingPluginException ||
+        final benign =
+            ex is MissingPluginException ||
             s.contains('getTileUrl') ||
             s.contains('TileProvider') ||
             s.contains('flutter_map');
@@ -133,8 +133,9 @@ void main() {
       // continuation) cycle, so flush runs many tight cycles.
       Future<void> flush([int cycles = 12]) async {
         for (var i = 0; i < cycles; i++) {
-          await tester.runAsync(() async =>
-              Future<void>.delayed(const Duration(milliseconds: 20)));
+          await tester.runAsync(
+            () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 60));
         }
@@ -174,29 +175,42 @@ void main() {
 
       Future<void> setPlace(double lat, double lon, String label) async {
         final editIcon = find.byIcon(Icons.edit_outlined).first;
-        await tester.ensureVisible(editIcon); // tile may be below the scroll fold
+        await tester.ensureVisible(
+          editIcon,
+        ); // tile may be below the scroll fold
         await tester.pump();
         await tester.tap(editIcon);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 350)); // dialog in
         // Ensure coordinates mode (idempotent when already there on edit).
-        await tester.tap(find.text(BriefingStrings.en.placeEntryModeCoordinates));
+        await tester.tap(
+          find.text(BriefingStrings.en.placeEntryModeCoordinates),
+        );
         await tester.pump();
         await tester.enterText(
-            find.widgetWithText(
-                TextFormField, BriefingStrings.en.placeEntryLatLabel),
-            '$lat');
+          find.widgetWithText(
+            TextFormField,
+            BriefingStrings.en.placeEntryLatLabel,
+          ),
+          '$lat',
+        );
         await tester.enterText(
-            find.widgetWithText(
-                TextFormField, BriefingStrings.en.placeEntryLonLabel),
-            '$lon');
+          find.widgetWithText(
+            TextFormField,
+            BriefingStrings.en.placeEntryLonLabel,
+          ),
+          '$lon',
+        );
         // The label field is the only plain TextField (lat/lon are
         // TextFormField); match it by its always-rendered floating label so the
         // finder survives a pre-filled (edit) state.
         await tester.enterText(
-            find.widgetWithText(
-                TextField, BriefingStrings.en.placeEntryLabelLabel),
-            label);
+          find.widgetWithText(
+            TextField,
+            BriefingStrings.en.placeEntryLabelLabel,
+          ),
+          label,
+        );
         await tester.pump();
         await tester.tap(find.text(BriefingStrings.en.placeEntrySave));
         await tester.pump(); // pop + _setDestination begins (awaits File I/O)
@@ -214,8 +228,11 @@ void main() {
       // --- HER changes to place B ⇒ prior provider CLOSED before re-fetch ----
       await setPlace(61.0, 11.0, 'Area B');
       expect(created, hasLength(2));
-      expect(created[0].closed, isTrue,
-          reason: 'the prior dest provider must be closed before the re-fetch');
+      expect(
+        created[0].closed,
+        isTrue,
+        reason: 'the prior dest provider must be closed before the re-fetch',
+      );
       expect(created[1].closed, isFalse);
       expect(find.byType(FamilyAreaCard), findsOneWidget);
       expect(find.textContaining('Area B'), findsWidgets);

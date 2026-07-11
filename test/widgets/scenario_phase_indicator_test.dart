@@ -58,8 +58,9 @@ void main() {
     });
 
     testWidgets('hidden when no weather condition', (tester) async {
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
@@ -70,10 +71,12 @@ void main() {
     });
 
     testWidgets('shows clear phase label', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition.clear(timestamp: DateTime(2026)),
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition.simulatedClear(timestamp: DateTime(2026)),
+        ),
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
@@ -83,17 +86,21 @@ void main() {
     });
 
     testWidgets('shows light snow label', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.light,
-          temperatureCelsius: 1.0,
-          visibilityMeters: 3000,
-          windSpeedKmh: 15,
-          timestamp: DateTime(2026),
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.light,
+            temperatureCelsius: 1.0,
+            visibilityMeters: 3000,
+            windSpeedKmh: 15,
+            timestamp: DateTime(2026),
+            source: ObservationSource.measured,
+            iceRisk: false,
+          ),
         ),
-      ));
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
@@ -102,39 +109,48 @@ void main() {
     });
 
     testWidgets('shows heavy snow label', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.heavy,
-          temperatureCelsius: -4.0,
-          visibilityMeters: 150,
-          windSpeedKmh: 45,
-          timestamp: DateTime(2026),
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.heavy,
+            temperatureCelsius: -4.0,
+            visibilityMeters: 150,
+            windSpeedKmh: 45,
+            timestamp: DateTime(2026),
+            source: ObservationSource.measured,
+            iceRisk: false,
+          ),
         ),
-      ));
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
 
       expect(find.text('Heavy Snow — Pass Summit'), findsOneWidget);
-      expect(find.text('Visibility critically low, hazardous conditions'),
-          findsOneWidget);
+      expect(
+        find.text('Visibility critically low, hazardous conditions'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows ice risk label', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -3.0,
-          visibilityMeters: 500,
-          windSpeedKmh: 20,
-          iceRisk: true,
-          timestamp: DateTime(2026),
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -3.0,
+            visibilityMeters: 500,
+            windSpeedKmh: 20,
+            iceRisk: true,
+            timestamp: DateTime(2026),
+            source: ObservationSource.measured,
+          ),
         ),
-      ));
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
@@ -148,10 +164,12 @@ void main() {
     });
 
     testWidgets('shows correct icon for clear phase', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition.clear(timestamp: DateTime(2026)),
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition.simulatedClear(timestamp: DateTime(2026)),
+        ),
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();
@@ -160,18 +178,21 @@ void main() {
     });
 
     testWidgets('shows correct icon for ice risk', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: WeatherCondition(
-          precipType: PrecipitationType.snow,
-          intensity: PrecipitationIntensity.moderate,
-          temperatureCelsius: -3.0,
-          visibilityMeters: 500,
-          windSpeedKmh: 20,
-          iceRisk: true,
-          timestamp: DateTime(2026),
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: WeatherCondition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -3.0,
+            visibilityMeters: 500,
+            windSpeedKmh: 20,
+            iceRisk: true,
+            timestamp: DateTime(2026),
+            source: ObservationSource.measured,
+          ),
         ),
-      ));
+      );
 
       await tester.pumpWidget(_buildIndicator(weatherBloc: weatherBloc));
       await tester.pump();

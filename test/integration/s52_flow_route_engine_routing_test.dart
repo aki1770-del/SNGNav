@@ -24,7 +24,8 @@ class _ScenarioRoutingEngine implements RoutingEngine {
   bool disposed = false;
 
   @override
-  EngineInfo get info => EngineInfo(name: 'mock-s52-routing', queryLatency: delay);
+  EngineInfo get info =>
+      EngineInfo(name: 'mock-s52-routing', queryLatency: delay);
 
   @override
   Future<bool> isAvailable() async => available;
@@ -50,37 +51,46 @@ class _ScenarioRoutingEngine implements RoutingEngine {
 
 void main() {
   group('S52 Flow 2: route -> engine -> routing bloc', () {
-    test('successful route request flows from engine to routeActive state', () async {
-      final engine = _ScenarioRoutingEngine(
-        result: S52TestFixtures.nagoyaToOkazakiRoute,
-      );
-      final bloc = RoutingBloc(engine: engine);
+    test(
+      'successful route request flows from engine to routeActive state',
+      () async {
+        final engine = _ScenarioRoutingEngine(
+          result: S52TestFixtures.nagoyaToOkazakiRoute,
+        );
+        final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RouteRequested(
-        origin: S52TestFixtures.nagoya,
-        destination: S52TestFixtures.higashiokazaki,
-        destinationLabel: 'Higashiokazaki',
-      ));
+        bloc.add(
+          const RouteRequested(
+            origin: S52TestFixtures.nagoya,
+            destination: S52TestFixtures.higashiokazaki,
+            destinationLabel: 'Higashiokazaki',
+          ),
+        );
 
-      await expectLater(
-        bloc.stream,
-        emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading)
-              .having((s) => s.destinationLabel, 'label', 'Higashiokazaki'),
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.routeActive)
-              .having((s) => s.route, 'route', S52TestFixtures.nagoyaToOkazakiRoute)
-              .having((s) => s.engineAvailable, 'engineAvailable', isTrue),
-        ]),
-      );
+        await expectLater(
+          bloc.stream,
+          emitsInOrder([
+            isA<RoutingState>()
+                .having((s) => s.status, 'status', RoutingStatus.loading)
+                .having((s) => s.destinationLabel, 'label', 'Higashiokazaki'),
+            isA<RoutingState>()
+                .having((s) => s.status, 'status', RoutingStatus.routeActive)
+                .having(
+                  (s) => s.route,
+                  'route',
+                  S52TestFixtures.nagoyaToOkazakiRoute,
+                )
+                .having((s) => s.engineAvailable, 'engineAvailable', isTrue),
+          ]),
+        );
 
-      expect(engine.calculateCallCount, 1);
-      expect(engine.lastRequest, S52TestFixtures.nagoyaToOkazakiRequest);
+        expect(engine.calculateCallCount, 1);
+        expect(engine.lastRequest, S52TestFixtures.nagoyaToOkazakiRequest);
 
-      await bloc.close();
-      expect(engine.disposed, isTrue);
-    });
+        await bloc.close();
+        expect(engine.disposed, isTrue);
+      },
+    );
 
     test('engine failure surfaces as error state with message', () async {
       final engine = _ScenarioRoutingEngine(
@@ -88,19 +98,28 @@ void main() {
       );
       final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RouteRequested(
-        origin: S52TestFixtures.nagoya,
-        destination: S52TestFixtures.higashiokazaki,
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: S52TestFixtures.nagoya,
+          destination: S52TestFixtures.higashiokazaki,
+        ),
+      );
 
       await expectLater(
         bloc.stream,
         emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
+          isA<RoutingState>().having(
+            (s) => s.status,
+            'status',
+            RoutingStatus.loading,
+          ),
           isA<RoutingState>()
               .having((s) => s.status, 'status', RoutingStatus.error)
-              .having((s) => s.errorMessage, 'errorMessage', contains('No route found')),
+              .having(
+                (s) => s.errorMessage,
+                'errorMessage',
+                contains('No route found'),
+              ),
         ]),
       );
 
@@ -114,10 +133,12 @@ void main() {
       );
       final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RouteRequested(
-        origin: S52TestFixtures.nagoya,
-        destination: S52TestFixtures.higashiokazaki,
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: S52TestFixtures.nagoya,
+          destination: S52TestFixtures.higashiokazaki,
+        ),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 5));
       expect(bloc.state.status, RoutingStatus.loading);
@@ -135,18 +156,22 @@ void main() {
       );
       final bloc = RoutingBloc(engine: engine);
 
-      bloc.emit(RoutingState(
-        status: RoutingStatus.routeActive,
-        route: S52TestFixtures.nagoyaToOkazakiRoute,
-        destinationLabel: 'Higashiokazaki',
-        engineAvailable: true,
-      ));
+      bloc.emit(
+        RoutingState(
+          status: RoutingStatus.routeActive,
+          route: S52TestFixtures.nagoyaToOkazakiRoute,
+          destinationLabel: 'Higashiokazaki',
+          engineAvailable: true,
+        ),
+      );
 
-      bloc.add(const RouteRequested(
-        origin: S52TestFixtures.nagoya,
-        destination: S52TestFixtures.inuyama,
-        destinationLabel: 'Inuyama Castle',
-      ));
+      bloc.add(
+        const RouteRequested(
+          origin: S52TestFixtures.nagoya,
+          destination: S52TestFixtures.inuyama,
+          destinationLabel: 'Inuyama Castle',
+        ),
+      );
 
       await expectLater(
         bloc.stream,
@@ -156,7 +181,11 @@ void main() {
               .having((s) => s.destinationLabel, 'label', 'Inuyama Castle'),
           isA<RoutingState>()
               .having((s) => s.status, 'status', RoutingStatus.routeActive)
-              .having((s) => s.route, 'route', S52TestFixtures.nagoyaToInuyamaRoute)
+              .having(
+                (s) => s.route,
+                'route',
+                S52TestFixtures.nagoyaToInuyamaRoute,
+              )
               .having((s) => s.destinationLabel, 'label', 'Inuyama Castle'),
         ]),
       );
@@ -164,31 +193,36 @@ void main() {
       await bloc.close();
     });
 
-    test('engine availability and route contract assumptions remain stable', () async {
-      final engine = _ScenarioRoutingEngine(
-        result: S52TestFixtures.nagoyaToOkazakiRoute,
-        available: true,
-      );
-      final bloc = RoutingBloc(engine: engine);
+    test(
+      'engine availability and route contract assumptions remain stable',
+      () async {
+        final engine = _ScenarioRoutingEngine(
+          result: S52TestFixtures.nagoyaToOkazakiRoute,
+          available: true,
+        );
+        final bloc = RoutingBloc(engine: engine);
 
-      bloc.add(const RoutingEngineCheckRequested());
-      await Future<void>.delayed(Duration.zero);
+        bloc.add(const RoutingEngineCheckRequested());
+        await Future<void>.delayed(Duration.zero);
 
-      expect(bloc.state.engineAvailable, isTrue);
+        expect(bloc.state.engineAvailable, isTrue);
 
-      bloc.add(const RouteRequested(
-        origin: S52TestFixtures.nagoya,
-        destination: S52TestFixtures.higashiokazaki,
-      ));
-      await Future<void>.delayed(Duration.zero);
+        bloc.add(
+          const RouteRequested(
+            origin: S52TestFixtures.nagoya,
+            destination: S52TestFixtures.higashiokazaki,
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      final route = bloc.state.route;
-      expect(route, isNotNull);
-      expect(route!.hasGeometry, isTrue);
-      expect(route.maneuvers, isNotEmpty);
-      expect(route.engineInfo.name, 'mock-s52');
+        final route = bloc.state.route;
+        expect(route, isNotNull);
+        expect(route!.hasGeometry, isTrue);
+        expect(route.maneuvers, isNotEmpty);
+        expect(route.engineInfo.name, 'mock-s52');
 
-      await bloc.close();
-    });
+        await bloc.close();
+      },
+    );
   });
 }

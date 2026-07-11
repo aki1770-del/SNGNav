@@ -45,8 +45,7 @@ class MockSuccessHostApi implements FluoriteHostApi {
     required String type,
     required LatLng position,
     Map<String, dynamic>? properties,
-  }) async =>
-      1;
+  }) async => 1;
 
   @override
   Future<void> destroyEntity(int entityId) async {}
@@ -93,8 +92,7 @@ class MockFailHostApi implements FluoriteHostApi {
     required String type,
     required LatLng position,
     Map<String, dynamic>? properties,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> destroyEntity(int entityId) async {}
@@ -140,8 +138,7 @@ class MockSlowHostApi implements FluoriteHostApi {
     required String type,
     required LatLng position,
     Map<String, dynamic>? properties,
-  }) async =>
-      1;
+  }) async => 1;
 
   @override
   Future<void> destroyEntity(int entityId) async {}
@@ -212,8 +209,9 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('shows unavailable fallback with NotImplementedHostApi',
-        (tester) async {
+    testWidgets('shows unavailable fallback with NotImplementedHostApi', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildView());
       await tester.pumpAndSettle();
 
@@ -222,19 +220,21 @@ void main() {
       expect(find.byIcon(Icons.terrain), findsOneWidget);
     });
 
-    testWidgets('shows custom placeholder when provided and unavailable',
-        (tester) async {
-      await tester.pumpWidget(_buildView(
-        placeholder: const Text('Custom Fallback'),
-      ));
+    testWidgets('shows custom placeholder when provided and unavailable', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildView(placeholder: const Text('Custom Fallback')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Custom Fallback'), findsOneWidget);
       expect(find.text('3D Renderer Unavailable'), findsNothing);
     });
 
-    testWidgets('shows 3D active indicator when mock host returns ready',
-        (tester) async {
+    testWidgets('shows 3D active indicator when mock host returns ready', (
+      tester,
+    ) async {
       final api = MockSuccessHostApi();
 
       await tester.pumpWidget(_buildView(hostApi: api));
@@ -244,13 +244,12 @@ void main() {
       expect(find.byIcon(Icons.view_in_ar), findsOneWidget);
     });
 
-    testWidgets('calls onStatusChanged callback through lifecycle',
-        (tester) async {
+    testWidgets('calls onStatusChanged callback through lifecycle', (
+      tester,
+    ) async {
       final statuses = <FluoriteViewStatus>[];
 
-      await tester.pumpWidget(_buildView(
-        onStatusChanged: statuses.add,
-      ));
+      await tester.pumpWidget(_buildView(onStatusChanged: statuses.add));
       await tester.pumpAndSettle();
 
       // Phase A: initializing → unavailable
@@ -266,7 +265,10 @@ void main() {
 
       expect(key.currentState!.status, FluoriteViewStatus.unavailable);
       expect(key.currentState!.errorMessage, isNotNull);
-      expect(key.currentState!.errorMessage, contains('native renderer not available'));
+      expect(
+        key.currentState!.errorMessage,
+        contains('native renderer not available'),
+      );
     });
 
     testWidgets('shows error message for generic failures', (tester) async {
@@ -290,11 +292,9 @@ void main() {
       expect(key.currentState!.status, FluoriteViewStatus.initializing);
 
       // Simulate native callback
-      key.currentState!.onSceneReady(const SceneInfo(
-        isReady: true,
-        entityCount: 10,
-        frameTimeMs: 8.3,
-      ));
+      key.currentState!.onSceneReady(
+        const SceneInfo(isReady: true, entityCount: 10, frameTimeMs: 8.3),
+      );
       await tester.pump();
 
       expect(key.currentState!.status, FluoriteViewStatus.ready);

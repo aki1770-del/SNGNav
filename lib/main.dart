@@ -140,6 +140,9 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       visibilityMeters: 600.0, // reduced — fog wall visible
       windSpeedKmh: 18.0,
       iceRisk: true,
+      // This is an ASSERTED scenario (the getting-started default scene), not a
+      // measurement. Saying so is the whole point of ObservationSource.
+      source: ObservationSource.simulated,
       timestamp: DateTime(2026, 1, 1, 7, 15),
     ),
   );
@@ -147,7 +150,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // The live weather provider (only constructed when WEATHER_PROVIDER=digitraffic).
   // Null on every offline/default path — the scene never depends on it existing.
   WeatherProvider? _weatherProvider;
-  StreamSubscription<WeatherCondition>? _weatherSub;
+  StreamSubscription<WeatherReading>? _weatherSub;
 
   // True once a live condition has actually arrived from the feed, so the
   // caption can tell the truth about whether the scene reflects live severity
@@ -315,11 +318,22 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       final provider = config.createWeatherProvider();
       _weatherProvider = provider;
 
+      // driving_weather 0.5.0: the stream carries a SEALED WeatherReading.
+      // An OBSERVED reading updates the scene. A STALE one still updates it (an
+      // old reading is still information — the assessment itself now degrades
+      // honestly on absent fields). An UNAVAILABLE one must NOT leave the last
+      // good assessment standing as though it were current: the scene switches
+      // to the honest unknown assessment, which renders the "not measured"
+      // state rather than a stale-but-calm one.
       _weatherSub = provider.conditions.listen(
-        (condition) {
-          // Reuse the proven mapping the rest of the app uses:
-          // WeatherCondition -> DrivingConditionAssessment.
+        (reading) {
           if (!mounted) return;
+          final WeatherCondition condition = switch (reading) {
+            WeatherObserved(:final condition) => condition,
+            WeatherStale(:final lastKnown) => lastKnown,
+            WeatherUnavailable() =>
+              WeatherCondition.unknown(timestamp: DateTime.now()),
+          };
           setState(() {
             _assessment =
                 DrivingConditionAssessment.fromCondition(condition);

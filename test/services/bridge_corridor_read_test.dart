@@ -7,7 +7,8 @@ import 'package:sngnav_snow_scene/services/bridge_corridor_read.dart';
 void main() {
   group('parseBridgeCsv', () {
     test('happy path: header + rows, 5-decimal lat/lon, bearing parsed', () {
-      const csv = 'way_id,lat,lon,bearing_deg\n'
+      const csv =
+          'way_id,lat,lon,bearing_deg\n'
           '123456,39.70018,140.11000,90\n'
           '345678,39.71234,140.09876,175\n';
       final result = parseBridgeCsv(csv);
@@ -21,7 +22,8 @@ void main() {
     });
 
     test('blank bearing and missing bearing column both parse as null', () {
-      const csv = 'way_id,lat,lon,bearing_deg\n'
+      const csv =
+          'way_id,lat,lon,bearing_deg\n'
           '1,39.70009,140.10600,\n'
           '2,39.70011,140.10700\n';
       final result = parseBridgeCsv(csv);
@@ -32,7 +34,8 @@ void main() {
     });
 
     test('malformed rows are skipped and counted, valid rows survive', () {
-      const csv = 'way_id,lat,lon,bearing_deg\n'
+      const csv =
+          'way_id,lat,lon,bearing_deg\n'
           '1,39.70000,140.10000,90\n'
           'not_a_number,39.70000,140.10000,90\n'
           '2,91.50000,140.10000,90\n' // lat out of range
@@ -45,7 +48,8 @@ void main() {
     });
 
     test('tolerates CRLF endings and blank lines without counting them', () {
-      const csv = 'way_id,lat,lon,bearing_deg\r\n'
+      const csv =
+          'way_id,lat,lon,bearing_deg\r\n'
           '1,39.70000,140.10000,90\r\n'
           '\r\n'
           '2,39.70001,140.10001,\r\n';
@@ -85,47 +89,52 @@ void main() {
         );
 
     test('(a) parallel bridge within 30 m of route is counted', () {
-      final result =
-          countBridgeSitesOnRoute([site(1, 20, 1000, bearing: 90)], route);
+      final result = countBridgeSitesOnRoute([
+        site(1, 20, 1000, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 1);
       expect(result.clusterCount, 1);
     });
 
     test('(b) perpendicular overpass within 10 m is NOT counted', () {
-      final result =
-          countBridgeSitesOnRoute([site(2, 10, 600, bearing: 0)], route);
+      final result = countBridgeSitesOnRoute([
+        site(2, 10, 600, bearing: 0),
+      ], route);
       expect(result.keptSiteCount, 0);
       expect(result.clusterCount, 0);
     });
 
     test('(c) parallel bridge 80 m away is NOT counted', () {
-      final result =
-          countBridgeSitesOnRoute([site(3, 80, 1400, bearing: 90)], route);
+      final result = countBridgeSitesOnRoute([
+        site(3, 80, 1400, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 0);
       expect(result.clusterCount, 0);
     });
 
-    test('(d) bearing-less bridge within 30 m IS counted (fail toward warning)',
-        () {
-      final result = countBridgeSitesOnRoute([site(4, -15, 300)], route);
-      expect(result.keptSiteCount, 1);
-      expect(result.clusterCount, 1);
-    });
+    test(
+      '(d) bearing-less bridge within 30 m IS counted (fail toward warning)',
+      () {
+        final result = countBridgeSitesOnRoute([site(4, -15, 300)], route);
+        expect(result.keptSiteCount, 1);
+        expect(result.clusterCount, 1);
+      },
+    );
 
     test('(e) two on-route ways 50 m apart cluster to ONE site', () {
-      final result = countBridgeSitesOnRoute(
-        [site(5, 5, 1000, bearing: 90), site(6, 5, 1050, bearing: 90)],
-        route,
-      );
+      final result = countBridgeSitesOnRoute([
+        site(5, 5, 1000, bearing: 90),
+        site(6, 5, 1050, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 2);
       expect(result.clusterCount, 1);
     });
 
     test('(f) two sites 500 m apart stay TWO clusters', () {
-      final result = countBridgeSitesOnRoute(
-        [site(7, 5, 200, bearing: 90), site(8, 5, 700, bearing: 90)],
-        route,
-      );
+      final result = countBridgeSitesOnRoute([
+        site(7, 5, 200, bearing: 90),
+        site(8, 5, 700, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 2);
       expect(result.clusterCount, 2);
     });
@@ -152,8 +161,9 @@ void main() {
     });
 
     test('site far outside the expanded route bbox is dropped', () {
-      final result =
-          countBridgeSitesOnRoute([site(11, 10000, 1000, bearing: 90)], route);
+      final result = countBridgeSitesOnRoute([
+        site(11, 10000, 1000, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 0);
       expect(result.clusterCount, 0);
     });
@@ -165,30 +175,19 @@ void main() {
         LatLng(latAt(222), lonAt(-8.6)),
       ];
       // A site bearing of 3 differs by ~5° once folded — parallel, kept.
-      final kept = countBridgeSitesOnRoute(
-        [
-          BridgeSite(
-            wayId: 12,
-            lat: latAt(111),
-            lon: lonAt(-4.3),
-            bearingDeg: 3,
-          ),
-        ],
-        northRoute,
-      );
+      final kept = countBridgeSitesOnRoute([
+        BridgeSite(wayId: 12, lat: latAt(111), lon: lonAt(-4.3), bearingDeg: 3),
+      ], northRoute);
       expect(kept.keptSiteCount, 1);
       // A site bearing of 88 is near-perpendicular to the same segment.
-      final dropped = countBridgeSitesOnRoute(
-        [
-          BridgeSite(
-            wayId: 13,
-            lat: latAt(111),
-            lon: lonAt(-4.3),
-            bearingDeg: 88,
-          ),
-        ],
-        northRoute,
-      );
+      final dropped = countBridgeSitesOnRoute([
+        BridgeSite(
+          wayId: 13,
+          lat: latAt(111),
+          lon: lonAt(-4.3),
+          bearingDeg: 88,
+        ),
+      ], northRoute);
       expect(dropped.keptSiteCount, 0);
     });
 
@@ -203,17 +202,17 @@ void main() {
     });
 
     test('chained clustering: 3 ways at 100 m spacing single-link to ONE', () {
-      final result = countBridgeSitesOnRoute(
-        [
-          site(15, 5, 800, bearing: 90),
-          site(16, 5, 900, bearing: 90),
-          site(17, 5, 1000, bearing: 90),
-        ],
-        route,
-      );
+      final result = countBridgeSitesOnRoute([
+        site(15, 5, 800, bearing: 90),
+        site(16, 5, 900, bearing: 90),
+        site(17, 5, 1000, bearing: 90),
+      ], route);
       expect(result.keptSiteCount, 3);
-      expect(result.clusterCount, 1,
-          reason: 'single linkage chains 100 m gaps into one experienced site');
+      expect(
+        result.clusterCount,
+        1,
+        reason: 'single linkage chains 100 m gaps into one experienced site',
+      );
     });
 
     // BOUNDARY PAIRS: pin each calibrated constant just inside AND just
@@ -222,52 +221,60 @@ void main() {
     // dropping real bridges — the fail-toward-silence direction the module's
     // own contract forbids) ship green.
 
-    test('corridor boundary: 28 m kept, 33 m dropped (pins 30 m both ways)',
-        () {
-      expect(
-        countBridgeSitesOnRoute([site(20, 28, 1000, bearing: 90)], route)
-            .keptSiteCount,
-        1,
-        reason: 'a narrowed corridor would silently drop this real bridge',
-      );
-      expect(
-        countBridgeSitesOnRoute([site(21, 33, 1000, bearing: 90)], route)
-            .keptSiteCount,
-        0,
-        reason: 'a widened corridor would over-count neighbouring roads',
-      );
-    });
+    test(
+      'corridor boundary: 28 m kept, 33 m dropped (pins 30 m both ways)',
+      () {
+        expect(
+          countBridgeSitesOnRoute([
+            site(20, 28, 1000, bearing: 90),
+          ], route).keptSiteCount,
+          1,
+          reason: 'a narrowed corridor would silently drop this real bridge',
+        );
+        expect(
+          countBridgeSitesOnRoute([
+            site(21, 33, 1000, bearing: 90),
+          ], route).keptSiteCount,
+          0,
+          reason: 'a widened corridor would over-count neighbouring roads',
+        );
+      },
+    );
 
-    test('bearing boundary: 29° diff kept, 31° dropped (pins ±30° both ways)',
-        () {
-      // Route segment bearing 90; site bearings 61 / 121 → folded diffs
-      // 29 / 31.
-      expect(
-        countBridgeSitesOnRoute([site(22, 5, 1000, bearing: 61)], route)
-            .keptSiteCount,
-        1,
-        reason: 'a narrowed gate would drop a slightly-skewed real bridge',
-      );
-      expect(
-        countBridgeSitesOnRoute([site(23, 5, 1000, bearing: 121)], route)
-            .keptSiteCount,
-        0,
-        reason: 'a widened gate would start counting skewed overpasses',
-      );
-    });
+    test(
+      'bearing boundary: 29° diff kept, 31° dropped (pins ±30° both ways)',
+      () {
+        // Route segment bearing 90; site bearings 61 / 121 → folded diffs
+        // 29 / 31.
+        expect(
+          countBridgeSitesOnRoute([
+            site(22, 5, 1000, bearing: 61),
+          ], route).keptSiteCount,
+          1,
+          reason: 'a narrowed gate would drop a slightly-skewed real bridge',
+        );
+        expect(
+          countBridgeSitesOnRoute([
+            site(23, 5, 1000, bearing: 121),
+          ], route).keptSiteCount,
+          0,
+          reason: 'a widened gate would start counting skewed overpasses',
+        );
+      },
+    );
 
     test('cluster boundary: 110 m gap → ONE site, 130 m gap → TWO '
         '(pins 120 m both ways)', () {
-      final one = countBridgeSitesOnRoute(
-        [site(24, 5, 1000, bearing: 90), site(25, 5, 1110, bearing: 90)],
-        route,
-      );
+      final one = countBridgeSitesOnRoute([
+        site(24, 5, 1000, bearing: 90),
+        site(25, 5, 1110, bearing: 90),
+      ], route);
       expect(one.keptSiteCount, 2);
       expect(one.clusterCount, 1);
-      final two = countBridgeSitesOnRoute(
-        [site(26, 5, 1000, bearing: 90), site(27, 5, 1130, bearing: 90)],
-        route,
-      );
+      final two = countBridgeSitesOnRoute([
+        site(26, 5, 1000, bearing: 90),
+        site(27, 5, 1130, bearing: 90),
+      ], route);
       expect(two.keptSiteCount, 2);
       expect(two.clusterCount, 2);
     });

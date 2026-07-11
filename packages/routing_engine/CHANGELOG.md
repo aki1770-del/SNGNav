@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.6.0
+
+### Safety defect in 0.5.0 and earlier — please read
+
+Up to and including 0.5.0, **both engines could hand you a maneuver position
+that was never in the routing response**: they silently substituted
+`const LatLng(0, 0)` — "Null Island", a real coordinate in the Gulf of Guinea —
+whenever they could not resolve the real one.
+
+* `OsrmRoutingEngine`: whenever a step's `maneuver.location` was missing or
+  shorter than two elements.
+* `ValhallaRoutingEngine`: whenever `begin_shape_index` fell outside the
+  decoded polyline. (A *missing* `begin_shape_index` was also defaulted to
+  index `0`, silently claiming the maneuver happens at the route's start.)
+
+Nothing marked these as fabricated. `RouteManeuver.position` was a
+non-nullable `LatLng`, so a consumer could not tell a parsed coordinate from a
+manufactured one — and a maneuver "at 0,0" narrated or plotted for a driver in
+Akita is a wrong place presented with full confidence. If you narrated,
+mapped, or measured distance-to-next-maneuver from `position`, assume any
+`LatLng(0, 0)` you have seen from this package was a parse failure, not a
+location.
+
+pub.dev versions are immutable: we cannot withdraw the affected releases.
+This note is the recall.
+
+### Breaking: an unknown position is now `null`, and will not compile away quietly
+
+* `RouteManeuver.position` is now `LatLng?`. **`null` means the position is
+  UNKNOWN** — never the origin, never `LatLng(0, 0)`.
+* Added `RouteManeuver.hasPosition` (`position != null`).
+* Both engines return `null` instead of `LatLng(0, 0)` for the cases above.
+  Valhalla additionally treats a missing or negative `begin_shape_index` as
+  unknown rather than as index `0`, and OSRM treats a non-numeric `location`
+  as unknown rather than throwing.
+* `RouteManeuver.toString()` says `position unknown` when it is absent.
+
+Every site that reads `maneuver.position` as a `LatLng` now fails to compile.
+**That compile error is the fix, not a side-effect of it** — it lands on the
+exact line where an unparseable coordinate used to become a confident one.
+
+Migration:
+
+| 0.5.0 | 0.6.0 |
+| --- | --- |
+| `narrate(m.position)` | `if (m.hasPosition) narrate(m.position!)` — otherwise announce the turn *without* a place; do not invent one |
+| `markers.add(m.position)` | skip the marker when `m.position == null`; the maneuver keeps its instruction, distance and time |
+| `distanceTo(m.position)` | no position means no distance — show the instruction, not a number derived from `(0, 0)` |
+| `if (m.position == const LatLng(0, 0))` (defect workaround) | delete it; use `!m.hasPosition` |
+
+A maneuver with no position is still a valid maneuver: `instruction`,
+`lengthKm` and `timeSeconds` remain true and usable. One unparseable
+coordinate does not invalidate a route — the loom refuses the false thread,
+not the whole cloth.
+
+### Tests
+
+Two tests in 0.5.0 *certified* this defect by name — `missing maneuver
+location defaults to (0, 0)` and `begin_shape_index beyond decoded points
+defaults to (0, 0)`. Both are inverted, and the absent-position cases (missing,
+short, non-numeric, out-of-range, negative) are now covered explicitly,
+alongside tests that a well-formed response still yields a real position.
+
 ## 0.5.0
 
 Turn-by-turn narration honors the requested language — Japanese by default.

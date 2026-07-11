@@ -45,14 +45,14 @@ class MockFleetBloc extends MockBloc<FleetEvent, FleetState>
     implements FleetBloc {}
 
 class _ScriptedWeatherProvider implements WeatherProvider {
-  final _controller = StreamController<WeatherCondition>.broadcast();
+  final _controller = StreamController<WeatherReading>.broadcast();
 
   @override
-  Stream<WeatherCondition> get conditions => _controller.stream;
+  Stream<WeatherReading> get conditions => _controller.stream;
 
   void emit(WeatherCondition condition) {
     if (!_controller.isClosed) {
-      _controller.add(condition);
+      _controller.add(WeatherObserved(condition));
     }
   }
 
@@ -165,6 +165,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _blackIceWeather = WeatherCondition(
@@ -175,6 +177,7 @@ final _blackIceWeather = WeatherCondition(
   windSpeedKmh: 35,
   iceRisk: true,
   timestamp: _now.add(const Duration(minutes: 5)),
+  source: ObservationSource.measured,
 );
 
 final _heavySnowWarning = WeatherCondition(
@@ -184,6 +187,8 @@ final _heavySnowWarning = WeatherCondition(
   visibilityMeters: 350,
   windSpeedKmh: 30,
   timestamp: _now.add(const Duration(minutes: 3)),
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _dryReport = FleetReport(
@@ -243,91 +248,208 @@ Future<void> _pumpBlocCycles(WidgetTester tester, [int count = 3]) async {
 
 void main() {
   testWidgets(
-      'RouteRequested drives navigation start, auto-advance, and weather safety alert',
-      (tester) async {
-    final locationBloc = MockLocationBloc();
-    final consentBloc = MockConsentBloc();
-    final fleetBloc = MockFleetBloc();
-    final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final weatherProvider = _ScriptedWeatherProvider();
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
+    'RouteRequested drives navigation start, auto-advance, and weather safety alert',
+    (tester) async {
+      final locationBloc = MockLocationBloc();
+      final consentBloc = MockConsentBloc();
+      final fleetBloc = MockFleetBloc();
+      final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final weatherProvider = _ScriptedWeatherProvider();
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
 
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
-    when(() => consentBloc.state).thenReturn(ConsentState(
-      status: ConsentBlocStatus.ready,
-      consents: {
-        ConsentPurpose.fleetLocation: ConsentRecord(
-          purpose: ConsentPurpose.fleetLocation,
-          status: ConsentStatus.denied,
-          jurisdiction: Jurisdiction.appi,
-          updatedAt: DateTime(2026, 3, 11),
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(() => consentBloc.state).thenReturn(
+        ConsentState(
+          status: ConsentBlocStatus.ready,
+          consents: {
+            ConsentPurpose.fleetLocation: ConsentRecord(
+              purpose: ConsentPurpose.fleetLocation,
+              status: ConsentStatus.denied,
+              jurisdiction: Jurisdiction.appi,
+              updatedAt: DateTime(2026, 3, 11),
+            ),
+          },
         ),
-      },
-    ));
-    when(() => fleetBloc.state).thenReturn(const FleetState.idle());
+      );
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
 
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
+      await tester.pumpWidget(
+        _buildWidget(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(mapBloc.state.status, MapStatus.ready);
-    expect(navigationBloc.state.status, NavigationStatus.idle);
+      expect(mapBloc.state.status, MapStatus.ready);
+      expect(navigationBloc.state.status, NavigationStatus.idle);
 
-    weatherBloc.add(const WeatherMonitorStarted());
-    weatherProvider.emit(_lightSnow);
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
+      weatherBloc.add(const WeatherMonitorStarted());
+      weatherProvider.emit(_lightSnow);
+      routingBloc.add(
+        const RouteRequested(
+          origin: LatLng(35.1709, 136.9066),
+          destination: LatLng(34.9554, 137.1791),
+          destinationLabel: 'Higashiokazaki Station',
+        ),
+      );
 
-    await tester.pump();
-    await tester.pump();
+      await tester.pump();
+      await tester.pump();
 
-    expect(routingBloc.state.status, RoutingStatus.routeActive);
-    expect(navigationBloc.state.status, NavigationStatus.navigating);
-    expect(navigationBloc.state.route, isNotNull);
-    expect(navigationBloc.state.currentManeuverIndex, 0);
-    expect(navigationBloc.state.destinationLabel, 'Higashiokazaki Station');
-    expect(mapBloc.state.cameraMode, CameraMode.overview);
-    expect(mapBloc.state.hasFitBounds, isTrue);
-    expect(navigationBloc.state.hasSafetyAlert, isFalse);
+      expect(routingBloc.state.status, RoutingStatus.routeActive);
+      expect(navigationBloc.state.status, NavigationStatus.navigating);
+      expect(navigationBloc.state.route, isNotNull);
+      expect(navigationBloc.state.currentManeuverIndex, 0);
+      expect(navigationBloc.state.destinationLabel, 'Higashiokazaki Station');
+      expect(mapBloc.state.cameraMode, CameraMode.overview);
+      expect(mapBloc.state.hasFitBounds, isTrue);
+      expect(navigationBloc.state.hasSafetyAlert, isFalse);
 
-    weatherProvider.emit(_blackIceWeather);
-    await tester.pump();
-    await tester.pump();
+      weatherProvider.emit(_blackIceWeather);
+      await tester.pump();
+      await tester.pump();
 
-    expect(weatherBloc.state.isHazardous, isTrue);
-    expect(navigationBloc.state.hasSafetyAlert, isTrue);
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    // Feed ice flag → the precise, possibility-graded ja term.
-    expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
+      expect(weatherBloc.state.hazard, SafetyVerdict.hazardous);
+      expect(navigationBloc.state.hasSafetyAlert, isTrue);
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+      // Feed ice flag → the precise, possibility-graded ja term.
+      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
 
-    await tester.pump(const Duration(seconds: 8));
-    await tester.pump();
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pump();
 
-    expect(navigationBloc.state.status, NavigationStatus.navigating);
-    expect(navigationBloc.state.currentManeuverIndex, 1);
+      expect(navigationBloc.state.status, NavigationStatus.navigating);
+      expect(navigationBloc.state.currentManeuverIndex, 1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 
   testWidgets(
-      'full Snow Scene chain: route, warning weather, consent grant, fleet escalation, and maneuver advance remain coherent',
-      (tester) async {
+    'full Snow Scene chain: route, warning weather, consent grant, fleet escalation, and maneuver advance remain coherent',
+    (tester) async {
+      final locationBloc = MockLocationBloc();
+      final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final weatherProvider = _ScriptedWeatherProvider();
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
+      final consentBloc = ConsentBloc(service: InMemoryConsentService());
+      final fleetProvider = _ScriptedFleetProvider();
+      final fleetBloc = FleetBloc(provider: fleetProvider);
+
+      addTearDown(() async {
+        await routingBloc.close();
+        await navigationBloc.close();
+        await mapBloc.close();
+        await weatherBloc.close();
+        await consentBloc.close();
+        await fleetBloc.close();
+      });
+
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+
+      await tester.pumpWidget(
+        _buildWidget(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
+      await tester.pump();
+
+      consentBloc.add(const ConsentLoadRequested());
+      weatherBloc.add(const WeatherMonitorStarted());
+      weatherProvider.emit(_lightSnow);
+      routingBloc.add(
+        const RouteRequested(
+          origin: LatLng(35.1709, 136.9066),
+          destination: LatLng(34.9554, 137.1791),
+          destinationLabel: 'Higashiokazaki Station',
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+
+      expect(consentBloc.state.status, ConsentBlocStatus.ready);
+      expect(consentBloc.state.isFleetGranted, isFalse);
+      expect(fleetBloc.state.status, FleetStatus.idle);
+      expect(routingBloc.state.status, RoutingStatus.routeActive);
+      expect(navigationBloc.state.status, NavigationStatus.navigating);
+      expect(mapBloc.state.cameraMode, CameraMode.overview);
+      expect(mapBloc.state.hasFitBounds, isTrue);
+
+      weatherProvider.emit(_heavySnowWarning);
+      await tester.pump();
+      await tester.pump();
+
+      expect(weatherBloc.state.hazard, SafetyVerdict.hazardous);
+      expect(navigationBloc.state.hasSafetyAlert, isTrue);
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
+
+      consentBloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(consentBloc.state.isFleetGranted, isTrue);
+      expect(fleetProvider.started, isTrue);
+      expect(fleetBloc.state.isListening, isTrue);
+
+      fleetProvider.emit(_dryReport);
+      await tester.pump();
+      await tester.pump();
+
+      expect(fleetBloc.state.vehicleCount, 1);
+      expect(fleetBloc.state.hasHazards, isFalse);
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
+
+      fleetProvider.emit(_icyReport);
+      await tester.pump();
+      await tester.pump();
+
+      expect(fleetBloc.state.hasHazards, isTrue);
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+      expect(mapBloc.state.hasFitBounds, isTrue);
+
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pump();
+
+      expect(navigationBloc.state.status, NavigationStatus.navigating);
+      expect(navigationBloc.state.currentManeuverIndex, 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
+  testWidgets('fleet reports before consent grant are ignored end to end', (
+    tester,
+  ) async {
     final locationBloc = MockLocationBloc();
     final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
     final navigationBloc = NavigationBloc();
@@ -347,128 +469,31 @@ void main() {
       await fleetBloc.close();
     });
 
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
+    when(
+      () => locationBloc.state,
+    ).thenReturn(const LocationState.uninitialized());
 
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
+    await tester.pumpWidget(
+      _buildWidget(
+        locationBloc: locationBloc,
+        routingBloc: routingBloc,
+        navigationBloc: navigationBloc,
+        mapBloc: mapBloc,
+        weatherBloc: weatherBloc,
+        consentBloc: consentBloc,
+        fleetBloc: fleetBloc,
+      ),
+    );
     await tester.pump();
 
     consentBloc.add(const ConsentLoadRequested());
-    weatherBloc.add(const WeatherMonitorStarted());
-    weatherProvider.emit(_lightSnow);
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
-
-    await tester.pump();
-    await tester.pump();
-
-    expect(consentBloc.state.status, ConsentBlocStatus.ready);
-    expect(consentBloc.state.isFleetGranted, isFalse);
-    expect(fleetBloc.state.status, FleetStatus.idle);
-    expect(routingBloc.state.status, RoutingStatus.routeActive);
-    expect(navigationBloc.state.status, NavigationStatus.navigating);
-    expect(mapBloc.state.cameraMode, CameraMode.overview);
-    expect(mapBloc.state.hasFitBounds, isTrue);
-
-    weatherProvider.emit(_heavySnowWarning);
-    await tester.pump();
-    await tester.pump();
-
-    expect(weatherBloc.state.isHazardous, isTrue);
-    expect(navigationBloc.state.hasSafetyAlert, isTrue);
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-
-    consentBloc.add(const ConsentGrantRequested(
-      purpose: ConsentPurpose.fleetLocation,
-      jurisdiction: Jurisdiction.appi,
-    ));
-    await tester.pump();
-    await tester.pump();
-
-    expect(consentBloc.state.isFleetGranted, isTrue);
-    expect(fleetProvider.started, isTrue);
-    expect(fleetBloc.state.isListening, isTrue);
-
-    fleetProvider.emit(_dryReport);
-    await tester.pump();
-    await tester.pump();
-
-    expect(fleetBloc.state.vehicleCount, 1);
-    expect(fleetBloc.state.hasHazards, isFalse);
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-
-    fleetProvider.emit(_icyReport);
-    await tester.pump();
-    await tester.pump();
-
-    expect(fleetBloc.state.hasHazards, isTrue);
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-    expect(mapBloc.state.hasFitBounds, isTrue);
-
-    await tester.pump(const Duration(seconds: 8));
-    await tester.pump();
-
-    expect(navigationBloc.state.status, NavigationStatus.navigating);
-    expect(navigationBloc.state.currentManeuverIndex, 1);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets(
-      'fleet reports before consent grant are ignored end to end',
-      (tester) async {
-    final locationBloc = MockLocationBloc();
-    final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final weatherProvider = _ScriptedWeatherProvider();
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
-    final consentBloc = ConsentBloc(service: InMemoryConsentService());
-    final fleetProvider = _ScriptedFleetProvider();
-    final fleetBloc = FleetBloc(provider: fleetProvider);
-
-    addTearDown(() async {
-      await routingBloc.close();
-      await navigationBloc.close();
-      await mapBloc.close();
-      await weatherBloc.close();
-      await consentBloc.close();
-      await fleetBloc.close();
-    });
-
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
-
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
-    await tester.pump();
-
-    consentBloc.add(const ConsentLoadRequested());
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
+    routingBloc.add(
+      const RouteRequested(
+        origin: LatLng(35.1709, 136.9066),
+        destination: LatLng(34.9554, 137.1791),
+        destinationLabel: 'Higashiokazaki Station',
+      ),
+    );
     await tester.pump();
     await tester.pump();
 
@@ -486,199 +511,223 @@ void main() {
   });
 
   testWidgets(
-      'granted consent with icy fleet and no hazardous weather still raises critical alert',
-      (tester) async {
-    final locationBloc = MockLocationBloc();
-    final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final weatherProvider = _ScriptedWeatherProvider();
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
-    final consentBloc = ConsentBloc(service: InMemoryConsentService());
-    final fleetProvider = _ScriptedFleetProvider();
-    final fleetBloc = FleetBloc(provider: fleetProvider);
+    'granted consent with icy fleet and no hazardous weather still raises critical alert',
+    (tester) async {
+      final locationBloc = MockLocationBloc();
+      final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final weatherProvider = _ScriptedWeatherProvider();
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
+      final consentBloc = ConsentBloc(service: InMemoryConsentService());
+      final fleetProvider = _ScriptedFleetProvider();
+      final fleetBloc = FleetBloc(provider: fleetProvider);
 
-    addTearDown(() async {
-      await routingBloc.close();
-      await navigationBloc.close();
-      await mapBloc.close();
-      await weatherBloc.close();
-      await consentBloc.close();
-      await fleetBloc.close();
-    });
+      addTearDown(() async {
+        await routingBloc.close();
+        await navigationBloc.close();
+        await mapBloc.close();
+        await weatherBloc.close();
+        await consentBloc.close();
+        await fleetBloc.close();
+      });
 
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
 
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
-    await tester.pump();
+      await tester.pumpWidget(
+        _buildWidget(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
+      await tester.pump();
 
-    consentBloc.add(const ConsentLoadRequested());
-    weatherBloc.add(const WeatherMonitorStarted());
-    await _pumpBlocCycles(tester);
-    weatherProvider.emit(_lightSnow);
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
-    await tester.pump();
-    await tester.pump();
+      consentBloc.add(const ConsentLoadRequested());
+      weatherBloc.add(const WeatherMonitorStarted());
+      await _pumpBlocCycles(tester);
+      weatherProvider.emit(_lightSnow);
+      routingBloc.add(
+        const RouteRequested(
+          origin: LatLng(35.1709, 136.9066),
+          destination: LatLng(34.9554, 137.1791),
+          destinationLabel: 'Higashiokazaki Station',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
 
-    consentBloc.add(const ConsentGrantRequested(
-      purpose: ConsentPurpose.fleetLocation,
-      jurisdiction: Jurisdiction.appi,
-    ));
-    await _pumpBlocCycles(tester, 4);
+      consentBloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      );
+      await _pumpBlocCycles(tester, 4);
 
-    fleetProvider.emit(_icyReport);
-    await tester.pump();
-    await tester.pump();
+      fleetProvider.emit(_icyReport);
+      await tester.pump();
+      await tester.pump();
 
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
-
-  testWidgets(
-      'critical weather alert is not downgraded after consent grant and snowy fleet report',
-      (tester) async {
-    final locationBloc = MockLocationBloc();
-    final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final weatherProvider = _ScriptedWeatherProvider();
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
-    final consentBloc = ConsentBloc(service: InMemoryConsentService());
-    final fleetProvider = _ScriptedFleetProvider();
-    final fleetBloc = FleetBloc(provider: fleetProvider);
-
-    addTearDown(() async {
-      await routingBloc.close();
-      await navigationBloc.close();
-      await mapBloc.close();
-      await weatherBloc.close();
-      await consentBloc.close();
-      await fleetBloc.close();
-    });
-
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
-
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
-    await tester.pump();
-
-    consentBloc.add(const ConsentLoadRequested());
-    weatherBloc.add(const WeatherMonitorStarted());
-    await _pumpBlocCycles(tester);
-    weatherProvider.emit(_blackIceWeather);
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
-    await tester.pump();
-    await tester.pump();
-
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-
-    consentBloc.add(const ConsentGrantRequested(
-      purpose: ConsentPurpose.fleetLocation,
-      jurisdiction: Jurisdiction.appi,
-    ));
-    await _pumpBlocCycles(tester, 4);
-
-    fleetProvider.emit(_snowyReport);
-    await tester.pump();
-    await tester.pump();
-
-    expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-    // Feed ice flag → the precise, possibility-graded ja term.
-    expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 
   testWidgets(
-      'granted consent with dry fleet report preserves route state without creating an alert',
-      (tester) async {
-    final locationBloc = MockLocationBloc();
-    final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final weatherProvider = _ScriptedWeatherProvider();
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
-    final consentBloc = ConsentBloc(service: InMemoryConsentService());
-    final fleetProvider = _ScriptedFleetProvider();
-    final fleetBloc = FleetBloc(provider: fleetProvider);
+    'critical weather alert is not downgraded after consent grant and snowy fleet report',
+    (tester) async {
+      final locationBloc = MockLocationBloc();
+      final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final weatherProvider = _ScriptedWeatherProvider();
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
+      final consentBloc = ConsentBloc(service: InMemoryConsentService());
+      final fleetProvider = _ScriptedFleetProvider();
+      final fleetBloc = FleetBloc(provider: fleetProvider);
 
-    addTearDown(() async {
-      await routingBloc.close();
-      await navigationBloc.close();
-      await mapBloc.close();
-      await weatherBloc.close();
-      await consentBloc.close();
-      await fleetBloc.close();
-    });
+      addTearDown(() async {
+        await routingBloc.close();
+        await navigationBloc.close();
+        await mapBloc.close();
+        await weatherBloc.close();
+        await consentBloc.close();
+        await fleetBloc.close();
+      });
 
-    when(() => locationBloc.state)
-        .thenReturn(const LocationState.uninitialized());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
 
-    await tester.pumpWidget(_buildWidget(
-      locationBloc: locationBloc,
-      routingBloc: routingBloc,
-      navigationBloc: navigationBloc,
-      mapBloc: mapBloc,
-      weatherBloc: weatherBloc,
-      consentBloc: consentBloc,
-      fleetBloc: fleetBloc,
-    ));
-    await tester.pump();
+      await tester.pumpWidget(
+        _buildWidget(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
+      await tester.pump();
 
-    consentBloc.add(const ConsentLoadRequested());
-    routingBloc.add(const RouteRequested(
-      origin: LatLng(35.1709, 136.9066),
-      destination: LatLng(34.9554, 137.1791),
-      destinationLabel: 'Higashiokazaki Station',
-    ));
-    await tester.pump();
-    await tester.pump();
+      consentBloc.add(const ConsentLoadRequested());
+      weatherBloc.add(const WeatherMonitorStarted());
+      await _pumpBlocCycles(tester);
+      weatherProvider.emit(_blackIceWeather);
+      routingBloc.add(
+        const RouteRequested(
+          origin: LatLng(35.1709, 136.9066),
+          destination: LatLng(34.9554, 137.1791),
+          destinationLabel: 'Higashiokazaki Station',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
 
-    consentBloc.add(const ConsentGrantRequested(
-      purpose: ConsentPurpose.fleetLocation,
-      jurisdiction: Jurisdiction.appi,
-    ));
-    await _pumpBlocCycles(tester, 4);
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
 
-    fleetProvider.emit(_dryReport);
-    await tester.pump();
-    await tester.pump();
+      consentBloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      );
+      await _pumpBlocCycles(tester, 4);
 
-    expect(fleetBloc.state.vehicleCount, 1);
-    expect(fleetBloc.state.hasHazards, isFalse);
-    expect(routingBloc.state.destinationLabel, 'Higashiokazaki Station');
-    expect(navigationBloc.state.hasSafetyAlert, isFalse);
+      fleetProvider.emit(_snowyReport);
+      await tester.pump();
+      await tester.pump();
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-  });
+      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+      // Feed ice flag → the precise, possibility-graded ja term.
+      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'granted consent with dry fleet report preserves route state without creating an alert',
+    (tester) async {
+      final locationBloc = MockLocationBloc();
+      final routingBloc = RoutingBloc(engine: _ImmediateRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final weatherProvider = _ScriptedWeatherProvider();
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
+      final consentBloc = ConsentBloc(service: InMemoryConsentService());
+      final fleetProvider = _ScriptedFleetProvider();
+      final fleetBloc = FleetBloc(provider: fleetProvider);
+
+      addTearDown(() async {
+        await routingBloc.close();
+        await navigationBloc.close();
+        await mapBloc.close();
+        await weatherBloc.close();
+        await consentBloc.close();
+        await fleetBloc.close();
+      });
+
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+
+      await tester.pumpWidget(
+        _buildWidget(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
+        ),
+      );
+      await tester.pump();
+
+      consentBloc.add(const ConsentLoadRequested());
+      routingBloc.add(
+        const RouteRequested(
+          origin: LatLng(35.1709, 136.9066),
+          destination: LatLng(34.9554, 137.1791),
+          destinationLabel: 'Higashiokazaki Station',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      consentBloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      );
+      await _pumpBlocCycles(tester, 4);
+
+      fleetProvider.emit(_dryReport);
+      await tester.pump();
+      await tester.pump();
+
+      expect(fleetBloc.state.vehicleCount, 1);
+      expect(fleetBloc.state.hasHazards, isFalse);
+      expect(routingBloc.state.destinationLabel, 'Higashiokazaki Station');
+      expect(navigationBloc.state.hasSafetyAlert, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 }

@@ -21,14 +21,29 @@ import 'package:voice_guidance/voice_guidance.dart';
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
         shape: shape,
+        // CHAIR RULING 3 (BOD-19): the Null Island guard lands in this wave.
+        //
+        // routing_engine 0.6.0 made `RouteManeuver.position` nullable. Before
+        // it, a maneuver whose location failed to parse silently carried
+        // `const LatLng(0, 0)` — Null Island, a REAL coordinate in the Gulf of
+        // Guinea — and this line copied it straight into the narration and the
+        // map. A maneuver we could not locate is not "at 0,0": it has NO
+        // position, and no coordinate may be substituted for it.
+        //
+        // `NavigationManeuver.position` is non-nullable, so such a maneuver
+        // cannot enter this type at all. It is omitted here rather than placed
+        // at a fabricated coordinate. It is not lost: `_UnlocatableManeuverNote`
+        // below tells the driver how many steps could not be located, so a
+        // silently-short route can never pass for a complete one.
         maneuvers: maneuvers
+            .where((m) => m.position != null)
             .map((m) => NavigationManeuver(
                   index: m.index,
                   instruction: m.instruction,
                   type: m.type,
                   lengthKm: m.lengthKm,
                   timeSeconds: m.timeSeconds,
-                  position: m.position,
+                  position: m.position!,
                 ))
             .toList(),
         totalDistanceKm: totalDistanceKm,
@@ -252,11 +267,19 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   final SimulatedWeatherProvider _weatherProvider =
       SimulatedWeatherProvider(interval: const Duration(seconds: 6));
   static const _autoAdvanceInterval = Duration(seconds: 3);
-  StreamSubscription<WeatherCondition>? _weatherSubscription;
+  StreamSubscription<WeatherReading>? _weatherSubscription;
   Timer? _autoAdvanceTimer;
 
   offline_tiles.OfflineTileManager? _offlineTileManager;
   WeatherCondition? _latestWeather;
+
+  /// True when [_latestWeather] is a LAST KNOWN reading the provider could not
+  /// refresh. Carried so the panel can SAY it — up to driving_weather 0.4.4 a
+  /// failed fetch silently re-emitted the old condition with a fresh timestamp,
+  /// so stale data was indistinguishable from fresh data on this screen.
+  // ignore: unused_field
+  bool _weatherIsStale = false;
+  Duration? _weatherAge;
   String _tileStatus = 'Checking tile source...';
   bool? _voiceBackendAvailable;
   bool _autoAdvanceEnabled = false;
@@ -379,19 +402,37 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _startWeather() async {
-    _weatherSubscription = _weatherProvider.conditions.listen((condition) {
+    // driving_weather 0.5.0: a SEALED WeatherReading — observed / stale /
+    // unavailable. The three are different facts and must not be flattened.
+    _weatherSubscription = _weatherProvider.conditions.listen((reading) {
       if (!mounted) {
         return;
       }
+      final WeatherCondition? condition = switch (reading) {
+        WeatherObserved(:final condition) => condition,
+        WeatherStale(:final lastKnown) => lastKnown,
+        // No data at all. NOT "no hazard" — the UI renders the unknown state.
+        WeatherUnavailable() => null,
+      };
       setState(() {
         _latestWeather = condition;
+        _weatherIsStale = reading is WeatherStale;
+        _weatherAge = reading is WeatherStale ? reading.age : null;
       });
-      if (condition.isHazardous) {
+      // Only POSITIVE evidence of a hazard fires an alert. `hazard` is
+      // tri-state: `unknown` is neither an alert (that would cry wolf on every
+      // offline moment until she stopped believing it) nor a green light — it
+      // is rendered as its own state, below.
+      if (condition != null && condition.hazard == SafetyVerdict.hazardous) {
+        final vis = condition.visibilityMeters;
         context.read<NavigationBloc>().add(
               SafetyAlertReceived(
-                message:
-                    'Weather: ${condition.precipType.name} ${condition.intensity.name}, visibility ${condition.visibilityMeters.toStringAsFixed(0)} m',
-                severity: condition.iceRisk || condition.visibilityMeters < 200
+                message: 'Weather: '
+                    '${condition.precipType?.name ?? 'precipitation not measured'} '
+                    '${condition.intensity?.name ?? ''}, visibility '
+                    '${vis == null ? 'not measured' : '${vis.toStringAsFixed(0)} m'}',
+                severity: condition.iceRisk == true ||
+                        (vis != null && vis < 200)
                     ? AlertSeverity.critical
                     : AlertSeverity.warning,
               ),
@@ -543,6 +584,11 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
           listener: (_, state) {
             final maneuver = state.currentManeuver;
             if (maneuver != null) {
+              // The maneuvers that reach NavigationRoute all carry a position
+              // (the adapter above refuses to fabricate one), so this centre is
+              // always a real coordinate. Before the guard, a maneuver whose
+              // location failed to parse would have centred HER map on Null
+              // Island — the Gulf of Guinea — while she was driving in Akita.
               context.read<MapBloc>().add(CenterChanged(maneuver.position));
               context.read<MapBloc>().add(const ZoomChanged(12.0));
             }
@@ -958,6 +1004,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
             child: _WeatherSummary(
               condition: _latestWeather,
               tileStatus: _tileStatus,
+              staleAge: _weatherAge,
             ),
           ),
           _PanelCard(
@@ -974,6 +1021,12 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       const SizedBox(height: 6),
                       Text(routingState.route!.summary),
                       Text('Engine: ${routingState.route!.engineInfo.name}'),
+                      // A maneuver we could not LOCATE is omitted from the map
+                      // and the narration (it is not placed on Null Island).
+                      // Omitting it silently, though, would let a short route
+                      // pass for a complete one — the same absence-reads-as-fine
+                      // defect one layer over. So it is counted and shown.
+                      _UnlocatableManeuverNote(route: routingState.route!),
                       Text(
                         '${routingState.route!.totalDistanceKm.toStringAsFixed(1)} km • ${routingState.route!.eta.inMinutes} min',
                       ),
@@ -1190,14 +1243,26 @@ class _WeatherMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hazardous = condition?.isHazardous ?? false;
+    // `?? false` is the exact keystroke that restores the defect the library
+    // just removed: it resolves "no data" to "not hazardous". Tri-state instead.
+    final verdict = condition?.hazard ?? SafetyVerdict.unknown;
+    final hazardous = verdict == SafetyVerdict.hazardous;
+    final unknown = verdict == SafetyVerdict.unknown;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: hazardous ? Colors.red.shade700 : Colors.blue.shade700,
+        color: hazardous
+            ? Colors.red.shade700
+            : unknown
+                ? Colors.blueGrey.shade600
+                : Colors.blue.shade700,
         shape: BoxShape.circle,
       ),
       child: Icon(
-        hazardous ? Icons.ac_unit : Icons.cloud,
+        hazardous
+            ? Icons.ac_unit
+            : unknown
+                ? Icons.help_outline
+                : Icons.cloud,
         color: Colors.white,
         size: 24,
       ),
@@ -1205,31 +1270,111 @@ class _WeatherMarker extends StatelessWidget {
   }
 }
 
+/// Discloses maneuvers that carried NO position and were therefore left off the
+/// map and out of the narration.
+///
+/// Silence here would be the defect: a route whose steps could not be located
+/// would simply look shorter, and a short route reads exactly like a complete
+/// one unless somebody says otherwise.
+class _UnlocatableManeuverNote extends StatelessWidget {
+  const _UnlocatableManeuverNote({required this.route});
+
+  final RouteResult route;
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocatable =
+        route.maneuvers.where((m) => m.position == null).length;
+    if (unlocatable == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        '$unlocatable of ${route.maneuvers.length} steps could not be located '
+        'and are not shown on the map.',
+        style: TextStyle(
+          color: Colors.orange.shade800,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
 class _WeatherSummary extends StatelessWidget {
-  const _WeatherSummary({required this.condition, required this.tileStatus});
+  const _WeatherSummary({
+    required this.condition,
+    required this.tileStatus,
+    this.staleAge,
+  });
 
   final WeatherCondition? condition;
   final String tileStatus;
 
+  /// Non-null when [condition] is a LAST KNOWN reading that could not be
+  /// refreshed. Its real age, so the panel can say so rather than presenting
+  /// stale data with a fresh face.
+  final Duration? staleAge;
+
   @override
   Widget build(BuildContext context) {
-    if (condition == null) {
-      return Text(tileStatus);
+    final c = condition;
+    if (c == null) {
+      // NO DATA. Up to now this fell through to the tile status alone — the
+      // weather panel simply vanished, and a blank panel reads as a calm one.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '路面状況を取得できていません。見える範囲で運転してください。',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 6),
+          const Text('Road conditions unavailable — drive to what you can see.'),
+          const SizedBox(height: 10),
+          Text(tileStatus),
+        ],
+      );
     }
+
+    // Every field prints "not measured" when the feed did not carry it. 0.4.4
+    // printed +5.0 C / 10000 m / 0 km/h / "No ice risk" here — for a road
+    // nobody had looked at.
+    String num1(double? v, String unit) =>
+        v == null ? 'not measured' : '${v.toStringAsFixed(1)} $unit';
+    String num0(double? v, String unit) =>
+        v == null ? 'not measured' : '${v.toStringAsFixed(0)} $unit';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${condition!.precipType.name} ${condition!.intensity.name}',
+          '${c.precipType?.name ?? 'precipitation not measured'} '
+          '${c.intensity?.name ?? ''}'.trim(),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 6),
         Text(
-          '${condition!.temperatureCelsius.toStringAsFixed(1)} C • visibility ${condition!.visibilityMeters.toStringAsFixed(0)} m • wind ${condition!.windSpeedKmh.toStringAsFixed(0)} km/h',
+          '${num1(c.temperatureCelsius, 'C')} • visibility '
+          '${num0(c.visibilityMeters, 'm')} • wind '
+          '${num0(c.windSpeedKmh, 'km/h')}',
         ),
         const SizedBox(height: 6),
-        Text(condition!.iceRisk ? 'Ice risk detected' : 'No ice risk'),
+        Text(switch (c.iceRisk) {
+          true => 'Ice risk detected',
+          false => 'No ice risk',
+          // `null` is NOT "No ice risk". That sentence, printed for an
+          // unmeasured road, is the defect in one line of UI text.
+          null => 'Ice risk not measured',
+        }),
+        if (staleAge != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'This reading is ${staleAge!.inMinutes} minutes old — the feed '
+            'could not be refreshed.',
+            style: TextStyle(color: Colors.orange.shade800),
+          ),
+        ],
         const SizedBox(height: 10),
         Text(tileStatus),
       ],

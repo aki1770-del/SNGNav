@@ -477,8 +477,12 @@ void main() {
       await engine.dispose();
     });
 
+    // Absence of a resolvable shape index is absence of a position — never
+    // Null Island. Up to 0.5.0 these cases silently produced LatLng(0, 0),
+    // a real coordinate in the Gulf of Guinea, which consumers narrated and
+    // plotted as a genuine maneuver location.
     test(
-      'begin_shape_index beyond decoded points defaults to (0, 0)',
+      'begin_shape_index beyond decoded points yields NO position (never 0,0)',
       () async {
         final engine = ValhallaRoutingEngine(
           baseUrl: 'http://test',
@@ -497,11 +501,99 @@ void main() {
         );
 
         final result = await engine.calculateRoute(_request);
-        expect(result.maneuvers.first.position, const LatLng(0, 0));
+        final m = result.maneuvers.first;
+
+        expect(m.position, isNull);
+        expect(m.hasPosition, isFalse);
+        // The fabrication this release removes — asserted explicitly so the
+        // old behaviour cannot return unnoticed.
+        expect(m.position, isNot(const LatLng(0, 0)));
+
+        // The loom refuses the FALSE thread, not the whole cloth: the rest of
+        // the maneuver is still true and still usable.
+        expect(m.instruction, 'Test');
+        expect(m.lengthKm, closeTo(1.0, 0.001));
+        expect(m.timeSeconds, closeTo(60, 0.001));
 
         await engine.dispose();
       },
     );
+
+    test('missing begin_shape_index yields NO position (never the route start)',
+        () async {
+      // Previously this defaulted to index 0 — silently claiming the maneuver
+      // happens at the route origin. An unstated index is not "at the start".
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaClient(
+          shape: 'o}@o}@',
+          maneuvers: [
+            {'instruction': 'Test', 'type': 1, 'length': 1.0, 'time': 60},
+          ],
+        ),
+      );
+
+      final result = await engine.calculateRoute(_request);
+
+      expect(result.maneuvers.first.position, isNull);
+      expect(result.maneuvers.first.instruction, 'Test');
+
+      await engine.dispose();
+    });
+
+    test('negative begin_shape_index yields NO position (never throws)',
+        () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaClient(
+          shape: 'o}@o}@',
+          maneuvers: [
+            {
+              'instruction': 'Test',
+              'type': 1,
+              'length': 1.0,
+              'time': 60,
+              'begin_shape_index': -1,
+            },
+          ],
+        ),
+      );
+
+      final result = await engine.calculateRoute(_request);
+
+      expect(result.maneuvers.first.position, isNull);
+
+      await engine.dispose();
+    });
+
+    test('a resolvable begin_shape_index still yields a REAL position',
+        () async {
+      // The honest-absence contract must not make every position absent:
+      // a maneuver the engine did locate keeps its true coordinate.
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaClient(
+          maneuvers: [
+            {
+              'instruction': 'Drive east.',
+              'type': 1,
+              'length': 1.0,
+              'time': 60,
+              'begin_shape_index': 0,
+            },
+          ],
+        ),
+      );
+
+      final result = await engine.calculateRoute(_request);
+      final m = result.maneuvers.first;
+
+      expect(m.hasPosition, isTrue);
+      expect(m.position, isNotNull);
+      expect(m.position, result.shape.first);
+
+      await engine.dispose();
+    });
   });
 
   group('ValhallaRoutingEngine — summary and distance', () {

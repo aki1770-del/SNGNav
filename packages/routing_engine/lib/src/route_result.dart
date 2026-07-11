@@ -14,7 +14,24 @@ class RouteManeuver extends Equatable {
   final String type; // engine-agnostic: 'depart', 'right', 'left', etc.
   final double lengthKm;
   final double timeSeconds;
-  final LatLng position;
+
+  /// Where the maneuver happens — **`null` means the position is UNKNOWN.**
+  ///
+  /// `null` is never "the origin" and never `LatLng(0, 0)`. It means the
+  /// engine's response did not carry a usable coordinate for this maneuver
+  /// (a missing/short `location` array on OSRM; a `begin_shape_index` that
+  /// falls outside the decoded polyline on Valhalla).
+  ///
+  /// Up to and including 0.5.0 both engines silently substituted
+  /// `const LatLng(0, 0)` — Null Island, a real coordinate in the Gulf of
+  /// Guinea — which consumers then narrated and mapped as a genuine position.
+  /// Absence of a measurement is not a measurement. Read it through
+  /// [hasPosition], and do not narrate or plot a maneuver that has none.
+  ///
+  /// The rest of the maneuver ([instruction], [lengthKm], [timeSeconds]) is
+  /// still true and still useful when the position is absent — one unparseable
+  /// coordinate does not invalidate the route.
+  final LatLng? position;
 
   const RouteManeuver({
     required this.index,
@@ -24,6 +41,12 @@ class RouteManeuver extends Equatable {
     required this.timeSeconds,
     required this.position,
   });
+
+  /// Whether this maneuver carries a known position.
+  ///
+  /// `false` means the engine gave us no usable coordinate — not that the
+  /// maneuver is at 0,0.
+  bool get hasPosition => position != null;
 
   @override
   List<Object?> get props => [
@@ -37,7 +60,8 @@ class RouteManeuver extends Equatable {
 
   @override
   String toString() =>
-      'RouteManeuver($index: $type "$instruction" ${lengthKm}km)';
+      'RouteManeuver($index: $type "$instruction" ${lengthKm}km'
+      '${hasPosition ? '' : ', position unknown'})';
 }
 
 /// Which routing engine produced this result.

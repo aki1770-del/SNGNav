@@ -214,9 +214,7 @@ void main() {
     test('toString includes vehicle count and hazard count', () {
       final state = FleetState(
         status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _report(condition: RoadCondition.icy),
-        },
+        activeReports: {'V-001': _report(condition: RoadCondition.icy)},
       );
       expect(state.toString(), contains('1 vehicles'));
       expect(state.toString(), contains('1 hazards'));
@@ -229,26 +227,17 @@ void main() {
 
   group('FleetEvent', () {
     test('FleetListenStarted equality', () {
-      expect(
-        const FleetListenStarted(),
-        equals(const FleetListenStarted()),
-      );
+      expect(const FleetListenStarted(), equals(const FleetListenStarted()));
     });
 
     test('FleetListenStopped equality', () {
-      expect(
-        const FleetListenStopped(),
-        equals(const FleetListenStopped()),
-      );
+      expect(const FleetListenStopped(), equals(const FleetListenStopped()));
     });
 
     test('FleetReportReceived equality', () {
       final timestamp = DateTime(2026, 2, 27);
       final report = _report(timestamp: timestamp);
-      expect(
-        FleetReportReceived(report),
-        equals(FleetReportReceived(report)),
-      );
+      expect(FleetReportReceived(report), equals(FleetReportReceived(report)));
     });
 
     test('FleetErrorOccurred equality', () {
@@ -286,8 +275,11 @@ void main() {
       build: () => FleetBloc(provider: _MockFleetProvider()),
       act: (bloc) => bloc.add(const FleetListenStarted()),
       expect: () => [
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
       ],
     );
 
@@ -300,8 +292,11 @@ void main() {
         bloc.add(const FleetListenStopped());
       },
       expect: () => [
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         isA<FleetState>()
             .having((s) => s.status, 'status', FleetStatus.idle)
             .having((s) => s.activeReports, 'reports', isEmpty),
@@ -325,8 +320,11 @@ void main() {
       },
       expect: () => [
         // listening (on start)
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         // listening with report
         isA<FleetState>()
             .having((s) => s.vehicleCount, 'vehicles', 1)
@@ -353,8 +351,11 @@ void main() {
       },
       expect: () => [
         // listening
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         // V-001 received
         isA<FleetState>()
             .having((s) => s.vehicleCount, 'vehicles', 1)
@@ -384,8 +385,11 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 150));
       },
       expect: () => [
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         // V-001 dry
         isA<FleetState>()
             .having((s) => s.vehicleCount, 'vehicles', 1)
@@ -407,11 +411,13 @@ void main() {
           // Pruning happens on insertion, so V-OLD is pruned immediately.
           // The emitted state (0 vehicles, listening) equals the prior
           // listening state — bloc_test deduplicates it.
-          p.emitReport(_report(
-            id: 'V-OLD',
-            condition: RoadCondition.icy,
-            timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
-          ));
+          p.emitReport(
+            _report(
+              id: 'V-OLD',
+              condition: RoadCondition.icy,
+              timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
+            ),
+          );
         });
         Future<void>.delayed(const Duration(milliseconds: 80)).then((_) {
           // Fresh report — survives pruning.
@@ -424,8 +430,11 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 150));
       },
       expect: () => [
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         // V-OLD was pruned on insertion (stale). V-NEW is fresh — only V-NEW present.
         isA<FleetState>()
             .having((s) => s.vehicleCount, 'vehicles', 1)
@@ -447,8 +456,11 @@ void main() {
       build: () => FleetBloc(provider: _FailingFleetProvider()),
       act: (bloc) => bloc.add(const FleetListenStarted()),
       expect: () => [
-        isA<FleetState>()
-            .having((s) => s.status, 'status', FleetStatus.listening),
+        isA<FleetState>().having(
+          (s) => s.status,
+          'status',
+          FleetStatus.listening,
+        ),
         isA<FleetState>()
             .having((s) => s.status, 'status', FleetStatus.error)
             .having((s) => s.errorMessage, 'error', isNotNull),

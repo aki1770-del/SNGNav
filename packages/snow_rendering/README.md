@@ -9,6 +9,14 @@ precipitation parameters from real weather observations.
 
 Pure Dart — no Flutter dependency. Safe to use from any Dart environment.
 
+> **0.3.0 fixes a safety defect present through 0.2.7.** A road whose conditions
+> could not be classified fell through to `RoadSurfaceState.dry`, `gripFactor:
+> 1.0`, `RecommendedResponse.proceed` and the advisory **"Conditions normal"** —
+> a confident green light over a road nobody had measured. `surfaceState` and
+> `gripFactor` are now nullable and a `conditionsUnknown` response tier exists.
+> Read the [CHANGELOG](CHANGELOG.md) before upgrading — the compile errors are
+> the fix.
+
 ## Features
 
 - `RoadSurfaceState` — six-state classification (dry, wet, slush, compactedSnow, blackIce, standingWater) with grip factors, including the humidity-gated radiative-frost black-ice window (clear sky, ambient a few degrees above 0 °C, road surface frozen)
@@ -22,7 +30,7 @@ Pure Dart — no Flutter dependency. Safe to use from any Dart environment.
 
 ```yaml
 dependencies:
-  snow_rendering: ^0.2.7
+  snow_rendering: ^0.3.0
 ```
 
 ## Quick Start
@@ -42,11 +50,25 @@ final condition = WeatherCondition(
 );
 
 final assessment = DrivingConditionAssessment.fromCondition(condition);
-print(assessment.surfaceState);    // RoadSurfaceState.compactedSnow
-print(assessment.gripFactor);      // 0.3
+
+// NULLABLE (0.3.0): a road the classifier could not assess has NO surface and
+// NO grip coefficient. `null` does not mean `dry`, and it does not mean 1.0 —
+// inventing either is the defect this release removes.
+print(assessment.surfaceState);    // RoadSurfaceState.compactedSnow (or null)
+print(assessment.gripFactor);      // 0.3 (or null — surface not classified)
 print(assessment.advisoryMessage); // Compacted snow — use winter tyres, reduce speed
-print(assessment.visibility.blurSigma); // 2.0 (mild blur at 400m)
-print(assessment.precipitation.particleCount); // 500 (heavy snow)
+print(assessment.visibility?.blurSigma);        // 2.0 (or null — not measured)
+print(assessment.precipitation?.particleCount); // 500 (or null — not measured)
+
+// The tier tells you which case you are in — exhaustively.
+switch (assessment.recommendedResponse) {
+  case RecommendedResponse.proceed:            // assessed, and benign
+  case RecommendedResponse.reduceSpeed:        // hazard
+  case RecommendedResponse.considerTurningBack:// whiteout class
+  case RecommendedResponse.conditionsUnknown:  // NOT assessed — say so
+    print(RecommendedResponse.conditionsUnknown.announcement!.jaSpokenText);
+    // 路面状況を取得できていません。見える範囲で運転してください。
+}
 ```
 
 ## Debounced Classification
@@ -54,7 +76,10 @@ print(assessment.precipitation.particleCount); // 500 (heavy snow)
 Wrap in `HysteresisFilter` to prevent flickering at boundary conditions:
 
 ```dart
-final filter = HysteresisFilter<RoadSurfaceState>();
+// NOTE the nullable type argument: `fromCondition` returns `RoadSurfaceState?`
+// in 0.3.0 — a road it cannot classify has no surface, and must not be
+// debounced into `dry`.
+final filter = HysteresisFilter<RoadSurfaceState?>();
 // Requires the same state in 2 of last 3 readings before transitioning.
 final stable = filter.update(RoadSurfaceState.fromCondition(condition));
 ```

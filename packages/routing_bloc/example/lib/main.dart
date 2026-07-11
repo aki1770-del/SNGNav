@@ -12,7 +12,18 @@ import 'package:routing_engine/routing_engine.dart';
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
     shape: shape,
+    // routing_engine 0.6.0: `RouteManeuver.position` is nullable. A maneuver
+    // whose position could not be parsed is NOT "at 0,0" (Null Island, in the
+    // Gulf of Guinea) — it has NO position, and no coordinate may be
+    // substituted for it. `NavigationManeuver.position` is non-nullable, so a
+    // positionless maneuver simply cannot enter this type: it is omitted here
+    // rather than given a fake location.
+    //
+    // A production app should NOT silently drop it — the instruction and the
+    // distance are still true and still useful. It should keep the instruction
+    // and refuse only to place it on the map or narrate it as a location.
     maneuvers: maneuvers
+        .where((m) => m.position != null)
         .map(
           (m) => NavigationManeuver(
             index: m.index,
@@ -20,7 +31,7 @@ extension _RouteResultToNavigation on RouteResult {
             type: m.type,
             lengthKm: m.lengthKm,
             timeSeconds: m.timeSeconds,
-            position: m.position,
+            position: m.position!,
           ),
         )
         .toList(),

@@ -76,8 +76,9 @@ void main() {
     );
   });
 
-  testWidgets('snow_scene pre-trip surface — JA capture (in-app, shell-hosted)',
-      (tester) async {
+  testWidgets('snow_scene pre-trip surface — JA capture (in-app, shell-hosted)', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');
@@ -152,10 +153,7 @@ void main() {
         // The REAL shell — its default pretrip leg builds the AppBar + button +
         // PretripScreen(compactedSnow). RepaintBoundary at the home level so the
         // whole Scaffold (AppBar included) is captured.
-        home: RepaintBoundary(
-          key: boundaryKey,
-          child: const SnowSceneShell(),
-        ),
+        home: RepaintBoundary(key: boundaryKey, child: const SnowSceneShell()),
       ),
     );
 
@@ -169,26 +167,39 @@ void main() {
 
     // Confirm the localized chrome actually reached the tree (cheap guard that
     // the PNG is of the Japanese surface, not a silent English fallback).
-    expect(find.text(BriefingStrings.ja.beforeYouDrive), findsWidgets,
-        reason: 'the AppBar title must render "出発前に" under ja');
-    expect(find.text(BriefingStrings.ja.startDrive), findsOneWidget,
-        reason: 'the Start-drive button must render "運転を開始" under ja');
-    expect(find.text(BriefingStrings.en.beforeYouDrive), findsNothing,
-        reason: 'no English "Before you drive" chrome should leak under ja');
+    expect(
+      find.text(BriefingStrings.ja.beforeYouDrive),
+      findsWidgets,
+      reason: 'the AppBar title must render "出発前に" under ja',
+    );
+    expect(
+      find.text(BriefingStrings.ja.startDrive),
+      findsOneWidget,
+      reason: 'the Start-drive button must render "運転を開始" under ja',
+    );
+    expect(
+      find.text(BriefingStrings.en.beforeYouDrive),
+      findsNothing,
+      reason: 'no English "Before you drive" chrome should leak under ja',
+    );
 
     await tester.runAsync(() async {
       final boundary =
-          boundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
-      final dir = Directory('test/widgets/_capture')..createSync(recursive: true);
+      final dir = Directory('test/widgets/_capture')
+        ..createSync(recursive: true);
       final file = File('${dir.path}/snow_scene_pretrip_ja.png');
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
-      print('CAPTURE snow_scene_pretrip_ja: ${file.absolute.path} '
-          '${file.lengthSync()} bytes ${image.width}x${image.height}');
+      print(
+        'CAPTURE snow_scene_pretrip_ja: ${file.absolute.path} '
+        '${file.lengthSync()} bytes ${image.width}x${image.height}',
+      );
     });
 
     // Surface any non-benign exception (benign plugin/asset misses degrade

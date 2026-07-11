@@ -38,6 +38,8 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     on<WeatherMonitorStarted>(_onStart);
     on<WeatherMonitorStopped>(_onStop);
     on<WeatherConditionReceived>(_onConditionReceived);
+    on<WeatherStaleConditionReceived>(_onStaleConditionReceived);
+    on<WeatherConditionUnavailable>(_onConditionUnavailable);
     on<WeatherErrorOccurred>(_onError);
   }
 
@@ -56,8 +58,21 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     emit(state.copyWith(status: WeatherStatus.monitoring));
 
     try {
+      // driving_weather 0.5.0: the provider stream is a SEALED WeatherReading —
+      // observed / stale / unavailable — not a bare WeatherCondition. The three
+      // cases are genuinely different facts and the app must not flatten them:
+      // a stale reading is not a fresh one, and "no data" is not "no hazard".
       _conditionSub = _provider.conditions.listen(
-        (condition) => add(WeatherConditionReceived(condition)),
+        (reading) {
+          switch (reading) {
+            case WeatherObserved(:final condition):
+              add(WeatherConditionReceived(condition));
+            case WeatherStale(:final lastKnown, :final age):
+              add(WeatherStaleConditionReceived(lastKnown, age));
+            case WeatherUnavailable():
+              add(const WeatherConditionUnavailable());
+          }
+        },
         onError: (Object e) => add(WeatherErrorOccurred(e.toString())),
       );
       await _provider.startMonitoring();
@@ -92,6 +107,33 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     emit(state.copyWith(
       status: WeatherStatus.monitoring,
       condition: event.condition,
+      conditionAge: Duration.zero,
+    ));
+  }
+
+  void _onStaleConditionReceived(
+    WeatherStaleConditionReceived event,
+    Emitter<WeatherState> emit,
+  ) {
+    // The last known condition, carried with its REAL age. It is not presented
+    // as fresh, and it is not thrown away — an hour-old reading is still
+    // information, as long as she is told it is an hour old.
+    emit(state.copyWith(
+      status: WeatherStatus.monitoring,
+      condition: event.lastKnown,
+      conditionAge: event.age,
+    ));
+  }
+
+  void _onConditionUnavailable(
+    WeatherConditionUnavailable event,
+    Emitter<WeatherState> emit,
+  ) {
+    // No condition at all. NOT "no hazard" — the state carries null, and every
+    // verdict on it resolves to SafetyVerdict.unknown.
+    emit(state.copyWith(
+      status: WeatherStatus.monitoring,
+      clearCondition: true,
     ));
   }
 
@@ -99,7 +141,9 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     WeatherErrorOccurred event,
     Emitter<WeatherState> emit,
   ) {
-    // Preserve last known condition so isHazardous stays correct on error.
+    // Preserve the last known condition so a positive hazard verdict survives
+    // an error. It keeps whatever age it already carried — an error does not
+    // make an old reading fresh.
     emit(state.copyWith(
       status: WeatherStatus.error,
       errorMessage: event.message,

@@ -47,7 +47,8 @@ Map<String, dynamic> _validResponse({
           {
             'distance': distance,
             'duration': duration,
-            'steps': steps ??
+            'steps':
+                steps ??
                 [
                   {
                     'name': 'Route 153',
@@ -88,8 +89,10 @@ Map<String, dynamic> _validResponse({
 }
 
 /// Create a MockClient that returns the given body for route requests.
-MockClient _mockClient(Map<String, dynamic> responseBody,
-    {int statusCode = 200}) {
+MockClient _mockClient(
+  Map<String, dynamic> responseBody, {
+  int statusCode = 200,
+}) {
   return MockClient((request) async {
     return http.Response(jsonEncode(responseBody), statusCode);
   });
@@ -145,15 +148,16 @@ void main() {
           client: client,
         );
 
-        await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(capturedUri, isNotNull);
         // OSRM uses lon,lat (not lat,lon).
-        expect(capturedUri!.path,
-            contains('/route/v1/driving/136.8815,35.1709;137.1566,35.0504'));
+        expect(
+          capturedUri!.path,
+          contains('/route/v1/driving/136.8815,35.1709;137.1566,35.0504'),
+        );
         expect(capturedUri!.queryParameters['steps'], 'true');
         expect(capturedUri!.queryParameters['overview'], 'full');
         expect(capturedUri!.queryParameters['geometries'], 'polyline');
@@ -162,10 +166,9 @@ void main() {
       test('parses valid response into RouteResult', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.totalDistanceKm, closeTo(25.7, 0.01));
         expect(result.totalTimeSeconds, 1830);
@@ -177,10 +180,9 @@ void main() {
       test('decodes polyline5 geometry correctly', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         // Polyline5 should decode to approximately our test coordinates.
         expect(result.shape.length, greaterThanOrEqualTo(2));
@@ -191,10 +193,9 @@ void main() {
       test('parses maneuver types correctly', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'depart');
         expect(result.maneuvers[1].type, 'right');
@@ -206,15 +207,19 @@ void main() {
         // is 'ja-JP' (HER's locale) since the ja narration fix.
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-          language: 'en',
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(
+            origin: _nagoya,
+            destination: _toyota,
+            language: 'en',
+          ),
+        );
 
         expect(result.maneuvers[0].instruction, 'Depart on Route 153');
-        expect(result.maneuvers[1].instruction,
-            'Right onto Tokai-Kanjo Expressway');
+        expect(
+          result.maneuvers[1].instruction,
+          'Right onto Tokai-Kanjo Expressway',
+        );
         expect(result.maneuvers[2].instruction, 'Arrive at destination');
       });
 
@@ -223,14 +228,12 @@ void main() {
         // to a Japanese driver by default.
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].instruction, 'Route 153を出発');
-        expect(result.maneuvers[1].instruction,
-            'Tokai-Kanjo Expressway方面へ右折');
+        expect(result.maneuvers[1].instruction, 'Tokai-Kanjo Expressway方面へ右折');
         expect(result.maneuvers[2].instruction, '目的地に到着');
       });
 
@@ -239,10 +242,9 @@ void main() {
           client: _mockClient(_validResponse(distance: 5000)),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.totalDistanceKm, closeTo(5.0, 0.01));
       });
@@ -250,23 +252,20 @@ void main() {
       test('records query latency in engineInfo', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.engineInfo.queryLatency, isNotNull);
-        expect(
-            result.engineInfo.queryLatency.inMicroseconds, greaterThan(0));
+        expect(result.engineInfo.queryLatency.inMicroseconds, greaterThan(0));
       });
 
       test('generates summary string', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.summary, contains('25.7 km'));
         expect(result.summary, contains('31 min'));
@@ -275,15 +274,20 @@ void main() {
       test('parses maneuver positions (lon,lat → LatLng)', () async {
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
-        // First maneuver at Nagoya.
-        expect(result.maneuvers[0].position.latitude, closeTo(35.1709, 0.001));
+        // First maneuver at Nagoya. `position` is nullable in routing_engine
+        // 0.6.0 (a maneuver whose location failed to parse has NO position and
+        // is NOT at LatLng(0,0)); this response carries a real one, and the `!`
+        // pins that — a null here would FAIL rather than silently pass.
+        expect(result.maneuvers[0].position, isNotNull);
+        expect(result.maneuvers[0].position!.latitude, closeTo(35.1709, 0.001));
         expect(
-            result.maneuvers[0].position.longitude, closeTo(136.8815, 0.001));
+          result.maneuvers[0].position!.longitude,
+          closeTo(136.8815, 0.001),
+        );
       });
     });
 
@@ -294,32 +298,29 @@ void main() {
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
           throwsA(isA<RoutingException>()),
         );
       });
 
       test('throws RoutingException on OSRM error code', () async {
         final engine = OsrmRoutingEngine(
-          client: _mockClient({
-            'code': 'NoRoute',
-            'message': 'No route found',
-          }),
+          client: _mockClient({'code': 'NoRoute', 'message': 'No route found'}),
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
-          throwsA(isA<RoutingException>().having(
-            (e) => e.message,
-            'message',
-            contains('No route found'),
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
+          throwsA(
+            isA<RoutingException>().having(
+              (e) => e.message,
+              'message',
+              contains('No route found'),
+            ),
+          ),
         );
       });
 
@@ -329,10 +330,9 @@ void main() {
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
           throwsA(isA<RoutingException>()),
         );
       });
@@ -341,85 +341,89 @@ void main() {
         final engine = OsrmRoutingEngine(client: _errorClient());
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
-          throwsA(isA<RoutingException>().having(
-            (e) => e.message,
-            'message',
-            contains('network error'),
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
+          throwsA(
+            isA<RoutingException>().having(
+              (e) => e.message,
+              'message',
+              contains('network error'),
+            ),
+          ),
         );
       });
     });
 
     group('maneuver type mapping', () {
       test('maps roundabout type', () async {
-        final response = _validResponse(steps: [
-          {
-            'name': 'Circle Rd',
-            'distance': 200.0,
-            'duration': 30.0,
-            'maneuver': {
-              'type': 'roundabout',
-              'modifier': 'right',
-              'location': [136.88, 35.17],
+        final response = _validResponse(
+          steps: [
+            {
+              'name': 'Circle Rd',
+              'distance': 200.0,
+              'duration': 30.0,
+              'maneuver': {
+                'type': 'roundabout',
+                'modifier': 'right',
+                'location': [136.88, 35.17],
+              },
             },
-          },
-        ]);
+          ],
+        );
         final engine = OsrmRoutingEngine(client: _mockClient(response));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'roundabout_enter');
       });
 
       test('maps merge type', () async {
-        final response = _validResponse(steps: [
-          {
-            'name': 'Highway',
-            'distance': 500.0,
-            'duration': 20.0,
-            'maneuver': {
-              'type': 'merge',
-              'modifier': 'slight left',
-              'location': [136.88, 35.17],
+        final response = _validResponse(
+          steps: [
+            {
+              'name': 'Highway',
+              'distance': 500.0,
+              'duration': 20.0,
+              'maneuver': {
+                'type': 'merge',
+                'modifier': 'slight left',
+                'location': [136.88, 35.17],
+              },
             },
-          },
-        ]);
+          ],
+        );
         final engine = OsrmRoutingEngine(client: _mockClient(response));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'merge');
       });
 
       test('maps slight left modifier', () async {
-        final response = _validResponse(steps: [
-          {
-            'name': 'Side Rd',
-            'distance': 300.0,
-            'duration': 40.0,
-            'maneuver': {
-              'type': 'turn',
-              'modifier': 'slight left',
-              'location': [136.88, 35.17],
+        final response = _validResponse(
+          steps: [
+            {
+              'name': 'Side Rd',
+              'distance': 300.0,
+              'duration': 40.0,
+              'maneuver': {
+                'type': 'turn',
+                'modifier': 'slight left',
+                'location': [136.88, 35.17],
+              },
             },
-          },
-        ]);
+          ],
+        );
         final engine = OsrmRoutingEngine(client: _mockClient(response));
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'slight_left');
       });

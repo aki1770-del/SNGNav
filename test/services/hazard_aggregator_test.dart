@@ -28,16 +28,24 @@ void main() {
 
     test('returns empty list for non-hazard reports only', () {
       final reports = [
-        makeReport(id: 'v1', lat: 35.0, lon: 137.0, condition: RoadCondition.dry),
-        makeReport(id: 'v2', lat: 35.1, lon: 137.1, condition: RoadCondition.wet),
+        makeReport(
+          id: 'v1',
+          lat: 35.0,
+          lon: 137.0,
+          condition: RoadCondition.dry,
+        ),
+        makeReport(
+          id: 'v2',
+          lat: 35.1,
+          lon: 137.1,
+          condition: RoadCondition.wet,
+        ),
       ];
       expect(HazardAggregator.aggregate(reports), isEmpty);
     });
 
     test('creates single zone for one hazard report', () {
-      final reports = [
-        makeReport(id: 'v1', lat: 35.05, lon: 137.25),
-      ];
+      final reports = [makeReport(id: 'v1', lat: 35.05, lon: 137.25)];
       final zones = HazardAggregator.aggregate(reports);
       expect(zones.length, 1);
       expect(zones[0].reports.length, 1);
@@ -46,9 +54,7 @@ void main() {
     });
 
     test('single report zone has minimum radius', () {
-      final reports = [
-        makeReport(id: 'v1', lat: 35.05, lon: 137.25),
-      ];
+      final reports = [makeReport(id: 'v1', lat: 35.05, lon: 137.25)];
       final zones = HazardAggregator.aggregate(reports);
       expect(zones[0].radiusMeters, HazardAggregator.minZoneRadius);
     });
@@ -79,9 +85,24 @@ void main() {
 
     test('filters out non-hazard reports from clusters', () {
       final reports = [
-        makeReport(id: 'v1', lat: 35.05, lon: 137.25, condition: RoadCondition.icy),
-        makeReport(id: 'v2', lat: 35.052, lon: 137.252, condition: RoadCondition.dry),
-        makeReport(id: 'v3', lat: 35.051, lon: 137.251, condition: RoadCondition.snowy),
+        makeReport(
+          id: 'v1',
+          lat: 35.05,
+          lon: 137.25,
+          condition: RoadCondition.icy,
+        ),
+        makeReport(
+          id: 'v2',
+          lat: 35.052,
+          lon: 137.252,
+          condition: RoadCondition.dry,
+        ),
+        makeReport(
+          id: 'v3',
+          lat: 35.051,
+          lon: 137.251,
+          condition: RoadCondition.snowy,
+        ),
       ];
       final zones = HazardAggregator.aggregate(reports);
       expect(zones.length, 1);
@@ -91,8 +112,18 @@ void main() {
 
     test('zone severity is icy when any report is icy', () {
       final reports = [
-        makeReport(id: 'v1', lat: 35.05, lon: 137.25, condition: RoadCondition.snowy),
-        makeReport(id: 'v2', lat: 35.052, lon: 137.252, condition: RoadCondition.icy),
+        makeReport(
+          id: 'v1',
+          lat: 35.05,
+          lon: 137.25,
+          condition: RoadCondition.snowy,
+        ),
+        makeReport(
+          id: 'v2',
+          lat: 35.052,
+          lon: 137.252,
+          condition: RoadCondition.icy,
+        ),
       ];
       final zones = HazardAggregator.aggregate(reports);
       expect(zones[0].severity, HazardSeverity.icy);
@@ -100,8 +131,18 @@ void main() {
 
     test('zone severity is snowy when no icy reports', () {
       final reports = [
-        makeReport(id: 'v1', lat: 35.05, lon: 137.25, condition: RoadCondition.snowy),
-        makeReport(id: 'v2', lat: 35.052, lon: 137.252, condition: RoadCondition.snowy),
+        makeReport(
+          id: 'v1',
+          lat: 35.05,
+          lon: 137.25,
+          condition: RoadCondition.snowy,
+        ),
+        makeReport(
+          id: 'v2',
+          lat: 35.052,
+          lon: 137.252,
+          condition: RoadCondition.snowy,
+        ),
       ];
       final zones = HazardAggregator.aggregate(reports);
       expect(zones[0].severity, HazardSeverity.snowy);
@@ -164,12 +205,13 @@ void main() {
       final reports = [
         makeReport(id: 'v1', lat: 35.050, lon: 137.250), // A
         makeReport(id: 'v2', lat: 35.055, lon: 137.255), // B (~700m from A)
-        makeReport(id: 'v3', lat: 35.060, lon: 137.260), // C (~700m from B, ~1.4km from A)
+        makeReport(
+          id: 'v3',
+          lat: 35.060,
+          lon: 137.260,
+        ), // C (~700m from B, ~1.4km from A)
       ];
-      final zones = HazardAggregator.aggregate(
-        reports,
-        clusterRadius: 1000,
-      );
+      final zones = HazardAggregator.aggregate(reports, clusterRadius: 1000);
       expect(zones.length, 1);
       expect(zones[0].reports.length, 3);
     });

@@ -79,35 +79,39 @@ void main() {
       await provider.dispose();
     });
 
-    test('skips a NaN-latitude read — does not emit, does not error the stream',
-        () async {
-      final emitted = <GeoPosition>[];
-      final errors = <Object>[];
-      provider.positions.listen(emitted.add, onError: errors.add);
+    test(
+      'skips a NaN-latitude read — does not emit, does not error the stream',
+      () async {
+        final emitted = <GeoPosition>[];
+        final errors = <Object>[];
+        provider.positions.listen(emitted.add, onError: errors.add);
 
-      await provider.start();
-      session.nextPosition = GeoPosition(
-        latitude: double.nan,
-        longitude: 136.88,
-        accuracy: 12.0,
-        timestamp: DateTime(2026, 3, 13, 12, 0),
-      );
-      session.emitLocation('/org/freedesktop/GeoClue2/Location/1');
-      await Future<void>.delayed(Duration.zero);
+        await provider.start();
+        session.nextPosition = GeoPosition(
+          latitude: double.nan,
+          longitude: 136.88,
+          accuracy: 12.0,
+          timestamp: DateTime(2026, 3, 13, 12, 0),
+        );
+        session.emitLocation('/org/freedesktop/GeoClue2/Location/1');
+        await Future<void>.delayed(Duration.zero);
 
-      expect(
-        emitted,
-        isEmpty,
-        reason: 'a non-finite coordinate must be skipped — it must never reach '
-            'a map boundary',
-      );
-      expect(
-        errors,
-        isEmpty,
-        reason: 'skipped SILENTLY — surfacing an error here would flip the '
-            'LocationBloc into its error state on one bad fix',
-      );
-    });
+        expect(
+          emitted,
+          isEmpty,
+          reason:
+              'a non-finite coordinate must be skipped — it must never reach '
+              'a map boundary',
+        );
+        expect(
+          errors,
+          isEmpty,
+          reason:
+              'skipped SILENTLY — surfacing an error here would flip the '
+              'LocationBloc into its error state on one bad fix',
+        );
+      },
+    );
 
     test('skips a +infinity-longitude read', () async {
       final emitted = <GeoPosition>[];
@@ -147,30 +151,33 @@ void main() {
       expect(emitted.single.longitude, 139.6917);
     });
 
-    test('a finite coordinate with UNKNOWN (NaN) accuracy is NOT skipped',
-        () async {
-      final emitted = <GeoPosition>[];
-      provider.positions.listen(emitted.add);
+    test(
+      'a finite coordinate with UNKNOWN (NaN) accuracy is NOT skipped',
+      () async {
+        final emitted = <GeoPosition>[];
+        provider.positions.listen(emitted.add);
 
-      await provider.start();
-      session.nextPosition = GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: double.nan,
-        timestamp: DateTime(2026, 3, 13, 12, 0),
-      );
-      session.emitLocation('/org/freedesktop/GeoClue2/Location/4');
-      await Future<void>.delayed(Duration.zero);
+        await provider.start();
+        session.nextPosition = GeoPosition(
+          latitude: 35.17,
+          longitude: 136.88,
+          accuracy: double.nan,
+          timestamp: DateTime(2026, 3, 13, 12, 0),
+        );
+        session.emitLocation('/org/freedesktop/GeoClue2/Location/4');
+        await Future<void>.delayed(Duration.zero);
 
-      expect(
-        emitted,
-        hasLength(1),
-        reason: 'an unknown accuracy must not drop a valid coordinate — it '
-            'degrades downstream (isNavigationGrade is false) instead',
-      );
-      expect(emitted.single.latitude.isFinite, isTrue);
-      expect(emitted.single.longitude.isFinite, isTrue);
-      expect(emitted.single.accuracy.isNaN, isTrue);
-    });
+        expect(
+          emitted,
+          hasLength(1),
+          reason:
+              'an unknown accuracy must not drop a valid coordinate — it '
+              'degrades downstream (isNavigationGrade is false) instead',
+        );
+        expect(emitted.single.latitude.isFinite, isTrue);
+        expect(emitted.single.longitude.isFinite, isTrue);
+        expect(emitted.single.accuracy.isNaN, isTrue);
+      },
+    );
   });
 }

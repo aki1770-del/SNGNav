@@ -59,15 +59,17 @@ void main() {
       // asset read) which the fake-async test zone blocks — turn the real event
       // loop with runAsync between pumps to let it complete.
       for (var i = 0; i < 8; i++) {
-        await tester.runAsync(() async =>
-            Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.runAsync(
+          () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
         await tester.pump();
       }
       // Drain benign FlutterMap/plugin async noise; rethrow a real defect.
       final ex = tester.takeException();
       if (ex != null) {
         final s = ex.toString();
-        final benign = ex is MissingPluginException ||
+        final benign =
+            ex is MissingPluginException ||
             s.contains('getTileUrl') ||
             s.contains('TileProvider') ||
             s.contains('flutter_map');
@@ -78,11 +80,18 @@ void main() {
       // blackIce was passed via widget.surfaceState; the pre-lift code would have
       // shown `compacted snow` (the default assessment's surface). Seeing
       // `black ice` and NOT `compacted snow` proves the severance.
-      expect(find.textContaining('black ice'), findsWidgets,
-          reason: 'the blackIce winter-guidance header must render from '
-              'widget.surfaceState');
-      expect(find.textContaining('compacted snow'), findsNothing,
-          reason: 'the pre-lift compactedSnow default must NOT leak through');
+      expect(
+        find.textContaining('black ice'),
+        findsWidgets,
+        reason:
+            'the blackIce winter-guidance header must render from '
+            'widget.surfaceState',
+      );
+      expect(
+        find.textContaining('compacted snow'),
+        findsNothing,
+        reason: 'the pre-lift compactedSnow default must NOT leak through',
+      );
     },
   );
 }

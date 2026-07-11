@@ -68,7 +68,7 @@ class MockLocationBloc extends MockBloc<LocationEvent, LocationState>
     implements LocationBloc {}
 
 class MockNavigationBloc extends MockBloc<NavigationEvent, NavigationState>
-  implements NavigationBloc {}
+    implements NavigationBloc {}
 
 class MockWeatherBloc extends MockBloc<WeatherEvent, WeatherState>
     implements WeatherBloc {}
@@ -87,16 +87,17 @@ const _defaultMapState = MapState(
   status: MapStatus.ready,
   center: LatLng(35.1709, 136.8815),
   zoom: 12.0,
-  visibleLayers: {MapLayerType.route, MapLayerType.weather, MapLayerType.hazard},
+  visibleLayers: {
+    MapLayerType.route,
+    MapLayerType.weather,
+    MapLayerType.hazard,
+  },
 );
 
 final _routeActive = RoutingState(
   status: RoutingStatus.routeActive,
   route: RouteResult(
-    shape: const [
-      LatLng(35.1709, 136.8815),
-      LatLng(35.0500, 137.3200),
-    ],
+    shape: const [LatLng(35.1709, 136.8815), LatLng(35.0500, 137.3200)],
     totalDistanceKm: 45.0,
     totalTimeSeconds: 3600,
     maneuvers: const [],
@@ -117,6 +118,8 @@ final _snowCondition = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: DateTime(2026),
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _hazardCondition = WeatherCondition(
@@ -126,6 +129,8 @@ final _hazardCondition = WeatherCondition(
   visibilityMeters: 150,
   windSpeedKmh: 40,
   timestamp: DateTime(2026),
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _fixPosition = GeoPosition(
@@ -275,133 +280,158 @@ void main() {
 
       // Defaults: ready map, no route, no location, no weather, no fleet
       when(() => mapBloc.state).thenReturn(_defaultMapState);
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-        when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
-      when(() => fleetBloc.state)
-          .thenReturn(const FleetState.idle());
-      when(() => consentBloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
+      when(
+        () => consentBloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
     });
 
-    testWidgets('renders FlutterMap when fluoriteAvailable = false (default)',
-        (tester) async {
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+    testWidgets('renders FlutterMap when fluoriteAvailable = false (default)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       expect(find.byType(FlutterMap), findsOneWidget);
       expect(find.byType(FluoriteView), findsNothing);
     });
 
-    testWidgets('renders FluoriteView when fluoriteAvailable = true',
-        (tester) async {
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-        fluoriteAvailable: true,
-      ));
+    testWidgets('renders FluoriteView when fluoriteAvailable = true', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+          fluoriteAvailable: true,
+        ),
+      );
       await tester.pumpAndSettle();
 
       // FluoriteView is in the tree (falls back to FlutterMap as placeholder)
       expect(find.byType(FluoriteView), findsOneWidget);
     });
 
-    testWidgets('FluoriteView falls back to FlutterMap when unavailable',
-        (tester) async {
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-        fluoriteAvailable: true,
-      ));
+    testWidgets('FluoriteView falls back to FlutterMap when unavailable', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+          fluoriteAvailable: true,
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Phase A: NotImplementedHostApi → unavailable → shows FlutterMap fallback
       expect(find.byType(FlutterMap), findsOneWidget);
     });
 
-    testWidgets('shows route polyline when route layer visible and route exists',
-        (tester) async {
+    testWidgets(
+      'shows route polyline when route layer visible and route exists',
+      (tester) async {
+        when(() => routingBloc.state).thenReturn(_routeActive);
+
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
+
+        expect(find.byType(PolylineLayer), findsOneWidget);
+      },
+    );
+
+    testWidgets('hides route polyline when route layer not visible', (
+      tester,
+    ) async {
       when(() => routingBloc.state).thenReturn(_routeActive);
+      when(() => mapBloc.state).thenReturn(
+        const MapState(
+          status: MapStatus.ready,
+          center: LatLng(35.1709, 136.8815),
+          zoom: 12.0,
+          visibleLayers: {}, // No visible layers
+        ),
+      );
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
-
-      expect(find.byType(PolylineLayer), findsOneWidget);
-    });
-
-    testWidgets('hides route polyline when route layer not visible',
-        (tester) async {
-      when(() => routingBloc.state).thenReturn(_routeActive);
-      when(() => mapBloc.state).thenReturn(const MapState(
-        status: MapStatus.ready,
-        center: LatLng(35.1709, 136.8815),
-        zoom: 12.0,
-        visibleLayers: {}, // No visible layers
-      ));
-
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       expect(find.byType(PolylineLayer), findsNothing);
     });
 
-    testWidgets('shows weather zone when weather layer visible and snowing',
-        (tester) async {
+    testWidgets('shows weather zone when weather layer visible and snowing', (
+      tester,
+    ) async {
       when(() => routingBloc.state).thenReturn(_routeActive);
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _snowCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _snowCondition,
+        ),
+      );
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       expect(find.byType(PolygonLayer), findsOneWidget);
 
-      final polygonLayer = tester.widget<PolygonLayer>(find.byType(PolygonLayer));
+      final polygonLayer = tester.widget<PolygonLayer>(
+        find.byType(PolygonLayer),
+      );
       final polygon = polygonLayer.polygons.single;
       final north = polygon.points
           .map((point) => point.latitude)
@@ -409,44 +439,52 @@ void main() {
       expect(north, greaterThan(35.10));
     });
 
-    testWidgets('shows hazard markers when hazard layer visible and hazardous',
-        (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _hazardCondition,
-      ));
+    testWidgets(
+      'shows hazard markers when hazard layer visible and hazardous',
+      (tester) async {
+        when(() => weatherBloc.state).thenReturn(
+          WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _hazardCondition,
+          ),
+        );
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
 
-      // MarkerLayer is rendered for hazard markers
-      // (Icon may not render if marker is outside test viewport)
-      expect(find.byType(MarkerLayer), findsOneWidget);
-    });
+        // MarkerLayer is rendered for hazard markers
+        // (Icon may not render if marker is outside test viewport)
+        expect(find.byType(MarkerLayer), findsOneWidget);
+      },
+    );
 
-    testWidgets('shows position marker when location available',
-        (tester) async {
-      when(() => locationBloc.state).thenReturn(LocationState(
-        quality: LocationQuality.fix,
-        position: _fixPosition,
-      ));
+    testWidgets('shows position marker when location available', (
+      tester,
+    ) async {
+      when(() => locationBloc.state).thenReturn(
+        LocationState(quality: LocationQuality.fix, position: _fixPosition),
+      );
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       // At least 1 MarkerLayer for position
       expect(find.byType(MarkerLayer), findsOneWidget);
@@ -454,15 +492,17 @@ void main() {
 
     testWidgets('hides position marker when no location', (tester) async {
       // Default: uninitialized location — no position marker
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       // No MarkerLayer at all (no route markers, no position marker)
       expect(find.byType(MarkerLayer), findsNothing);
@@ -493,131 +533,153 @@ void main() {
 
       // Defaults: fleet layer visible in map, no route/location/weather
       when(() => mapBloc.state).thenReturn(_fleetMapState);
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-        when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
     });
 
-    testWidgets('shows FleetLayer when consent granted + fleet listening',
-        (tester) async {
+    testWidgets('shows FleetLayer when consent granted + fleet listening', (
+      tester,
+    ) async {
       when(() => consentBloc.state).thenReturn(_consentGranted);
       when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       expect(find.byType(FleetLayer), findsOneWidget);
     });
 
-    testWidgets('hides FleetLayer when consent denied despite fleet listening',
-        (tester) async {
-      when(() => consentBloc.state).thenReturn(_consentDenied);
-      when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
+    testWidgets(
+      'hides FleetLayer when consent denied despite fleet listening',
+      (tester) async {
+        when(() => consentBloc.state).thenReturn(_consentDenied);
+        when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
 
-      expect(find.byType(FleetLayer), findsNothing);
-      expect(find.byType(HazardZoneLayer), findsNothing);
-    });
-
-    testWidgets('hides FleetLayer when consent granted but fleet not listening',
-        (tester) async {
-      when(() => consentBloc.state).thenReturn(_consentGranted);
-      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
-
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
-
-      expect(find.byType(FleetLayer), findsNothing);
-    });
+        expect(find.byType(FleetLayer), findsNothing);
+        expect(find.byType(HazardZoneLayer), findsNothing);
+      },
+    );
 
     testWidgets(
-        'shows HazardZoneLayer when consent + fleet + hazards present',
-        (tester) async {
-      when(() => consentBloc.state).thenReturn(_consentGranted);
-      when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
+      'hides FleetLayer when consent granted but fleet not listening',
+      (tester) async {
+        when(() => consentBloc.state).thenReturn(_consentGranted);
+        when(() => fleetBloc.state).thenReturn(const FleetState.idle());
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
 
-      expect(find.byType(HazardZoneLayer), findsOneWidget);
-    });
+        expect(find.byType(FleetLayer), findsNothing);
+      },
+    );
 
-    testWidgets('hides HazardZoneLayer when fleet has no hazards',
-        (tester) async {
+    testWidgets(
+      'shows HazardZoneLayer when consent + fleet + hazards present',
+      (tester) async {
+        when(() => consentBloc.state).thenReturn(_consentGranted);
+        when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
+
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
+
+        expect(find.byType(HazardZoneLayer), findsOneWidget);
+      },
+    );
+
+    testWidgets('hides HazardZoneLayer when fleet has no hazards', (
+      tester,
+    ) async {
       when(() => consentBloc.state).thenReturn(_consentGranted);
       when(() => fleetBloc.state).thenReturn(_fleetListeningDryOnly);
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       // FleetLayer renders (dry reports still visible), but no HazardZoneLayer
       expect(find.byType(FleetLayer), findsOneWidget);
       expect(find.byType(HazardZoneLayer), findsNothing);
     });
 
-    testWidgets('hides fleet layers when fleet layer toggled off in MapState',
-        (tester) async {
+    testWidgets('hides fleet layers when fleet layer toggled off in MapState', (
+      tester,
+    ) async {
       // Map state without fleet or hazard layers visible
-      when(() => mapBloc.state).thenReturn(const MapState(
-        status: MapStatus.ready,
-        center: LatLng(35.1709, 136.8815),
-        zoom: 12.0,
-        visibleLayers: {MapLayerType.route, MapLayerType.weather},
-      ));
+      when(() => mapBloc.state).thenReturn(
+        const MapState(
+          status: MapStatus.ready,
+          center: LatLng(35.1709, 136.8815),
+          zoom: 12.0,
+          visibleLayers: {MapLayerType.route, MapLayerType.weather},
+        ),
+      );
       when(() => consentBloc.state).thenReturn(_consentGranted);
       when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+      await tester.pumpWidget(
+        _buildMapLayer(
+          mapBloc: mapBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          locationBloc: locationBloc,
+          weatherBloc: weatherBloc,
+          fleetBloc: fleetBloc,
+          consentBloc: consentBloc,
+        ),
+      );
 
       // Neither fleet markers nor hazard visuals should render.
       expect(find.byType(FleetLayer), findsNothing);
@@ -648,40 +710,43 @@ void main() {
       consentBloc = MockConsentBloc();
 
       when(() => mapBloc.state).thenReturn(_fleetMapState);
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-        when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
       when(() => consentBloc.state).thenReturn(_consentGranted);
     });
 
     testWidgets(
-        'fleet reports flow through HazardAggregator to HazardZoneLayer',
-        (tester) async {
-      // Two hazard reports close together (< 2km clustering threshold)
-      // should produce a HazardZone via HazardAggregator.aggregate()
-      when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
+      'fleet reports flow through HazardAggregator to HazardZoneLayer',
+      (tester) async {
+        // Two hazard reports close together (< 2km clustering threshold)
+        // should produce a HazardZone via HazardAggregator.aggregate()
+        when(() => fleetBloc.state).thenReturn(_fleetListeningWithHazards);
 
-      await tester.pumpWidget(_buildMapLayer(
-        mapBloc: mapBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        locationBloc: locationBloc,
-        weatherBloc: weatherBloc,
-        fleetBloc: fleetBloc,
-        consentBloc: consentBloc,
-      ));
+        await tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+          ),
+        );
 
-      // HazardZoneLayer is present — confirms the pipeline:
-      // fleetState.reports → HazardAggregator.aggregate() → HazardZoneLayer
-      expect(find.byType(HazardZoneLayer), findsOneWidget);
+        // HazardZoneLayer is present — confirms the pipeline:
+        // fleetState.reports → HazardAggregator.aggregate() → HazardZoneLayer
+        expect(find.byType(HazardZoneLayer), findsOneWidget);
 
-      // CircleLayer inside HazardZoneLayer confirms zones were generated
-      expect(find.byType(CircleLayer), findsOneWidget);
-    });
+        // CircleLayer inside HazardZoneLayer confirms zones were generated
+        expect(find.byType(CircleLayer), findsOneWidget);
+      },
+    );
   });
 }

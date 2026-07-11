@@ -69,14 +69,12 @@ Map<String, dynamic> _validResponse({
 }) {
   return {
     'trip': {
-      'summary': {
-        'length': lengthKm,
-        'time': timeSeconds,
-      },
+      'summary': {'length': lengthKm, 'time': timeSeconds},
       'legs': [
         {
           'shape': shape ?? _testPolyline6(),
-          'maneuvers': maneuvers ??
+          'maneuvers':
+              maneuvers ??
               [
                 {
                   'instruction': 'Drive north on Route 153.',
@@ -100,8 +98,10 @@ Map<String, dynamic> _validResponse({
 }
 
 /// Create a MockClient that returns the given body.
-MockClient _mockClient(Map<String, dynamic> responseBody,
-    {int statusCode = 200}) {
+MockClient _mockClient(
+  Map<String, dynamic> responseBody, {
+  int statusCode = 200,
+}) {
   return MockClient((request) async {
     return http.Response(jsonEncode(responseBody), statusCode);
   });
@@ -122,8 +122,9 @@ void main() {
   group('ValhallaRoutingEngine', () {
     group('info', () {
       test('engine name is valhalla', () {
-        final engine =
-            ValhallaRoutingEngine(client: _mockClient(_validResponse()));
+        final engine = ValhallaRoutingEngine(
+          client: _mockClient(_validResponse()),
+        );
         expect(engine.info.name, 'valhalla');
       });
     });
@@ -167,10 +168,9 @@ void main() {
           client: client,
         );
 
-        await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(capturedRequest, isNotNull);
         expect(capturedRequest!.url.path, '/route');
@@ -190,10 +190,9 @@ void main() {
           client: _mockClient(_validResponse()),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.totalDistanceKm, closeTo(25.7, 0.01));
         expect(result.totalTimeSeconds, 1830);
@@ -207,10 +206,9 @@ void main() {
           client: _mockClient(_validResponse()),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.shape.length, 2);
         expect(result.shape[0].latitude, closeTo(35.1709, 0.001));
@@ -224,15 +222,12 @@ void main() {
           client: _mockClient(_validResponse()),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
-        expect(result.maneuvers[0].instruction,
-            'Drive north on Route 153.');
-        expect(result.maneuvers[1].instruction,
-            'Arrive at your destination.');
+        expect(result.maneuvers[0].instruction, 'Drive north on Route 153.');
+        expect(result.maneuvers[1].instruction, 'Arrive at your destination.');
       });
 
       test('records query latency in engineInfo', () async {
@@ -240,13 +235,11 @@ void main() {
           client: _mockClient(_validResponse()),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
-        expect(
-            result.engineInfo.queryLatency.inMicroseconds, greaterThan(0));
+        expect(result.engineInfo.queryLatency.inMicroseconds, greaterThan(0));
       });
 
       test('generates summary string', () async {
@@ -254,10 +247,9 @@ void main() {
           client: _mockClient(_validResponse()),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.summary, contains('25.7 km'));
         expect(result.summary, contains('31 min'));
@@ -271,11 +263,13 @@ void main() {
         });
         final engine = ValhallaRoutingEngine(client: client);
 
-        await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-          costing: 'bicycle',
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(
+            origin: _nagoya,
+            destination: _toyota,
+            costing: 'bicycle',
+          ),
+        );
 
         expect(capturedBody!['costing'], 'bicycle');
       });
@@ -288,11 +282,13 @@ void main() {
         });
         final engine = ValhallaRoutingEngine(client: client);
 
-        await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-          language: 'en-US',
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(
+            origin: _nagoya,
+            destination: _toyota,
+            language: 'en-US',
+          ),
+        );
 
         final dirs =
             capturedBody!['directions_options'] as Map<String, dynamic>;
@@ -303,105 +299,120 @@ void main() {
     group('maneuver type mapping', () {
       test('type 1 → depart', () async {
         final engine = ValhallaRoutingEngine(
-          client: _mockClient(_validResponse(maneuvers: [
-            {
-              'instruction': 'Go',
-              'type': 1,
-              'length': 1.0,
-              'time': 60.0,
-              'begin_shape_index': 0,
-            },
-          ])),
+          client: _mockClient(
+            _validResponse(
+              maneuvers: [
+                {
+                  'instruction': 'Go',
+                  'type': 1,
+                  'length': 1.0,
+                  'time': 60.0,
+                  'begin_shape_index': 0,
+                },
+              ],
+            ),
+          ),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'depart');
       });
 
       test('type 6 → right', () async {
         final engine = ValhallaRoutingEngine(
-          client: _mockClient(_validResponse(maneuvers: [
-            {
-              'instruction': 'Turn right',
-              'type': 6,
-              'length': 0.5,
-              'time': 30.0,
-              'begin_shape_index': 0,
-            },
-          ])),
+          client: _mockClient(
+            _validResponse(
+              maneuvers: [
+                {
+                  'instruction': 'Turn right',
+                  'type': 6,
+                  'length': 0.5,
+                  'time': 30.0,
+                  'begin_shape_index': 0,
+                },
+              ],
+            ),
+          ),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'right');
       });
 
       test('type 11 → left', () async {
         final engine = ValhallaRoutingEngine(
-          client: _mockClient(_validResponse(maneuvers: [
-            {
-              'instruction': 'Turn left',
-              'type': 11,
-              'length': 0.3,
-              'time': 20.0,
-              'begin_shape_index': 0,
-            },
-          ])),
+          client: _mockClient(
+            _validResponse(
+              maneuvers: [
+                {
+                  'instruction': 'Turn left',
+                  'type': 11,
+                  'length': 0.3,
+                  'time': 20.0,
+                  'begin_shape_index': 0,
+                },
+              ],
+            ),
+          ),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'left');
       });
 
       test('type 22 → roundabout_enter', () async {
         final engine = ValhallaRoutingEngine(
-          client: _mockClient(_validResponse(maneuvers: [
-            {
-              'instruction': 'Enter roundabout',
-              'type': 22,
-              'length': 0.1,
-              'time': 10.0,
-              'begin_shape_index': 0,
-            },
-          ])),
+          client: _mockClient(
+            _validResponse(
+              maneuvers: [
+                {
+                  'instruction': 'Enter roundabout',
+                  'type': 22,
+                  'length': 0.1,
+                  'time': 10.0,
+                  'begin_shape_index': 0,
+                },
+              ],
+            ),
+          ),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'roundabout_enter');
       });
 
       test('unknown type → unknown', () async {
         final engine = ValhallaRoutingEngine(
-          client: _mockClient(_validResponse(maneuvers: [
-            {
-              'instruction': 'Do something',
-              'type': 99,
-              'length': 0.1,
-              'time': 10.0,
-              'begin_shape_index': 0,
-            },
-          ])),
+          client: _mockClient(
+            _validResponse(
+              maneuvers: [
+                {
+                  'instruction': 'Do something',
+                  'type': 99,
+                  'length': 0.1,
+                  'time': 10.0,
+                  'begin_shape_index': 0,
+                },
+              ],
+            ),
+          ),
         );
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: _nagoya,
-          destination: _toyota,
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(origin: _nagoya, destination: _toyota),
+        );
 
         expect(result.maneuvers[0].type, 'unknown');
       });
@@ -414,10 +425,9 @@ void main() {
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
           throwsA(isA<RoutingException>()),
         );
       });
@@ -428,15 +438,16 @@ void main() {
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
-          throwsA(isA<RoutingException>().having(
-            (e) => e.message,
-            'message',
-            contains('trip'),
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
+          throwsA(
+            isA<RoutingException>().having(
+              (e) => e.message,
+              'message',
+              contains('trip'),
+            ),
+          ),
         );
       });
 
@@ -451,10 +462,9 @@ void main() {
         );
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
           throwsA(isA<RoutingException>()),
         );
       });
@@ -463,15 +473,16 @@ void main() {
         final engine = ValhallaRoutingEngine(client: _errorClient());
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
-          throwsA(isA<RoutingException>().having(
-            (e) => e.message,
-            'message',
-            contains('network error'),
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
+          throwsA(
+            isA<RoutingException>().having(
+              (e) => e.message,
+              'message',
+              contains('network error'),
+            ),
+          ),
         );
       });
 
@@ -482,10 +493,9 @@ void main() {
         final engine = ValhallaRoutingEngine(client: client);
 
         expect(
-          () => engine.calculateRoute(const RouteRequest(
-            origin: _nagoya,
-            destination: _toyota,
-          )),
+          () => engine.calculateRoute(
+            const RouteRequest(origin: _nagoya, destination: _toyota),
+          ),
           throwsA(isA<RoutingException>()),
         );
       });

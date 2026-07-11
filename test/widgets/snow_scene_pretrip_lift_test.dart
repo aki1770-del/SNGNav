@@ -97,7 +97,8 @@ void main() {
     final ex = tester.takeException();
     if (ex == null) return;
     final s = ex.toString();
-    final benign = ex is MissingPluginException ||
+    final benign =
+        ex is MissingPluginException ||
         s.contains('getTileUrl') ||
         s.contains('TileProvider') ||
         s.contains('flutter_map');
@@ -114,12 +115,12 @@ void main() {
   // `is` predicate so the finder is robust across Flutter versions (some return a
   // bare `FilledButton`, others the `_FilledButtonWithIcon` subclass).
   Finder startDriveButton() => find.ancestor(
-        of: find.text('Start drive'),
-        matching: find.byWidgetPredicate(
-          (w) => w is FilledButton,
-          description: 'FilledButton (incl. .icon _FilledButtonWithIcon subtype)',
-        ),
-      );
+    of: find.text('Start drive'),
+    matching: find.byWidgetPredicate(
+      (w) => w is FilledButton,
+      description: 'FilledButton (incl. .icon _FilledButtonWithIcon subtype)',
+    ),
+  );
 
   testWidgets(
     'NO-REGRESSION (host): main.dart Pre-trip view renders the shared '
@@ -145,10 +146,9 @@ void main() {
       final db = openConsentDatabase(':memory:');
       addTearDown(db.close);
 
-      await tester.pumpWidget(SnowSceneApp(
-        consentDb: db,
-        config: ProviderConfig.fromEnvironment(),
-      ));
+      await tester.pumpWidget(
+        SnowSceneApp(consentDb: db, config: ProviderConfig.fromEnvironment()),
+      );
       await tester.pump();
       drainBenign(tester);
 
@@ -190,32 +190,36 @@ void main() {
 
       // Idle/loading states keep the drive build deterministic + timer-free
       // (no routeActive → no NavigationStarted → no 8 s auto-advance Timer).
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
       when(() => routingBloc.state).thenReturn(const RoutingState.idle());
-      when(() => navigationBloc.state)
-          .thenReturn(const NavigationState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
       when(() => mapBloc.state).thenReturn(MapState.loading());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
-      when(() => consentBloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
+      when(
+        () => consentBloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
       when(() => fleetBloc.state).thenReturn(const FleetState.idle());
 
-      await tester.pumpWidget(MaterialApp(
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider<LocationBloc>.value(value: locationBloc),
-            BlocProvider<RoutingBloc>.value(value: routingBloc),
-            BlocProvider<NavigationBloc>.value(value: navigationBloc),
-            BlocProvider<MapBloc>.value(value: mapBloc),
-            BlocProvider<WeatherBloc>.value(value: weatherBloc),
-            BlocProvider<ConsentBloc>.value(value: consentBloc),
-            BlocProvider<FleetBloc>.value(value: fleetBloc),
-          ],
-          child: const SnowSceneShell(),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<LocationBloc>.value(value: locationBloc),
+              BlocProvider<RoutingBloc>.value(value: routingBloc),
+              BlocProvider<NavigationBloc>.value(value: navigationBloc),
+              BlocProvider<MapBloc>.value(value: mapBloc),
+              BlocProvider<WeatherBloc>.value(value: weatherBloc),
+              BlocProvider<ConsentBloc>.value(value: consentBloc),
+              BlocProvider<FleetBloc>.value(value: fleetBloc),
+            ],
+            child: const SnowSceneShell(),
+          ),
         ),
-      ));
+      );
       await tester.pump();
       drainBenign(tester);
 
@@ -241,10 +245,9 @@ void main() {
       final db = openConsentDatabase(':memory:');
       addTearDown(db.close);
 
-      await tester.pumpWidget(SnowSceneApp(
-        consentDb: db,
-        config: ProviderConfig.fromEnvironment(),
-      ));
+      await tester.pumpWidget(
+        SnowSceneApp(consentDb: db, config: ProviderConfig.fromEnvironment()),
+      );
       await tester.pump();
       drainBenign(tester);
 
@@ -252,24 +255,44 @@ void main() {
       // reason chip ends in ホワイトアウト状態です — present ONLY when the snow_scene
       // MaterialApp supplies the ja delegates/locales (otherwise it silently
       // falls back to English, the D4 reach failure this guards).
-      expect(find.textContaining('ホワイトアウト'), findsWidgets,
-          reason: 'the JA whiteout reason chip must render in snow_scene under ja');
-      expect(find.textContaining('whiteout conditions'), findsNothing,
-          reason: 'no English reason chip should leak under the ja locale');
+      expect(
+        find.textContaining('ホワイトアウト'),
+        findsWidgets,
+        reason:
+            'the JA whiteout reason chip must render in snow_scene under ja',
+      );
+      expect(
+        find.textContaining('whiteout conditions'),
+        findsNothing,
+        reason: 'no English reason chip should leak under the ja locale',
+      );
 
       // The shell CHROME must reach HER mother too: the AppBar title + the
       // Start-drive button were hardcoded English literals (a same-screen
       // language split above the Japanese briefing). Assert the localized chrome
       // is present AND the English literals are absent under ja — so a chrome
       // English-leak fails CI instead of passing silently.
-      expect(find.text(BriefingStrings.ja.beforeYouDrive), findsWidgets,
-          reason: 'the AppBar title must render the localized "出発前に" under ja');
-      expect(find.text(BriefingStrings.ja.startDrive), findsOneWidget,
-          reason: 'the Start-drive button must render the localized label under ja');
-      expect(find.text(BriefingStrings.en.beforeYouDrive), findsNothing,
-          reason: 'the English "Before you drive" chrome must not leak under ja');
-      expect(find.text(BriefingStrings.en.startDrive), findsNothing,
-          reason: 'the English "Start drive" chrome must not leak under ja');
+      expect(
+        find.text(BriefingStrings.ja.beforeYouDrive),
+        findsWidgets,
+        reason: 'the AppBar title must render the localized "出発前に" under ja',
+      );
+      expect(
+        find.text(BriefingStrings.ja.startDrive),
+        findsOneWidget,
+        reason:
+            'the Start-drive button must render the localized label under ja',
+      );
+      expect(
+        find.text(BriefingStrings.en.beforeYouDrive),
+        findsNothing,
+        reason: 'the English "Before you drive" chrome must not leak under ja',
+      );
+      expect(
+        find.text(BriefingStrings.en.startDrive),
+        findsNothing,
+        reason: 'the English "Start drive" chrome must not leak under ja',
+      );
     },
   );
 }

@@ -18,6 +18,7 @@ import 'constant_fleet_confidence_provider.dart';
 import 'cpu_safety_score_simulation_engine.dart';
 import 'fleet_confidence_provider.dart';
 import 'safety_score_simulation_engine.dart';
+import 'simulated_safety_score.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
 import 'simulation_result.dart';
@@ -39,7 +40,7 @@ class SafetyScoreSimulator {
   ///
   /// Jitter (±10%) is applied to grip and visibility inputs
   /// to model real-world sensor noise.
-  SafetyScore runOnce({
+  SimulatedSafetyScore runOnce({
     required double speed,
     required double gripFactor,
     required RoadSurfaceState surface,
@@ -65,7 +66,7 @@ class SafetyScoreSimulator {
 
   /// Run N Monte Carlo simulations and return a [SimulationResult].
   ///
-  /// [SimulationResult] includes the mean [SafetyScore] plus variance,
+  /// [SimulationResult] includes the mean [SimulatedSafetyScore] plus variance,
   /// incident count, and (when using the native engine) execution time.
   ///
   /// [runs] defaults to 1000. Provide [seed] for deterministic results

@@ -451,8 +451,11 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 1500));
       final drRadius = bloc.state.confidenceRadius;
 
-      expect(drRadius, greaterThan(gpsRadius),
-          reason: 'Confidence radius should grow during DR');
+      expect(
+        drRadius,
+        greaterThan(gpsRadius),
+        reason: 'Confidence radius should grow during DR',
+      );
     });
   });
 }

@@ -24,10 +24,7 @@ void main() {
     testWidgets('shows status message on startup', (tester) async {
       await tester.pumpWidget(const main_app.SNGNavGettingStarted());
       // Either "Initializing..." or the actual status after init
-      expect(
-        find.textContaining('Initializing'),
-        findsWidgets,
-      );
+      expect(find.textContaining('Initializing'), findsWidgets);
     });
   });
 

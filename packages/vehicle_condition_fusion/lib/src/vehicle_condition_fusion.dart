@@ -75,7 +75,7 @@ class VehicleConditionFusion {
   /// Use this for a CAN reader, a sensor-fusion source, or tests.
   VehicleConditionFusion({
     required Stream<VehicleConditionSignals> signals,
-    HysteresisFilter<RoadSurfaceState>? surfaceFilter,
+    HysteresisFilter<RoadSurfaceState?>? surfaceFilter,
     DateTime Function()? clock,
   }) : this._(
           frames: signals,
@@ -96,7 +96,7 @@ class VehicleConditionFusion {
   /// processor does NOT under-warn while a real ice hazard persists.
   VehicleConditionFusion.fromPartialFrames({
     required Stream<VehicleConditionSignals> partialFrames,
-    HysteresisFilter<RoadSurfaceState>? surfaceFilter,
+    HysteresisFilter<RoadSurfaceState?>? surfaceFilter,
     DateTime Function()? clock,
   }) : this._(
           frames: partialFrames,
@@ -108,10 +108,10 @@ class VehicleConditionFusion {
   VehicleConditionFusion._({
     required Stream<VehicleConditionSignals> frames,
     required bool mergePartialFrames,
-    HysteresisFilter<RoadSurfaceState>? surfaceFilter,
+    HysteresisFilter<RoadSurfaceState?>? surfaceFilter,
     DateTime Function()? clock,
   })  : _mergePartialFrames = mergePartialFrames,
-        _surfaceFilter = surfaceFilter ?? HysteresisFilter<RoadSurfaceState>(),
+        _surfaceFilter = surfaceFilter ?? HysteresisFilter<RoadSurfaceState?>(),
         _clock = clock ?? DateTime.now {
     _sub = frames.listen(
       _onFrame,
@@ -124,7 +124,7 @@ class VehicleConditionFusion {
   /// When true, each incoming frame is a partial frame folded into [_running]
   /// (carry-forward); when false, each frame is a complete snapshot used as-is.
   final bool _mergePartialFrames;
-  final HysteresisFilter<RoadSurfaceState> _surfaceFilter;
+  final HysteresisFilter<RoadSurfaceState?> _surfaceFilter;
   final DateTime Function() _clock;
   final StreamController<VehicleConditionUpdate> _controller =
       StreamController<VehicleConditionUpdate>.broadcast();

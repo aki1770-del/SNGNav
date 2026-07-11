@@ -54,6 +54,22 @@ enum HourHazard {
 
   /// Whiteout-class visibility (< 100 m) or forecast ice.
   severe,
+
+  /// **The hazard could not be assessed** — no forecast slot covered the
+  /// window at all.
+  ///
+  /// Declared LAST deliberately: the ladder `clear < caution < elevated <
+  /// severe` is compared by `index` in the peak reduce and in the
+  /// better-window search, and this member must not sit inside that ordering.
+  /// It is never produced by [SnowAwarePretripAdvisor.hazardOf] — it is only
+  /// ever the answer when there was nothing to classify.
+  ///
+  /// It exists because up to 0.5.1 a `noData` briefing carried
+  /// `peakHazard: HourHazard.clear`, and an integrator rendering
+  /// `briefing.peakHazard` — as this catalog's own example does — printed
+  /// "clear" for a trip with ZERO forecast data. Absence of a forecast is not
+  /// a clear morning.
+  unknown,
 }
 
 /// One verdict shape the app UI renders directly. The contract's
@@ -174,7 +190,8 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         verdict: PretripVerdict.noData,
         chips: [],
         recommendation: null,
-        peakHazard: HourHazard.clear,
+        // NOT HourHazard.clear. Nothing was forecast; nothing is claimed.
+        peakHazard: HourHazard.unknown,
       );
     }
 
@@ -209,6 +226,18 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         commute.flexibility == CommuteFlexibility.discretionary;
 
     switch (peak) {
+      case HourHazard.unknown:
+        // Unreachable: `peak` is reduced from `hazardOf`, which never returns
+        // `unknown`, and the empty-window case returned above. Kept explicit so
+        // the compiler — not a future reader's memory — enforces that an
+        // unassessable window can never fall into the `clear` branch.
+        return const PretripBriefing(
+          verdict: PretripVerdict.noData,
+          chips: [],
+          recommendation: null,
+          peakHazard: HourHazard.unknown,
+        );
+
       case HourHazard.clear:
         chips.add(messages.noWinterHazard());
         addStalenessChip();
@@ -423,6 +452,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     return !cursor.isBefore(end);
   }
 
+  /// Peak reduce over classified slots. [HourHazard.unknown] is declared last
+  /// and is NEVER produced by [hazardOf], so it cannot enter this comparison;
+  /// it is not a rung on this ladder.
   HourHazard _worse(HourHazard a, HourHazard b) =>
       a.index >= b.index ? a : b;
 

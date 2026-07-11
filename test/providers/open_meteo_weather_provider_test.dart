@@ -40,7 +40,10 @@ Map<String, dynamic> _buildResponse({
   List<double>? visibility,
 }) {
   // Generate 24 hourly entries.
-  final hours = List.generate(24, (i) => '2026-02-27T${i.toString().padLeft(2, '0')}:00');
+  final hours = List.generate(
+    24,
+    (i) => '2026-02-27T${i.toString().padLeft(2, '0')}:00',
+  );
   return {
     'current': {
       'temperature_2m': temperature,
@@ -62,13 +65,15 @@ String _jsonResponse({
   List<double>? snowfall,
   List<double>? visibility,
 }) {
-  return jsonEncode(_buildResponse(
-    temperature: temperature,
-    weatherCode: weatherCode,
-    windSpeed: windSpeed,
-    snowfall: snowfall,
-    visibility: visibility,
-  ));
+  return jsonEncode(
+    _buildResponse(
+      temperature: temperature,
+      weatherCode: weatherCode,
+      windSpeed: windSpeed,
+      snowfall: snowfall,
+      visibility: visibility,
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +139,7 @@ void main() {
         final condition = OpenMeteoWeatherProvider.parseWeatherResponse(json);
 
         expect(condition.iceRisk, true);
-        expect(condition.isFreezing, true);
+        expect(condition.freezing, SafetyVerdict.hazardous);
       });
 
       test('no ice risk when warm temperature', () {
@@ -168,7 +173,7 @@ void main() {
         final condition = OpenMeteoWeatherProvider.parseWeatherResponse(json);
 
         expect(condition.visibilityMeters, 500.0);
-        expect(condition.hasReducedVisibility, true);
+        expect(condition.reducedVisibility, SafetyVerdict.hazardous);
       });
 
       test('snow shower codes map correctly', () {
@@ -222,10 +227,7 @@ void main() {
 
         final provider = OpenMeteoWeatherProvider(client: mockClient);
 
-        expect(
-          () => provider.fetchWeather(),
-          throwsA(isA<HttpException>()),
-        );
+        expect(() => provider.fetchWeather(), throwsA(isA<HttpException>()));
 
         provider.dispose();
       });
@@ -245,13 +247,12 @@ void main() {
           pollInterval: const Duration(seconds: 60),
         );
 
-        final firstCondition = provider.conditions.first;
+        final firstReading = provider.conditions.first;
         await provider.startMonitoring();
 
-        final condition = await firstCondition.timeout(
-          const Duration(seconds: 5),
-        );
-        expect(condition, isA<WeatherCondition>());
+        final reading = await firstReading.timeout(const Duration(seconds: 5));
+        expect(reading, isA<WeatherObserved>());
+        final condition = (reading as WeatherObserved).condition;
         expect(condition.precipType, PrecipitationType.none);
 
         provider.dispose();
@@ -272,7 +273,7 @@ void main() {
           pollInterval: const Duration(milliseconds: 50),
         );
 
-        final emissions = <WeatherCondition>[];
+        final emissions = <WeatherReading>[];
         final sub = provider.conditions.listen(emissions.add);
         await provider.startMonitoring();
 
@@ -286,47 +287,68 @@ void main() {
         provider.dispose();
       });
 
-      test('offline fallback: re-emits last condition on HTTP failure',
-          () async {
-        int callCount = 0;
-        final mockClient = MockClient((_) async {
-          callCount++;
-          if (callCount == 1) {
-            // First call succeeds.
-            return http.Response(
-              _jsonResponse(weatherCode: 71, temperature: -2.0),
-              200,
-            );
+      // These two tests CERTIFIED defect D3 up to driving_weather 0.4.4:
+      //   * a failed fetch silently re-emitted the last condition with no
+      //     staleness marker, so stale data was indistinguishable from fresh;
+      //   * with no prior data it emitted NOTHING, and the UI could not tell
+      //     "no data" from "not fetched yet" — so it rendered the calm state.
+      // Both are inverted here. That inversion is itself the proof this release
+      // is breaking.
+      test(
+        'HTTP failure emits WeatherStale — the age is CARRIED, not hidden',
+        () async {
+          int callCount = 0;
+          final mockClient = MockClient((_) async {
+            callCount++;
+            if (callCount == 1) {
+              // First call succeeds.
+              return http.Response(
+                _jsonResponse(weatherCode: 71, temperature: -2.0),
+                200,
+              );
+            }
+            // Subsequent calls fail.
+            return http.Response('Server Error', 500);
+          });
+
+          final provider = OpenMeteoWeatherProvider(
+            client: mockClient,
+            pollInterval: const Duration(milliseconds: 50),
+          );
+
+          final readings = <WeatherReading>[];
+          final sub = provider.conditions.listen(readings.add);
+          await provider.startMonitoring();
+
+          // Wait for initial success + at least one failed poll.
+          await Future<void>.delayed(const Duration(milliseconds: 150));
+
+          expect(readings.length, greaterThanOrEqualTo(2));
+
+          // The first is a real observation.
+          final first = readings.first;
+          expect(first, isA<WeatherObserved>());
+          expect((first as WeatherObserved).condition.temperatureCelsius, -2.0);
+
+          // Every later one is STALE — the last known condition, wearing its
+          // own age, not a fresh face.
+          final stale = readings.whereType<WeatherStale>().toList();
+          expect(stale, isNotEmpty);
+          for (final e in stale) {
+            expect(e.lastKnown.precipType, PrecipitationType.snow);
+            expect(e.lastKnown.temperatureCelsius, -2.0);
+            expect(e.age, isNotNull);
+            expect(e.cause, isNotNull); // it says WHY, too
           }
-          // Subsequent calls fail.
-          return http.Response('Server Error', 500);
-        });
+          // Nothing after the first pretends to be an observation.
+          expect(readings.skip(1).whereType<WeatherObserved>(), isEmpty);
 
-        final provider = OpenMeteoWeatherProvider(
-          client: mockClient,
-          pollInterval: const Duration(milliseconds: 50),
-        );
+          await sub.cancel();
+          provider.dispose();
+        },
+      );
 
-        final emissions = <WeatherCondition>[];
-        final sub = provider.conditions.listen(emissions.add);
-        await provider.startMonitoring();
-
-        // Wait for initial success + at least one failed poll.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
-
-        // Should have at least 2 emissions (first real, then fallback).
-        expect(emissions.length, greaterThanOrEqualTo(2));
-        // All emissions should be the same condition (fallback).
-        for (final e in emissions) {
-          expect(e.precipType, PrecipitationType.snow);
-          expect(e.temperatureCelsius, -2.0);
-        }
-
-        await sub.cancel();
-        provider.dispose();
-      });
-
-      test('offline fallback: no emission when no prior condition', () async {
+      test('no prior data emits WeatherUnavailable — never SILENCE', () async {
         final mockClient = MockClient((_) async {
           return http.Response('Server Error', 500);
         });
@@ -336,14 +358,20 @@ void main() {
           pollInterval: const Duration(milliseconds: 50),
         );
 
-        final emissions = <WeatherCondition>[];
+        final emissions = <WeatherReading>[];
         final sub = provider.conditions.listen(emissions.add);
         await provider.startMonitoring();
 
-        // Wait a bit — should emit nothing.
         await Future<void>.delayed(const Duration(milliseconds: 150));
 
-        expect(emissions, isEmpty);
+        // 0.4.4 emitted NOTHING here. Silence on a safety feed is not honest —
+        // the UI cannot distinguish it from "still loading", so it renders the
+        // calm state over a road it knows nothing about.
+        expect(emissions, isNotEmpty);
+        expect(emissions.every((e) => e is WeatherUnavailable), isTrue);
+        final unavailable = emissions.first as WeatherUnavailable;
+        expect(unavailable.since, isNotNull);
+        expect(unavailable.cause, isNotNull);
 
         await sub.cancel();
         provider.dispose();
@@ -364,7 +392,7 @@ void main() {
           pollInterval: const Duration(milliseconds: 50),
         );
 
-        final emissions = <WeatherCondition>[];
+        final emissions = <WeatherReading>[];
         final sub = provider.conditions.listen(emissions.add);
         await provider.startMonitoring();
 
@@ -399,10 +427,7 @@ void main() {
         provider.dispose();
 
         // Stream should be done after dispose.
-        expect(
-          () => provider.conditions,
-          returnsNormally,
-        );
+        expect(() => provider.conditions, returnsNormally);
       });
     });
 

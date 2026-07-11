@@ -150,7 +150,13 @@ class PretripScreen extends StatefulWidget {
   /// The road-surface state the host's driving-condition assessment expects;
   /// drives the offline winter-driving guidance card. The host owns the
   /// assessment (live/simulated); this screen only reads its surface state.
-  final RoadSurfaceState surfaceState;
+  ///
+  /// **Nullable** (snow_rendering 0.3.0): `null` means the surface COULD NOT BE
+  /// CLASSIFIED — the feed carried no ice risk, no temperature and no
+  /// precipitation type. It does not mean `dry`. There is no winter card for a
+  /// road nobody measured, and inventing the dry card (which is what the old
+  /// non-nullable fall-through did, gripFactor 1.0 and all) is the defect.
+  final RoadSurfaceState? surfaceState;
 
   @override
   State<PretripScreen> createState() => _PretripScreenState();
@@ -953,10 +959,12 @@ class _PretripScreenState extends State<PretripScreen> {
                 // a benign surface with no baked card. Resolved in the driver's
                 // language — Japanese for HER mother when a verified card exists,
                 // else the grounded English (honest fallback, never blank).
-                winterCard: _winter?.cardFor(
-                  widget.surfaceState,
-                  lang: locale.languageCode,
-                ),
+                winterCard: widget.surfaceState == null
+                    ? null
+                    : _winter?.cardFor(
+                        widget.surfaceState!,
+                        lang: locale.languageCode,
+                      ),
               ),
               // IN-FORCE JMA TURMOIL WARNINGS (0.4.0 widening): downpour /
               // typhoon-wind / thunder / fog warnings at HER current location,

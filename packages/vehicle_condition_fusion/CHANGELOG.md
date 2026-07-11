@@ -1,5 +1,105 @@
 # Changelog
 
+## 0.5.0
+
+### Safety defect in 0.3.1 and earlier — please read
+
+**Up to and including 0.3.1 — the version currently on pub.dev, and the one you
+are almost certainly holding — a vehicle that did not publish an air temperature
+was ASSUMED TO BE ABOVE FREEZING.**
+
+```dart
+// vehicle_signal_fusion.dart, 0.3.1 (verified in the published tarball)
+const double kAssumedAboveFreezingCelsius = 5.0;
+final temp = s.airTempC ?? kAssumedAboveFreezingCelsius;  // 5.0 °C
+```
+
+(0.4.0 appears below in this changelog but was **never published**; 0.3.1 is the
+release every consumer actually has, and it carries the defect.)
+
+The constant's own docstring defended this as safe, because "a missing signal
+never fabricates ice". That is true, and it is beside the point: the missing
+signal was instead fabricating the **absence** of ice. A vehicle with a silent
+or absent temperature sensor reported `+5.0 °C`, which the downstream classifier
+turned into `RoadSurfaceState.dry`, `gripFactor: 1.0`, and the advisory
+**"Conditions normal"**.
+
+This is the same defect class as `WeatherCondition.clear()` in `driving_weather`
+0.4.4 — but it sits in the **offline path**, which makes it worse. This package
+exists to keep working when the network feed is gone. That is the compound-failure
+scenario, and it is exactly when a driver most needs to be told the truth.
+
+Two smaller fabrications rode along:
+
+- `windSpeedKmh: 0.0` was emitted immediately below a comment stating that the
+  snow-safety signal set does not carry wind — declaring the absence and then
+  filling it in anyway.
+- A vehicle publishing **neither** wiper state **nor** rain sensor fell through
+  to `PrecipitationType.none` — "it is not precipitating" — asserted from
+  silence.
+
+pub.dev versions are immutable. This note is the recall.
+
+### Breaking
+
+- **`kAssumedAboveFreezingCelsius` is REMOVED.** There is no longer an assumed
+  temperature, because there is no longer an assumption.
+- `vehicleSignalsToWeatherCondition` now returns a `WeatherCondition` whose
+  unmeasured fields are `null` (requires `driving_weather: ^0.5.0`):
+  - absent `airTempC` → `temperatureCelsius: null` (was `5.0`);
+  - `windSpeedKmh: null`, always;
+  - no wiper **and** no rain sensor → `precipType: null`, `intensity: null`,
+    `visibilityMeters: null` (was `none` / `none` / `10000.0`);
+  - **`iceRisk` is now tri-state (`bool?`)**: `true` only from a direct friction
+    measurement below `kIcyFrictionThreshold` or an attributable traction-loss
+    event; `false` only when friction was actually MEASURED and was fine;
+    **`null` when there is no friction signal at all** (was `false` — a claim,
+    not an absence).
+  - the condition is tagged `ObservationSource.derived`, because its visibility
+    is a proxy and its precipitation type is inferred from wiper + temperature.
+- **`VehicleConditionFusion`'s `surfaceFilter` is now
+  `HysteresisFilter<RoadSurfaceState?>`** (was `HysteresisFilter<RoadSurfaceState>`),
+  since the surface may honestly be unknown. **Note:** Dart's covariant generics
+  mean passing the old `HysteresisFilter<RoadSurfaceState>` still *compiles* —
+  and then throws at runtime the first time an unknown surface arrives. Update
+  the type argument.
+- Requires `driving_conditions: ^0.6.0` (and thus `snow_rendering: ^0.3.0`),
+  where `surfaceState` and `gripFactor` became nullable and
+  `RecommendedResponse.conditionsUnknown` was added.
+
+### Behavioural consequence, stated plainly
+
+**A vehicle that publishes no precipitation signal at all no longer reports a
+`dry` road.** It reports an unknown surface and
+`RecommendedResponse.conditionsUnknown`.
+
+This is a real reduction in what we claim, and it is correct: without any wiper
+or rain-sensor reading, "dry" was never something the vehicle told us — it was
+what the decision tree fell through to. If your integration relied on that
+fall-through, publish `Vehicle.Body.Windshield.Front.Wiping.System.Mode` (or the
+rain sensor) and `dry` returns, **earned** from a signal rather than assumed from
+silence.
+
+### Preserved: the Akita radiative-frost reach
+
+The offline black-ice detection that matters most is **unchanged**: a car
+reporting `+2 °C` and `70 % RH`, with the wheels not yet slipping and **no rain
+sensor at all**, still classifies `RoadSurfaceState.blackIce` before the first
+slip.
+
+That reach would have been silently lost if the radiative-frost check had stayed
+gated behind a *reported* precipitation type. It does not: black ice from
+temperature + humidity is POSITIVE evidence and fires even when precipitation is
+unreported. Absent data must never *suppress* a hazard that present data already
+justifies. (Without humidity it still abstains — it does not fabricate the
+hazard; it now abstains to `null` rather than to a fabricated `dry`.)
+
+### Also
+
+- Two pre-existing tests **certified the defect** and were inverted: one asserted
+  `iceRisk == false` for a vehicle with no friction sensor; one asserted a `dry`
+  road for a vehicle with no precipitation signal.
+
 ## 0.4.0
 
 - **Map `Vehicle.Exterior.Humidity` → `VehicleConditionSignals.humidityRH`**

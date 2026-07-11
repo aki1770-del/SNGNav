@@ -55,26 +55,30 @@ final _forecast = WeatherForecast(
   issuedAt: _issued,
   hourly: [
     HourlyForecast(
-        hour: DateTime(2026, 1, 15, 16),
-        tempCelsius: -3,
-        precipitationMmPerHour: 2,
-        visibilityMeters: 400),
+      hour: DateTime(2026, 1, 15, 16),
+      tempCelsius: -3,
+      precipitationMmPerHour: 2,
+      visibilityMeters: 400,
+    ),
     HourlyForecast(
-        hour: DateTime(2026, 1, 15, 17),
-        tempCelsius: -4,
-        precipitationMmPerHour: 2,
-        visibilityMeters: 300),
+      hour: DateTime(2026, 1, 15, 17),
+      tempCelsius: -4,
+      precipitationMmPerHour: 2,
+      visibilityMeters: 300,
+    ),
     HourlyForecast(
-        hour: DateTime(2026, 1, 15, 18),
-        tempCelsius: -4,
-        precipitationMmPerHour: 1,
-        visibilityMeters: 600),
+      hour: DateTime(2026, 1, 15, 18),
+      tempCelsius: -4,
+      precipitationMmPerHour: 1,
+      visibilityMeters: 600,
+    ),
   ],
 );
 
 PretripBriefing _briefFor(String lang) {
-  final advisor =
-      SnowAwarePretripAdvisor(messages: PretripMessages.forLanguage(lang));
+  final advisor = SnowAwarePretripAdvisor(
+    messages: PretripMessages.forLanguage(lang),
+  );
   final commute = CommuteShape(
     plannedDeparture: _departure,
     plannedDuration: _duration,
@@ -85,18 +89,20 @@ PretripBriefing _briefFor(String lang) {
   return advisor.brief(
     forecast: _forecast,
     commute: commute,
-    profile:
-        const DriverProfileSpec(profileTag: 'akita', reactionTimeSeconds: 1.5),
+    profile: const DriverProfileSpec(
+      profileTag: 'akita',
+      reactionTimeSeconds: 1.5,
+    ),
   );
 }
 
 CommuteShape _renderCommute() => CommuteShape(
-      plannedDeparture: _departure,
-      plannedDuration: _duration,
-      routeIdentifiers: const ['akita-daylight'],
-      flexibility: CommuteFlexibility.discretionary,
-      geo: _geo,
-    );
+  plannedDeparture: _departure,
+  plannedDuration: _duration,
+  routeIdentifiers: const ['akita-daylight'],
+  flexibility: CommuteFlexibility.discretionary,
+  geo: _geo,
+);
 
 Future<bool> _loadLatin() async {
   final f = File(_latinTtf);
@@ -171,8 +177,11 @@ void main() {
         .toList();
     // ignore: avoid_print
     print('EN daylight chip: $daylightChips');
-    expect(daylightChips, isNotEmpty,
-        reason: 'the EN briefing must carry a daylight chip to capture');
+    expect(
+      daylightChips,
+      isNotEmpty,
+      reason: 'the EN briefing must carry a daylight chip to capture',
+    );
     await _capture(
       tester,
       fontFamily: hasLatin ? 'Roboto' : 'Roboto',
@@ -205,8 +214,11 @@ void main() {
         .toList();
     // ignore: avoid_print
     print('JA daylight chip: $daylightChips');
-    expect(daylightChips, isNotEmpty,
-        reason: 'the JA briefing must carry a daylight chip to capture');
+    expect(
+      daylightChips,
+      isNotEmpty,
+      reason: 'the JA briefing must carry a daylight chip to capture',
+    );
     await _capture(
       tester,
       fontFamily: 'NotoSansCJK',

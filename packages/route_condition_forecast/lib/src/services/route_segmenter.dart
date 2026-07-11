@@ -17,10 +17,33 @@ class RouteSegmenter {
   ///
   /// Returns an empty list if the route has no maneuvers.
   /// Segments are ordered in travel sequence.
+  ///
+  /// ## Maneuvers with no position are SKIPPED, not placed at (0, 0)
+  ///
+  /// Since `routing_engine` 0.6.0, [RouteManeuver.position] is `LatLng?` —
+  /// `null` means the engine's response carried no usable coordinate for that
+  /// maneuver. (Up to 0.5.0 both engines silently substituted
+  /// `const LatLng(0, 0)`: Null Island, a real place in the Gulf of Guinea.)
+  ///
+  /// A segment is a GEOGRAPHIC span — it exists to be asked "what will the
+  /// weather be *here*". A maneuver with no position cannot answer that, so it
+  /// yields no segment. It is skipped rather than anchored to a fabricated
+  /// coordinate, which would have queried the weather in the Atlantic and
+  /// attributed the answer to a road in Akita.
+  ///
+  /// Skipping is itself an absence, and it is NOT hidden: the resulting
+  /// forecast reports it via `RouteForecast.unlocatableManeuverCount` and
+  /// `RouteForecast.coversWholeRoute`. A route whose forecast does not cover
+  /// all of it must say so — a silently short forecast reads exactly like a
+  /// clear one.
   static List<RouteSegment> byManeuver(RouteResult route) {
     if (route.maneuvers.isEmpty) return const [];
 
-    final maneuvers = route.maneuvers;
+    // Only maneuvers that actually have a position can anchor a segment.
+    final maneuvers =
+        route.maneuvers.where((m) => m.position != null).toList(growable: false);
+    if (maneuvers.isEmpty) return const [];
+
     final shape = route.shape;
     final segments = <RouteSegment>[];
 
@@ -29,13 +52,13 @@ class RouteSegmenter {
       final isLast = i == maneuvers.length - 1;
 
       final end = isLast
-          ? (shape.isNotEmpty ? shape.last : maneuver.position)
-          : maneuvers[i + 1].position;
+          ? (shape.isNotEmpty ? shape.last : maneuver.position!)
+          : maneuvers[i + 1].position!;
 
       segments.add(
         RouteSegment(
           index: i,
-          start: maneuver.position,
+          start: maneuver.position!,
           end: end,
           distanceKm: maneuver.lengthKm,
           maneuver: maneuver,

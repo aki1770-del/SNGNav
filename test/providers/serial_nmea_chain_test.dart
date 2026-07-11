@@ -71,30 +71,34 @@ void main() {
 
   /// Let the asynchronous chain start (bloc → DR → provider subscriptions)
   /// fully settle before feeding bytes — see the library note on feeding.
-  Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 200));
+  Future<void> settle() =>
+      Future<void>.delayed(const Duration(milliseconds: 200));
 
-  test('1. canned NMEA bytes → fix LocationState at the right position', () async {
-    // Long gpsTimeout so DR never kicks in for this fix-only test.
-    final chain = buildChain(
-      mode: DeadReckoningMode.kalman,
-      gpsTimeout: const Duration(seconds: 30),
-    );
+  test(
+    '1. canned NMEA bytes → fix LocationState at the right position',
+    () async {
+      // Long gpsTimeout so DR never kicks in for this fix-only test.
+      final chain = buildChain(
+        mode: DeadReckoningMode.kalman,
+        gpsTimeout: const Duration(seconds: 30),
+      );
 
-    chain.bloc.add(const LocationStartRequested());
-    await settle();
+      chain.bloc.add(const LocationStartRequested());
+      await settle();
 
-    final fixFuture = chain.bloc.stream
-        .firstWhere((s) => s.quality == LocationQuality.fix)
-        .timeout(const Duration(seconds: 5));
-    chain.bytes.add(nmea(_rmc));
+      final fixFuture = chain.bloc.stream
+          .firstWhere((s) => s.quality == LocationQuality.fix)
+          .timeout(const Duration(seconds: 5));
+      chain.bytes.add(nmea(_rmc));
 
-    final fix = await fixFuture;
-    expect(fix.quality, LocationQuality.fix);
-    expect(fix.position, isNotNull);
-    expect(fix.position!.latitude, closeTo(48.1173, 0.01));
-    expect(fix.position!.longitude, closeTo(11.5167, 0.01));
-    expect(fix.isDeadReckoning, isFalse);
-  });
+      final fix = await fixFuture;
+      expect(fix.quality, LocationQuality.fix);
+      expect(fix.position, isNotNull);
+      expect(fix.position!.latitude, closeTo(48.1173, 0.01));
+      expect(fix.position!.longitude, closeTo(11.5167, 0.01));
+      expect(fix.isDeadReckoning, isFalse);
+    },
+  );
 
   test('2. stopping the byte feed → dead-reckoning state', () async {
     final chain = buildChain(

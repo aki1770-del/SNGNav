@@ -95,7 +95,7 @@ String _describe(
   int step,
   VehicleConditionUpdate update, {
   required bool held,
-  required double visMeters,
+  required double? visMeters,
 }) {
   final s = update.signals!;
   final a = update.assessment!;
@@ -108,8 +108,8 @@ String _describe(
   final tcs = (s.tcsEngaged ?? false) ? 'ON ' : 'off';
   final wiper = (s.wiperIntensity ?? 0).toString();
 
-  final surface = a.surfaceState.name.padRight(13);
-  final grip = a.gripFactor.toStringAsFixed(2);
+  final surface = a.surfaceState?.name ?? 'unknown'.padRight(13);
+  final grip = a.gripFactor?.toStringAsFixed(2) ?? '?';
   final marker = held ? ' (held)' : '';
 
   final line1 = 'step ${step.toString().padLeft(2)}  '
@@ -125,7 +125,10 @@ String _describe(
 /// by precipitation level) — NOT a re-derivation from the rendered opacity. A
 /// vehicle has no meteorological visibility sensor; treat this as a documented
 /// hint, never a measurement.
-String _visibilityCue(double meters) {
+String _visibilityCue(double? meters) {
+  // `null` = the vehicle reported no precipitation signal at all, so there is
+  // no cue to derive. It is NOT "clear" — say so.
+  if (meters == null) return 'vis: unknown (no data)';
   if (meters >= 10000) return 'vis: clear   (~10 km)';
   if (meters >= 5000) return 'vis: clear   (~5 km) ';
   if (meters >= 800) return 'vis: reduced (~800 m)';

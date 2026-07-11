@@ -26,61 +26,67 @@ void main() {
   // Temp-only base: a 07:00 + 08:00 slot, road condition + visibility unset
   // (exactly what the MET Norway compact product delivers for Japan).
   WeatherForecast tempOnlyBase() => WeatherForecast(
-        issuedAt: DateTime(2026, 1, 1, 6, 0),
-        hourly: [
-          HourlyForecast(
-            hour: DateTime(2026, 1, 1, 7),
-            tempCelsius: -2,
-            precipitationMmPerHour: 0.5,
-            visibilityMeters: null,
-            estimatedRoadCondition: null,
-          ),
-          HourlyForecast(
-            hour: DateTime(2026, 1, 1, 8),
-            tempCelsius: -2,
-            precipitationMmPerHour: 0.5,
-            visibilityMeters: null,
-            estimatedRoadCondition: null,
-          ),
-        ],
-      );
+    issuedAt: DateTime(2026, 1, 1, 6, 0),
+    hourly: [
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 7),
+        tempCelsius: -2,
+        precipitationMmPerHour: 0.5,
+        visibilityMeters: null,
+        estimatedRoadCondition: null,
+      ),
+      HourlyForecast(
+        hour: DateTime(2026, 1, 1, 8),
+        tempCelsius: -2,
+        precipitationMmPerHour: 0.5,
+        visibilityMeters: null,
+        estimatedRoadCondition: null,
+      ),
+    ],
+  );
 
   Advisory adv(String eventClass) => Advisory(
-        source: AdvisorySource.jmaJapan,
-        eventClass: eventClass,
-        severity: AdvisorySeverity.severe,
-        certainty: AdvisoryCertainty.observed,
-        urgency: AdvisoryUrgency.immediate,
-        areaDescription: '秋田県',
-        effective: null,
-        expires: null,
-        headline: eventClass,
-        description: eventClass,
-      );
+    source: AdvisorySource.jmaJapan,
+    eventClass: eventClass,
+    severity: AdvisorySeverity.severe,
+    certainty: AdvisoryCertainty.observed,
+    urgency: AdvisoryUrgency.immediate,
+    areaDescription: '秋田県',
+    effective: null,
+    expires: null,
+    headline: eventClass,
+    description: eventClass,
+  );
 
-  MetForecastFetch metStub(WeatherForecast? f) => () async => f;
-  MetForecastFetch metThrows() => () async => throw Exception('net down');
-  JmaAdvisoryFetch jmaStub(List<Advisory> a) => () async => a;
+  MetForecastFetch metStub(WeatherForecast? f) =>
+      () async => f;
+  MetForecastFetch metThrows() =>
+      () async => throw Exception('net down');
+  JmaAdvisoryFetch jmaStub(List<Advisory> a) =>
+      () async => a;
 
   HourlyForecast slotAt(WeatherForecast f, DateTime hour) =>
       f.hourly.firstWhere((s) => s.hour == hour);
 
-  test('T1 merged: Akita + heavy-snow warning → packedSnow in window', () async {
-    final base = tempOnlyBase();
-    final result = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metStub(base),
-      fetchJmaAdvisories: jmaStub([adv('大雪警報')]),
-    );
-    expect(result.status, PretripLiveStatus.japanJmaMerged);
-    expect(result.jmaEventName, '大雪警報');
-    expect(result.prefectureCode, '050000');
-    final depSlot = slotAt(result.forecast!, DateTime(2026, 1, 1, 7));
-    expect(depSlot.estimatedRoadCondition, RoadConditionEstimate.packedSnow);
-  });
+  test(
+    'T1 merged: Akita + heavy-snow warning → packedSnow in window',
+    () async {
+      final base = tempOnlyBase();
+      final result = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metStub(base),
+        fetchJmaAdvisories: jmaStub([adv('大雪警報')]),
+      );
+      expect(result.status, PretripLiveStatus.japanJmaMerged);
+      expect(result.jmaEventName, '大雪警報');
+      expect(result.prefectureCode, '050000');
+      final depSlot = slotAt(result.forecast!, DateTime(2026, 1, 1, 7));
+      expect(depSlot.estimatedRoadCondition, RoadConditionEstimate.packedSnow);
+    },
+  );
 
   test('T2 ice: Akita + snow-accretion warning → ice in window', () async {
     final result = await resolvePretripLiveForecast(
@@ -114,8 +120,7 @@ void main() {
     final got = result.forecast!.hourly
         .map((s) => s.estimatedRoadCondition)
         .toList();
-    final want =
-        base.hourly.map((s) => s.estimatedRoadCondition).toList();
+    final want = base.hourly.map((s) => s.estimatedRoadCondition).toList();
     expect(got, want);
     expect(got.every((c) => c == null), isTrue);
   });
@@ -156,10 +161,7 @@ void main() {
     );
     // The 0.4.0 widening: the fetched in-force warning is NOT silently
     // dropped — it rides the card lane, wording verbatim.
-    expect(
-      result.jmaTurmoilAdvisories.map((a) => a.eventClass),
-      ['大雨警報'],
-    );
+    expect(result.jmaTurmoilAdvisories.map((a) => a.eventClass), ['大雨警報']);
   });
 
   test('T13 turmoil ordering: 強風注意報 + 大雨危険警報 carried highest '
@@ -199,10 +201,10 @@ void main() {
       fetchJmaAdvisories: jmaStub([kyoufuu, kiken]),
     );
     expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
-    expect(
-      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
-      ['大雨危険警報', '強風注意報'],
-    );
+    expect(result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(), [
+      '大雨危険警報',
+      '強風注意報',
+    ]);
   });
 
   test('T14 turmoil beside a merged snow warning: 大雪警報 merges the road '
@@ -219,10 +221,9 @@ void main() {
     expect(result.status, PretripLiveStatus.japanJmaMerged);
     expect(result.jmaEventName, '大雪警報');
     // The snow class does NOT leak onto the card lane; the rain class does.
-    expect(
-      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
-      ['大雨警報'],
-    );
+    expect(result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(), [
+      '大雨警報',
+    ]);
   });
 
   test('T15 the incomplete-read notice never rides the turmoil card lane '
@@ -240,10 +241,9 @@ void main() {
       ]),
     );
     expect(result.jmaBorderCheckIncomplete, isTrue);
-    expect(
-      result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(),
-      ['大雨警報'],
-    );
+    expect(result.jmaTurmoilAdvisories.map((a) => a.eventClass).toList(), [
+      '大雨警報',
+    ]);
   });
 
   test('T6 global: Nagoya → MET only, JMA leg NEVER invoked', () async {
@@ -265,37 +265,39 @@ void main() {
     expect(result.forecast, base);
   });
 
-  test('T7 offline: MET null/throws → metNorwayUnavailable, JMA never invoked',
-      () async {
-    var called = false;
-    JmaAdvisoryFetch guard() => () async {
-          called = true;
-          return const [];
-        };
+  test(
+    'T7 offline: MET null/throws → metNorwayUnavailable, JMA never invoked',
+    () async {
+      var called = false;
+      JmaAdvisoryFetch guard() => () async {
+        called = true;
+        return const [];
+      };
 
-    final r1 = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metStub(null),
-      fetchJmaAdvisories: guard(),
-    );
-    expect(r1.forecast, isNull);
-    expect(r1.status, PretripLiveStatus.metNorwayUnavailable);
+      final r1 = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metStub(null),
+        fetchJmaAdvisories: guard(),
+      );
+      expect(r1.forecast, isNull);
+      expect(r1.status, PretripLiveStatus.metNorwayUnavailable);
 
-    final r2 = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metThrows(),
-      fetchJmaAdvisories: guard(),
-    );
-    expect(r2.forecast, isNull);
-    expect(r2.status, PretripLiveStatus.metNorwayUnavailable);
-    expect(called, isFalse);
-  });
+      final r2 = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metThrows(),
+        fetchJmaAdvisories: guard(),
+      );
+      expect(r2.forecast, isNull);
+      expect(r2.status, PretripLiveStatus.metNorwayUnavailable);
+      expect(called, isFalse);
+    },
+  );
 
   test('T8 never-fabricate-visibility: merged keeps every base vis', () async {
     final base = tempOnlyBase();
@@ -341,53 +343,58 @@ void main() {
     expect(result.jmaUnreachableArea, '秋田県');
   });
 
-  test('T11 PARTIAL border read (no reachable warning): NOT a clean all-clear',
-      () async {
-    final base = tempOnlyBase();
-    final result = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metStub(base),
-      // No reachable snow warning, only the incomplete-read notice.
-      fetchJmaAdvisories:
-          jmaStub([buildIncompleteReadNotice(const ['050000', '060000'])]),
-    );
-    // No band merged, but the read is INCOMPLETE — the flag carries so HER is
-    // not shown an implied "no warnings".
-    expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
-    expect(result.jmaBorderCheckIncomplete, isTrue);
-    expect(result.jmaUnreachableArea, '秋田県・山形県');
-  });
+  test(
+    'T11 PARTIAL border read (no reachable warning): NOT a clean all-clear',
+    () async {
+      final base = tempOnlyBase();
+      final result = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metStub(base),
+        // No reachable snow warning, only the incomplete-read notice.
+        fetchJmaAdvisories: jmaStub([
+          buildIncompleteReadNotice(const ['050000', '060000']),
+        ]),
+      );
+      // No band merged, but the read is INCOMPLETE — the flag carries so HER is
+      // not shown an implied "no warnings".
+      expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
+      expect(result.jmaBorderCheckIncomplete, isTrue);
+      expect(result.jmaUnreachableArea, '秋田県・山形県');
+    },
+  );
 
-  test('T12 COMPLETE read unchanged: no notice → flag false (no false caution)',
-      () async {
-    final base = tempOnlyBase();
-    final merged = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metStub(base),
-      fetchJmaAdvisories: jmaStub([adv('大雪警報')]),
-    );
-    expect(merged.status, PretripLiveStatus.japanJmaMerged);
-    expect(merged.jmaBorderCheckIncomplete, isFalse);
-    expect(merged.jmaUnreachableArea, isNull);
+  test(
+    'T12 COMPLETE read unchanged: no notice → flag false (no false caution)',
+    () async {
+      final base = tempOnlyBase();
+      final merged = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metStub(base),
+        fetchJmaAdvisories: jmaStub([adv('大雪警報')]),
+      );
+      expect(merged.status, PretripLiveStatus.japanJmaMerged);
+      expect(merged.jmaBorderCheckIncomplete, isFalse);
+      expect(merged.jmaUnreachableArea, isNull);
 
-    final clean = await resolvePretripLiveForecast(
-      latitude: akitaLat,
-      longitude: akitaLon,
-      now: now,
-      window: window,
-      fetchMetForecast: metStub(base),
-      fetchJmaAdvisories: jmaStub(const []),
-    );
-    expect(clean.status, PretripLiveStatus.japanJmaNoAdvisory);
-    expect(clean.jmaBorderCheckIncomplete, isFalse);
-    expect(clean.jmaUnreachableArea, isNull);
-  });
+      final clean = await resolvePretripLiveForecast(
+        latitude: akitaLat,
+        longitude: akitaLon,
+        now: now,
+        window: window,
+        fetchMetForecast: metStub(base),
+        fetchJmaAdvisories: jmaStub(const []),
+      );
+      expect(clean.status, PretripLiveStatus.japanJmaNoAdvisory);
+      expect(clean.jmaBorderCheckIncomplete, isFalse);
+      expect(clean.jmaUnreachableArea, isNull);
+    },
+  );
 
   test('T9 caption strings: exact arms, UNAVAILABLE token, no CJK', () {
     // metNorway arm — byte-equal to the legacy main.dart literal.
@@ -396,7 +403,8 @@ void main() {
       latitude: nagoyaLat,
       longitude: nagoyaLon,
     );
-    final legacy = 'LIVE forecast — data: MET Norway (CC BY 4.0), '
+    final legacy =
+        'LIVE forecast — data: MET Norway (CC BY 4.0), '
         'lat $nagoyaLat lon $nagoyaLon. '
         'No visibility/surface data in this product — hazard signal from '
         'temperature + precipitation only.';
@@ -446,8 +454,11 @@ void main() {
     // card font has no CJK glyphs; verbatim JP lives only in the data layer).
     for (final cap in [metCap, mergedCap, noAdvCap, failCap]) {
       for (final rune in cap.runes) {
-        expect(rune <= 0x3000, isTrue,
-            reason: 'CJK code point U+${rune.toRadixString(16)} in: $cap');
+        expect(
+          rune <= 0x3000,
+          isTrue,
+          reason: 'CJK code point U+${rune.toRadixString(16)} in: $cap',
+        );
       }
     }
   });

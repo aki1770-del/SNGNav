@@ -21,8 +21,12 @@ void main() {
         final kf = KalmanFilter();
         final t = DateTime(2026, 2, 28, 12, 0, 0);
         kf.update(
-          lat: 35.17, lon: 136.88, speed: 11.0, heading: 90.0,
-          accuracy: 5.0, timestamp: t,
+          lat: 35.17,
+          lon: 136.88,
+          speed: 11.0,
+          heading: 90.0,
+          accuracy: 5.0,
+          timestamp: t,
         );
         expect(kf.isInitialized, isTrue);
         expect(kf.state.lat, 35.17);
@@ -33,8 +37,10 @@ void main() {
 
       test('withState constructor initialises directly', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
         );
         expect(kf.isInitialized, isTrue);
@@ -43,8 +49,10 @@ void main() {
 
       test('reset clears state', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
         );
         kf.reset();
@@ -56,8 +64,10 @@ void main() {
       test('predicts position forward at constant velocity', () {
         final t = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0, // due east
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0, // due east
           timestamp: t,
         );
 
@@ -72,8 +82,10 @@ void main() {
 
       test('heading 0° moves north (latitude increases)', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.0, longitude: 137.0,
-          speed: 10.0, heading: 0.0, // due north
+          latitude: 35.0,
+          longitude: 137.0,
+          speed: 10.0,
+          heading: 0.0, // due north
           timestamp: DateTime(2026, 2, 28),
         );
 
@@ -84,8 +96,10 @@ void main() {
 
       test('heading 180° moves south (latitude decreases)', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.0, longitude: 137.0,
-          speed: 10.0, heading: 180.0, // due south
+          latitude: 35.0,
+          longitude: 137.0,
+          speed: 10.0,
+          heading: 180.0, // due south
           timestamp: DateTime(2026, 2, 28),
         );
 
@@ -95,8 +109,10 @@ void main() {
 
       test('accuracy grows during prediction-only', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
           initialAccuracy: 5.0,
         );
@@ -109,14 +125,19 @@ void main() {
         }
 
         final a10 = kf.accuracyMetres;
-        expect(a10, greaterThan(a0),
-            reason: 'Accuracy should degrade during prediction-only');
+        expect(
+          a10,
+          greaterThan(a0),
+          reason: 'Accuracy should degrade during prediction-only',
+        );
       });
 
       test('zero-duration prediction does not change state', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
         );
 
@@ -130,8 +151,10 @@ void main() {
 
       test('stationary vehicle stays in place', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 0.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 0.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
         );
 
@@ -145,8 +168,10 @@ void main() {
       test('update corrects predicted position toward measurement', () {
         final t0 = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: t0,
         );
 
@@ -176,8 +201,10 @@ void main() {
       test('update reduces accuracy (covariance shrinks)', () {
         final t0 = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: t0,
           initialAccuracy: 5.0,
         );
@@ -190,15 +217,20 @@ void main() {
 
         // GPS fix — accuracy recovers.
         kf.update(
-          lat: kf.state.lat, lon: kf.state.lon,
-          speed: 11.0, heading: 90.0,
+          lat: kf.state.lat,
+          lon: kf.state.lon,
+          speed: 11.0,
+          heading: 90.0,
           accuracy: 5.0,
           timestamp: t0.add(const Duration(seconds: 10)),
         );
         final recoveredAccuracy = kf.accuracyMetres;
 
-        expect(recoveredAccuracy, lessThan(degradedAccuracy),
-            reason: 'GPS fix should reduce uncertainty');
+        expect(
+          recoveredAccuracy,
+          lessThan(degradedAccuracy),
+          reason: 'GPS fix should reduce uncertainty',
+        );
       });
 
       test('low-accuracy GPS has less influence', () {
@@ -206,13 +238,17 @@ void main() {
 
         // Two identical filters.
         final kfGood = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: t0,
         );
         final kfBad = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: t0,
         );
 
@@ -221,23 +257,32 @@ void main() {
 
         // Good GPS (5m accuracy).
         kfGood.update(
-          lat: offsetLat, lon: 136.88,
-          speed: 11.0, heading: 90.0,
-          accuracy: 5.0, timestamp: t1,
+          lat: offsetLat,
+          lon: 136.88,
+          speed: 11.0,
+          heading: 90.0,
+          accuracy: 5.0,
+          timestamp: t1,
         );
 
         // Bad GPS (100m accuracy).
         kfBad.update(
-          lat: offsetLat, lon: 136.88,
-          speed: 11.0, heading: 90.0,
-          accuracy: 100.0, timestamp: t1,
+          lat: offsetLat,
+          lon: 136.88,
+          speed: 11.0,
+          heading: 90.0,
+          accuracy: 100.0,
+          timestamp: t1,
         );
 
         // Good GPS should pull the state closer to the measurement.
         final goodDist = (kfGood.state.lat - offsetLat).abs();
         final badDist = (kfBad.state.lat - offsetLat).abs();
-        expect(goodDist, lessThan(badDist),
-            reason: 'Higher-accuracy GPS should have more influence');
+        expect(
+          goodDist,
+          lessThan(badDist),
+          reason: 'Higher-accuracy GPS should have more influence',
+        );
       });
     });
 
@@ -245,36 +290,47 @@ void main() {
       test('handles 350° → 10° transition', () {
         final t0 = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 350.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 350.0,
           timestamp: t0,
         );
 
         kf.update(
-          lat: 35.17, lon: 136.88,
-          speed: 11.0, heading: 10.0,
+          lat: 35.17,
+          lon: 136.88,
+          speed: 11.0,
+          heading: 10.0,
           accuracy: 5.0,
           timestamp: t0.add(const Duration(seconds: 1)),
         );
 
         // Heading should be near 0/360, not near 180.
         final h = kf.state.heading;
-        expect(h < 30 || h > 330, isTrue,
-            reason: 'Heading should wrap correctly through 0°');
+        expect(
+          h < 30 || h > 330,
+          isTrue,
+          reason: 'Heading should wrap correctly through 0°',
+        );
       });
 
       test('heading stays in [0, 360)', () {
         final t0 = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 5.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 5.0,
           timestamp: t0,
         );
 
         // Update with heading near 355° — wraps through 0.
         kf.update(
-          lat: 35.17, lon: 136.88,
-          speed: 11.0, heading: 355.0,
+          lat: 35.17,
+          lon: 136.88,
+          speed: 11.0,
+          heading: 355.0,
           accuracy: 5.0,
           timestamp: t0.add(const Duration(seconds: 1)),
         );
@@ -318,8 +374,10 @@ void main() {
         // 10 GPS fixes before tunnel.
         for (var i = 0; i < 10; i++) {
           kf.update(
-            lat: 35.17, lon: 136.88 + i * 0.0001,
-            speed: 25.0, heading: 90.0,
+            lat: 35.17,
+            lon: 136.88 + i * 0.0001,
+            speed: 25.0,
+            heading: 90.0,
             accuracy: 5.0,
             timestamp: t0.add(Duration(seconds: i)),
           );
@@ -331,25 +389,35 @@ void main() {
           kf.predict(const Duration(seconds: 1));
         }
         final tunnelAccuracy = kf.accuracyMetres;
-        expect(tunnelAccuracy, greaterThan(preAccuracy),
-            reason: 'Accuracy degrades in tunnel');
+        expect(
+          tunnelAccuracy,
+          greaterThan(preAccuracy),
+          reason: 'Accuracy degrades in tunnel',
+        );
 
         // GPS recovery.
         kf.update(
-          lat: kf.state.lat, lon: kf.state.lon,
-          speed: 25.0, heading: 90.0,
+          lat: kf.state.lat,
+          lon: kf.state.lon,
+          speed: 25.0,
+          heading: 90.0,
           accuracy: 8.0,
           timestamp: t0.add(const Duration(seconds: 40)),
         );
         final recoveredAccuracy = kf.accuracyMetres;
-        expect(recoveredAccuracy, lessThan(tunnelAccuracy),
-            reason: 'Accuracy recovers after GPS fix');
+        expect(
+          recoveredAccuracy,
+          lessThan(tunnelAccuracy),
+          reason: 'Accuracy recovers after GPS fix',
+        );
       });
 
       test('extended dead reckoning exceeds safety cap', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 25.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 25.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
           initialAccuracy: 5.0,
         );
@@ -359,8 +427,11 @@ void main() {
           kf.predict(const Duration(seconds: 1));
         }
 
-        expect(kf.isAccuracyExceeded, isTrue,
-            reason: '5 minutes without GPS should exceed safety cap');
+        expect(
+          kf.isAccuracyExceeded,
+          isTrue,
+          reason: '5 minutes without GPS should exceed safety cap',
+        );
       });
     });
 
@@ -368,15 +439,19 @@ void main() {
       test('speed never goes negative', () {
         final t0 = DateTime(2026, 2, 28, 12, 0, 0);
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 1.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 1.0,
+          heading: 90.0,
           timestamp: t0,
         );
 
         // GPS reports speed 0 — filter should clamp, not go negative.
         kf.update(
-          lat: 35.17, lon: 136.88,
-          speed: 0.0, heading: 90.0,
+          lat: 35.17,
+          lon: 136.88,
+          speed: 0.0,
+          heading: 90.0,
           accuracy: 5.0,
           timestamp: t0.add(const Duration(seconds: 1)),
         );
@@ -388,8 +463,10 @@ void main() {
     group('accuracy calculation', () {
       test('accuracy reflects covariance in metres', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 11.0, heading: 90.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 11.0,
+          heading: 90.0,
           timestamp: DateTime(2026, 2, 28),
           initialAccuracy: 10.0,
         );
@@ -400,8 +477,10 @@ void main() {
 
       test('accuracy is positive', () {
         final kf = KalmanFilter.withState(
-          latitude: 35.17, longitude: 136.88,
-          speed: 0.0, heading: 0.0,
+          latitude: 35.17,
+          longitude: 136.88,
+          speed: 0.0,
+          heading: 0.0,
           timestamp: DateTime(2026, 2, 28),
         );
 

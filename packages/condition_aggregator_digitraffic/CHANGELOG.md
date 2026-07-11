@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.7
+
+### Changed (behaviour): an unclassifiable announcement is no longer "minor"
+
+`defaultDigitrafficFallbackMapping.severity` is **`AdvisorySeverity.unknown`**
+(was `AdvisorySeverity.minor`, described in the code as "conservative").
+
+Minor is not conservative for an event class we cannot classify at all: it is an
+ASSERTED benign severity for an announcement whose severity we do not know. If
+Fintraffic adds a new severe-class announcement type tomorrow, every driver on
+this adapter would have been told **"minor"** until somebody noticed.
+
+`AdvisorySeverity.unknown` already exists on the enum and is used correctly
+elsewhere in this catalog (`condition_aggregator_owm_road_risk`: an
+`event_level <= 0` maps to `unknown`). The honest value was available and was not
+chosen. The integrator `capMapping` override hook is unchanged.
+
 ## 0.0.6 — 2026-06-26 — Docs: dev-first on-ramp
 
 - README now LEADS with what-it-is, a `dart pub add` install line, and a

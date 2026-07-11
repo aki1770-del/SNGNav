@@ -21,8 +21,9 @@ void main() {
       expect(find.byType(SnowScene3DView), findsNothing);
     });
 
-    testWidgets('tapping Forward shows the 3D forward-view and hides the map',
-        (tester) async {
+    testWidgets('tapping Forward shows the 3D forward-view and hides the map', (
+      tester,
+    ) async {
       await tester.pumpWidget(const main_app.SNGNavGettingStarted());
       await tester.pump();
 
@@ -37,20 +38,22 @@ void main() {
       expect(find.byType(FlutterMap), findsNothing);
     });
 
-    testWidgets('toggling back to 2D map restores the map and hides forward-view',
-        (tester) async {
-      await tester.pumpWidget(const main_app.SNGNavGettingStarted());
-      await tester.pump();
+    testWidgets(
+      'toggling back to 2D map restores the map and hides forward-view',
+      (tester) async {
+        await tester.pumpWidget(const main_app.SNGNavGettingStarted());
+        await tester.pump();
 
-      await tester.tap(find.text('Forward'));
-      await tester.pump();
-      expect(find.byType(SnowScene3DView), findsOneWidget);
+        await tester.tap(find.text('Forward'));
+        await tester.pump();
+        expect(find.byType(SnowScene3DView), findsOneWidget);
 
-      await tester.tap(find.text('2D map'));
-      await tester.pump();
+        await tester.tap(find.text('2D map'));
+        await tester.pump();
 
-      expect(find.byType(FlutterMap), findsOneWidget);
-      expect(find.byType(SnowScene3DView), findsNothing);
-    });
+        expect(find.byType(FlutterMap), findsOneWidget);
+        expect(find.byType(SnowScene3DView), findsNothing);
+      },
+    );
   });
 }

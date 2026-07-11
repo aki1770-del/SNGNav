@@ -3,7 +3,7 @@ description: >-
   Safety-driven route adaptation for winter driving. Evaluates route
   condition forecasts, decides when rerouting is justified, and generates
   detour waypoints to bypass hazard zones. Pure Dart, no Flutter dependency.
-version: 0.1.5
+version: 0.2.0
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -19,17 +19,28 @@ environment:
 dependencies:
   equatable: ^2.0.7
   latlong2: ^0.9.1
-  driving_weather: ^0.4.0
+  # 0.5.0 is the Measured-or-Absent release: nullable measured fields +
+  # tri-state SafetyVerdict. This package's honest-absence behaviour depends on
+  # that type surface, so the floor is hard.
+  driving_weather: ^0.5.0
   fleet_hazard: ^0.5.0
-  routing_engine: '>=0.4.0 <0.6.0'
-  route_condition_forecast: ^0.1.0
+  # This package's lib/ imports no routing_engine symbol (it only holds a
+  # RouteResult transitively, inside RouteForecast) — verified by grep. The
+  # 0.6.0 nullable-position break therefore cannot reach it, so the range spans
+  # it deliberately rather than pinning consumers needlessly.
+  routing_engine: '>=0.4.0 <0.7.0'
+  route_condition_forecast: ^0.2.0
 
 dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
 
 # Monorepo development: use local path for sibling packages. Published
-# releases resolve against pub.dev via the caret constraint above.
+# releases resolve against pub.dev via the caret constraints above.
 dependency_overrides:
   route_condition_forecast:
     path: ../route_condition_forecast
+  driving_weather:
+    path: ../driving_weather
+  routing_engine:
+    path: ../routing_engine

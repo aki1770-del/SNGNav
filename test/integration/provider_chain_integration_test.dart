@@ -82,52 +82,56 @@ const _higashiokazaki = LatLng(34.9554, 137.1791);
 // ==========================================================================
 void main() {
   group('ProviderConfig creates working providers', () {
-    test('simulated + DR(kalman) config produces positions through BLoC',
-        () async {
-      final config = ProviderConfig(
-        locationType: LocationProviderType.simulated,
-        deadReckoningEnabled: true,
-        drMode: DeadReckoningMode.kalman,
-      );
+    test(
+      'simulated + DR(kalman) config produces positions through BLoC',
+      () async {
+        final config = ProviderConfig(
+          locationType: LocationProviderType.simulated,
+          deadReckoningEnabled: true,
+          drMode: DeadReckoningMode.kalman,
+        );
 
-      final provider = config.createLocationProvider(
-        simulatedInterval: const Duration(milliseconds: 20),
-      );
-      final bloc = LocationBloc(provider: provider);
+        final provider = config.createLocationProvider(
+          simulatedInterval: const Duration(milliseconds: 20),
+        );
+        final bloc = LocationBloc(provider: provider);
 
-      bloc.add(const LocationStartRequested());
+        bloc.add(const LocationStartRequested());
 
-      // Wait for at least one position
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+        // Wait for at least one position
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      expect(bloc.state.quality, equals(LocationQuality.fix));
-      expect(bloc.state.hasPosition, isTrue);
-      expect(bloc.state.position!.latitude, closeTo(35.17, 0.02));
+        expect(bloc.state.quality, equals(LocationQuality.fix));
+        expect(bloc.state.hasPosition, isTrue);
+        expect(bloc.state.position!.latitude, closeTo(35.17, 0.02));
 
-      await bloc.close();
-    });
+        await bloc.close();
+      },
+    );
 
-    test('simulated + DR(linear) config produces positions through BLoC',
-        () async {
-      final config = ProviderConfig(
-        locationType: LocationProviderType.simulated,
-        deadReckoningEnabled: true,
-        drMode: DeadReckoningMode.linear,
-      );
+    test(
+      'simulated + DR(linear) config produces positions through BLoC',
+      () async {
+        final config = ProviderConfig(
+          locationType: LocationProviderType.simulated,
+          deadReckoningEnabled: true,
+          drMode: DeadReckoningMode.linear,
+        );
 
-      final provider = config.createLocationProvider(
-        simulatedInterval: const Duration(milliseconds: 20),
-      );
-      final bloc = LocationBloc(provider: provider);
+        final provider = config.createLocationProvider(
+          simulatedInterval: const Duration(milliseconds: 20),
+        );
+        final bloc = LocationBloc(provider: provider);
 
-      bloc.add(const LocationStartRequested());
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+        bloc.add(const LocationStartRequested());
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      expect(bloc.state.quality, equals(LocationQuality.fix));
-      expect(bloc.state.hasPosition, isTrue);
+        expect(bloc.state.quality, equals(LocationQuality.fix));
+        expect(bloc.state.hasPosition, isTrue);
 
-      await bloc.close();
-    });
+        await bloc.close();
+      },
+    );
 
     test('simulated + DR disabled config produces raw GPS positions', () async {
       final config = ProviderConfig(
@@ -151,11 +155,8 @@ void main() {
       await bloc.close();
     });
 
-    test('simulated weather config produces conditions through BLoC',
-        () async {
-      final config = ProviderConfig(
-        weatherType: WeatherProviderType.simulated,
-      );
+    test('simulated weather config produces conditions through BLoC', () async {
+      final config = ProviderConfig(weatherType: WeatherProviderType.simulated);
 
       final provider = config.createWeatherProvider(
         simulatedInterval: const Duration(milliseconds: 50),
@@ -203,41 +204,45 @@ void main() {
       await bloc.close();
     });
 
-    test('phases 1-2: city + suburban driving produce continuous fixes',
-        () async {
-      bloc.add(const LocationStartRequested());
+    test(
+      'phases 1-2: city + suburban driving produce continuous fixes',
+      () async {
+        bloc.add(const LocationStartRequested());
 
-      // Let simulated provider run through city + suburban phases (steps 0-9)
-      // 10 steps × 100ms = 1000ms
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+        // Let simulated provider run through city + suburban phases (steps 0-9)
+        // 10 steps × 100ms = 1000ms
+        await Future<void>.delayed(const Duration(milliseconds: 500));
 
-      expect(bloc.state.quality, equals(LocationQuality.fix));
-      expect(bloc.state.hasPosition, isTrue);
-      // Should be somewhere between Sakae and Okazaki
-      expect(bloc.state.position!.latitude, lessThan(35.18));
-      expect(bloc.state.position!.latitude, greaterThan(35.05));
-    });
+        expect(bloc.state.quality, equals(LocationQuality.fix));
+        expect(bloc.state.hasPosition, isTrue);
+        // Should be somewhere between Sakae and Okazaki
+        expect(bloc.state.position!.latitude, lessThan(35.18));
+        expect(bloc.state.position!.latitude, greaterThan(35.05));
+      },
+    );
 
-    test('phase 3: tunnel activates DR — BLoC keeps receiving positions',
-        () async {
-      bloc.add(const LocationStartRequested());
+    test(
+      'phase 3: tunnel activates DR — BLoC keeps receiving positions',
+      () async {
+        bloc.add(const LocationStartRequested());
 
-      // Step 10 (tunnel start) at ~1000ms. GPS timeout fires at ~1200ms.
-      // Wait until DR is active (1300ms to be safe).
-      await Future<void>.delayed(const Duration(milliseconds: 1300));
+        // Step 10 (tunnel start) at ~1000ms. GPS timeout fires at ~1200ms.
+        // Wait until DR is active (1300ms to be safe).
+        await Future<void>.delayed(const Duration(milliseconds: 1300));
 
-      // SimulatedLocationProvider should be in tunnel phase (step 10-14)
-      expect(simGps.currentStep, greaterThanOrEqualTo(10));
-      expect(simGps.currentStep, lessThanOrEqualTo(14));
+        // SimulatedLocationProvider should be in tunnel phase (step 10-14)
+        expect(simGps.currentStep, greaterThanOrEqualTo(10));
+        expect(simGps.currentStep, lessThanOrEqualTo(14));
 
-      // DR should be active (tunnel = no GPS emissions)
-      expect(drProvider.isDrActive, isTrue);
+        // DR should be active (tunnel = no GPS emissions)
+        expect(drProvider.isDrActive, isTrue);
 
-      // BLoC should NOT be stale — DR is feeding positions
-      expect(bloc.state.quality, isNot(LocationQuality.stale));
-      expect(bloc.state.quality, isNot(LocationQuality.uninitialized));
-      expect(bloc.state.hasPosition, isTrue);
-    });
+        // BLoC should NOT be stale — DR is feeding positions
+        expect(bloc.state.quality, isNot(LocationQuality.stale));
+        expect(bloc.state.quality, isNot(LocationQuality.uninitialized));
+        expect(bloc.state.hasPosition, isTrue);
+      },
+    );
 
     test('phase 4: tunnel exit recovers GPS — DR deactivates', () async {
       bloc.add(const LocationStartRequested());
@@ -271,8 +276,11 @@ void main() {
       await sub.cancel();
 
       // Should have received many positions (GPS + DR combined)
-      expect(positions.length, greaterThan(10),
-          reason: 'Expected positions from GPS + DR across full cycle');
+      expect(
+        positions.length,
+        greaterThan(10),
+        reason: 'Expected positions from GPS + DR across full cycle',
+      );
 
       // First position should be near Sakae (phase 1)
       expect(positions.first.latitude, closeTo(35.17, 0.02));
@@ -280,8 +288,11 @@ void main() {
       // Should have positions during tunnel (DR-generated)
       // DR positions continue in the direction of last GPS heading
       final hasMovedSouth = positions.any((p) => p.latitude < 35.10);
-      expect(hasMovedSouth, isTrue,
-          reason: 'DR should extrapolate southward through tunnel');
+      expect(
+        hasMovedSouth,
+        isTrue,
+        reason: 'DR should extrapolate southward through tunnel',
+      );
     });
   });
 
@@ -343,10 +354,16 @@ void main() {
       final linearTunnel = linearPositions.where((p) => p.latitude < 35.10);
       final kalmanTunnel = kalmanPositions.where((p) => p.latitude < 35.10);
 
-      expect(linearTunnel, isNotEmpty,
-          reason: 'Linear DR should produce tunnel positions');
-      expect(kalmanTunnel, isNotEmpty,
-          reason: 'Kalman DR should produce tunnel positions');
+      expect(
+        linearTunnel,
+        isNotEmpty,
+        reason: 'Linear DR should produce tunnel positions',
+      );
+      expect(
+        kalmanTunnel,
+        isNotEmpty,
+        reason: 'Kalman DR should produce tunnel positions',
+      );
 
       await linearBloc.close();
       await kalmanBloc.close();
@@ -385,63 +402,82 @@ void main() {
       await navigationBloc.close();
     });
 
-    test('driver scenario: get fix → request route → start navigation',
-        () async {
-      // Step 1: Location fix — wait for first position through DR wrapper
-      locationBloc.add(const LocationStartRequested());
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+    test(
+      'driver scenario: get fix → request route → start navigation',
+      () async {
+        // Step 1: Location fix — wait for first position through DR wrapper
+        locationBloc.add(const LocationStartRequested());
+        await Future<void>.delayed(const Duration(milliseconds: 300));
 
-      expect(locationBloc.state.quality, equals(LocationQuality.fix));
-      final origin = LatLng(
-        locationBloc.state.position!.latitude,
-        locationBloc.state.position!.longitude,
-      );
+        expect(locationBloc.state.quality, equals(LocationQuality.fix));
+        final origin = LatLng(
+          locationBloc.state.position!.latitude,
+          locationBloc.state.position!.longitude,
+        );
 
-      // Step 2: Request route
-      routingBloc.add(RouteRequested(
-        origin: origin,
-        destination: _higashiokazaki,
-        destinationLabel: '東岡崎駅',
-      ));
+        // Step 2: Request route
+        routingBloc.add(
+          RouteRequested(
+            origin: origin,
+            destination: _higashiokazaki,
+            destinationLabel: '東岡崎駅',
+          ),
+        );
 
-      await expectLater(
-        routingBloc.stream,
-        emitsInOrder([
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.loading),
-          isA<RoutingState>()
-              .having((s) => s.status, 'status', RoutingStatus.routeActive),
-        ]),
-      );
+        await expectLater(
+          routingBloc.stream,
+          emitsInOrder([
+            isA<RoutingState>().having(
+              (s) => s.status,
+              'status',
+              RoutingStatus.loading,
+            ),
+            isA<RoutingState>().having(
+              (s) => s.status,
+              'status',
+              RoutingStatus.routeActive,
+            ),
+          ]),
+        );
 
-      // Step 3: Start navigation
-      navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!.toNavigationRoute(),
-        destinationLabel: '東岡崎駅',
-      ));
-      await Future<void>.delayed(Duration.zero);
+        // Step 3: Start navigation
+        navigationBloc.add(
+          NavigationStarted(
+            route: routingBloc.state.route!.toNavigationRoute(),
+            destinationLabel: '東岡崎駅',
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      expect(navigationBloc.state.status, equals(NavigationStatus.navigating));
-      expect(navigationBloc.state.destinationLabel, equals('東岡崎駅'));
-      expect(navigationBloc.state.route!.totalDistanceKm, closeTo(25.7, 0.1));
-    });
+        expect(
+          navigationBloc.state.status,
+          equals(NavigationStatus.navigating),
+        );
+        expect(navigationBloc.state.destinationLabel, equals('東岡崎駅'));
+        expect(navigationBloc.state.route!.totalDistanceKm, closeTo(25.7, 0.1));
+      },
+    );
 
     test('navigation survives tunnel: DR keeps location alive', () async {
       // Start location + route + navigation
       locationBloc.add(const LocationStartRequested());
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      routingBloc.add(const RouteRequested(
-        origin: _sakae,
-        destination: _higashiokazaki,
-        destinationLabel: '東岡崎駅',
-      ));
+      routingBloc.add(
+        const RouteRequested(
+          origin: _sakae,
+          destination: _higashiokazaki,
+          destinationLabel: '東岡崎駅',
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!.toNavigationRoute(),
-        destinationLabel: '東岡崎駅',
-      ));
+      navigationBloc.add(
+        NavigationStarted(
+          route: routingBloc.state.route!.toNavigationRoute(),
+          destinationLabel: '東岡崎駅',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(navigationBloc.state.isNavigating, isTrue);
@@ -465,17 +501,21 @@ void main() {
       locationBloc.add(const LocationStartRequested());
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      routingBloc.add(const RouteRequested(
-        origin: _sakae,
-        destination: _higashiokazaki,
-        destinationLabel: '東岡崎駅',
-      ));
+      routingBloc.add(
+        const RouteRequested(
+          origin: _sakae,
+          destination: _higashiokazaki,
+          destinationLabel: '東岡崎駅',
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!.toNavigationRoute(),
-        destinationLabel: '東岡崎駅',
-      ));
+      navigationBloc.add(
+        NavigationStarted(
+          route: routingBloc.state.route!.toNavigationRoute(),
+          destinationLabel: '東岡崎駅',
+        ),
+      );
       await Future<void>.delayed(Duration.zero);
 
       // Run through full cycle including tunnel exit (step 15 at ~1500ms + margin)
@@ -495,15 +535,14 @@ void main() {
       locationBloc.add(const LocationStartRequested());
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      routingBloc.add(const RouteRequested(
-        origin: _sakae,
-        destination: _higashiokazaki,
-      ));
+      routingBloc.add(
+        const RouteRequested(origin: _sakae, destination: _higashiokazaki),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      navigationBloc.add(NavigationStarted(
-        route: routingBloc.state.route!.toNavigationRoute(),
-      ));
+      navigationBloc.add(
+        NavigationStarted(route: routingBloc.state.route!.toNavigationRoute()),
+      );
       await Future<void>.delayed(Duration.zero);
 
       // Clear route and stop navigation
@@ -547,21 +586,25 @@ void main() {
       // Start all providers
       locationBloc.add(const LocationStartRequested());
       weatherBloc.add(const WeatherMonitorStarted());
-      routingBloc.add(const RouteRequested(
-        origin: _sakae,
-        destination: _higashiokazaki,
-        destinationLabel: '東岡崎駅',
-      ));
+      routingBloc.add(
+        const RouteRequested(
+          origin: _sakae,
+          destination: _higashiokazaki,
+          destinationLabel: '東岡崎駅',
+        ),
+      );
 
       // Let them all run concurrently
       await Future<void>.delayed(const Duration(milliseconds: 300));
 
       // Start navigation
       if (routingBloc.state.hasRoute) {
-        navigationBloc.add(NavigationStarted(
-          route: routingBloc.state.route!.toNavigationRoute(),
-          destinationLabel: '東岡崎駅',
-        ));
+        navigationBloc.add(
+          NavigationStarted(
+            route: routingBloc.state.route!.toNavigationRoute(),
+            destinationLabel: '東岡崎駅',
+          ),
+        );
       }
       await Future<void>.delayed(Duration.zero);
 
@@ -667,10 +710,9 @@ void main() {
       final navigationBloc = NavigationBloc();
 
       locationBloc.add(const LocationStartRequested());
-      routingBloc.add(const RouteRequested(
-        origin: _sakae,
-        destination: _higashiokazaki,
-      ));
+      routingBloc.add(
+        const RouteRequested(origin: _sakae, destination: _higashiokazaki),
+      );
 
       await Future<void>.delayed(const Duration(milliseconds: 200));
 

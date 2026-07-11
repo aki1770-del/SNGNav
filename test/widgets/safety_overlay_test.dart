@@ -107,10 +107,12 @@ void main() {
     });
 
     testWidgets('shows alert message for info severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.info,
-        message: 'Road maintenance ahead',
-      ));
+      when(() => bloc.state).thenReturn(
+        _withAlert(
+          severity: AlertSeverity.info,
+          message: 'Road maintenance ahead',
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -118,10 +120,12 @@ void main() {
     });
 
     testWidgets('shows alert message for warning severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.warning,
-        message: 'Ice detected ahead',
-      ));
+      when(() => bloc.state).thenReturn(
+        _withAlert(
+          severity: AlertSeverity.warning,
+          message: 'Ice detected ahead',
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -129,11 +133,13 @@ void main() {
     });
 
     testWidgets('shows alert message for critical severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.critical,
-        message: 'GPS signal lost',
-        dismissible: false,
-      ));
+      when(() => bloc.state).thenReturn(
+        _withAlert(
+          severity: AlertSeverity.critical,
+          message: 'GPS signal lost',
+          dismissible: false,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -141,9 +147,9 @@ void main() {
     });
 
     testWidgets('shows correct icon for info severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.info,
-      ));
+      when(
+        () => bloc.state,
+      ).thenReturn(_withAlert(severity: AlertSeverity.info));
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -151,9 +157,9 @@ void main() {
     });
 
     testWidgets('shows correct icon for warning severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.warning,
-      ));
+      when(
+        () => bloc.state,
+      ).thenReturn(_withAlert(severity: AlertSeverity.warning));
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -161,10 +167,9 @@ void main() {
     });
 
     testWidgets('shows correct icon for critical severity', (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      ));
+      when(() => bloc.state).thenReturn(
+        _withAlert(severity: AlertSeverity.critical, dismissible: false),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -179,20 +184,21 @@ void main() {
       expect(find.text('Dismiss'), findsOneWidget);
     });
 
-    testWidgets('hides dismiss button when not dismissible (critical)',
-        (tester) async {
-      when(() => bloc.state).thenReturn(_withAlert(
-        severity: AlertSeverity.critical,
-        dismissible: false,
-      ));
+    testWidgets('hides dismiss button when not dismissible (critical)', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        _withAlert(severity: AlertSeverity.critical, dismissible: false),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
       expect(find.text('Dismiss'), findsNothing);
     });
 
-    testWidgets('dismiss button dispatches SafetyAlertDismissed',
-        (tester) async {
+    testWidgets('dismiss button dispatches SafetyAlertDismissed', (
+      tester,
+    ) async {
       when(() => bloc.state).thenReturn(_withAlert(dismissible: true));
 
       await tester.pumpWidget(_buildWidget(bloc));

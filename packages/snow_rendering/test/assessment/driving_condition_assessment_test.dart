@@ -17,6 +17,7 @@ WeatherCondition _condition({
   windSpeedKmh: 0,
   iceRisk: iceRisk,
   humidityRH: humidityRH,
+  source: ObservationSource.measured,
   timestamp: DateTime(2026),
 );
 
@@ -72,7 +73,7 @@ void main() {
         final a = DrivingConditionAssessment.fromCondition(c);
         expect(
           a.gripFactor,
-          a.surfaceState.gripFactor,
+          a.surfaceState!.gripFactor,
           reason: 'gripFactor mismatch for ${a.surfaceState}',
         );
       }
@@ -92,8 +93,8 @@ void main() {
       final a = DrivingConditionAssessment.fromCondition(
         _condition(visibilityMeters: 100),
       );
-      expect(a.visibility.opacity, closeTo(0.9, 0.001));
-      expect(a.visibility.blurSigma, closeTo(8.0, 0.001));
+      expect(a.visibility!.opacity, closeTo(0.9, 0.001));
+      expect(a.visibility!.blurSigma, closeTo(8.0, 0.001));
     });
 
     test('iceRisk → advisory contains "Black ice"', () {
@@ -210,7 +211,7 @@ void main() {
           temperatureCelsius: 5,
         ),
       );
-      expect(a.precipitation.particleCount, greaterThan(0));
+      expect(a.precipitation!.particleCount, greaterThan(0));
     });
 
     test('equality — same condition produces equal assessment', () {

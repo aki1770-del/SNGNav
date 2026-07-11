@@ -396,24 +396,42 @@ void main() {
         'Vehicle.Exterior.Humidity': 70.0,
       });
       final condition = vehicleSignalsToWeatherCondition(s);
-      expect(condition.iceRisk, isFalse, reason: 'no friction/traction slip yet');
+      // CHANGED in 0.5.0 (was `isFalse`). This vehicle publishes NO friction
+      // signal and no traction event, so we have no ice measurement at all.
+      // `null` = we did not look. `false` would have been a claim we cannot
+      // support — and it was the claim that let absence read as "no ice".
+      expect(condition.iceRisk, isNull,
+          reason: 'no friction signal at all — we do not know');
       expect(condition.humidityRH, 70.0);
 
+      // The reach still holds: black ice is caught from temperature + humidity,
+      // BEFORE the first slip, even with no friction signal and no rain sensor.
       final a = DrivingConditionAssessment.fromCondition(condition);
       expect(a.surfaceState, RoadSurfaceState.blackIce);
       expect(a.advisoryMessage, contains('Black ice risk'));
     });
 
-    test('round-trip: same frame WITHOUT humidity → dry (honest abstention)', () {
-      // Same +2C frame but the vehicle has no humidity sensor: the classifier
-      // must NOT fabricate black ice — it abstains, exactly as before the wire.
+    test(
+        'round-trip: same frame WITHOUT humidity → surface UNKNOWN '
+        '(honest abstention — and no longer a fabricated "dry")', () {
+      // Same +2C frame but the vehicle has no humidity sensor. The classifier
+      // must NOT fabricate black ice — it abstains, exactly as before.
+      //
+      // CHANGED in 0.5.0: it used to abstain all the way to `RoadSurfaceState.dry`
+      // (grip 1.0, "Conditions normal"). But this frame carries NO precipitation
+      // signal whatsoever — no wiper, no rain sensor — so "dry" was never
+      // something we knew; it was the fall-through. Abstention now lands on
+      // `null` (cannot classify), which is what abstaining actually means.
       final s = VehicleConditionSignals.fromVss(const {
         'Vehicle.Exterior.AirTemperature': 2.0,
       });
       final a = DrivingConditionAssessment.fromCondition(
         vehicleSignalsToWeatherCondition(s),
       );
-      expect(a.surfaceState, RoadSurfaceState.dry);
+      expect(a.surfaceState, isNull);
+      expect(a.surfaceState, isNot(RoadSurfaceState.dry));
+      expect(a.gripFactor, isNull); // was 1.0 — maximum grip, from nothing
+      expect(a.recommendedResponse, RecommendedResponse.conditionsUnknown);
     });
 
     test('round-trip: TCS engaged on a cold VSS frame → ice risk', () {

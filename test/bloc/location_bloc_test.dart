@@ -303,8 +303,7 @@ void main() {
         const LocationState.acquiring(),
         isA<LocationState>()
             .having((s) => s.quality, 'quality', LocationQuality.error)
-            .having(
-                (s) => s.errorMessage, 'error', contains('not available')),
+            .having((s) => s.errorMessage, 'error', contains('not available')),
       ],
     );
 
@@ -376,7 +375,9 @@ void main() {
       expect: () => [
         const LocationState.acquiring(),
         LocationState(
-            quality: LocationQuality.degraded, position: _degradedFix),
+          quality: LocationQuality.degraded,
+          position: _degradedFix,
+        ),
       ],
     );
 
@@ -399,7 +400,9 @@ void main() {
       act: (bloc) => bloc.add(LocationPositionReceived(_degradedFix)),
       expect: () => [
         LocationState(
-            quality: LocationQuality.degraded, position: _degradedFix),
+          quality: LocationQuality.degraded,
+          position: _degradedFix,
+        ),
       ],
     );
 
@@ -407,7 +410,9 @@ void main() {
       'degraded → fix when accuracy improves',
       build: () => LocationBloc(provider: provider),
       seed: () => LocationState(
-          quality: LocationQuality.degraded, position: _degradedFix),
+        quality: LocationQuality.degraded,
+        position: _degradedFix,
+      ),
       act: (bloc) => bloc.add(LocationPositionReceived(_nagoyaFix)),
       expect: () => [
         LocationState(quality: LocationQuality.fix, position: _nagoyaFix),
@@ -420,8 +425,7 @@ void main() {
       seed: () => const LocationState.acquiring(),
       act: (bloc) => bloc.add(LocationPositionReceived(_borderlineFix)),
       expect: () => [
-        LocationState(
-            quality: LocationQuality.fix, position: _borderlineFix),
+        LocationState(quality: LocationQuality.fix, position: _borderlineFix),
       ],
     );
 
@@ -432,8 +436,9 @@ void main() {
       act: (bloc) => bloc.add(LocationPositionReceived(_justOverThreshold)),
       expect: () => [
         LocationState(
-            quality: LocationQuality.degraded,
-            position: _justOverThreshold),
+          quality: LocationQuality.degraded,
+          position: _justOverThreshold,
+        ),
       ],
     );
   });
@@ -460,11 +465,12 @@ void main() {
       'degraded → stale when timeout fires',
       build: () => LocationBloc(provider: provider),
       seed: () => LocationState(
-          quality: LocationQuality.degraded, position: _degradedFix),
+        quality: LocationQuality.degraded,
+        position: _degradedFix,
+      ),
       act: (bloc) => bloc.add(const LocationStaleTimeout()),
       expect: () => [
-        LocationState(
-            quality: LocationQuality.stale, position: _degradedFix),
+        LocationState(quality: LocationQuality.stale, position: _degradedFix),
       ],
     );
 
@@ -529,8 +535,7 @@ void main() {
         const LocationState.acquiring(),
         LocationState(quality: LocationQuality.fix, position: _nagoyaFix),
         LocationState(quality: LocationQuality.fix, position: _updatedFix),
-        LocationState(
-            quality: LocationQuality.stale, position: _updatedFix),
+        LocationState(quality: LocationQuality.stale, position: _updatedFix),
       ],
     );
   });
@@ -561,7 +566,9 @@ void main() {
       'degraded → error on error event',
       build: () => LocationBloc(provider: provider),
       seed: () => LocationState(
-          quality: LocationQuality.degraded, position: _degradedFix),
+        quality: LocationQuality.degraded,
+        position: _degradedFix,
+      ),
       act: (bloc) => bloc.add(const LocationErrorOccurred('timeout')),
       expect: () => [
         const LocationState(
@@ -575,8 +582,7 @@ void main() {
       'acquiring → error on error event',
       build: () => LocationBloc(provider: provider),
       seed: () => const LocationState.acquiring(),
-      act: (bloc) =>
-          bloc.add(const LocationErrorOccurred('permission denied')),
+      act: (bloc) => bloc.add(const LocationErrorOccurred('permission denied')),
       expect: () => [
         const LocationState(
           quality: LocationQuality.error,
@@ -633,14 +639,16 @@ void main() {
       act: (bloc) async {
         // New position from MockLocationProvider — not a DeadReckoningProvider,
         // so isDr is computed as false inside _onPositionReceived.
-        bloc.add(LocationPositionReceived(
-          GeoPosition(
-            latitude: 35.1720,
-            longitude: 136.8830,
-            accuracy: 4.0,
-            timestamp: DateTime(2026, 2, 27, 10, 5),
+        bloc.add(
+          LocationPositionReceived(
+            GeoPosition(
+              latitude: 35.1720,
+              longitude: 136.8830,
+              accuracy: 4.0,
+              timestamp: DateTime(2026, 2, 27, 10, 5),
+            ),
           ),
-        ));
+        );
         await Future<void>.delayed(const Duration(milliseconds: 10));
         // Now stale timeout should transition (DR flag is now off).
         bloc.add(const LocationStaleTimeout());

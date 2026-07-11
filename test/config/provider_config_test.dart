@@ -41,37 +41,32 @@ void main() {
   });
 
   group('ProviderConfig — weather defaults', () {
-    test('defaults to simulated weather (D-VGC132-1: all-simulated default)', () {
-      const config = ProviderConfig();
-      expect(config.weatherType, WeatherProviderType.simulated);
-    });
+    test(
+      'defaults to simulated weather (D-VGC132-1: all-simulated default)',
+      () {
+        const config = ProviderConfig();
+        expect(config.weatherType, WeatherProviderType.simulated);
+      },
+    );
 
     test('accepts explicit simulated weather', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.simulated,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.simulated);
       expect(config.weatherType, WeatherProviderType.simulated);
     });
 
     test('accepts explicit openMeteo weather', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       expect(config.weatherType, WeatherProviderType.openMeteo);
     });
 
     test('isSimulatedWeather returns true for simulated', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.simulated,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.simulated);
       expect(config.isSimulatedWeather, isTrue);
       expect(config.isRealWeather, isFalse);
     });
 
     test('isRealWeather returns true for openMeteo', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       expect(config.isRealWeather, isTrue);
       expect(config.isSimulatedWeather, isFalse);
     });
@@ -89,9 +84,7 @@ void main() {
     });
 
     test('accepts explicit geoclue location', () {
-      const config = ProviderConfig(
-        locationType: LocationProviderType.geoclue,
-      );
+      const config = ProviderConfig(locationType: LocationProviderType.geoclue);
       expect(config.locationType, LocationProviderType.geoclue);
     });
 
@@ -109,9 +102,7 @@ void main() {
     });
 
     test('isRealLocation returns true for geoclue', () {
-      const config = ProviderConfig(
-        locationType: LocationProviderType.geoclue,
-      );
+      const config = ProviderConfig(locationType: LocationProviderType.geoclue);
       expect(config.isRealLocation, isTrue);
       expect(config.isSimulatedLocation, isFalse);
     });
@@ -120,10 +111,13 @@ void main() {
   group('ProviderConfig.fromEnvironment', () {
     // Note: --dart-define values are compile-time constants.
     // In tests without --dart-define, defaults apply.
-    test('defaults to simulated weather when no dart-define is set (D-VGC132-1)', () {
-      final config = ProviderConfig.fromEnvironment();
-      expect(config.weatherType, WeatherProviderType.simulated);
-    });
+    test(
+      'defaults to simulated weather when no dart-define is set (D-VGC132-1)',
+      () {
+        final config = ProviderConfig.fromEnvironment();
+        expect(config.weatherType, WeatherProviderType.simulated);
+      },
+    );
 
     test('defaults to simulated location when no dart-define is set', () {
       final config = ProviderConfig.fromEnvironment();
@@ -138,27 +132,21 @@ void main() {
 
   group('createWeatherProvider', () {
     test('creates SimulatedWeatherProvider for simulated type', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.simulated,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.simulated);
       final provider = config.createWeatherProvider();
       expect(provider, isA<SimulatedWeatherProvider>());
       provider.dispose();
     });
 
     test('creates OpenMeteoWeatherProvider for openMeteo type', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       final provider = config.createWeatherProvider();
       expect(provider, isA<OpenMeteoWeatherProvider>());
       provider.dispose();
     });
 
     test('passes latitude and longitude to OpenMeteo', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       final provider = config.createWeatherProvider(
         latitude: 34.0,
         longitude: 135.0,
@@ -171,9 +159,7 @@ void main() {
     });
 
     test('uses default Nagoya coordinates for OpenMeteo', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       final provider = config.createWeatherProvider();
       final openMeteo = provider as OpenMeteoWeatherProvider;
       expect(openMeteo.latitude, 35.18);
@@ -182,9 +168,7 @@ void main() {
     });
 
     test('passes custom poll interval to OpenMeteo', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.openMeteo,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.openMeteo);
       final provider = config.createWeatherProvider(
         pollInterval: const Duration(minutes: 10),
       );
@@ -194,9 +178,7 @@ void main() {
     });
 
     test('passes custom interval to SimulatedWeatherProvider', () {
-      const config = ProviderConfig(
-        weatherType: WeatherProviderType.simulated,
-      );
+      const config = ProviderConfig(weatherType: WeatherProviderType.simulated);
       final provider = config.createWeatherProvider(
         simulatedInterval: const Duration(seconds: 1),
       );
@@ -206,14 +188,17 @@ void main() {
   });
 
   group('createLocationProvider', () {
-    test('creates SimulatedLocationProvider wrapped in DR by default', () async {
-      const config = ProviderConfig(
-        locationType: LocationProviderType.simulated,
-      );
-      final provider = config.createLocationProvider();
-      expect(provider, isA<DeadReckoningProvider>());
-      await provider.dispose();
-    });
+    test(
+      'creates SimulatedLocationProvider wrapped in DR by default',
+      () async {
+        const config = ProviderConfig(
+          locationType: LocationProviderType.simulated,
+        );
+        final provider = config.createLocationProvider();
+        expect(provider, isA<DeadReckoningProvider>());
+        await provider.dispose();
+      },
+    );
 
     test('creates raw SimulatedLocationProvider when DR disabled', () async {
       const config = ProviderConfig(
@@ -272,40 +257,30 @@ void main() {
     });
 
     test('accepts explicit osrm routing', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.osrm,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.osrm);
       expect(config.routingType, RoutingEngineType.osrm);
     });
 
     test('isMockRouting returns true for mock', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.mock,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.mock);
       expect(config.isMockRouting, isTrue);
       expect(config.isOsrmRouting, isFalse);
     });
 
     test('isOsrmRouting returns true for osrm', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.osrm,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.osrm);
       expect(config.isOsrmRouting, isTrue);
       expect(config.isMockRouting, isFalse);
       expect(config.isValhallaRouting, isFalse);
     });
 
     test('accepts explicit valhalla routing', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.valhalla,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.valhalla);
       expect(config.routingType, RoutingEngineType.valhalla);
     });
 
     test('isValhallaRouting returns true for valhalla', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.valhalla,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.valhalla);
       expect(config.isValhallaRouting, isTrue);
       expect(config.isMockRouting, isFalse);
       expect(config.isOsrmRouting, isFalse);
@@ -313,34 +288,31 @@ void main() {
   });
 
   group('ProviderConfig.fromEnvironment — routing', () {
-    test('defaults to mock routing when no dart-define is set (D-VGC132-1)', () {
-      final config = ProviderConfig.fromEnvironment();
-      expect(config.routingType, RoutingEngineType.mock);
-    });
+    test(
+      'defaults to mock routing when no dart-define is set (D-VGC132-1)',
+      () {
+        final config = ProviderConfig.fromEnvironment();
+        expect(config.routingType, RoutingEngineType.mock);
+      },
+    );
   });
 
   group('createRoutingEngine', () {
     test('returns null for mock type (caller provides mock)', () {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.mock,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.mock);
       final engine = config.createRoutingEngine();
       expect(engine, isNull);
     });
 
     test('creates OsrmRoutingEngine for osrm type', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.osrm,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.osrm);
       final engine = config.createRoutingEngine();
       expect(engine, isA<OsrmRoutingEngine>());
       await engine!.dispose();
     });
 
     test('passes custom base URL to OsrmRoutingEngine', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.osrm,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.osrm);
       final engine = config.createRoutingEngine(
         osrmBaseUrl: 'http://localhost:5000',
       );
@@ -351,9 +323,7 @@ void main() {
     });
 
     test('uses public demo URL by default for osrm', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.osrm,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.osrm);
       final engine = config.createRoutingEngine();
       final osrm = engine! as OsrmRoutingEngine;
       expect(osrm.baseUrl, 'https://router.project-osrm.org');
@@ -361,34 +331,33 @@ void main() {
     });
 
     test('creates ValhallaRoutingEngine for valhalla type', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.valhalla,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.valhalla);
       final engine = config.createRoutingEngine();
       expect(engine, isA<ValhallaRoutingEngine>());
       await engine!.dispose();
     });
 
     test('uses public OSM Valhalla URL by default', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.valhalla,
-      );
+      const config = ProviderConfig(routingType: RoutingEngineType.valhalla);
       final engine = config.createRoutingEngine();
       final valhalla = engine! as ValhallaRoutingEngine;
       expect(valhalla.baseUrl, 'https://valhalla1.openstreetmap.de');
       await engine.dispose();
     });
 
-    test('passes custom base URL to ValhallaRoutingEngine via config field', () async {
-      const config = ProviderConfig(
-        routingType: RoutingEngineType.valhalla,
-        valhallaBaseUrl: 'http://localhost:8005',
-      );
-      final engine = config.createRoutingEngine();
-      final valhalla = engine! as ValhallaRoutingEngine;
-      expect(valhalla.baseUrl, 'http://localhost:8005');
-      await engine.dispose();
-    });
+    test(
+      'passes custom base URL to ValhallaRoutingEngine via config field',
+      () async {
+        const config = ProviderConfig(
+          routingType: RoutingEngineType.valhalla,
+          valhallaBaseUrl: 'http://localhost:8005',
+        );
+        final engine = config.createRoutingEngine();
+        final valhalla = engine! as ValhallaRoutingEngine;
+        expect(valhalla.baseUrl, 'http://localhost:8005');
+        await engine.dispose();
+      },
+    );
   });
 
   // =========================================================================
@@ -402,24 +371,18 @@ void main() {
     });
 
     test('accepts explicit linear mode', () {
-      const config = ProviderConfig(
-        drMode: DeadReckoningMode.linear,
-      );
+      const config = ProviderConfig(drMode: DeadReckoningMode.linear);
       expect(config.drMode, DeadReckoningMode.linear);
     });
 
     test('isKalmanDr returns true for kalman + DR enabled', () {
-      const config = ProviderConfig(
-        drMode: DeadReckoningMode.kalman,
-      );
+      const config = ProviderConfig(drMode: DeadReckoningMode.kalman);
       expect(config.isKalmanDr, isTrue);
       expect(config.isLinearDr, isFalse);
     });
 
     test('isLinearDr returns true for linear + DR enabled', () {
-      const config = ProviderConfig(
-        drMode: DeadReckoningMode.linear,
-      );
+      const config = ProviderConfig(drMode: DeadReckoningMode.linear);
       expect(config.isLinearDr, isTrue);
       expect(config.isKalmanDr, isFalse);
     });
@@ -477,10 +440,7 @@ void main() {
     test('includes online and mbtiles', () {
       expect(
         TileSourceType.values,
-        containsAll([
-          TileSourceType.online,
-          TileSourceType.mbtiles,
-        ]),
+        containsAll([TileSourceType.online, TileSourceType.mbtiles]),
       );
     });
   });
@@ -497,9 +457,7 @@ void main() {
     });
 
     test('accepts explicit mbtiles source', () {
-      const config = ProviderConfig(
-        tileSource: TileSourceType.mbtiles,
-      );
+      const config = ProviderConfig(tileSource: TileSourceType.mbtiles);
       expect(config.tileSource, TileSourceType.mbtiles);
     });
 
@@ -512,17 +470,13 @@ void main() {
     });
 
     test('isOnlineTiles returns true for online', () {
-      const config = ProviderConfig(
-        tileSource: TileSourceType.online,
-      );
+      const config = ProviderConfig(tileSource: TileSourceType.online);
       expect(config.isOnlineTiles, isTrue);
       expect(config.isMbtilesTiles, isFalse);
     });
 
     test('isMbtilesTiles returns true for mbtiles', () {
-      const config = ProviderConfig(
-        tileSource: TileSourceType.mbtiles,
-      );
+      const config = ProviderConfig(tileSource: TileSourceType.mbtiles);
       expect(config.isMbtilesTiles, isTrue);
       expect(config.isOnlineTiles, isFalse);
     });

@@ -118,8 +118,9 @@ Future<void> _capture(
 }
 
 void main() {
-  testWidgets('FamilyAreaCard JA capture — populated + honest-null',
-      (tester) async {
+  testWidgets('FamilyAreaCard JA capture — populated + honest-null', (
+    tester,
+  ) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');

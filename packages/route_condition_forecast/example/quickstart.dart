@@ -15,12 +15,36 @@ Future<void> main() async {
     engineInfo: const EngineInfo(name: 'mock'),
   );
   // Heavy snow + ice = hazardous; projected onto each segment at its arrival time.
-  final snow = WeatherCondition(precipType: PrecipitationType.snow, intensity: PrecipitationIntensity.heavy, temperatureCelsius: -4, visibilityMeters: 150, windSpeedKmh: 30, iceRisk: true, timestamp: DateTime.now());
+  final snow = WeatherCondition(precipType: PrecipitationType.snow, intensity: PrecipitationIntensity.heavy, temperatureCelsius: -4, visibilityMeters: 150, windSpeedKmh: 30, iceRisk: true, source: ObservationSource.measured, timestamp: DateTime.now());
   final forecaster = RouteConditionForecaster(forecastProvider: CurrentConditionsForecastProvider(snow), speedKmh: 50);
   final forecast = await forecaster.forecast(route);
 
-  print('Route hazardous: ${forecast.hasAnyHazard}; first hazard ${forecast.firstHazardEtaSeconds?.round()}s in');
+  // `hazard` is TRI-STATE (SafetyVerdict). Do NOT write
+  // `if (forecast.hazard == SafetyVerdict.hazardous) warn(); else allClear();`
+  // — that puts `unknown` in the "all clear" branch, which is the defect this
+  // release removed. Handle all three, and let the compiler check that you did.
+  switch (forecast.hazard) {
+    case SafetyVerdict.hazardous:
+      print(
+        'Route HAZARDOUS; first hazard '
+        '${forecast.firstHazardEtaSeconds?.round()}s in',
+      );
+    case SafetyVerdict.notHazardous:
+      print('Route assessed and clear.');
+    case SafetyVerdict.unknown:
+      // NOT a green light. We could not assess the route — say so.
+      print(
+        'Route could NOT be assessed '
+        '(${forecast.unassessedSegmentCount} unassessed segment(s), '
+        '${forecast.unlocatableManeuverCount} unlocatable maneuver(s)). '
+        'Drive to what you can see.',
+      );
+  }
+
   for (final s in forecast.segments) {
-    print('Seg ${s.segment.index}: arrives ${s.etaSeconds.round()}s, hazardous=${s.isHazardous}, conf=${s.confidence.toStringAsFixed(2)}');
+    print(
+      'Seg ${s.segment.index}: arrives ${s.etaSeconds.round()}s, '
+      'hazard=${s.hazard.name}, conf=${s.confidence.toStringAsFixed(2)}',
+    );
   }
 }

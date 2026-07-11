@@ -58,8 +58,9 @@ void main() {
       bloc = MockLocationBloc();
     });
 
-    testWidgets('renders "--" when LocationState is uninitialized',
-        (tester) async {
+    testWidgets('renders "--" when LocationState is uninitialized', (
+      tester,
+    ) async {
       when(() => bloc.state).thenReturn(const LocationState.uninitialized());
 
       await tester.pumpWidget(_buildWidget(bloc));
@@ -69,17 +70,19 @@ void main() {
     });
 
     testWidgets('renders "--" when speed is NaN', (tester) async {
-      when(() => bloc.state).thenReturn(LocationState(
-        quality: LocationQuality.fix,
-        position: GeoPosition(
-          latitude: 35.1709,
-          longitude: 136.8815,
-          accuracy: 5.0,
-          speed: double.nan,
-          heading: 0.0,
-          timestamp: DateTime(2026, 2, 27),
+      when(() => bloc.state).thenReturn(
+        LocationState(
+          quality: LocationQuality.fix,
+          position: GeoPosition(
+            latitude: 35.1709,
+            longitude: 136.8815,
+            accuracy: 5.0,
+            speed: double.nan,
+            heading: 0.0,
+            timestamp: DateTime(2026, 2, 27),
+          ),
         ),
-      ));
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -88,10 +91,12 @@ void main() {
 
     testWidgets('renders rounded speed when valid', (tester) async {
       // 18.6 m/s * 3.6 = 66.96 km/h => rounds to 67.
-      when(() => bloc.state).thenReturn(LocationState(
-        quality: LocationQuality.fix,
-        position: _position(speed: 18.6),
-      ));
+      when(() => bloc.state).thenReturn(
+        LocationState(
+          quality: LocationQuality.fix,
+          position: _position(speed: 18.6),
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -107,10 +112,9 @@ void main() {
     });
 
     testWidgets('shows green dot when quality is fix', (tester) async {
-      when(() => bloc.state).thenReturn(LocationState(
-        quality: LocationQuality.fix,
-        position: _position(),
-      ));
+      when(() => bloc.state).thenReturn(
+        LocationState(quality: LocationQuality.fix, position: _position()),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 
@@ -127,10 +131,12 @@ void main() {
     });
 
     testWidgets('shows amber dot when quality is degraded', (tester) async {
-      when(() => bloc.state).thenReturn(LocationState(
-        quality: LocationQuality.degraded,
-        position: _position(accuracy: 100.0),
-      ));
+      when(() => bloc.state).thenReturn(
+        LocationState(
+          quality: LocationQuality.degraded,
+          position: _position(accuracy: 100.0),
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(bloc));
 

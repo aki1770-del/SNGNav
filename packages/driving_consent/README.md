@@ -26,7 +26,7 @@ at their persistence and jurisdiction layer.
 
 ```yaml
 dependencies:
-  driving_consent: ^0.4.0
+  driving_consent: ^0.5.0
 ```
 
 ## Quick Start

@@ -38,9 +38,7 @@ void main() {
       provider.reports.first.then(completer.complete);
 
       await provider.startListening();
-      final report = await completer.future.timeout(
-        const Duration(seconds: 2),
-      );
+      final report = await completer.future.timeout(const Duration(seconds: 2));
 
       expect(report, isNotNull);
       expect(report.vehicleId, isNotEmpty);

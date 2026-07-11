@@ -39,21 +39,24 @@ void main() {
       final condition = await firstCondition.timeout(
         const Duration(seconds: 2),
       );
-      expect(condition, isA<WeatherCondition>());
+      expect(condition, isA<WeatherObserved>());
     });
 
     test('first emission is clear (Phase 0)', () async {
-      final firstCondition = provider.conditions.first;
+      final firstReading = provider.conditions.first;
       await provider.startMonitoring();
 
-      final condition = await firstCondition;
+      final reading = await firstReading;
+      final condition = (reading as WeatherObserved).condition;
       expect(condition.precipType, PrecipitationType.none);
-      expect(condition.isSnowing, false);
+      expect(condition.snowing, SafetyVerdict.notHazardous);
     });
 
     test('second emission is light snow (Phase 1)', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       // Wait for two emissions (initial + first timer tick)
@@ -69,7 +72,9 @@ void main() {
 
     test('emits all 6 phases in sequence', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       // Wait for all 6 phases (initial + 5 ticks at 50ms each)
@@ -96,7 +101,9 @@ void main() {
 
     test('scenario cycles back to Phase 0 after Phase 5', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       // Wait for 7 emissions (full cycle + one more)
@@ -111,7 +118,9 @@ void main() {
 
     test('stopMonitoring stops emissions', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -127,7 +136,7 @@ void main() {
     });
 
     test('dispose stops timer and allows cleanup', () async {
-      final emissions = <WeatherCondition>[];
+      final emissions = <WeatherReading>[];
       await provider.startMonitoring();
       final sub = provider.conditions.listen(emissions.add);
 
@@ -145,13 +154,15 @@ void main() {
 
     test('Phase 3 (heavy snow) is hazardous', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 250));
 
       expect(emissions.length, greaterThanOrEqualTo(4));
-      expect(emissions[3].isHazardous, true);
+      expect(emissions[3].hazard, SafetyVerdict.hazardous);
       expect(emissions[3].intensity, PrecipitationIntensity.heavy);
       expect(emissions[3].visibilityMeters, 150);
 
@@ -160,14 +171,16 @@ void main() {
 
     test('Phase 4 (ice risk) has iceRisk = true', () async {
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 300));
 
       expect(emissions.length, greaterThanOrEqualTo(5));
       expect(emissions[4].iceRisk, true);
-      expect(emissions[4].isHazardous, true);
+      expect(emissions[4].hazard, SafetyVerdict.hazardous);
 
       await sub.cancel();
     });
@@ -179,7 +192,9 @@ void main() {
       );
 
       final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen((r) {
+        if (r is WeatherObserved) emissions.add(r.condition);
+      });
       await provider.startMonitoring();
 
       // After 150ms, only the initial emission should have fired

@@ -152,12 +152,23 @@ const Map<String, DigitrafficCapMapping> defaultDigitrafficCapMapping =
 
 /// Default fallback CAP mapping applied when an observed
 /// `trafficAnnouncementType` is not present in the provided override
-/// map nor in [defaultDigitrafficCapMapping]. Conservative minor /
-/// possible / unknown shape — the integrator should override on first
-/// encounter of a new event class.
+/// map nor in [defaultDigitrafficCapMapping].
+///
+/// The severity is [AdvisorySeverity.unknown] — **not** `minor`.
+///
+/// Up to 0.0.6 it was `minor`, described as "conservative". Minor is not
+/// conservative for an event class we cannot classify at all: it is an
+/// ASSERTED benign severity for an announcement whose severity we do not know.
+/// If Fintraffic adds a new severe-class announcement type tomorrow, every
+/// driver on this adapter would be told "minor" until somebody noticed.
+///
+/// `unknown` is the honest value, it already exists on the enum, and it is used
+/// correctly elsewhere in this catalog (`owm_road_risk_mapper.dart`: an
+/// `event_level <= 0` maps to `AdvisorySeverity.unknown`). The integrator
+/// override hook is unchanged — this is the value used until they exercise it.
 const DigitrafficCapMapping defaultDigitrafficFallbackMapping =
     DigitrafficCapMapping(
-      severity: AdvisorySeverity.minor,
+      severity: AdvisorySeverity.unknown,
       certainty: AdvisoryCertainty.possible,
       urgency: AdvisoryUrgency.unknown,
     );

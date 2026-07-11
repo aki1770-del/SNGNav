@@ -57,6 +57,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _heavySnowIce = WeatherCondition(
@@ -67,6 +69,7 @@ final _heavySnowIce = WeatherCondition(
   windSpeedKmh: 40,
   iceRisk: true,
   timestamp: _now,
+  source: ObservationSource.measured,
 );
 
 final _gpsPosition = GeoPosition(
@@ -79,10 +82,7 @@ final _gpsPosition = GeoPosition(
 );
 
 const _demoRoute = NavigationRoute(
-  shape: [
-    LatLng(35.1709, 136.8815),
-    LatLng(35.0700, 137.4000),
-  ],
+  shape: [LatLng(35.1709, 136.8815), LatLng(35.0700, 137.4000)],
   maneuvers: [
     NavigationManeuver(
       index: 0,
@@ -130,15 +130,15 @@ Widget _goldenFrame({
   final navBloc = MockNavigationBloc();
   final locationBloc = MockLocationBloc();
 
-  when(() => weatherBloc.state).thenReturn(
-    weatherState ?? const WeatherState.unavailable(),
-  );
-  when(() => navBloc.state).thenReturn(
-    navState ?? const NavigationState.idle(),
-  );
-  when(() => locationBloc.state).thenReturn(
-    locationState ?? const LocationState.uninitialized(),
-  );
+  when(
+    () => weatherBloc.state,
+  ).thenReturn(weatherState ?? const WeatherState.unavailable());
+  when(
+    () => navBloc.state,
+  ).thenReturn(navState ?? const NavigationState.idle());
+  when(
+    () => locationBloc.state,
+  ).thenReturn(locationState ?? const LocationState.uninitialized());
 
   return MaterialApp(
     debugShowCheckedModeBanner: false,
@@ -156,11 +156,7 @@ Widget _goldenFrame({
           BlocProvider<NavigationBloc>.value(value: navBloc),
           BlocProvider<LocationBloc>.value(value: locationBloc),
         ],
-        child: SizedBox(
-          width: size.width,
-          height: size.height,
-          child: child,
-        ),
+        child: SizedBox(width: size.width, height: size.height, child: child),
       ),
     ),
   );
@@ -182,14 +178,16 @@ RouteProgressStatus _routeProgressStatus(NavigationStatus status) {
 void main() {
   group('Golden — WeatherStatusBar', () {
     testWidgets('light snow', (tester) async {
-      await tester.pumpWidget(_goldenFrame(
-        child: const WeatherStatusBar(),
-        weatherState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: _lightSnow,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const WeatherStatusBar(),
+          weatherState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _lightSnow,
+          ),
+          size: const Size(600, 60),
         ),
-        size: const Size(600, 60),
-      ));
+      );
 
       await expectLater(
         find.byType(WeatherStatusBar),
@@ -198,14 +196,16 @@ void main() {
     });
 
     testWidgets('heavy snow with ice', (tester) async {
-      await tester.pumpWidget(_goldenFrame(
-        child: const WeatherStatusBar(),
-        weatherState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: _heavySnowIce,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const WeatherStatusBar(),
+          weatherState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _heavySnowIce,
+          ),
+          size: const Size(600, 60),
         ),
-        size: const Size(600, 60),
-      ));
+      );
 
       await expectLater(
         find.byType(WeatherStatusBar),
@@ -221,15 +221,19 @@ void main() {
         visibilityMeters: 3000,
         windSpeedKmh: 15,
         timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      await tester.pumpWidget(_goldenFrame(
-        child: const WeatherStatusBar(),
-        weatherState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: stale,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const WeatherStatusBar(),
+          weatherState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: stale,
+          ),
+          size: const Size(600, 60),
         ),
-        size: const Size(600, 60),
-      ));
+      );
 
       await expectLater(
         find.byType(WeatherStatusBar),
@@ -240,14 +244,16 @@ void main() {
 
   group('Golden — SpeedDisplay', () {
     testWidgets('60 km/h with GPS fix', (tester) async {
-      await tester.pumpWidget(_goldenFrame(
-        child: const SpeedDisplay(),
-        locationState: LocationState(
-          quality: LocationQuality.fix,
-          position: _gpsPosition,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const SpeedDisplay(),
+          locationState: LocationState(
+            quality: LocationQuality.fix,
+            position: _gpsPosition,
+          ),
+          size: const Size(120, 120),
         ),
-        size: const Size(120, 120),
-      ));
+      );
 
       await expectLater(
         find.byType(SpeedDisplay),
@@ -256,10 +262,9 @@ void main() {
     });
 
     testWidgets('no GPS (uninitialized)', (tester) async {
-      await tester.pumpWidget(_goldenFrame(
-        child: const SpeedDisplay(),
-        size: const Size(120, 120),
-      ));
+      await tester.pumpWidget(
+        _goldenFrame(child: const SpeedDisplay(), size: const Size(120, 120)),
+      );
 
       await expectLater(
         find.byType(SpeedDisplay),
@@ -279,11 +284,13 @@ void main() {
         alertDismissible: true,
       );
       // SafetyOverlay uses Positioned.fill — needs a Stack parent.
-      await tester.pumpWidget(_goldenFrame(
-        child: const Stack(children: [SafetyOverlay()]),
-        navState: criticalState,
-        size: const Size(400, 300),
-      ));
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const Stack(children: [SafetyOverlay()]),
+          navState: criticalState,
+          size: const Size(400, 300),
+        ),
+      );
 
       await expectLater(
         find.byType(Stack).last,
@@ -300,11 +307,13 @@ void main() {
         alertSeverity: AlertSeverity.warning,
         alertDismissible: true,
       );
-      await tester.pumpWidget(_goldenFrame(
-        child: const Stack(children: [SafetyOverlay()]),
-        navState: warningState,
-        size: const Size(400, 300),
-      ));
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: const Stack(children: [SafetyOverlay()]),
+          navState: warningState,
+          size: const Size(400, 300),
+        ),
+      );
 
       await expectLater(
         find.byType(Stack).last,
@@ -320,16 +329,18 @@ void main() {
         route: _demoRoute,
         currentManeuverIndex: 0,
       );
-      await tester.pumpWidget(_goldenFrame(
-        child: RouteProgressBar(
-          status: _routeProgressStatus(navState.status),
-          route: navState.route,
-          currentManeuverIndex: navState.currentManeuverIndex,
-          destinationLabel: navState.destinationLabel,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: RouteProgressBar(
+            status: _routeProgressStatus(navState.status),
+            route: navState.route,
+            currentManeuverIndex: navState.currentManeuverIndex,
+            destinationLabel: navState.destinationLabel,
+          ),
+          navState: navState,
+          size: const Size(400, 120),
         ),
-        navState: navState,
-        size: const Size(400, 120),
-      ));
+      );
 
       await expectLater(
         find.byType(RouteProgressBar),
@@ -344,16 +355,18 @@ void main() {
         currentManeuverIndex: 2,
         destinationLabel: 'Mikawa Highlands',
       );
-      await tester.pumpWidget(_goldenFrame(
-        child: RouteProgressBar(
-          status: _routeProgressStatus(arrivedState.status),
-          route: arrivedState.route,
-          currentManeuverIndex: arrivedState.currentManeuverIndex,
-          destinationLabel: arrivedState.destinationLabel,
+      await tester.pumpWidget(
+        _goldenFrame(
+          child: RouteProgressBar(
+            status: _routeProgressStatus(arrivedState.status),
+            route: arrivedState.route,
+            currentManeuverIndex: arrivedState.currentManeuverIndex,
+            destinationLabel: arrivedState.destinationLabel,
+          ),
+          navState: arrivedState,
+          size: const Size(400, 80),
         ),
-        navState: arrivedState,
-        size: const Size(400, 80),
-      ));
+      );
 
       await expectLater(
         find.byType(RouteProgressBar),

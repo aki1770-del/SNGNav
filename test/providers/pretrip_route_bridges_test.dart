@@ -24,7 +24,8 @@ final List<LatLng> _route = [
 
 /// Two bridge sites ON the route, ~1.1 km apart (> the 120 m cluster radius),
 /// both bearing 0 (parallel to the north-heading route) ⇒ 2 clusters.
-const String _csvTwoBridges = 'way_id,lat,lon,bearing_deg\n'
+const String _csvTwoBridges =
+    'way_id,lat,lon,bearing_deg\n'
     '1,39.72500,140.10000,0\n'
     '2,39.73500,140.10000,0\n';
 
@@ -34,7 +35,9 @@ WeatherForecast _forecastCovering(DateTime departure, double temp) =>
       hourly: [
         HourlyForecast(hour: departure, tempCelsius: temp),
         HourlyForecast(
-            hour: departure.add(const Duration(hours: 1)), tempCelsius: temp),
+          hour: departure.add(const Duration(hours: 1)),
+          tempCelsius: temp,
+        ),
       ],
     );
 
@@ -92,20 +95,23 @@ void main() {
       expect(r.skippedRowCount, 0);
     });
 
-    test('sites far from the route ⇒ result with clusterCount 0 (not null)',
-        () async {
-      // Two sites BRACKETING the route (so the route stays inside the data's
-      // coverage extent) but both kilometres off the 30 m corridor: a real
-      // resolve with nothing to say — NOT the coverage-gate arm.
-      final r = await resolvePretripRouteBridges(
-        fetchRouteShape: () async => _route,
-        loadBridgeCsv: () async => 'way_id,lat,lon,bearing_deg\n'
-            '8,39.71000,140.05000,0\n'
-            '9,39.75000,140.15000,0\n',
-      );
-      expect(r, isNotNull);
-      expect(r!.clusterCount, 0);
-    });
+    test(
+      'sites far from the route ⇒ result with clusterCount 0 (not null)',
+      () async {
+        // Two sites BRACKETING the route (so the route stays inside the data's
+        // coverage extent) but both kilometres off the 30 m corridor: a real
+        // resolve with nothing to say — NOT the coverage-gate arm.
+        final r = await resolvePretripRouteBridges(
+          fetchRouteShape: () async => _route,
+          loadBridgeCsv: () async =>
+              'way_id,lat,lon,bearing_deg\n'
+              '8,39.71000,140.05000,0\n'
+              '9,39.75000,140.15000,0\n',
+        );
+        expect(r, isNotNull);
+        expect(r!.clusterCount, 0);
+      },
+    );
 
     test('route leaving the data coverage extent → null (honest absence, '
         'never a truncated count)', () async {
@@ -122,11 +128,11 @@ void main() {
       expect(r, isNull);
     });
 
-    test('malformed rows are skipped, counted, and threaded through',
-        () async {
+    test('malformed rows are skipped, counted, and threaded through', () async {
       final r = await resolvePretripRouteBridges(
         fetchRouteShape: () async => _route,
-        loadBridgeCsv: () async => 'way_id,lat,lon,bearing_deg\n'
+        loadBridgeCsv: () async =>
+            'way_id,lat,lon,bearing_deg\n'
             '1,39.72500,140.10000,0\n'
             'garbage,row,here\n',
       );
@@ -178,7 +184,8 @@ void main() {
           now: DateTime(2026, 1, 15),
         ),
         isTrue,
-        reason: 'warm origin evidence must never suppress the winter band — '
+        reason:
+            'warm origin evidence must never suppress the winter band — '
             'the decks are elsewhere on the route',
       );
     });
@@ -206,7 +213,9 @@ void main() {
           HourlyForecast(hour: departure, tempCelsius: 12),
           // Freezing, but 6 hours later — outside the window.
           HourlyForecast(
-              hour: departure.add(const Duration(hours: 6)), tempCelsius: -5),
+            hour: departure.add(const Duration(hours: 6)),
+            tempCelsius: -5,
+          ),
         ],
       );
       expect(
@@ -237,7 +246,8 @@ void main() {
           now: DateTime(2026, 7, 15),
         ),
         isTrue,
-        reason: 'the destination read is already on the same screen; a '
+        reason:
+            'the destination read is already on the same screen; a '
             'freezing far endpoint is corridor-relevant cold evidence',
       );
     });
@@ -262,7 +272,9 @@ void main() {
         issuedAt: departure,
         hourly: [
           HourlyForecast(
-              hour: departure.add(const Duration(hours: 6)), tempCelsius: -5),
+            hour: departure.add(const Duration(hours: 6)),
+            tempCelsius: -5,
+          ),
         ],
       );
       expect(
@@ -300,7 +312,8 @@ void main() {
             now: DateTime(2026, month, 15),
           ),
           isTrue,
-          reason: 'month $month is in the compound-failure band '
+          reason:
+              'month $month is in the compound-failure band '
               '(October: inland-Akita first-deck-ice month)',
         );
       }

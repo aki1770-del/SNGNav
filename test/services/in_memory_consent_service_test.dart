@@ -114,8 +114,7 @@ void main() {
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
 
       final fleet = await service.getConsent(ConsentPurpose.fleetLocation);
-      final weather =
-          await service.getConsent(ConsentPurpose.weatherTelemetry);
+      final weather = await service.getConsent(ConsentPurpose.weatherTelemetry);
       final diag = await service.getConsent(ConsentPurpose.diagnostics);
 
       expect(fleet.isEffectivelyGranted, true);

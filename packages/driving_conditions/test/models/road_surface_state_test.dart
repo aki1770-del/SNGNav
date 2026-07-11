@@ -16,6 +16,7 @@ WeatherCondition _condition({
       visibilityMeters: visibilityMeters,
       windSpeedKmh: 0,
       iceRisk: iceRisk,
+      source: ObservationSource.measured,
       timestamp: DateTime(2026),
     );
 

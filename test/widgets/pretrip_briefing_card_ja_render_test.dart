@@ -36,8 +36,9 @@ void main() {
     }
   });
 
-  testWidgets('renders the Japanese briefing for HER mother in Akita',
-      (tester) async {
+  testWidgets('renders the Japanese briefing for HER mother in Akita', (
+    tester,
+  ) async {
     // Without a real CJK font the card would render tofu boxes, and a passing
     // golden would prove nothing about whether HER mother can read it. Skip
     // rather than bake a misleading blank (OPS-066: the artifact must be real).
@@ -58,23 +59,27 @@ void main() {
     final forecast = WeatherForecast(
       hourly: [
         HourlyForecast(
-            hour: DateTime(2026, 1, 1, 7),
-            tempCelsius: -3,
-            precipitationMmPerHour: 3,
-            visibilityMeters: 80),
+          hour: DateTime(2026, 1, 1, 7),
+          tempCelsius: -3,
+          precipitationMmPerHour: 3,
+          visibilityMeters: 80,
+        ),
         HourlyForecast(
-            hour: DateTime(2026, 1, 1, 8),
-            tempCelsius: -3,
-            precipitationMmPerHour: 1,
-            visibilityMeters: 250),
+          hour: DateTime(2026, 1, 1, 8),
+          tempCelsius: -3,
+          precipitationMmPerHour: 1,
+          visibilityMeters: 250,
+        ),
         HourlyForecast(
-            hour: DateTime(2026, 1, 1, 9),
-            tempCelsius: -1,
-            visibilityMeters: 5000),
+          hour: DateTime(2026, 1, 1, 9),
+          tempCelsius: -1,
+          visibilityMeters: 5000,
+        ),
         HourlyForecast(
-            hour: DateTime(2026, 1, 1, 10),
-            tempCelsius: 0,
-            visibilityMeters: 8000),
+          hour: DateTime(2026, 1, 1, 10),
+          tempCelsius: 0,
+          visibilityMeters: 8000,
+        ),
       ],
       issuedAt: issued,
     );
@@ -88,7 +93,9 @@ void main() {
       forecast: forecast,
       commute: commute,
       profile: const DriverProfileSpec(
-          profileTag: 'akita', reactionTimeSeconds: 1.5),
+        profileTag: 'akita',
+        reactionTimeSeconds: 1.5,
+      ),
     );
 
     await tester.pumpWidget(
@@ -158,12 +165,15 @@ void main() {
       routeIdentifiers: const ['akita-commute'],
       flexibility: CommuteFlexibility.discretionary,
     );
-    final briefing = SnowAwarePretripAdvisor(messages: PretripMessages.ja).brief(
-      forecast: forecast,
-      commute: commute,
-      profile:
-          const DriverProfileSpec(profileTag: 'akita', reactionTimeSeconds: 1.5),
-    );
+    final briefing = SnowAwarePretripAdvisor(messages: PretripMessages.ja)
+        .brief(
+          forecast: forecast,
+          commute: commute,
+          profile: const DriverProfileSpec(
+            profileTag: 'akita',
+            reactionTimeSeconds: 1.5,
+          ),
+        );
 
     await tester.pumpWidget(
       MaterialApp(

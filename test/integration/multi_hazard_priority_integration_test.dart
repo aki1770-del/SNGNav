@@ -50,6 +50,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: DateTime(2026, 3, 12, 6),
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _heavySnow = WeatherCondition(
@@ -59,6 +61,8 @@ final _heavySnow = WeatherCondition(
   visibilityMeters: 300,
   windSpeedKmh: 45,
   timestamp: DateTime(2026, 3, 12, 6, 5),
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _iceRisk = WeatherCondition(
@@ -69,6 +73,7 @@ final _iceRisk = WeatherCondition(
   windSpeedKmh: 20,
   iceRisk: true,
   timestamp: DateTime(2026, 3, 12, 6, 7),
+  source: ObservationSource.measured,
 );
 
 final _icyReport = FleetReport(
@@ -139,16 +144,17 @@ void main() {
       consentBloc = MockConsentBloc();
       fleetBloc = MockFleetBloc();
 
-      when(() => locationBloc.state)
-          .thenReturn(const LocationState.uninitialized());
-      when(() => routingBloc.state)
-          .thenReturn(const RoutingState.idle());
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
-      when(() => consentBloc.state)
-          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
-      when(() => fleetBloc.state)
-          .thenReturn(const FleetState.idle());
+      when(
+        () => locationBloc.state,
+      ).thenReturn(const LocationState.uninitialized());
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
+      when(
+        () => consentBloc.state,
+      ).thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
     });
 
     tearDown(() async {
@@ -156,9 +162,9 @@ void main() {
       await mapBloc.close();
     });
 
-    testWidgets(
-        'fleet critical alert overrides an earlier weather warning',
-        (tester) async {
+    testWidgets('fleet critical alert overrides an earlier weather warning', (
+      tester,
+    ) async {
       final weatherController = StreamController<WeatherState>.broadcast();
       final fleetController = StreamController<FleetState>.broadcast();
 
@@ -176,332 +182,32 @@ void main() {
         initialState: const FleetState.idle(),
       );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _heavySnow,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-001': _icyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'later weather warning does not downgrade an existing fleet critical alert',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: const WeatherState.unavailable(),
-      );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-001': _icyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _heavySnow,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'dry fleet report does not replace an existing weather warning',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: _lightSnow,
+      await tester.pumpWidget(
+        _buildScaffold(
+          locationBloc: locationBloc,
+          routingBloc: routingBloc,
+          navigationBloc: navigationBloc,
+          mapBloc: mapBloc,
+          weatherBloc: weatherBloc,
+          consentBloc: consentBloc,
+          fleetBloc: fleetBloc,
         ),
       );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
       await tester.pump();
 
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _heavySnow,
-      ));
-      await tester.pumpAndSettle();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-003': _dryReport},
-      ));
+      weatherController.add(
+        WeatherState(status: WeatherStatus.monitoring, condition: _heavySnow),
+      );
       await tester.pumpAndSettle();
 
       expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-      // Heavy snow at −4 °C classifies as compacted snow — the alert now
-      // names the surface precisely (圧雪), ja-primary.
-      expect(navigationBloc.state.alertMessage, contains('圧雪'));
 
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'snowy fleet warning replaces an earlier weather warning message at same severity',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: _lightSnow,
+      fleetController.add(
+        FleetState(
+          status: FleetStatus.listening,
+          activeReports: {'V-001': _icyReport},
         ),
       );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _heavySnow,
-      ));
-      await tester.pumpAndSettle();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-002': _snowyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'weather critical ice risk overrides an earlier fleet warning',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: const WeatherState.unavailable(),
-      );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-002': _snowyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
-
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _iceRisk,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      // Feed ice flag → the precise, possibility-graded ja term.
-      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
-
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'later snowy fleet warning does not downgrade an existing weather critical alert',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: const WeatherState.unavailable(),
-      );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _iceRisk,
-      ));
-      await tester.pumpAndSettle();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-002': _snowyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      // Feed ice flag → the precise, possibility-graded ja term.
-      expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
-
-      await weatherController.close();
-      await fleetController.close();
-    });
-
-    testWidgets(
-        'later dry fleet report does not clear an existing fleet critical alert',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
-
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: const WeatherState.unavailable(),
-      );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
-
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-001': _icyReport},
-      ));
-      await tester.pumpAndSettle();
-
-      expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
-      expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
-
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {
-          'V-001': _icyReport,
-          'V-003': _dryReport,
-        },
-      ));
       await tester.pumpAndSettle();
 
       expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
@@ -512,47 +218,378 @@ void main() {
     });
 
     testWidgets(
-        'non-hazard weather plus dry fleet keeps navigation alert-free',
-        (tester) async {
-      final weatherController = StreamController<WeatherState>.broadcast();
-      final fleetController = StreamController<FleetState>.broadcast();
+      'later weather warning does not downgrade an existing fleet critical alert',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
 
-      whenListen(
-        weatherBloc,
-        weatherController.stream,
-        initialState: const WeatherState.unavailable(),
-      );
-      whenListen(
-        fleetBloc,
-        fleetController.stream,
-        initialState: const FleetState.idle(),
-      );
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: const WeatherState.unavailable(),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
 
-      await tester.pumpWidget(_buildScaffold(
-        locationBloc: locationBloc,
-        routingBloc: routingBloc,
-        navigationBloc: navigationBloc,
-        mapBloc: mapBloc,
-        weatherBloc: weatherBloc,
-        consentBloc: consentBloc,
-        fleetBloc: fleetBloc,
-      ));
-      await tester.pump();
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
 
-      weatherController.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
-      fleetController.add(FleetState(
-        status: FleetStatus.listening,
-        activeReports: {'V-003': _dryReport},
-      ));
-      await tester.pumpAndSettle();
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-001': _icyReport},
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(navigationBloc.state.hasSafetyAlert, isFalse);
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
 
-      await weatherController.close();
-      await fleetController.close();
-    });
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _heavySnow),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'dry fleet report does not replace an existing weather warning',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _lightSnow,
+          ),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _heavySnow),
+        );
+        await tester.pumpAndSettle();
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
+        // Heavy snow at −4 °C classifies as compacted snow — the alert now
+        // names the surface precisely (圧雪), ja-primary.
+        expect(navigationBloc.state.alertMessage, contains('圧雪'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'snowy fleet warning replaces an earlier weather warning message at same severity',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _lightSnow,
+          ),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _heavySnow),
+        );
+        await tester.pumpAndSettle();
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-002': _snowyReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
+        expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'weather critical ice risk overrides an earlier fleet warning',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: const WeatherState.unavailable(),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-002': _snowyReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.warning);
+
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _iceRisk),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        // Feed ice flag → the precise, possibility-graded ja term.
+        expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'later snowy fleet warning does not downgrade an existing weather critical alert',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: const WeatherState.unavailable(),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _iceRisk),
+        );
+        await tester.pumpAndSettle();
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-002': _snowyReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        // Feed ice flag → the precise, possibility-graded ja term.
+        expect(navigationBloc.state.alertMessage, contains('ブラックアイスバーン'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'later dry fleet report does not clear an existing fleet critical alert',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: const WeatherState.unavailable(),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-001': _icyReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-001': _icyReport, 'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.alertSeverity, AlertSeverity.critical);
+        expect(navigationBloc.state.alertMessage, contains('Fleet reports'));
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
+
+    testWidgets(
+      'non-hazard weather plus dry fleet keeps navigation alert-free',
+      (tester) async {
+        final weatherController = StreamController<WeatherState>.broadcast();
+        final fleetController = StreamController<FleetState>.broadcast();
+
+        whenListen(
+          weatherBloc,
+          weatherController.stream,
+          initialState: const WeatherState.unavailable(),
+        );
+        whenListen(
+          fleetBloc,
+          fleetController.stream,
+          initialState: const FleetState.idle(),
+        );
+
+        await tester.pumpWidget(
+          _buildScaffold(
+            locationBloc: locationBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            mapBloc: mapBloc,
+            weatherBloc: weatherBloc,
+            consentBloc: consentBloc,
+            fleetBloc: fleetBloc,
+          ),
+        );
+        await tester.pump();
+
+        weatherController.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+        );
+        fleetController.add(
+          FleetState(
+            status: FleetStatus.listening,
+            activeReports: {'V-003': _dryReport},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(navigationBloc.state.hasSafetyAlert, isFalse);
+
+        await weatherController.close();
+        await fleetController.close();
+      },
+    );
   });
 }

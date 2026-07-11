@@ -38,12 +38,16 @@ Future<void> _loadRealFont() async {
 
 void main() {
   const advisor = SnowAwarePretripAdvisor();
-  const profile = DriverProfileSpec(profileTag: 'live', reactionTimeSeconds: 1.5);
+  const profile = DriverProfileSpec(
+    profileTag: 'live',
+    reactionTimeSeconds: 1.5,
+  );
   final captions = <String, String>{
     'nagoya': 'LIVE — MET Norway, real fetch (Nagoya) · global case',
     'akita':
         'LIVE — MET Norway, real fetch (Akita) · Japan snow-zone case (JMA live-check is a separate runtime step)',
-    'ushuaia': 'LIVE — MET Norway, real fetch (Ushuaia) · Southern-Hemisphere winter',
+    'ushuaia':
+        'LIVE — MET Norway, real fetch (Ushuaia) · Southern-Hemisphere winter',
     'remarkables_nz':
         'LIVE — MET Norway, real fetch (The Remarkables, NZ 1900m) · winter, near-freezing precipitation',
     'greenland_summit':
@@ -65,9 +69,16 @@ void main() {
   final envName = Platform.environment['LIVE_NAME'];
   final places = (envName != null && envName.isNotEmpty)
       ? <String>[envName]
-      : const ['nagoya', 'akita', 'ushuaia', 'remarkables_nz', 'greenland_summit'];
+      : const [
+          'nagoya',
+          'akita',
+          'ushuaia',
+          'remarkables_nz',
+          'greenland_summit',
+        ];
   if (envName != null && envName.isNotEmpty) {
-    captions[envName] = Platform.environment['LIVE_CAPTION'] ??
+    captions[envName] =
+        Platform.environment['LIVE_CAPTION'] ??
         'LIVE — MET Norway, real fetch ($envName)';
   }
 
@@ -83,7 +94,8 @@ void main() {
       await _loadRealFont();
 
       final forecast = mapLocationForecastToWeatherForecast(
-          jsonDecode(src.readAsStringSync()) as Map<String, dynamic>);
+        jsonDecode(src.readAsStringSync()) as Map<String, dynamic>,
+      );
       expect(forecast, isNotNull, reason: 'parser returned null for $place');
       // Departure = the real hazard slot where overridden, else the earliest slot.
       final dep = depOverride[place] ?? forecast!.hourly.first.hour;
@@ -94,12 +106,17 @@ void main() {
         routeIdentifiers: const ['live'],
         flexibility: CommuteFlexibility.discretionary,
       );
-      final briefing =
-          advisor.brief(forecast: forecast, commute: commute, profile: profile);
+      final briefing = advisor.brief(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
       // ignore: avoid_print
-      print('LIVE-REAL $place: verdict=${briefing.verdict} '
-          'peak=${briefing.peakHazard} slot0=${forecast.hourly.first.tempCelsius}C '
-          'issued=${forecast.issuedAt.toIso8601String()}');
+      print(
+        'LIVE-REAL $place: verdict=${briefing.verdict} '
+        'peak=${briefing.peakHazard} slot0=${forecast.hourly.first.tempCelsius}C '
+        'issued=${forecast.issuedAt.toIso8601String()}',
+      );
 
       final key = GlobalKey();
       tester.view.physicalSize = const Size(620, 760);
@@ -139,7 +156,9 @@ void main() {
         final file = File('${dir.path}/pretrip_livereal_$place.png');
         file.writeAsBytesSync(bytes!.buffer.asUint8List());
         // ignore: avoid_print
-        print('CAPTURE livereal_$place: ${file.path} ${file.lengthSync()} bytes');
+        print(
+          'CAPTURE livereal_$place: ${file.path} ${file.lengthSync()} bytes',
+        );
       });
       expect(tester.takeException(), isNull);
     });

@@ -32,20 +32,24 @@ import '../../tool/generate_bridge_asset.dart';
 
 /// An Overpass `out geom;` way element as the generator consumes it.
 Map<String, dynamic> way(int id, List<(double, double)> nodes) => {
-      'type': 'way',
-      'id': id,
-      'geometry': [
-        for (final (lat, lon) in nodes) {'lat': lat, 'lon': lon},
-      ],
-    };
+  'type': 'way',
+  'id': id,
+  'geometry': [
+    for (final (lat, lon) in nodes) {'lat': lat, 'lon': lon},
+  ],
+};
 
 /// Parses generator rows through the REAL app-side CSV parser (with header),
 /// asserting nothing was skipped as malformed.
 List<BridgeSite> roundTrip(List<String> rows) {
-  final parsed =
-      parseBridgeCsv('way_id,lat,lon,bearing_deg\n${rows.join('\n')}\n');
-  expect(parsed.skippedRowCount, 0,
-      reason: 'every generator row must round-trip through parseBridgeCsv');
+  final parsed = parseBridgeCsv(
+    'way_id,lat,lon,bearing_deg\n${rows.join('\n')}\n',
+  );
+  expect(
+    parsed.skippedRowCount,
+    0,
+    reason: 'every generator row must round-trip through parseBridgeCsv',
+  );
   return parsed.sites;
 }
 
@@ -56,26 +60,26 @@ void main() {
   const mPerDegLat = 111194.9;
   final mPerDegLon = mPerDegLat * 0.7694; // cos(39.7°)
 
-  test('straight short east-west way → ONE on-deck sample, chord bearing 90',
-      () {
-    final rows = csvRowsForWay(way(1, [
-      (latAkita, lonAkita),
-      (latAkita, lonAkita + 60 / mPerDegLon),
-    ]));
-    final sites = roundTrip(rows);
-    expect(sites, hasLength(1));
-    expect(sites.single.bearingDeg, 90);
-    // The sample sits ON the deck (here: the path midpoint).
-    expect(sites.single.lat, closeTo(latAkita, 1e-5));
-    expect(sites.single.lon, closeTo(lonAkita + 30 / mPerDegLon, 1e-4));
-  });
+  test(
+    'straight short east-west way → ONE on-deck sample, chord bearing 90',
+    () {
+      final rows = csvRowsForWay(
+        way(1, [(latAkita, lonAkita), (latAkita, lonAkita + 60 / mPerDegLon)]),
+      );
+      final sites = roundTrip(rows);
+      expect(sites, hasLength(1));
+      expect(sites.single.bearingDeg, 90);
+      // The sample sits ON the deck (here: the path midpoint).
+      expect(sites.single.lat, closeTo(latAkita, 1e-5));
+      expect(sites.single.lon, closeTo(lonAkita + 30 / mPerDegLon, 1e-4));
+    },
+  );
 
   test('straight long way (~200 m) → multiple samples inside the 120 m '
       'cluster radius, all with the honest chord bearing', () {
-    final rows = csvRowsForWay(way(6, [
-      (latAkita, lonAkita),
-      (latAkita, lonAkita + 200 / mPerDegLon),
-    ]));
+    final rows = csvRowsForWay(
+      way(6, [(latAkita, lonAkita), (latAkita, lonAkita + 200 / mPerDegLon)]),
+    );
     final sites = roundTrip(rows);
     expect(sites, hasLength(2));
     for (final site in sites) {
@@ -101,8 +105,11 @@ void main() {
     final sites = roundTrip(csvRowsForWay(curved));
     expect(sites, hasLength(2));
     for (final site in sites) {
-      expect(site.bearingDeg, isNull,
-          reason: 'a 45°-off chord could bearing-reject the deck itself');
+      expect(
+        site.bearingDeg,
+        isNull,
+        reason: 'a 45°-off chord could bearing-reject the deck itself',
+      );
     }
     // Samples at path 50 m / 150 m: midpoints of the two legs.
     expect(sites[0].lat, closeTo(latAkita, 1e-5));
@@ -120,59 +127,79 @@ void main() {
     ];
     final result = countBridgeSitesOnRoute(sites, route);
     expect(result.keptSiteCount, 2);
-    expect(result.clusterCount, 1,
-        reason: 'one curved bridge, experienced once — samples merge');
+    expect(
+      result.clusterCount,
+      1,
+      reason: 'one curved bridge, experienced once — samples merge',
+    );
   });
 
-  test('CLOSED way (first node == last node) → BLANK bearing, site kept',
-      () {
+  test('CLOSED way (first node == last node) → BLANK bearing, site kept', () {
     // A ~square loop deck, ~100 m sides, returning to its first node.
     final dLat = 100 / mPerDegLat;
     final dLon = 100 / mPerDegLon;
-    final rows = csvRowsForWay(way(2, [
-      (latAkita, lonAkita),
-      (latAkita, lonAkita + dLon),
-      (latAkita + dLat, lonAkita + dLon),
-      (latAkita + dLat, lonAkita),
-      (latAkita, lonAkita), // closed
-    ]));
+    final rows = csvRowsForWay(
+      way(2, [
+        (latAkita, lonAkita),
+        (latAkita, lonAkita + dLon),
+        (latAkita + dLat, lonAkita + dLon),
+        (latAkita + dLat, lonAkita),
+        (latAkita, lonAkita), // closed
+      ]),
+    );
     final sites = roundTrip(rows);
     expect(sites, isNotEmpty);
     for (final site in sites) {
-      expect(site.bearingDeg, isNull,
-          reason: 'a closed way has no chord direction — a fabricated 0° '
-              'would let the matcher bearing-reject a real bridge');
+      expect(
+        site.bearingDeg,
+        isNull,
+        reason:
+            'a closed way has no chord direction — a fabricated 0° '
+            'would let the matcher bearing-reject a real bridge',
+      );
       // Each sample sits ON the loop's rim, never at its interior mean
       // (center ≈ (+50 m, +50 m), which sits ~50 m off every side — outside
       // the matcher's 30 m corridor).
       final northMeters = (site.lat - latAkita) * mPerDegLat;
       final eastMeters = (site.lon - lonAkita) * mPerDegLon;
-      final centerDist = math.sqrt(math.pow(northMeters - 50, 2).toDouble() +
-          math.pow(eastMeters - 50, 2).toDouble());
-      expect(centerDist, greaterThan(40),
-          reason: 'an interior-mean point would be off the deck');
+      final centerDist = math.sqrt(
+        math.pow(northMeters - 50, 2).toDouble() +
+            math.pow(eastMeters - 50, 2).toDouble(),
+      );
+      expect(
+        centerDist,
+        greaterThan(40),
+        reason: 'an interior-mean point would be off the deck',
+      );
     }
   });
 
   test('NEAR-closed way (endpoints ~5 m apart, U-shape) → BLANK bearing', () {
     final dLat = 80 / mPerDegLat;
-    final rows = csvRowsForWay(way(3, [
-      (latAkita, lonAkita),
-      (latAkita + dLat, lonAkita),
-      (latAkita + dLat, lonAkita + 60 / mPerDegLon),
-      (latAkita + 5 / mPerDegLat, lonAkita), // back next to the start
-    ]));
+    final rows = csvRowsForWay(
+      way(3, [
+        (latAkita, lonAkita),
+        (latAkita + dLat, lonAkita),
+        (latAkita + dLat, lonAkita + 60 / mPerDegLon),
+        (latAkita + 5 / mPerDegLat, lonAkita), // back next to the start
+      ]),
+    );
     final sites = roundTrip(rows);
     expect(sites, isNotEmpty);
     for (final site in sites) {
-      expect(site.bearingDeg, isNull,
-          reason: 'a ~5 m chord cannot honestly define a deck direction');
+      expect(
+        site.bearingDeg,
+        isNull,
+        reason: 'a ~5 m chord cannot honestly define a deck direction',
+      );
     }
   });
 
-  test('way with < 2 geometry nodes → skipped entirely (no half-honest row)',
-      () {
-    expect(csvRowsForWay(way(4, [(latAkita, lonAkita)])), isEmpty);
-    expect(csvRowsForWay(way(5, [])), isEmpty);
-  });
+  test(
+    'way with < 2 geometry nodes → skipped entirely (no half-honest row)',
+    () {
+      expect(csvRowsForWay(way(4, [(latAkita, lonAkita)])), isEmpty);
+      expect(csvRowsForWay(way(5, [])), isEmpty);
+    },
+  );
 }

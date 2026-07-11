@@ -102,9 +102,7 @@ void main() {
     });
 
     test('unknown defaults to GDPR jurisdiction', () {
-      final record = ConsentRecord.unknown(
-        purpose: ConsentPurpose.diagnostics,
-      );
+      final record = ConsentRecord.unknown(purpose: ConsentPurpose.diagnostics);
       expect(record.jurisdiction, Jurisdiction.gdpr);
     });
 
@@ -164,10 +162,22 @@ void main() {
       expect(ConsentPurpose.values, contains(ConsentPurpose.fleetLocation));
       expect(ConsentPurpose.values, contains(ConsentPurpose.weatherTelemetry));
       expect(ConsentPurpose.values, contains(ConsentPurpose.diagnostics));
-      expect(ConsentPurpose.values, contains(ConsentPurpose.alertExperienceInstrumentation));
-      expect(ConsentPurpose.values, contains(ConsentPurpose.voiceExperienceInstrumentation));
-      expect(ConsentPurpose.values, contains(ConsentPurpose.cohortCalibrationInstrumentation));
-      expect(ConsentPurpose.values, contains(ConsentPurpose.tripContextInstrumentation));
+      expect(
+        ConsentPurpose.values,
+        contains(ConsentPurpose.alertExperienceInstrumentation),
+      );
+      expect(
+        ConsentPurpose.values,
+        contains(ConsentPurpose.voiceExperienceInstrumentation),
+      );
+      expect(
+        ConsentPurpose.values,
+        contains(ConsentPurpose.cohortCalibrationInstrumentation),
+      );
+      expect(
+        ConsentPurpose.values,
+        contains(ConsentPurpose.tripContextInstrumentation),
+      );
     });
 
     test('all Jurisdiction values exist', () {
@@ -250,8 +260,7 @@ void main() {
 
     test('per-purpose: granting fleet does not affect weather', () async {
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.gdpr);
-      final weather =
-          await service.getConsent(ConsentPurpose.weatherTelemetry);
+      final weather = await service.getConsent(ConsentPurpose.weatherTelemetry);
       expect(weather.status, ConsentStatus.unknown);
     });
 
@@ -261,12 +270,15 @@ void main() {
       // weatherTelemetry left as unknown
 
       final records = await service.getAllConsents();
-      final fleet =
-          records.firstWhere((r) => r.purpose == ConsentPurpose.fleetLocation);
-      final diag =
-          records.firstWhere((r) => r.purpose == ConsentPurpose.diagnostics);
-      final weather = records
-          .firstWhere((r) => r.purpose == ConsentPurpose.weatherTelemetry);
+      final fleet = records.firstWhere(
+        (r) => r.purpose == ConsentPurpose.fleetLocation,
+      );
+      final diag = records.firstWhere(
+        (r) => r.purpose == ConsentPurpose.diagnostics,
+      );
+      final weather = records.firstWhere(
+        (r) => r.purpose == ConsentPurpose.weatherTelemetry,
+      );
 
       expect(fleet.status, ConsentStatus.granted);
       expect(diag.status, ConsentStatus.denied);
@@ -369,10 +381,12 @@ void main() {
           purpose: ConsentPurpose.fleetLocation,
           jurisdiction: Jurisdiction.gdpr,
         ),
-        equals(const ConsentGrantRequested(
-          purpose: ConsentPurpose.fleetLocation,
-          jurisdiction: Jurisdiction.gdpr,
-        )),
+        equals(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.gdpr,
+          ),
+        ),
       );
     });
 
@@ -380,7 +394,8 @@ void main() {
       expect(
         const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
         equals(
-            const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation)),
+          const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
+        ),
       );
     });
   });
@@ -412,11 +427,18 @@ void main() {
       build: () => ConsentBloc(service: InMemoryConsentService()),
       act: (bloc) => bloc.add(const ConsentLoadRequested()),
       expect: () => [
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.loading),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.loading,
+        ),
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
-            .having((s) => s.consents.length, 'consents count', ConsentPurpose.values.length)
+            .having(
+              (s) => s.consents.length,
+              'consents count',
+              ConsentPurpose.values.length,
+            )
             .having((s) => s.isAllDenied, 'all denied', true),
       ],
     );
@@ -431,10 +453,12 @@ void main() {
             p: ConsentRecord.unknown(purpose: p),
         },
       ),
-      act: (bloc) => bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.gdpr,
-      )),
+      act: (bloc) => bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.gdpr,
+        ),
+      ),
       expect: () => [
         isA<ConsentState>()
             .having((s) => s.isFleetGranted, 'fleet granted', true)
@@ -484,14 +508,18 @@ void main() {
         },
       ),
       act: (bloc) {
-        bloc.add(const ConsentGrantRequested(
-          purpose: ConsentPurpose.fleetLocation,
-          jurisdiction: Jurisdiction.gdpr,
-        ));
-        bloc.add(const ConsentGrantRequested(
-          purpose: ConsentPurpose.weatherTelemetry,
-          jurisdiction: Jurisdiction.appi,
-        ));
+        bloc.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.gdpr,
+          ),
+        );
+        bloc.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.weatherTelemetry,
+            jurisdiction: Jurisdiction.appi,
+          ),
+        );
       },
       expect: () => [
         // After fleet grant
@@ -514,8 +542,11 @@ void main() {
       },
       act: (bloc) => bloc.add(const ConsentLoadRequested()),
       expect: () => [
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.loading),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.loading,
+        ),
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.error)
             .having((s) => s.isFleetGranted, 'fleet', false)
@@ -536,13 +567,18 @@ void main() {
             p: ConsentRecord.unknown(purpose: p),
         },
       ),
-      act: (bloc) => bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.gdpr,
-      )),
+      act: (bloc) => bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.gdpr,
+        ),
+      ),
       expect: () => [
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.error),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.error,
+        ),
       ],
     );
 
@@ -567,8 +603,11 @@ void main() {
         const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
       ),
       expect: () => [
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.error),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.error,
+        ),
       ],
     );
 
@@ -582,10 +621,12 @@ void main() {
             p: ConsentRecord.unknown(purpose: p),
         },
       ),
-      act: (bloc) => bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.appi,
-      )),
+      act: (bloc) => bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      ),
       expect: () => [
         isA<ConsentState>().having(
           (s) => s.consents[ConsentPurpose.fleetLocation]?.jurisdiction,
@@ -601,10 +642,12 @@ void main() {
       // Seed directly into loading state — simulates race condition where
       // a grant arrives while a previous load is in progress.
       seed: () => const ConsentState(status: ConsentBlocStatus.loading),
-      act: (bloc) => bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.gdpr,
-      )),
+      act: (bloc) => bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.gdpr,
+        ),
+      ),
       // Guard fires: no state change emitted.
       expect: () => <ConsentState>[],
       verify: (bloc) {
@@ -641,10 +684,12 @@ void main() {
       act: (bloc) async {
         bloc.add(const ConsentLoadRequested());
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        bloc.add(const ConsentGrantRequested(
-          purpose: ConsentPurpose.fleetLocation,
-          jurisdiction: Jurisdiction.gdpr,
-        ));
+        bloc.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.gdpr,
+          ),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         bloc.add(
           const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
@@ -652,15 +697,17 @@ void main() {
       },
       expect: () => [
         // loading
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.loading),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.loading,
+        ),
         // ready (all unknown)
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
             .having((s) => s.isFleetGranted, 'fleet', false),
         // fleet granted
-        isA<ConsentState>()
-            .having((s) => s.isFleetGranted, 'fleet', true),
+        isA<ConsentState>().having((s) => s.isFleetGranted, 'fleet', true),
         // fleet revoked
         isA<ConsentState>()
             .having((s) => s.isFleetGranted, 'fleet', false)

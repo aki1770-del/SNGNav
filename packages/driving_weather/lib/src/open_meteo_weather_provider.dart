@@ -3,9 +3,18 @@
 /// Fetches current weather from the Open-Meteo API (free, no API key).
 /// Maps WMO weather codes + temperature to [WeatherCondition].
 ///
-/// Offline fallback: if the HTTP request fails, re-emits the last known
-/// condition (if any) so the UI stays populated with stale data rather
-/// than going blank.
+/// ## Absence is never filled in (Measured-or-Absent, O1)
+///
+/// Any field the response does not carry stays `null`. Up to and including
+/// 0.4.4, an empty `hourly` block silently produced `visibility = 10000` (i.e.
+/// "clear") and `snowfall = 0` — values the API never sent. It no longer does.
+///
+/// ## Offline behaviour (O3)
+///
+/// On fetch failure this provider emits [WeatherStale] (carrying the real age
+/// of the last observation and the cause) or, with no prior observation,
+/// [WeatherUnavailable]. Up to 0.4.4 it silently re-emitted the last condition
+/// with no staleness marker, and emitted nothing at all when it had none.
 ///
 /// Implements [WeatherProvider] — same 4 methods as
 /// [SimulatedWeatherProvider]. Application logic is implementation-agnostic;
@@ -19,6 +28,7 @@ import 'package:http/http.dart' as http;
 
 import 'weather_condition.dart';
 import 'weather_provider.dart';
+import 'weather_reading.dart';
 
 class OpenMeteoWeatherProvider implements WeatherProvider {
   /// HTTP client — injectable for testing.
@@ -33,11 +43,15 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
   /// How often to poll the API. Default 5 minutes.
   final Duration pollInterval;
 
-  StreamController<WeatherCondition>? _controller;
+  StreamController<WeatherReading>? _controller;
   Timer? _timer;
 
-  /// Last successfully parsed condition — used for offline fallback.
+  /// Last successfully parsed condition, and when it was actually observed.
   WeatherCondition? _lastCondition;
+  DateTime? _lastObservedAt;
+
+  /// When the provider first found itself without data. Cleared on success.
+  DateTime? _unavailableSince;
 
   OpenMeteoWeatherProvider({
     http.Client? client,
@@ -47,8 +61,8 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
   }) : _client = client ?? http.Client();
 
   @override
-  Stream<WeatherCondition> get conditions {
-    _controller ??= StreamController<WeatherCondition>.broadcast();
+  Stream<WeatherReading> get conditions {
+    _controller ??= StreamController<WeatherReading>.broadcast();
     return _controller!.stream;
   }
 
@@ -96,15 +110,38 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     try {
       final condition = await fetchWeather();
       if (_controller == null || _controller!.isClosed) return;
-      _lastCondition = condition;
-      _controller!.add(condition);
-    } catch (_) {
-      // Offline fallback: re-emit last known condition if available.
-      if (_controller == null || _controller!.isClosed) return;
-      if (_lastCondition != null) {
-        _controller!.add(_lastCondition!);
+      // Belt-and-braces: never let a content-free condition overwrite the last
+      // REAL observation. If it did, the next genuine failure would emit a
+      // WeatherStale carrying nothing — the fallback the driver depends on in
+      // the compound-failure case would have been quietly poisoned.
+      if (!condition.isFullyUnknown) {
+        _lastCondition = condition;
+        _lastObservedAt = condition.timestamp;
       }
-      // If no last condition, silently skip — application stays in current state.
+      _unavailableSince = null;
+      _controller!.add(WeatherObserved(condition));
+    } catch (error) {
+      // The fetch failed. Say so — never re-emit an old condition as though it
+      // were fresh, and never go silent.
+      if (_controller == null || _controller!.isClosed) return;
+      final now = DateTime.now();
+      final last = _lastCondition;
+      final observedAt = _lastObservedAt;
+      if (last != null && observedAt != null) {
+        _controller!.add(
+          WeatherStale(
+            lastKnown: last,
+            observedAt: observedAt,
+            age: now.difference(observedAt),
+            cause: error,
+          ),
+        );
+      } else {
+        _unavailableSince ??= now;
+        _controller!.add(
+          WeatherUnavailable(since: _unavailableSince!, cause: error),
+        );
+      }
     }
   }
 
@@ -137,40 +174,63 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
 
   /// Parses an Open-Meteo JSON response into a [WeatherCondition].
   ///
+  /// Every field the response does not carry is left `null`. Nothing is
+  /// defaulted: a missing visibility is not 10 km, a missing snowfall is not
+  /// zero, and a missing temperature is not above freezing.
+  ///
+  /// **A body with no `current` block is not a weather response at all** — it
+  /// is a failure, and it throws [WeatherParseException] so that the caller
+  /// routes it to [WeatherStale] / [WeatherUnavailable]. That distinction is
+  /// load-bearing: "the source did not measure this field" (`null`, honest) is
+  /// a different fact from "the response was not a weather response". Parsing
+  /// a malformed body into an all-null condition would label it
+  /// [WeatherObserved] — a reading claiming to be an observation when nothing
+  /// was observed — and would also overwrite the last real observation, so the
+  /// next genuine failure would emit a [WeatherStale] carrying nothing.
+  ///
   /// Visible for testing — allows unit-testing the parser without HTTP.
   static WeatherCondition parseWeatherResponse(Map<String, dynamic> json) {
-    final current = json['current'] as Map<String, dynamic>;
-    final hourly = json['hourly'] as Map<String, dynamic>;
+    final current = json['current'] as Map<String, dynamic>?;
+    final hourly = json['hourly'] as Map<String, dynamic>?;
 
-    final temperature = (current['temperature_2m'] as num).toDouble();
-    final weatherCode = (current['weather_code'] as num).toInt();
-    final windSpeed = (current['wind_speed_10m'] as num).toDouble();
+    if (current == null) {
+      throw const WeatherParseException(
+        'Open-Meteo response carried no `current` block — not a weather '
+        'response',
+      );
+    }
+
+    // `current` block — measured. Absent entries stay null.
+    final temperature = (current['temperature_2m'] as num?)?.toDouble();
+    final weatherCode = (current['weather_code'] as num?)?.toInt();
+    final windSpeed = (current['wind_speed_10m'] as num?)?.toDouble();
     // Relative humidity in percent. Optional: older cached responses and other
     // feeds may omit it — a missing value stays null (never fabricated), so the
     // radiative-frost classifier simply abstains rather than guessing.
     final humidityRH = (current['relative_humidity_2m'] as num?)?.toDouble();
 
-    // Get current hour's snowfall and visibility from hourly data.
-    final snowfallList = hourly['snowfall'] as List<dynamic>;
-    final visibilityList = hourly['visibility'] as List<dynamic>;
+    // `hourly` block — current hour's snowfall and visibility. An empty or
+    // absent list means WE DO NOT KNOW. It does not mean zero snow and 10 km
+    // of visibility (which is what 0.4.4 and earlier claimed here).
+    final snowfall = _hourlyValue(hourly?['snowfall']);
+    final visibility = _hourlyValue(hourly?['visibility']);
 
-    double snowfall = 0;
-    double visibility = 10000;
-
-    if (snowfallList.isNotEmpty && visibilityList.isNotEmpty) {
-      // Find the current hour index (use first entry as approximation).
-      final now = DateTime.now();
-      final currentHourIndex = now.hour.clamp(0, snowfallList.length - 1);
-      snowfall = (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
-      visibility =
-          (visibilityList[currentHourIndex] as num?)?.toDouble() ?? 10000;
+    // Map WMO weather code to our model. With no code, precipitation is
+    // unknown — unless the hourly snowfall itself evidences snow.
+    PrecipitationType? precipType;
+    PrecipitationIntensity? intensity;
+    if (weatherCode != null) {
+      (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall);
+    } else if (snowfall != null && snowfall > 0) {
+      (precipType, intensity) = _inferFromSnowfall(snowfall);
     }
 
-    // Map WMO weather code to our model.
-    final (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall);
-
-    // Ice risk: sub-zero temperature + any precipitation.
-    final iceRisk = temperature <= 0 && precipType != PrecipitationType.none;
+    // Ice risk: sub-zero temperature + any precipitation. Derivable ONLY when
+    // both inputs are present; otherwise it is unknown, never `false`.
+    bool? iceRisk;
+    if (temperature != null && precipType != null) {
+      iceRisk = temperature <= 0 && precipType != PrecipitationType.none;
+    }
 
     return WeatherCondition(
       precipType: precipType,
@@ -180,8 +240,27 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       windSpeedKmh: windSpeed,
       iceRisk: iceRisk,
       humidityRH: humidityRH,
+      source: ObservationSource.measured,
       timestamp: DateTime.now(),
     );
+  }
+
+  /// Reads the current hour's entry out of an Open-Meteo `hourly` list.
+  ///
+  /// Returns `null` — never a stand-in value — when the list is absent, empty,
+  /// carries no entry at the current hour, or carries a non-numeric entry.
+  ///
+  /// The index is NOT clamped into the list. A truncated response (say, three
+  /// entries read at 20:00) does not carry this hour's value; substituting a
+  /// DIFFERENT hour's snowfall or visibility and presenting it as "now" is the
+  /// same fabrication class this contract exists to remove — it just launders
+  /// the wrong hour instead of the wrong number.
+  static double? _hourlyValue(Object? list) {
+    if (list is! List || list.isEmpty) return null;
+    final index = DateTime.now().hour;
+    if (index >= list.length) return null;
+    final value = list[index];
+    return value is num ? value.toDouble() : null;
   }
 
   /// Maps WMO weather code to (PrecipitationType, PrecipitationIntensity).
@@ -193,7 +272,7 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
   ///   95-99 = Thunderstorm.
   static (PrecipitationType, PrecipitationIntensity) _mapWeatherCode(
     int code,
-    double snowfallCm,
+    double? snowfallCm,
   ) {
     // Snow codes: 71 (light), 73 (moderate), 75 (heavy), 77 (snow grains).
     if (code == 71 || code == 85) {
@@ -237,18 +316,25 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     }
 
     // If snowfall > 0 but code doesn't match snow, infer from data.
-    if (snowfallCm > 0) {
-      if (snowfallCm >= 2.0) {
-        return (PrecipitationType.snow, PrecipitationIntensity.heavy);
-      }
-      if (snowfallCm >= 0.5) {
-        return (PrecipitationType.snow, PrecipitationIntensity.moderate);
-      }
-      return (PrecipitationType.snow, PrecipitationIntensity.light);
+    if (snowfallCm != null && snowfallCm > 0) {
+      return _inferFromSnowfall(snowfallCm);
     }
 
-    // Clear / cloudy / fog — no precipitation.
+    // Clear / cloudy / fog — the code positively says no precipitation.
     return (PrecipitationType.none, PrecipitationIntensity.none);
+  }
+
+  /// Infers snow intensity from a measured hourly snowfall depth (cm/hr).
+  static (PrecipitationType, PrecipitationIntensity) _inferFromSnowfall(
+    double snowfallCm,
+  ) {
+    if (snowfallCm >= 2.0) {
+      return (PrecipitationType.snow, PrecipitationIntensity.heavy);
+    }
+    if (snowfallCm >= 0.5) {
+      return (PrecipitationType.snow, PrecipitationIntensity.moderate);
+    }
+    return (PrecipitationType.snow, PrecipitationIntensity.light);
   }
 }
 
@@ -261,4 +347,19 @@ class HttpException implements Exception {
 
   @override
   String toString() => 'HttpException: $message${uri != null ? ' ($uri)' : ''}';
+}
+
+/// Thrown when a 200-response body is not a weather response at all.
+///
+/// Distinct from an absent FIELD (which is honestly `null`): a body with no
+/// `current` block carries no observation, and a reading built from it would
+/// be a [WeatherObserved] that observed nothing. It is a failure, and it is
+/// routed to [WeatherStale] / [WeatherUnavailable] like any other failure.
+class WeatherParseException implements Exception {
+  final String message;
+
+  const WeatherParseException(this.message);
+
+  @override
+  String toString() => 'WeatherParseException: $message';
 }

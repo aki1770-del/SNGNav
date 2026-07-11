@@ -41,9 +41,7 @@ void main() {
             initialCenter: LatLng(35.05, 137.25),
             initialZoom: 12,
           ),
-          children: [
-            HazardZoneLayer(zones: zones),
-          ],
+          children: [HazardZoneLayer(zones: zones)],
         ),
       ),
     );
@@ -82,16 +80,18 @@ void main() {
       expect(find.byIcon(Icons.cloudy_snowing), findsOneWidget);
     });
 
-    testWidgets('shows vehicle count badge for multi-vehicle zones',
-        (tester) async {
+    testWidgets('shows vehicle count badge for multi-vehicle zones', (
+      tester,
+    ) async {
       final zones = [makeZone(reportCount: 3)];
       await tester.pumpWidget(buildLayer(zones));
       // Badge shows "3" for 3 unique vehicles.
       expect(find.text('3'), findsOneWidget);
     });
 
-    testWidgets('hides vehicle count badge for single-vehicle zones',
-        (tester) async {
+    testWidgets('hides vehicle count badge for single-vehicle zones', (
+      tester,
+    ) async {
       final zones = [makeZone(reportCount: 1)];
       await tester.pumpWidget(buildLayer(zones));
       // No badge — vehicleCount is 1.

@@ -14,7 +14,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:driving_conditions/driving_conditions.dart' show RoadSurfaceState;
+import 'package:driving_conditions/driving_conditions.dart'
+    show RoadSurfaceState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:sngnav_snow_scene/providers/jma_briefing_merge.dart';
@@ -38,13 +39,17 @@ void main() {
 
   // Hazard fixtures stay subzero; the clear fixture sits above the frost
   // band (subzero dry air is caution class since the 2026-06-12 quant fix).
-  HourlyForecast slot(int hour, {double temp = -3, double? vis, double? precip}) =>
-      HourlyForecast(
-        hour: DateTime(2026, 1, 1, hour),
-        tempCelsius: temp,
-        precipitationMmPerHour: precip,
-        visibilityMeters: vis,
-      );
+  HourlyForecast slot(
+    int hour, {
+    double temp = -3,
+    double? vis,
+    double? precip,
+  }) => HourlyForecast(
+    hour: DateTime(2026, 1, 1, hour),
+    tempCelsius: temp,
+    precipitationMmPerHour: precip,
+    visibilityMeters: vis,
+  );
 
   final whiteoutThenClear = [
     slot(7, vis: 80, precip: 3),
@@ -52,16 +57,10 @@ void main() {
     slot(9, vis: 5000),
     slot(10, vis: 8000),
   ];
-  final clear = [
-    slot(7, temp: 3, vis: 8000),
-    slot(8, temp: 3, vis: 8000),
-  ];
+  final clear = [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)];
   // Dry subzero air — caution class with the frost/black-ice chip (the
   // 2026-06-12 quant fix: 70/620 real winter slots used to render "clear").
-  final frostDry = [
-    slot(7, temp: -8),
-    slot(8, temp: -8),
-  ];
+  final frostDry = [slot(7, temp: -8), slot(8, temp: -8)];
 
   final cases = <String, (List<HourlyForecast>, CommuteFlexibility)>{
     'wait_advised': (whiteoutThenClear, CommuteFlexibility.discretionary),
@@ -123,8 +122,9 @@ void main() {
       await tester.pump();
 
       await tester.runAsync(() async {
-        final boundary = boundaryKey.currentContext!.findRenderObject()
-            as RenderRepaintBoundary;
+        final boundary =
+            boundaryKey.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
         final image = await boundary.toImage(pixelRatio: 1.0);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         expect(bytes, isNotNull);
@@ -133,8 +133,10 @@ void main() {
         file.writeAsBytesSync(bytes!.buffer.asUint8List());
         expect(file.lengthSync(), greaterThan(0));
         // ignore: avoid_print
-        print('CAPTURE ${entry.key}: ${file.path} '
-            '${file.lengthSync()} bytes ${image.width}x${image.height}');
+        print(
+          'CAPTURE ${entry.key}: ${file.path} '
+          '${file.lengthSync()} bytes ${image.width}x${image.height}',
+        );
       });
 
       expect(tester.takeException(), isNull);
@@ -206,8 +208,9 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -289,8 +292,9 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -375,8 +379,9 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -385,8 +390,10 @@ void main() {
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
-      print('CAPTURE jp_akita_measured_whiteout: ${file.path} '
-          '${file.lengthSync()} bytes');
+      print(
+        'CAPTURE jp_akita_measured_whiteout: ${file.path} '
+        '${file.lengthSync()} bytes',
+      );
     });
 
     expect(tester.takeException(), isNull);
@@ -453,8 +460,9 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -463,8 +471,10 @@ void main() {
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
-      print('CAPTURE jp_live_akita_unavailable: ${file.path} '
-          '${file.lengthSync()} bytes');
+      print(
+        'CAPTURE jp_live_akita_unavailable: ${file.path} '
+        '${file.lengthSync()} bytes',
+      );
     });
 
     expect(tester.takeException(), isNull);
@@ -477,7 +487,8 @@ void main() {
     // We render with the REAL shipped asset's blackIce card so the PNG shows
     // exactly what HER would see, not a hand-written fixture.
     final wk = WinterKnowledge.fromJsonString(
-        File('assets/winter_knowledge.json').readAsStringSync());
+      File('assets/winter_knowledge.json').readAsStringSync(),
+    );
     final card = wk.cardFor(RoadSurfaceState.blackIce);
     expect(card, isNotNull, reason: 'blackIce card must be baked');
 
@@ -534,8 +545,9 @@ void main() {
     await tester.pump();
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -544,8 +556,10 @@ void main() {
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       expect(file.lengthSync(), greaterThan(0));
       // ignore: avoid_print
-      print('CAPTURE winter_card_black_ice: ${file.path} '
-          '${file.lengthSync()} bytes');
+      print(
+        'CAPTURE winter_card_black_ice: ${file.path} '
+        '${file.lengthSync()} bytes',
+      );
     });
 
     expect(tester.takeException(), isNull);

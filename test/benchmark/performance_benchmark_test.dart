@@ -46,7 +46,9 @@ List<int> _benchmark(int iterations, void Function() fn) {
 
 /// Async variant of [_benchmark].
 Future<List<int>> _benchmarkAsync(
-    int iterations, Future<void> Function() fn) async {
+  int iterations,
+  Future<void> Function() fn,
+) async {
   final warmup = math.max(5, iterations ~/ 10);
   for (var i = 0; i < warmup; i++) {
     await fn();
@@ -74,14 +76,16 @@ void _report(String label, List<int> timesUs) {
   final p95 = timesUs[(n * 0.95).floor()];
   final p99 = timesUs[(n * 0.99).floor()];
 
-    debugPrint('  $label: '
-      'min=$minµs  '
-      'p50=$p50µs  '
-      'mean=${mean.toStringAsFixed(1)}µs  '
-      'p95=$p95µs  '
-      'p99=$p99µs  '
-      'max=$maxµs  '
-      '(n=$n)');
+  debugPrint(
+    '  $label: '
+    'min=$minµs  '
+    'p50=$p50µs  '
+    'mean=${mean.toStringAsFixed(1)}µs  '
+    'p95=$p95µs  '
+    'p99=$p99µs  '
+    'max=$maxµs  '
+    '(n=$n)',
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -148,11 +152,9 @@ MockClient _osrmMockClient({
         'type': isFirst
             ? 'depart'
             : isLast
-                ? 'arrive'
-                : 'turn',
-        'modifier': isFirst || isLast
-            ? ''
-            : (i % 2 == 0 ? 'left' : 'right'),
+            ? 'arrive'
+            : 'turn',
+        'modifier': isFirst || isLast ? '' : (i % 2 == 0 ? 'left' : 'right'),
         'location': [136.9 + i * 0.01, 35.17 - i * 0.005],
       },
       'name': 'Route 153 segment $i',
@@ -196,13 +198,13 @@ MockClient _valhallaMockClient({
       'instruction': isFirst
           ? 'Drive east on Route 153.'
           : isLast
-              ? 'You have arrived.'
-              : 'Turn ${i % 2 == 0 ? "left" : "right"} on segment $i.',
+          ? 'You have arrived.'
+          : 'Turn ${i % 2 == 0 ? "left" : "right"} on segment $i.',
       'type': isFirst
           ? 1
           : isLast
-              ? 2
-              : (i % 2 == 0 ? 11 : 6),
+          ? 2
+          : (i % 2 == 0 ? 11 : 6),
       'length': length / numManeuvers,
       'time': time / numManeuvers,
       'begin_shape_index': i,
@@ -215,10 +217,7 @@ MockClient _valhallaMockClient({
         'trip': {
           'summary': {'length': length, 'time': time},
           'legs': [
-            {
-              'shape': polyline,
-              'maneuvers': maneuvers,
-            },
+            {'shape': polyline, 'maneuvers': maneuvers},
           ],
         },
       }),
@@ -327,10 +326,12 @@ void main() {
       final isExceeded = kf.isAccuracyExceeded;
 
       // ignore: avoid_print
-      print('  60s tunnel: ${sw.elapsedMicroseconds}µs total '
-          '(${(sw.elapsedMicroseconds / 60).toStringAsFixed(1)}µs/step), '
-          'accuracy=${accuracyAfter60s.toStringAsFixed(1)}m, '
-          'exceeded=$isExceeded');
+      print(
+        '  60s tunnel: ${sw.elapsedMicroseconds}µs total '
+        '(${(sw.elapsedMicroseconds / 60).toStringAsFixed(1)}µs/step), '
+        'accuracy=${accuracyAfter60s.toStringAsFixed(1)}m, '
+        'exceeded=$isExceeded',
+      );
 
       // Sanity: position should have moved south-east.
       expect(kf.state.lat, lessThan(35.0824));
@@ -364,8 +365,10 @@ void main() {
       sw.stop();
 
       // ignore: avoid_print
-      print('  30s tunnel + recovery: ${sw.elapsedMicroseconds}µs total, '
-          'post-recovery accuracy=${kf.accuracyMetres.toStringAsFixed(1)}m');
+      print(
+        '  30s tunnel + recovery: ${sw.elapsedMicroseconds}µs total, '
+        'post-recovery accuracy=${kf.accuracyMetres.toStringAsFixed(1)}m',
+      );
 
       // Post-recovery accuracy should be better than pre-recovery.
       expect(kf.accuracyMetres, lessThan(100));
@@ -390,19 +393,23 @@ void main() {
         );
 
         final times = await _benchmarkAsync(200, () async {
-          await engine.calculateRoute(const RouteRequest(
-            origin: LatLng(35.17, 136.91),
-            destination: LatLng(34.96, 137.18),
-          ));
+          await engine.calculateRoute(
+            const RouteRequest(
+              origin: LatLng(35.17, 136.91),
+              destination: LatLng(34.96, 137.18),
+            ),
+          );
         });
 
         _report('polyline5 ${numPoints}pt', times);
 
         // Verify decode correctness.
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: LatLng(35.17, 136.91),
-          destination: LatLng(34.96, 137.18),
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(
+            origin: LatLng(35.17, 136.91),
+            destination: LatLng(34.96, 137.18),
+          ),
+        );
         expect(result.shape.length, numPoints);
         expect(result.shape.first.latitude, closeTo(35.1709, 0.001));
 
@@ -422,25 +429,26 @@ void main() {
 
         final engine = ValhallaRoutingEngine(
           baseUrl: 'http://bench',
-          client: _valhallaMockClient(
-            polyline: encoded,
-            numManeuvers: 2,
-          ),
+          client: _valhallaMockClient(polyline: encoded, numManeuvers: 2),
         );
 
         final times = await _benchmarkAsync(200, () async {
-          await engine.calculateRoute(const RouteRequest(
-            origin: LatLng(35.17, 136.91),
-            destination: LatLng(34.96, 137.18),
-          ));
+          await engine.calculateRoute(
+            const RouteRequest(
+              origin: LatLng(35.17, 136.91),
+              destination: LatLng(34.96, 137.18),
+            ),
+          );
         });
 
         _report('polyline6 ${numPoints}pt', times);
 
-        final result = await engine.calculateRoute(const RouteRequest(
-          origin: LatLng(35.17, 136.91),
-          destination: LatLng(34.96, 137.18),
-        ));
+        final result = await engine.calculateRoute(
+          const RouteRequest(
+            origin: LatLng(35.17, 136.91),
+            destination: LatLng(34.96, 137.18),
+          ),
+        );
         expect(result.shape.length, numPoints);
 
         await engine.dispose();
@@ -458,25 +466,26 @@ void main() {
 
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://bench',
-        client: _osrmMockClient(
-          polyline: encoded,
-          numManeuvers: 25,
-        ),
+        client: _osrmMockClient(polyline: encoded, numManeuvers: 25),
       );
 
       final times = await _benchmarkAsync(200, () async {
-        await engine.calculateRoute(const RouteRequest(
-          origin: LatLng(35.17, 136.91),
-          destination: LatLng(34.96, 137.18),
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(
+            origin: LatLng(35.17, 136.91),
+            destination: LatLng(34.96, 137.18),
+          ),
+        );
       });
 
       _report('OSRM 25-step/500pt', times);
 
-      final result = await engine.calculateRoute(const RouteRequest(
-        origin: LatLng(35.17, 136.91),
-        destination: LatLng(34.96, 137.18),
-      ));
+      final result = await engine.calculateRoute(
+        const RouteRequest(
+          origin: LatLng(35.17, 136.91),
+          destination: LatLng(34.96, 137.18),
+        ),
+      );
       expect(result.maneuvers.length, 25);
       expect(result.shape.length, 500);
 
@@ -494,25 +503,26 @@ void main() {
 
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://bench',
-        client: _valhallaMockClient(
-          polyline: encoded,
-          numManeuvers: 25,
-        ),
+        client: _valhallaMockClient(polyline: encoded, numManeuvers: 25),
       );
 
       final times = await _benchmarkAsync(200, () async {
-        await engine.calculateRoute(const RouteRequest(
-          origin: LatLng(35.17, 136.91),
-          destination: LatLng(34.96, 137.18),
-        ));
+        await engine.calculateRoute(
+          const RouteRequest(
+            origin: LatLng(35.17, 136.91),
+            destination: LatLng(34.96, 137.18),
+          ),
+        );
       });
 
       _report('Valhalla 25-step/500pt', times);
 
-      final result = await engine.calculateRoute(const RouteRequest(
-        origin: LatLng(35.17, 136.91),
-        destination: LatLng(34.96, 137.18),
-      ));
+      final result = await engine.calculateRoute(
+        const RouteRequest(
+          origin: LatLng(35.17, 136.91),
+          destination: LatLng(34.96, 137.18),
+        ),
+      );
       expect(result.maneuvers.length, 25);
       expect(result.shape.length, 500);
 
@@ -538,14 +548,16 @@ void main() {
       final sub = dr.positions.listen(positions.add);
 
       // Emit one GPS fix to initialise the filter.
-      gps.emit(GeoPosition(
-        latitude: 35.0824,
-        longitude: 137.1088,
-        accuracy: 5.0,
-        speed: 16.67,
-        heading: 135.0,
-        timestamp: DateTime.now(),
-      ));
+      gps.emit(
+        GeoPosition(
+          latitude: 35.0824,
+          longitude: 137.1088,
+          accuracy: 5.0,
+          speed: 16.67,
+          heading: 135.0,
+          timestamp: DateTime.now(),
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 50));
       final gpsCount = positions.length;
 
@@ -561,15 +573,23 @@ void main() {
       final isDrActive = dr.isDrActive;
 
       // ignore: avoid_print
-      print('  DR activation: gps_fixes=$gpsCount, '
-          'dr_positions=$drPositions, '
-          'isDrActive=$isDrActive, '
-          'wall_time=${sw.elapsedMilliseconds}ms');
+      print(
+        '  DR activation: gps_fixes=$gpsCount, '
+        'dr_positions=$drPositions, '
+        'isDrActive=$isDrActive, '
+        'wall_time=${sw.elapsedMilliseconds}ms',
+      );
 
-      expect(isDrActive, isTrue,
-          reason: 'DR should be active after GPS timeout');
-      expect(drPositions, greaterThan(0),
-          reason: 'DR should have emitted at least one position');
+      expect(
+        isDrActive,
+        isTrue,
+        reason: 'DR should be active after GPS timeout',
+      );
+      expect(
+        drPositions,
+        greaterThan(0),
+        reason: 'DR should have emitted at least one position',
+      );
 
       await sub.cancel();
       await dr.dispose();
@@ -588,14 +608,16 @@ void main() {
       final positions = <GeoPosition>[];
       final sub = dr.positions.listen(positions.add);
 
-      gps.emit(GeoPosition(
-        latitude: 35.0824,
-        longitude: 137.1088,
-        accuracy: 5.0,
-        speed: 16.67,
-        heading: 135.0,
-        timestamp: DateTime.now(),
-      ));
+      gps.emit(
+        GeoPosition(
+          latitude: 35.0824,
+          longitude: 137.1088,
+          accuracy: 5.0,
+          speed: 16.67,
+          heading: 135.0,
+          timestamp: DateTime.now(),
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 50));
       positions.clear();
 
@@ -606,10 +628,12 @@ void main() {
       final drPositions = positions.length;
 
       // ignore: avoid_print
-      print('  DR activation (linear): '
-          'dr_positions=$drPositions, '
-          'isDrActive=${dr.isDrActive}, '
-          'wall_time=${sw.elapsedMilliseconds}ms');
+      print(
+        '  DR activation (linear): '
+        'dr_positions=$drPositions, '
+        'isDrActive=${dr.isDrActive}, '
+        'wall_time=${sw.elapsedMilliseconds}ms',
+      );
 
       expect(dr.isDrActive, isTrue);
       expect(drPositions, greaterThan(0));
@@ -671,14 +695,18 @@ void main() {
       sw.stop();
 
       // ignore: avoid_print
-      print('  60 GPS updates: ${sw.elapsedMicroseconds}µs total '
-          '(${(sw.elapsedMicroseconds / 60).toStringAsFixed(1)}µs/update)');
+      print(
+        '  60 GPS updates: ${sw.elapsedMicroseconds}µs total '
+        '(${(sw.elapsedMicroseconds / 60).toStringAsFixed(1)}µs/update)',
+      );
       // ignore: avoid_print
-      print('  Convergence: '
-          'fix1=${accuracies[0].toStringAsFixed(2)}m → '
-          'fix10=${accuracies[9].toStringAsFixed(2)}m → '
-          'fix30=${accuracies[29].toStringAsFixed(2)}m → '
-          'fix60=${accuracies[59].toStringAsFixed(2)}m');
+      print(
+        '  Convergence: '
+        'fix1=${accuracies[0].toStringAsFixed(2)}m → '
+        'fix10=${accuracies[9].toStringAsFixed(2)}m → '
+        'fix30=${accuracies[29].toStringAsFixed(2)}m → '
+        'fix60=${accuracies[59].toStringAsFixed(2)}m',
+      );
 
       // After 60 fixes, accuracy should be very good.
       expect(accuracies.last, lessThan(10.0));

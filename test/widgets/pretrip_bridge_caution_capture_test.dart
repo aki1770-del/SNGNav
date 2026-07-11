@@ -54,9 +54,10 @@ WeatherForecast _freezingLive() {
     hourly: [
       HourlyForecast(hour: base, tempCelsius: -2, precipitationMmPerHour: 0.5),
       HourlyForecast(
-          hour: base.add(const Duration(hours: 1)),
-          tempCelsius: -2,
-          precipitationMmPerHour: 0.5),
+        hour: base.add(const Duration(hours: 1)),
+        tempCelsius: -2,
+        precipitationMmPerHour: 0.5,
+      ),
     ],
   );
 }
@@ -77,8 +78,7 @@ void main() {
     );
   });
 
-  testWidgets('CAPTURE: route bridge caution reaches HER (ja)',
-      (tester) async {
+  testWidgets('CAPTURE: route bridge caution reaches HER (ja)', (tester) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');
@@ -122,7 +122,8 @@ void main() {
                   const LatLng(39.72000, 140.10000),
                   const LatLng(39.74000, 140.10000),
                 ],
-                loadBridgeCsv: () async => 'way_id,lat,lon,bearing_deg\n'
+                loadBridgeCsv: () async =>
+                    'way_id,lat,lon,bearing_deg\n'
                     '1,39.72500,140.10000,0\n'
                     '2,39.73500,140.10000,0\n',
               ),
@@ -135,20 +136,23 @@ void main() {
     await tester.pump();
     for (var i = 0; i < 12; i++) {
       await tester.runAsync(
-          () async => Future<void>.delayed(const Duration(milliseconds: 20)));
+        () async => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
     }
 
     // Guard: the caution actually reached the tree before we capture.
-    expect(find.byKey(const Key('pretrip-bridge-corridor-caution')),
-        findsOneWidget);
-    expect(find.textContaining('この先、秋田県内の経路上に橋が約2か所あります'),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pretrip-bridge-corridor-caution')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('この先、秋田県内の経路上に橋が約2か所あります'), findsOneWidget);
 
     await tester.runAsync(() async {
-      final boundary = boundaryKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 1.0);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       expect(bytes, isNotNull);
@@ -157,8 +161,10 @@ void main() {
       final file = File('${dir.path}/pretrip_bridge_caution_ja.png');
       file.writeAsBytesSync(bytes!.buffer.asUint8List());
       // ignore: avoid_print
-      print('CAPTURE pretrip_bridge_caution_ja: ${file.absolute.path} '
-          '${file.lengthSync()} bytes ${image.width}x${image.height}');
+      print(
+        'CAPTURE pretrip_bridge_caution_ja: ${file.absolute.path} '
+        '${file.lengthSync()} bytes ${image.width}x${image.height}',
+      );
     });
 
     final ex = tester.takeException();

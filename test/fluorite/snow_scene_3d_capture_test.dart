@@ -28,17 +28,26 @@ void main() {
       windSpeedKmh: 45,
       iceRisk: true,
       timestamp: DateTime(2026, 1, 1),
+      source: ObservationSource.measured,
     ),
   );
 
+  // The road NOBODY MEASURED — the state this release invented, and the exact
+  // scene that used to be painted as clean dark asphalt with a crystal-clear
+  // sky (`RoadSurfaceState.dry`, gripFactor 1.0, "Conditions normal") for a
+  // feed that had gone silent. It must now LOOK un-assessed, not fine.
+  final unknown = DrivingConditionAssessment.fromCondition(
+    WeatherCondition.unknown(timestamp: DateTime(2026, 1, 1)),
+  );
+
   GeoPosition pos(double accuracy) => GeoPosition(
-        latitude: 35.17,
-        longitude: 136.88,
-        accuracy: accuracy,
-        speed: 14,
-        heading: 90,
-        timestamp: DateTime(2026, 1, 1, 7, 15),
-      );
+    latitude: 35.17,
+    longitude: 136.88,
+    accuracy: accuracy,
+    speed: 14,
+    heading: 90,
+    timestamp: DateTime(2026, 1, 1, 7, 15),
+  );
 
   final cases = <String, LocationState?>{
     'fix': LocationState(quality: LocationQuality.fix, position: pos(8)),
@@ -78,8 +87,9 @@ void main() {
       await tester.pump();
 
       await tester.runAsync(() async {
-        final boundary = boundaryKey.currentContext!.findRenderObject()
-            as RenderRepaintBoundary;
+        final boundary =
+            boundaryKey.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
         final image = await boundary.toImage(pixelRatio: 1.0);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         expect(bytes, isNotNull);
@@ -91,11 +101,64 @@ void main() {
         expect(image.height, 480);
         // Log so the raw path + byte count appear in test output.
         // ignore: avoid_print
-        print('CAPTURE ${entry.key}: ${file.path} '
-            '${file.lengthSync()} bytes ${image.width}x${image.height}');
+        print(
+          'CAPTURE ${entry.key}: ${file.path} '
+          '${file.lengthSync()} bytes ${image.width}x${image.height}',
+        );
       });
 
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('capture: conditions_unknown (the road nobody measured)', (
+    tester,
+  ) async {
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: RepaintBoundary(
+              key: boundaryKey,
+              child: SizedBox(
+                width: 800,
+                height: 480,
+                child: SnowScene3DView(
+                  assessment: unknown,
+                  location: LocationState(
+                    quality: LocationQuality.fix,
+                    position: pos(8),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // The scene must not claim a surface it could not classify.
+    expect(unknown.surfaceState, isNull);
+    expect(unknown.gripFactor, isNull);
+    expect(unknown.advisoryMessage, contains('drive to what you can see'));
+
+    await tester.runAsync(() async {
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final dir = Directory('test/fluorite/_capture')..createSync();
+      final file = File('${dir.path}/scene_conditions_unknown.png');
+      file.writeAsBytesSync(bytes!.buffer.asUint8List());
+      // ignore: avoid_print
+      print(
+        'CAPTURE conditions_unknown: ${file.path} '
+        '${file.lengthSync()} bytes ${image.width}x${image.height}',
+      );
+    });
+    expect(tester.takeException(), isNull);
+  });
 }

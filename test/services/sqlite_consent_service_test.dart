@@ -129,8 +129,7 @@ void main() {
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
 
       final fleet = await service.getConsent(ConsentPurpose.fleetLocation);
-      final weather =
-          await service.getConsent(ConsentPurpose.weatherTelemetry);
+      final weather = await service.getConsent(ConsentPurpose.weatherTelemetry);
       final diag = await service.getConsent(ConsentPurpose.diagnostics);
 
       expect(fleet.isEffectivelyGranted, true);
@@ -151,28 +150,32 @@ void main() {
     // SQLite-specific tests — persistence and audit log
     // -------------------------------------------------------------------------
 
-    test('persistence: data survives new service instance on same DB', () async {
-      // Use a file path to test cross-instance persistence.
-      // For in-memory, we simulate by reusing the same Database object.
-      await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
-      await service.grant(ConsentPurpose.diagnostics, Jurisdiction.gdpr);
+    test(
+      'persistence: data survives new service instance on same DB',
+      () async {
+        // Use a file path to test cross-instance persistence.
+        // For in-memory, we simulate by reusing the same Database object.
+        await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
+        await service.grant(ConsentPurpose.diagnostics, Jurisdiction.gdpr);
 
-      // Create a new service instance on the same database.
-      final service2 = SqliteConsentService(db);
+        // Create a new service instance on the same database.
+        final service2 = SqliteConsentService(db);
 
-      final fleet = await service2.getConsent(ConsentPurpose.fleetLocation);
-      final diag = await service2.getConsent(ConsentPurpose.diagnostics);
-      final weather =
-          await service2.getConsent(ConsentPurpose.weatherTelemetry);
+        final fleet = await service2.getConsent(ConsentPurpose.fleetLocation);
+        final diag = await service2.getConsent(ConsentPurpose.diagnostics);
+        final weather = await service2.getConsent(
+          ConsentPurpose.weatherTelemetry,
+        );
 
-      expect(fleet.isEffectivelyGranted, true);
-      expect(fleet.jurisdiction, Jurisdiction.appi);
-      expect(diag.isEffectivelyGranted, true);
-      expect(diag.jurisdiction, Jurisdiction.gdpr);
-      expect(weather.isUnknown, true);
+        expect(fleet.isEffectivelyGranted, true);
+        expect(fleet.jurisdiction, Jurisdiction.appi);
+        expect(diag.isEffectivelyGranted, true);
+        expect(diag.jurisdiction, Jurisdiction.gdpr);
+        expect(weather.isUnknown, true);
 
-      // Don't dispose service2 — it shares the same db, tearDown handles it.
-    });
+        // Don't dispose service2 — it shares the same db, tearDown handles it.
+      },
+    );
 
     test('audit log records every grant', () async {
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
@@ -246,8 +249,7 @@ void main() {
       await service.grant(ConsentPurpose.diagnostics, Jurisdiction.appi);
 
       final fleet = await service.getConsent(ConsentPurpose.fleetLocation);
-      final weather =
-          await service.getConsent(ConsentPurpose.weatherTelemetry);
+      final weather = await service.getConsent(ConsentPurpose.weatherTelemetry);
       final diag = await service.getConsent(ConsentPurpose.diagnostics);
 
       expect(fleet.jurisdiction, Jurisdiction.gdpr);
@@ -282,10 +284,7 @@ void main() {
       final parsed = DateTime.tryParse(changedAt);
       expect(parsed, isNotNull);
       // Should be recent (within last minute)
-      expect(
-        parsed!.difference(DateTime.now()).inMinutes.abs(),
-        lessThan(1),
-      );
+      expect(parsed!.difference(DateTime.now()).inMinutes.abs(), lessThan(1));
     });
 
     test('audit log survives new service instance', () async {
@@ -300,20 +299,21 @@ void main() {
       expect(log[1]['status'], 'denied');
     });
 
-    test('idempotent migration: re-opening database does not duplicate tables',
-        () {
-      // openConsentDatabase runs migration. Opening again shouldn't fail.
-      final db2 = openConsentDatabase(':memory:');
-      final tables = db2.select(
-        "SELECT name FROM sqlite_master WHERE type='table' "
-        "AND name IN ('consents', 'consent_audit_log') ORDER BY name;",
-      );
-      expect(tables, hasLength(2));
-      db2.close();
-    });
+    test(
+      'idempotent migration: re-opening database does not duplicate tables',
+      () {
+        // openConsentDatabase runs migration. Opening again shouldn't fail.
+        final db2 = openConsentDatabase(':memory:');
+        final tables = db2.select(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name IN ('consents', 'consent_audit_log') ORDER BY name;",
+        );
+        expect(tables, hasLength(2));
+        db2.close();
+      },
+    );
 
-    test('grant overwrites previous grant (upsert, not duplicate row)',
-        () async {
+    test('grant overwrites previous grant (upsert, not duplicate row)', () async {
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.appi);
       await service.grant(ConsentPurpose.fleetLocation, Jurisdiction.gdpr);
 

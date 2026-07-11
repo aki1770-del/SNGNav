@@ -45,8 +45,8 @@ Future<List<DrivingConditionAssessment>> runScenario(
 }
 
 /// Consecutive-dedup of the surface-state sequence (the distinct phases seen).
-List<RoadSurfaceState> _phases(List<DrivingConditionAssessment> a) {
-  final out = <RoadSurfaceState>[];
+List<RoadSurfaceState?> _phases(List<DrivingConditionAssessment> a) {
+  final out = <RoadSurfaceState?>[];
   for (final s in a.map((e) => e.surfaceState)) {
     if (out.isEmpty || out.last != s) out.add(s);
   }
@@ -105,7 +105,7 @@ void main() {
       expect(ice.advisoryMessage.toLowerCase(), contains('ice'));
       // Black ice = lowest grip; the whiteout visibility proxy is heavy fog.
       expect(ice.gripFactor, RoadSurfaceState.blackIce.gripFactor);
-      expect(ice.visibility.opacity, greaterThan(0.5),
+      expect(ice.visibility!.opacity, greaterThan(0.5),
           reason: 'the whiteout must read as a heavy-fog / low-visibility cue');
 
       // The exact phase progression (escalate, then de-escalate and clear).

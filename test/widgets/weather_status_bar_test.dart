@@ -47,7 +47,6 @@ class MockWeatherBloc extends MockBloc<WeatherEvent, WeatherState>
 class MockNavigationBloc extends MockBloc<NavigationEvent, NavigationState>
     implements NavigationBloc {}
 
-
 // ---------------------------------------------------------------------------
 // Test data — timestamps use DateTime.now() so staleness indicator stays hidden
 // in existing tests (fresh data). Staleness tests use explicit old timestamps.
@@ -55,7 +54,7 @@ class MockNavigationBloc extends MockBloc<NavigationEvent, NavigationState>
 
 final _now = DateTime.now();
 
-final _clearCondition = WeatherCondition.clear(timestamp: _now);
+final _clearCondition = WeatherCondition.simulatedClear(timestamp: _now);
 
 final _lightSnow = WeatherCondition(
   precipType: PrecipitationType.snow,
@@ -64,6 +63,8 @@ final _lightSnow = WeatherCondition(
   visibilityMeters: 3000,
   windSpeedKmh: 15,
   timestamp: _now,
+  source: ObservationSource.measured,
+  iceRisk: false,
 );
 
 final _heavySnow = WeatherCondition(
@@ -74,6 +75,7 @@ final _heavySnow = WeatherCondition(
   windSpeedKmh: 40,
   iceRisk: true,
   timestamp: _now,
+  source: ObservationSource.measured,
 );
 
 final _iceOnly = WeatherCondition(
@@ -84,6 +86,7 @@ final _iceOnly = WeatherCondition(
   windSpeedKmh: 5,
   iceRisk: true,
   timestamp: _now,
+  source: ObservationSource.measured,
 );
 
 // ---------------------------------------------------------------------------
@@ -110,10 +113,9 @@ Widget _buildWidget(WeatherBloc weatherBloc, NavigationBloc navBloc) {
 
 void main() {
   setUpAll(() {
-    registerFallbackValue(const SafetyAlertReceived(
-      message: '',
-      severity: AlertSeverity.info,
-    ));
+    registerFallbackValue(
+      const SafetyAlertReceived(message: '', severity: AlertSeverity.info),
+    );
   });
 
   group('WeatherStatusBar', () {
@@ -127,8 +129,9 @@ void main() {
     });
 
     testWidgets('renders nothing when no condition available', (tester) async {
-      when(() => weatherBloc.state)
-          .thenReturn(const WeatherState.unavailable());
+      when(
+        () => weatherBloc.state,
+      ).thenReturn(const WeatherState.unavailable());
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -139,10 +142,12 @@ void main() {
     });
 
     testWidgets('shows precipitation label for clear weather', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _clearCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _clearCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -150,10 +155,9 @@ void main() {
     });
 
     testWidgets('shows precipitation label for light snow', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -161,10 +165,9 @@ void main() {
     });
 
     testWidgets('shows temperature', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -172,10 +175,9 @@ void main() {
     });
 
     testWidgets('shows visibility', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -183,22 +185,24 @@ void main() {
     });
 
     testWidgets('shows snow icon for snowing conditions', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
       expect(find.byIcon(Icons.cloudy_snowing), findsOneWidget);
     });
 
-    testWidgets('shows sun icon for clear non-freezing weather',
-        (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _clearCondition,
-      ));
+    testWidgets('shows sun icon for clear non-freezing weather', (
+      tester,
+    ) async {
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _clearCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -213,11 +217,12 @@ void main() {
         visibilityMeters: 500,
         windSpeedKmh: 30,
         timestamp: _now,
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: heavyNoIce,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: heavyNoIce),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -225,10 +230,9 @@ void main() {
     });
 
     testWidgets('shows ICE badge when iceRisk', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _heavySnow,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _heavySnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -236,36 +240,43 @@ void main() {
     });
 
     testWidgets(
-        'widget-mediated coupling: dispatches SafetyAlertReceived on hazardous transition',
-        (tester) async {
-      // Set up stream BEFORE building widget so BlocConsumer subscribes to it
-      final controller = StreamController<WeatherState>.broadcast();
-      whenListen(
-        weatherBloc,
-        controller.stream,
-        initialState: WeatherState(
-          status: WeatherStatus.monitoring,
-          condition: _lightSnow,
-        ),
-      );
+      'widget-mediated coupling: dispatches SafetyAlertReceived on hazardous transition',
+      (tester) async {
+        // Set up stream BEFORE building widget so BlocConsumer subscribes to it
+        final controller = StreamController<WeatherState>.broadcast();
+        whenListen(
+          weatherBloc,
+          controller.stream,
+          initialState: WeatherState(
+            status: WeatherStatus.monitoring,
+            condition: _lightSnow,
+          ),
+        );
 
-      await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
+        await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
-      // Emit hazardous state — triggers listenWhen (prev not hazardous, curr hazardous)
-      controller.add(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _iceOnly,
-      ));
-      await tester.pumpAndSettle();
+        // Emit hazardous state — triggers listenWhen (prev not hazardous, curr hazardous)
+        controller.add(
+          WeatherState(status: WeatherStatus.monitoring, condition: _iceOnly),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify SafetyAlertReceived was dispatched to NavigationBloc
-      verify(() => navBloc.add(any(
-        that: isA<SafetyAlertReceived>()
-            .having((e) => e.severity, 'severity', AlertSeverity.critical),
-      ))).called(1);
+        // Verify SafetyAlertReceived was dispatched to NavigationBloc
+        verify(
+          () => navBloc.add(
+            any(
+              that: isA<SafetyAlertReceived>().having(
+                (e) => e.severity,
+                'severity',
+                AlertSeverity.critical,
+              ),
+            ),
+          ),
+        ).called(1);
 
-      await controller.close();
-    });
+        await controller.close();
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -283,10 +294,12 @@ void main() {
     });
 
     testWidgets('no staleness indicator for fresh data', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow, // timestamp = _now (fresh)
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: _lightSnow, // timestamp = _now (fresh)
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -295,8 +308,9 @@ void main() {
       expect(find.textContaining('h ago'), findsNothing);
     });
 
-    testWidgets('shows amber elapsed time for stale data (15m old)',
-        (tester) async {
+    testWidgets('shows amber elapsed time for stale data (15m old)', (
+      tester,
+    ) async {
       final staleCondition = WeatherCondition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.light,
@@ -304,11 +318,15 @@ void main() {
         visibilityMeters: 3000,
         windSpeedKmh: 15,
         timestamp: _now.subtract(const Duration(minutes: 15)),
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: staleCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: staleCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -316,8 +334,9 @@ void main() {
       expect(find.text('STALE'), findsNothing);
     });
 
-    testWidgets('shows red STALE badge for critically stale data (45m old)',
-        (tester) async {
+    testWidgets('shows red STALE badge for critically stale data (45m old)', (
+      tester,
+    ) async {
       final criticalCondition = WeatherCondition(
         precipType: PrecipitationType.snow,
         intensity: PrecipitationIntensity.moderate,
@@ -325,11 +344,15 @@ void main() {
         visibilityMeters: 1500,
         windSpeedKmh: 20,
         timestamp: _now.subtract(const Duration(minutes: 45)),
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: criticalCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: criticalCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -344,11 +367,15 @@ void main() {
         visibilityMeters: 10000,
         windSpeedKmh: 0,
         timestamp: _now.subtract(const Duration(minutes: 20)),
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: veryOldCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: veryOldCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -378,11 +405,12 @@ void main() {
       );
     });
 
-    testWidgets('WeatherStatusBar is a StatefulWidget with timer', (tester) async {
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: _lightSnow,
-      ));
+    testWidgets('WeatherStatusBar is a StatefulWidget with timer', (
+      tester,
+    ) async {
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(status: WeatherStatus.monitoring, condition: _lightSnow),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 
@@ -393,8 +421,9 @@ void main() {
       expect(state, isNotNull);
     });
 
-    testWidgets('periodic timer triggers rebuild (stale data updates)',
-        (tester) async {
+    testWidgets('periodic timer triggers rebuild (stale data updates)', (
+      tester,
+    ) async {
       // Use data that is already stale (12 minutes old).
       // The periodic timer fires after 30s and triggers setState(),
       // which rebuilds the staleness indicator. We verify the rebuild
@@ -411,11 +440,15 @@ void main() {
         visibilityMeters: 3000,
         windSpeedKmh: 15,
         timestamp: DateTime.now().subtract(const Duration(minutes: 12)),
+        source: ObservationSource.measured,
+        iceRisk: false,
       );
-      when(() => weatherBloc.state).thenReturn(WeatherState(
-        status: WeatherStatus.monitoring,
-        condition: staleCondition,
-      ));
+      when(() => weatherBloc.state).thenReturn(
+        WeatherState(
+          status: WeatherStatus.monitoring,
+          condition: staleCondition,
+        ),
+      );
 
       await tester.pumpWidget(_buildWidget(weatherBloc, navBloc));
 

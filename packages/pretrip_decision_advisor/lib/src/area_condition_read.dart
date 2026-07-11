@@ -44,10 +44,11 @@ class AreaConditionRead {
     required this.areaLabel,
   });
 
-  /// Peak forecast hazard over the look-ahead window. Only meaningful when
-  /// [forecastCovered] is true; when the window is uncovered this is
-  /// [HourHazard.clear] as a non-asserted placeholder (the chip layer shows
-  /// "not covered", never a band).
+  /// Peak forecast hazard over the look-ahead window.
+  ///
+  /// [HourHazard.unknown] when [forecastCovered] is false — the forecast did
+  /// not cover the window, so no band is asserted. Up to 0.5.1 this was
+  /// [HourHazard.clear], which read as good news about hours nobody forecast.
   final HourHazard areaHazard;
 
   /// False ⇒ the forecast does not cover the window; the band is NOT asserted.
@@ -145,8 +146,11 @@ AreaConditionRead summarizeAreaConditions({
   final bool forecastCovered = slots.isNotEmpty;
   final HourHazard areaHazard = forecastCovered
       ? slots.map(advisor.hazardOf).reduce(_worse)
-      // Non-asserted placeholder: the chip layer shows "not covered", not a band.
-      : HourHazard.clear;
+      // NOT HourHazard.clear. The forecast did not cover the window; nothing is
+      // claimed. The chip layer shows "not covered", never a band — and now the
+      // VALUE itself says so too, so a consumer reading `areaHazard` without
+      // checking `forecastCovered` can no longer print "clear".
+      : HourHazard.unknown;
 
   return AreaConditionRead(
     areaHazard: areaHazard,
@@ -190,8 +194,10 @@ List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
   chips.add(r.measuredVisibilityMeters != null
       ? m.areaMeasuredVisibility(
           r.measuredVisibilityMeters!,
-          r.visibilityStationName ?? '',
-          r.visibilityDistanceKm ?? 0,
+          // Nullable through: an unknown station distance is NOT 0 km ("taken
+          // at your location"), and an unnamed station is NOT ''.
+          r.visibilityStationName,
+          r.visibilityDistanceKm,
         )
       : m.areaNoMeasuredVisibility());
 

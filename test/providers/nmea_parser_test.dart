@@ -78,9 +78,7 @@ void main() {
 
     test('void RMC (status V) → null', () {
       final parser = NmeaParser();
-      final pos = parser.parseLine(
-        r'$GPRMC,123519,V,,,,,,,230394,,*33',
-      );
+      final pos = parser.parseLine(r'$GPRMC,123519,V,,,,,,,230394,,*33');
       expect(pos, isNull);
     });
   });

@@ -47,6 +47,32 @@ class WeatherConditionReceived extends WeatherEvent {
   List<Object?> get props => [condition];
 }
 
+/// The provider could not refresh, and re-emitted the LAST KNOWN condition
+/// with its real age.
+///
+/// Internal event. Up to driving_weather 0.4.4 a failed fetch silently
+/// re-emitted the old condition with a fresh timestamp, so stale data was
+/// indistinguishable from fresh data on the driver's screen. The provider now
+/// emits `WeatherStale(lastKnown, observedAt, age, cause)`, and the app carries
+/// the age so it can SAY how old the reading is.
+class WeatherStaleConditionReceived extends WeatherEvent {
+  final WeatherCondition lastKnown;
+  final Duration age;
+
+  const WeatherStaleConditionReceived(this.lastKnown, this.age);
+
+  @override
+  List<Object?> get props => [lastKnown, age];
+}
+
+/// The provider has NO condition at all — it never got one, or it lost it.
+///
+/// Internal event. This replaces SILENCE, which the UI could not distinguish
+/// from "not fetched yet".
+class WeatherConditionUnavailable extends WeatherEvent {
+  const WeatherConditionUnavailable();
+}
+
 /// The weather provider reported an error.
 class WeatherErrorOccurred extends WeatherEvent {
   final String message;

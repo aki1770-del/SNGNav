@@ -113,7 +113,9 @@ void main() {
       expect(FluoriteCameraMode.values, hasLength(3));
       expect(FluoriteCameraMode.values, contains(FluoriteCameraMode.freeOrbit));
       expect(
-          FluoriteCameraMode.values, contains(FluoriteCameraMode.followVehicle));
+        FluoriteCameraMode.values,
+        contains(FluoriteCameraMode.followVehicle),
+      );
       expect(FluoriteCameraMode.values, contains(FluoriteCameraMode.birdsEye));
     });
   });
@@ -130,27 +132,18 @@ void main() {
     });
 
     test('disposeScene rejects with UnimplementedError', () {
-      expectLater(
-        api.disposeScene(),
-        throwsA(isA<UnimplementedError>()),
-      );
+      expectLater(api.disposeScene(), throwsA(isA<UnimplementedError>()));
     });
 
     test('createEntity rejects with UnimplementedError', () {
       expectLater(
-        api.createEntity(
-          type: 'vehicle',
-          position: const LatLng(35.0, 137.0),
-        ),
+        api.createEntity(type: 'vehicle', position: const LatLng(35.0, 137.0)),
         throwsA(isA<UnimplementedError>()),
       );
     });
 
     test('destroyEntity rejects with UnimplementedError', () {
-      expectLater(
-        api.destroyEntity(1),
-        throwsA(isA<UnimplementedError>()),
-      );
+      expectLater(api.destroyEntity(1), throwsA(isA<UnimplementedError>()));
     });
 
     test('updateEntityPosition rejects with UnimplementedError', () {
@@ -178,17 +171,11 @@ void main() {
     });
 
     test('clearRoute rejects with UnimplementedError', () {
-      expectLater(
-        api.clearRoute(),
-        throwsA(isA<UnimplementedError>()),
-      );
+      expectLater(api.clearRoute(), throwsA(isA<UnimplementedError>()));
     });
 
     test('getSceneInfo rejects with UnimplementedError', () {
-      expectLater(
-        api.getSceneInfo(),
-        throwsA(isA<UnimplementedError>()),
-      );
+      expectLater(api.getSceneInfo(), throwsA(isA<UnimplementedError>()));
     });
 
     test('error message references native renderer unavailability', () async {

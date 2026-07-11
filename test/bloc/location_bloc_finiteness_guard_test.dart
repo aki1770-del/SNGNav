@@ -221,8 +221,9 @@ void main() {
       build: () => LocationBloc(provider: provider),
       seed: () => const LocationState.acquiring(),
       act: (bloc) => bloc.add(LocationPositionReceived(zeroZero)),
-      expect: () =>
-          [LocationState(quality: LocationQuality.fix, position: zeroZero)],
+      expect: () => [
+        LocationState(quality: LocationQuality.fix, position: zeroZero),
+      ],
     );
 
     blocTest<LocationBloc, LocationState>(
@@ -230,8 +231,9 @@ void main() {
       build: () => LocationBloc(provider: provider),
       seed: () => const LocationState.acquiring(),
       act: (bloc) => bloc.add(LocationPositionReceived(southWest)),
-      expect: () =>
-          [LocationState(quality: LocationQuality.fix, position: southWest)],
+      expect: () => [
+        LocationState(quality: LocationQuality.fix, position: southWest),
+      ],
     );
 
     blocTest<LocationBloc, LocationState>(
@@ -239,8 +241,9 @@ void main() {
       build: () => LocationBloc(provider: provider),
       seed: () => const LocationState.acquiring(),
       act: (bloc) => bloc.add(LocationPositionReceived(highLat)),
-      expect: () =>
-          [LocationState(quality: LocationQuality.fix, position: highLat)],
+      expect: () => [
+        LocationState(quality: LocationQuality.fix, position: highLat),
+      ],
     );
 
     blocTest<LocationBloc, LocationState>(
@@ -248,12 +251,16 @@ void main() {
       'unknown, flows to degraded with a finite, placeable position',
       build: () => LocationBloc(provider: provider),
       seed: () => const LocationState.acquiring(),
-      act: (bloc) => bloc.add(LocationPositionReceived(GeoPosition(
-        latitude: 35.1709,
-        longitude: 136.8815,
-        accuracy: double.nan, // unknown accuracy — NOT a poison
-        timestamp: DateTime(2026, 2, 27, 10, 0),
-      ))),
+      act: (bloc) => bloc.add(
+        LocationPositionReceived(
+          GeoPosition(
+            latitude: 35.1709,
+            longitude: 136.8815,
+            accuracy: double.nan, // unknown accuracy — NOT a poison
+            timestamp: DateTime(2026, 2, 27, 10, 0),
+          ),
+        ),
+      ),
       expect: () => [
         isA<LocationState>()
             .having((s) => s.quality, 'quality', LocationQuality.degraded)
@@ -272,9 +279,9 @@ void main() {
   // (CenterChanged(LatLng(pos.latitude, pos.longitude)) -> mapController.move).
   // -------------------------------------------------------------------------
   group('snow_scene follow camera — stays finite after a NaN fix', () {
-    testWidgets(
-        'a NaN fix does not teleport / corrupt the map camera center',
-        (tester) async {
+    testWidgets('a NaN fix does not teleport / corrupt the map camera center', (
+      tester,
+    ) async {
       final bloc = LocationBloc(provider: MockLocationProvider());
       final mapController = MapController();
       const tokyo = LatLng(35.6812, 139.7671); // initial — distinct from fix
@@ -322,12 +329,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 20));
 
       // Render-grade assertion: camera center FINITE and held at last good.
-      expect(mapController.camera.center.latitude.isFinite, isTrue,
-          reason: 'NaN fix must not corrupt the map camera latitude');
-      expect(mapController.camera.center.longitude.isFinite, isTrue,
-          reason: 'NaN fix must not corrupt the map camera longitude');
-      expect(mapController.camera.center.latitude, closeTo(35.1709, 0.5),
-          reason: 'camera must hold the last good position');
+      expect(
+        mapController.camera.center.latitude.isFinite,
+        isTrue,
+        reason: 'NaN fix must not corrupt the map camera latitude',
+      );
+      expect(
+        mapController.camera.center.longitude.isFinite,
+        isTrue,
+        reason: 'NaN fix must not corrupt the map camera longitude',
+      );
+      expect(
+        mapController.camera.center.latitude,
+        closeTo(35.1709, 0.5),
+        reason: 'camera must hold the last good position',
+      );
 
       // Cleanup: stop cancels the stale watchdog timer; close disposes the
       // provider. Both are driven via pump (not awaited) to avoid a fake-async
@@ -387,8 +403,11 @@ void main() {
         LocationState(quality: LocationQuality.stale, position: _goodFix),
       ],
       verify: (bloc) {
-        expect(bloc.state.quality, LocationQuality.stale,
-            reason: 'dead GPS must age to stale, never masquerade as live');
+        expect(
+          bloc.state.quality,
+          LocationQuality.stale,
+          reason: 'dead GPS must age to stale, never masquerade as live',
+        );
         expect(_isFinitePos(bloc.state.position), isTrue);
       },
     );

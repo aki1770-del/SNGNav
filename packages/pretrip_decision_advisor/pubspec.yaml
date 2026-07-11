@@ -2,7 +2,7 @@ name: pretrip_decision_advisor
 description: >-
   Pure Dart pre-trip departure-timing decision advisor for snow-zone
   navigation: a contract plus a working reference advisor and visibility merge.
-version: 0.5.1
+version: 0.6.0
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues

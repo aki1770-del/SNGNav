@@ -34,8 +34,7 @@ void main() {
       final level = (await manager.getProperty(
         _managerIface,
         'AvailableAccuracyLevel',
-      ))
-          .asUint32();
+      )).asUint32();
 
       // Accuracy levels: 0=none, 1=country, 4=city, 5=neighborhood,
       // 6=street, 7=exact(wifi), 8=exact(gps)
@@ -76,120 +75,117 @@ void main() {
     }
   });
 
-  test('GeoClue2 D-Bus probe — client lifecycle', () async {
-    DBusClient? bus;
-    try {
-      bus = DBusClient.system();
+  test(
+    'GeoClue2 D-Bus probe — client lifecycle',
+    () async {
+      DBusClient? bus;
+      try {
+        bus = DBusClient.system();
 
-      final manager = DBusRemoteObject(
-        bus,
-        name: _busName,
-        path: DBusObjectPath(_managerPath),
-      );
+        final manager = DBusRemoteObject(
+          bus,
+          name: _busName,
+          path: DBusObjectPath(_managerPath),
+        );
 
-      // Get client.
-      final result = await manager.callMethod(
-        _managerIface,
-        'GetClient',
-        [],
-        replySignature: DBusSignature('o'),
-      );
-      final clientPath = result.returnValues[0].asObjectPath();
-      final client = DBusRemoteObject(
-        bus,
-        name: _busName,
-        path: clientPath,
-      );
+        // Get client.
+        final result = await manager.callMethod(
+          _managerIface,
+          'GetClient',
+          [],
+          replySignature: DBusSignature('o'),
+        );
+        final clientPath = result.returnValues[0].asObjectPath();
+        final client = DBusRemoteObject(bus, name: _busName, path: clientPath);
 
-      // Set DesktopId — required before Start.
-      await client.setProperty(
-        _clientIface,
-        'DesktopId',
-        DBusString('sngnav-snow-scene'),
-      );
-      // ignore: avoid_print
-      print('DesktopId set');
+        // Set DesktopId — required before Start.
+        await client.setProperty(
+          _clientIface,
+          'DesktopId',
+          DBusString('sngnav-snow-scene'),
+        );
+        // ignore: avoid_print
+        print('DesktopId set');
 
-      // Set accuracy.
-      await client.setProperty(
-        _clientIface,
-        'RequestedAccuracyLevel',
-        DBusUint32(8),
-      );
-      // ignore: avoid_print
-      print('RequestedAccuracyLevel set');
+        // Set accuracy.
+        await client.setProperty(
+          _clientIface,
+          'RequestedAccuracyLevel',
+          DBusUint32(8),
+        );
+        // ignore: avoid_print
+        print('RequestedAccuracyLevel set');
 
-      // Listen for signals.
-      final signalStream = DBusSignalStream(
-        bus,
-        sender: _busName,
-        interface: _clientIface,
-        name: 'LocationUpdated',
-        path: clientPath,
-      );
+        // Listen for signals.
+        final signalStream = DBusSignalStream(
+          bus,
+          sender: _busName,
+          interface: _clientIface,
+          name: 'LocationUpdated',
+          path: clientPath,
+        );
 
-      String? locationResult;
-      final sub = signalStream.listen((signal) async {
+        String? locationResult;
+        final sub = signalStream.listen((signal) async {
+          try {
+            final locationPath = signal.values[1].asObjectPath();
+            final location = DBusRemoteObject(
+              bus!,
+              name: _busName,
+              path: locationPath,
+            );
+
+            final lat = (await location.getProperty(
+              _locationIface,
+              'Latitude',
+            )).asDouble();
+            final lon = (await location.getProperty(
+              _locationIface,
+              'Longitude',
+            )).asDouble();
+            final acc = (await location.getProperty(
+              _locationIface,
+              'Accuracy',
+            )).asDouble();
+
+            locationResult = 'lat=$lat, lon=$lon, acc=${acc}m';
+          } catch (e) {
+            locationResult = 'signal error: $e';
+          }
+        });
+
+        // Start.
         try {
-          final locationPath = signal.values[1].asObjectPath();
-          final location = DBusRemoteObject(
-            bus!,
-            name: _busName,
-            path: locationPath,
-          );
+          await client.callMethod(_clientIface, 'Start', []);
+          // ignore: avoid_print
+          print('Client started — waiting 5s for location...');
 
-          final lat = (await location.getProperty(
-            _locationIface,
-            'Latitude',
-          ))
-              .asDouble();
-          final lon = (await location.getProperty(
-            _locationIface,
-            'Longitude',
-          ))
-              .asDouble();
-          final acc = (await location.getProperty(
-            _locationIface,
-            'Accuracy',
-          ))
-              .asDouble();
+          // Wait up to 5 seconds.
+          for (var i = 0; i < 50 && locationResult == null; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+          }
 
-          locationResult = 'lat=$lat, lon=$lon, acc=${acc}m';
+          if (locationResult != null) {
+            // ignore: avoid_print
+            print('LOCATION RECEIVED: $locationResult');
+          } else {
+            // ignore: avoid_print
+            print('No location received within 5 seconds');
+          }
         } catch (e) {
-          locationResult = 'signal error: $e';
-        }
-      });
-
-      // Start.
-      try {
-        await client.callMethod(_clientIface, 'Start', []);
-        // ignore: avoid_print
-        print('Client started — waiting 5s for location...');
-
-        // Wait up to 5 seconds.
-        for (var i = 0; i < 50 && locationResult == null; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 100));
-        }
-
-        if (locationResult != null) {
           // ignore: avoid_print
-          print('LOCATION RECEIVED: $locationResult');
-        } else {
-          // ignore: avoid_print
-          print('No location received within 5 seconds');
+          print('Start failed: $e');
         }
-      } catch (e) {
-        // ignore: avoid_print
-        print('Start failed: $e');
+
+        // Clean up.
+        await sub.cancel();
+        try {
+          await client.callMethod(_clientIface, 'Stop', []);
+        } catch (_) {}
+      } finally {
+        await bus?.close();
       }
-
-      // Clean up.
-      await sub.cancel();
-      try {
-        await client.callMethod(_clientIface, 'Stop', []);
-      } catch (_) {}
-    } finally {
-      await bus?.close();
-    }
-  }, timeout: const Timeout(Duration(seconds: 15)));
+    },
+    timeout: const Timeout(Duration(seconds: 15)),
+  );
 }

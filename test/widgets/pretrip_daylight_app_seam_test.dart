@@ -30,9 +30,15 @@ void main() {
     issuedAt: issued,
     hourly: [
       HourlyForecast(
-          hour: DateTime(2026, 1, 15, 17), tempCelsius: 3, visibilityMeters: 8000),
+        hour: DateTime(2026, 1, 15, 17),
+        tempCelsius: 3,
+        visibilityMeters: 8000,
+      ),
       HourlyForecast(
-          hour: DateTime(2026, 1, 15, 18), tempCelsius: 3, visibilityMeters: 8000),
+        hour: DateTime(2026, 1, 15, 18),
+        tempCelsius: 3,
+        visibilityMeters: 8000,
+      ),
     ],
   );
   // Departure 17:45, +30 min → arrival 18:15. Akita sunset is ~16:30 in
@@ -95,25 +101,39 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('daylight chip reaches the card (en) when geo is wired',
-      (tester) async {
+  testWidgets('daylight chip reaches the card (en) when geo is wired', (
+    tester,
+  ) async {
     await pumpCard(tester, briefFor('en', wireGeo: true));
-    expect(find.textContaining('past sunset'), findsWidgets,
-        reason: 'the postDusk daylight chip must render when geo is wired');
+    expect(
+      find.textContaining('past sunset'),
+      findsWidgets,
+      reason: 'the postDusk daylight chip must render when geo is wired',
+    );
   });
 
-  testWidgets('daylight chip reaches the card (ja) when geo is wired',
-      (tester) async {
+  testWidgets('daylight chip reaches the card (ja) when geo is wired', (
+    tester,
+  ) async {
     await pumpCard(tester, briefFor('ja', wireGeo: true));
-    expect(find.textContaining('日の入り'), findsWidgets,
-        reason: 'the JA postDusk daylight chip must render when geo is wired');
+    expect(
+      find.textContaining('日の入り'),
+      findsWidgets,
+      reason: 'the JA postDusk daylight chip must render when geo is wired',
+    );
   });
 
-  testWidgets('NO daylight chip when geo is unwired (the reach regression guard)',
-      (tester) async {
-    await pumpCard(tester, briefFor('en', wireGeo: false));
-    expect(find.textContaining('past sunset'), findsNothing,
-        reason: 'dropping `geo: geo` must drop the daylight chip — '
-            'this is the capability-without-reach regression');
-  });
+  testWidgets(
+    'NO daylight chip when geo is unwired (the reach regression guard)',
+    (tester) async {
+      await pumpCard(tester, briefFor('en', wireGeo: false));
+      expect(
+        find.textContaining('past sunset'),
+        findsNothing,
+        reason:
+            'dropping `geo: geo` must drop the daylight chip — '
+            'this is the capability-without-reach regression',
+      );
+    },
+  );
 }

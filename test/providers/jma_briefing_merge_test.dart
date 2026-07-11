@@ -10,28 +10,32 @@ void main() {
 
   // A Japan-shaped forecast: temperature only, no visibility, no road state —
   // exactly what the MET Norway compact product yields for Nagoya.
-  HourlyForecast jpSlot(int hour, {double temp = -2}) => HourlyForecast(
-        hour: DateTime(2026, 1, 1, hour),
-        tempCelsius: temp,
-      );
+  HourlyForecast jpSlot(int hour, {double temp = -2}) =>
+      HourlyForecast(hour: DateTime(2026, 1, 1, hour), tempCelsius: temp);
 
   WeatherForecast jpForecast() => WeatherForecast(
-        hourly: [jpSlot(7), jpSlot(8), jpSlot(9)],
-        issuedAt: issued,
-      );
+    hourly: [jpSlot(7), jpSlot(8), jpSlot(9)],
+    issuedAt: issued,
+  );
 
   group('roadConditionForJmaSnowAdvisory', () {
     test('大雪警報 → packedSnow', () {
-      expect(roadConditionForJmaSnowAdvisory('大雪警報'),
-          RoadConditionEstimate.packedSnow);
+      expect(
+        roadConditionForJmaSnowAdvisory('大雪警報'),
+        RoadConditionEstimate.packedSnow,
+      );
     });
     test('暴風雪警報 → packedSnow', () {
-      expect(roadConditionForJmaSnowAdvisory('暴風雪警報'),
-          RoadConditionEstimate.packedSnow);
+      expect(
+        roadConditionForJmaSnowAdvisory('暴風雪警報'),
+        RoadConditionEstimate.packedSnow,
+      );
     });
     test('着雪注意報 → ice', () {
-      expect(roadConditionForJmaSnowAdvisory('着雪注意報'),
-          RoadConditionEstimate.ice);
+      expect(
+        roadConditionForJmaSnowAdvisory('着雪注意報'),
+        RoadConditionEstimate.ice,
+      );
     });
     test('non-snow advisory → null', () {
       expect(roadConditionForJmaSnowAdvisory('強風注意報'), isNull);
@@ -92,8 +96,10 @@ void main() {
         windowStart: windowStart,
         windowDuration: windowDuration,
       );
-      expect(merged.hourly.single.estimatedRoadCondition,
-          RoadConditionEstimate.wet);
+      expect(
+        merged.hourly.single.estimatedRoadCondition,
+        RoadConditionEstimate.wet,
+      );
     });
 
     test('a non-snow advisory is a no-op', () {
@@ -115,8 +121,10 @@ void main() {
         routeIdentifiers: const ['jp'],
         flexibility: CommuteFlexibility.discretionary,
       );
-      const profile =
-          DriverProfileSpec(profileTag: 'jp', reactionTimeSeconds: 1.5);
+      const profile = DriverProfileSpec(
+        profileTag: 'jp',
+        reactionTimeSeconds: 1.5,
+      );
 
       // Before: temperature-only JP forecast — the advisor sees no snow/ice.
       final before = advisor.brief(

@@ -47,7 +47,7 @@ void main() {
       ));
       expect(a.surfaceState, RoadSurfaceState.compactedSnow);
       // heavy precip → 300 m visibility proxy → strong fog opacity
-      expect(a.visibility.opacity, greaterThan(0.5));
+      expect(a.visibility!.opacity, greaterThan(0.5));
     });
 
     test('moderate rain, warm, good grip → wet + mild fog', () {
@@ -58,8 +58,8 @@ void main() {
       ));
       expect(a.surfaceState, RoadSurfaceState.wet);
       // moderate precip → 800 m → some, but not heavy, fog
-      expect(a.visibility.opacity, greaterThan(0.0));
-      expect(a.visibility.opacity, lessThan(0.5));
+      expect(a.visibility!.opacity, greaterThan(0.0));
+      expect(a.visibility!.opacity, lessThan(0.5));
     });
 
     test('TCS engaged on a COLD road → ice risk → black ice', () {
@@ -126,7 +126,7 @@ void main() {
     test('HysteresisFilter debounces a single-frame surface flip', () async {
       final source = StreamController<VehicleConditionSignals>();
       final fusion = VehicleConditionFusion(signals: source.stream);
-      final surfaces = <RoadSurfaceState>[];
+      final surfaces = <RoadSurfaceState?>[];
       final sub = fusion.conditions.listen((u) {
         if (u.assessment != null) surfaces.add(u.assessment!.surfaceState);
       });
@@ -135,18 +135,21 @@ void main() {
       source.add(const VehicleConditionSignals(
         roadFriction: 0.95,
         airTempC: 5.0,
+        wiperIntensity: 0,
       ));
       await pumpEventQueue();
       // one icy reading (should be HELD — below the hysteresis threshold)
       source.add(const VehicleConditionSignals(
         roadFriction: 0.2,
         airTempC: 5.0,
+        wiperIntensity: 0,
       ));
       await pumpEventQueue();
       // a second icy reading (now persists → flip allowed)
       source.add(const VehicleConditionSignals(
         roadFriction: 0.2,
         airTempC: 5.0,
+        wiperIntensity: 0,
       ));
       await pumpEventQueue();
 
@@ -232,7 +235,7 @@ void main() {
       final source = StreamController<VehicleConditionSignals>();
       final fusion = VehicleConditionFusion.fromPartialFrames(
         partialFrames: source.stream,
-        surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+        surfaceFilter: HysteresisFilter<RoadSurfaceState?>(threshold: 1),
       );
       final updates = <VehicleConditionUpdate>[];
       final sub = fusion.conditions.listen(updates.add);
@@ -265,7 +268,7 @@ void main() {
       final source = StreamController<VehicleConditionSignals>();
       final fusion = VehicleConditionFusion(
         signals: source.stream,
-        surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+        surfaceFilter: HysteresisFilter<RoadSurfaceState?>(threshold: 1),
       );
       final updates = <VehicleConditionUpdate>[];
       final sub = fusion.conditions.listen(updates.add);

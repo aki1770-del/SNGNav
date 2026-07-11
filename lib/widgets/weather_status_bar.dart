@@ -96,7 +96,11 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
         // a dew-point INFERENCE (no surface measurement), so it alerts at
         // warning tier — mirroring the pre-trip surface's milder tier for
         // the same window, and keeping critical trustworthy.
-        final severity = condition.iceRisk
+        //
+        // `iceRisk` is now `bool?`: only an explicit `true` is evidence of ice.
+        // A null (NOT MEASURED) is not ice — and it is not no-ice either; it
+        // simply is not the reason this fired.
+        final severity = condition.iceRisk == true
             ? AlertSeverity.critical
             : AlertSeverity.warning;
 
@@ -107,7 +111,12 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
       },
       builder: (context, state) {
         if (!state.hasCondition) {
-          return const SizedBox.shrink();
+          // NO CONDITION AT ALL. Up to now this rendered SizedBox.shrink() —
+          // nothing. Silence on a safety surface reads as "nothing is wrong",
+          // which is the same green light the type system just removed. Say it.
+          return state.isMonitoring
+              ? const _ConditionsUnknownBar()
+              : const SizedBox.shrink();
         }
 
         final condition = state.condition!;
@@ -118,8 +127,14 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
         // heavy freezing rain names ブラックアイスバーン while the badge
         // reads HAZARD; that path fails safe: it always alerts.)
         final hasIceSurface =
-            condition.iceRisk || _isInvisibleIceWindow(condition);
+            condition.iceRisk == true || _isInvisibleIceWindow(condition);
         final isHazardous = state.isHazardous || hasIceSurface;
+
+        // The THIRD state. Not hazardous, and NOT known-benign: the feed
+        // answered partially (or an authority declared something nobody
+        // measured), so the road could not be assessed. It gets its own
+        // chrome — never the calm chrome of "not hazardous".
+        final isUnknown = !isHazardous && state.isConditionUnknown;
 
         return Container(
           width: double.infinity,
@@ -127,11 +142,17 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
           decoration: BoxDecoration(
             color: isHazardous
                 ? Colors.red.shade50.withAlpha(230)
-                : Colors.white.withAlpha(220),
+                : isUnknown
+                    ? Colors.blueGrey.shade50.withAlpha(235)
+                    : Colors.white.withAlpha(220),
             border: Border(
               bottom: BorderSide(
-                color: isHazardous ? Colors.red.shade300 : Colors.grey.shade300,
-                width: isHazardous ? 2 : 1,
+                color: isHazardous
+                    ? Colors.red.shade300
+                    : isUnknown
+                        ? Colors.blueGrey.shade400
+                        : Colors.grey.shade300,
+                width: isHazardous || isUnknown ? 2 : 1,
               ),
             ),
           ),
@@ -159,26 +180,31 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
               ),
               const SizedBox(width: 12),
 
-              // Temperature
+              // Temperature. `null` = NOT MEASURED — shown as "—", never as a
+              // number we do not have (0.4.4 printed a hardcoded +5.0 °C here
+              // for an empty feed).
               Text(
-                '${condition.temperatureCelsius.toStringAsFixed(0)}°C',
+                condition.temperatureCelsius == null
+                    ? '—°C'
+                    : '${condition.temperatureCelsius!.toStringAsFixed(0)}°C',
                 style: TextStyle(
                   fontSize: 12,
-                  color: condition.isFreezing
+                  color: condition.freezing == SafetyVerdict.hazardous
                       ? Colors.blue.shade700
                       : Colors.grey.shade700,
-                  fontWeight:
-                      condition.isFreezing ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: condition.freezing == SafetyVerdict.hazardous
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               ),
               const SizedBox(width: 12),
 
-              // Visibility
+              // Visibility. `null` = not measured, shown as "not measured".
               Text(
                 'Vis: ${_visibilityLabel(condition.visibilityMeters)}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: condition.hasReducedVisibility
+                  color: condition.reducedVisibility == SafetyVerdict.hazardous
                       ? Colors.orange.shade700
                       : Colors.grey.shade600,
                 ),
@@ -203,6 +229,27 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
                   child: Text(
                     hasIceSurface ? 'ICE' : 'HAZARD',
                     style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+              // The UNKNOWN badge. Visually distinct from both the red hazard
+              // badge and the calm no-badge "all clear": the road was NOT
+              // assessed, and she is told so.
+              if (isUnknown)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.shade600,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '未計測 / NOT MEASURED',
+                    style: TextStyle(
                       color: Colors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -259,10 +306,15 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
   /// REVISITED with that data (do not silently keep the alert; do not
   /// silently gate it).
   static bool _isInvisibleIceWindow(WeatherCondition condition) {
+    // An unmeasured temperature or precipitation type cannot EVIDENCE this
+    // window. It also does not deny it — the window simply is not the thing we
+    // can assert, and the unknown state carries that instead.
+    final temp = condition.temperatureCelsius;
+    if (temp == null) return false;
     return condition.precipType == PrecipitationType.none &&
-        condition.temperatureCelsius > 0 &&
+        temp > 0 &&
         isRadiativeFrostBlackIce(
-          ambientCelsius: condition.temperatureCelsius,
+          ambientCelsius: temp,
           humidityRHPercent: condition.humidityRH,
         );
   }
@@ -290,53 +342,69 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
       final a = invisibleBlackIceAnnouncement;
       return '${a.jaSpokenText}\n${a.enSpokenText}';
     }
-    if (condition.iceRisk) {
+    if (condition.iceRisk == true) {
       final a = RoadSurfaceState.blackIce.announcement!;
       return '${a.jaSpokenText}\n${a.enSpokenText}';
     }
-    if (condition.visibilityMeters < 200) {
-      return 'Visibility critically low (${condition.visibilityMeters.toStringAsFixed(0)}m) — consider stopping';
+    final vis = condition.visibilityMeters;
+    if (vis != null && vis < 200) {
+      return 'Visibility critically low (${vis.toStringAsFixed(0)}m) — consider stopping';
     }
     if (condition.intensity == PrecipitationIntensity.heavy) {
       // Name the classified surface precisely when the vocabulary exists
       // (圧雪 / シャーベット — the terms the driver knows), falling back
       // to the generic line for surfaces without one.
+      //
+      // `fromCondition` is now nullable: a road it cannot classify has no
+      // surface, and no announcement. It is not `dry`.
       final surfaceAnnouncement =
-          RoadSurfaceState.fromCondition(condition).announcement;
+          RoadSurfaceState.fromCondition(condition)?.announcement;
       if (surfaceAnnouncement != null) {
         return '${surfaceAnnouncement.jaSpokenText}\n'
             '${surfaceAnnouncement.enSpokenText}';
       }
-      return 'Heavy ${condition.precipType.name} — reduced traction and visibility';
+      final type = condition.precipType;
+      if (type != null) {
+        return 'Heavy ${type.name} — reduced traction and visibility';
+      }
     }
     return 'Hazardous weather conditions detected';
   }
 
   static IconData _weatherIcon(WeatherCondition condition) {
-    if (condition.iceRisk) return Icons.ac_unit;
+    if (condition.iceRisk == true) return Icons.ac_unit;
 
+    // A `null` precipitation type is NOT "clear" — it is unreported, and the
+    // sun icon would be a claim. The question-mark icon says what is true.
     return switch (condition.precipType) {
       PrecipitationType.snow => Icons.cloudy_snowing,
       PrecipitationType.rain => Icons.water_drop,
       PrecipitationType.sleet => Icons.grain,
       PrecipitationType.hail => Icons.storm,
-      PrecipitationType.none => condition.isFreezing
-          ? Icons.thermostat
-          : Icons.wb_sunny,
+      PrecipitationType.none =>
+        condition.freezing == SafetyVerdict.hazardous
+            ? Icons.thermostat
+            : Icons.wb_sunny,
+      null => Icons.help_outline,
     };
   }
 
   static String _precipLabel(WeatherCondition condition) {
-    if (condition.precipType == PrecipitationType.none) {
-      return condition.isFreezing ? 'Clear / Cold' : 'Clear';
+    final precip = condition.precipType;
+    if (precip == null) return 'Not measured';
+    if (precip == PrecipitationType.none) {
+      return condition.freezing == SafetyVerdict.hazardous
+          ? 'Clear / Cold'
+          : 'Clear';
     }
     final intensity = switch (condition.intensity) {
       PrecipitationIntensity.light => 'Light',
       PrecipitationIntensity.moderate => 'Moderate',
       PrecipitationIntensity.heavy => 'Heavy',
       PrecipitationIntensity.none => '',
+      null => '',
     };
-    final type = switch (condition.precipType) {
+    final type = switch (precip) {
       PrecipitationType.snow => 'Snow',
       PrecipitationType.rain => 'Rain',
       PrecipitationType.sleet => 'Sleet',
@@ -346,7 +414,9 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
     return '$intensity $type'.trim();
   }
 
-  static String _visibilityLabel(double meters) {
+  /// `null` metres = NOT MEASURED. It is not 10 km of clear air.
+  static String _visibilityLabel(double? meters) {
+    if (meters == null) return 'not measured';
     if (meters >= 10000) return '10+ km';
     if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
     return '${meters.toStringAsFixed(0)} m';
@@ -401,5 +471,82 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
     if (minutes < 60) return '${minutes}m ago';
     final hours = age.inHours;
     return '${hours}h ago';
+  }
+}
+
+/// The bar shown when there is NO condition at all.
+///
+/// This widget exists because the alternative was `SizedBox.shrink()` — i.e.
+/// nothing. An empty status bar is indistinguishable from a calm one, so
+/// "we have no data about the road" rendered exactly like "the road is fine".
+/// That is the same green-light-on-absence defect the Measured-or-Absent
+/// contract removed from the type system, reappearing at the reach layer, on
+/// the surface HER eyes are actually on.
+///
+/// ja FIRST: the driver this app anchors on reads Japanese, and the moment the
+/// feed dies in Akita is precisely the moment an English-only sentence becomes
+/// silence.
+class _ConditionsUnknownBar extends StatelessWidget {
+  const _ConditionsUnknownBar();
+
+  @override
+  Widget build(BuildContext context) {
+    // The catalog owns the words (snow_rendering's absence-tier announcement),
+    // so the app, the voice lane and the packages cannot drift apart.
+    final a = conditionsUnknownAnnouncement;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50.withAlpha(235),
+        border: Border(
+          bottom: BorderSide(color: Colors.blueGrey.shade400, width: 2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.help_outline, size: 20, color: Colors.blueGrey.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  a.jaSpokenText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey.shade900,
+                  ),
+                ),
+                Text(
+                  a.enSpokenText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.blueGrey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.shade600,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'NO DATA',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

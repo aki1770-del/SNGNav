@@ -33,12 +33,13 @@ void main() {
       markTestSkipped('QUANT_RAW_DIR not set — measurement harness only');
       return;
     }
-    final files = Directory(rawDir)
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.json'))
-        .toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final files =
+        Directory(rawDir)
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.json'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
     expect(files, isNotEmpty);
 
     const advisor = SnowAwarePretripAdvisor();
@@ -75,26 +76,30 @@ void main() {
       final nSev = hazards.where((h) => h == HourHazard.severe).length;
       totalSevere += nSev;
 
-      final horizonH =
-          slots.last.hour.difference(slots.first.hour).inHours + 1;
+      final horizonH = slots.last.hour.difference(slots.first.hour).inHours + 1;
       final staleness = now.difference(forecast.issuedAt);
 
-      rows.add('| $name | ${slots.length} | ${horizonH}h | '
-          '${staleness.inMinutes}min | ${tMin.toStringAsFixed(1)}…'
-          '${tMax.toStringAsFixed(1)} | $subzero | $precipSlots | '
-          '$nClear/$nCaution/$nElev/$nSev |');
+      rows.add(
+        '| $name | ${slots.length} | ${horizonH}h | '
+        '${staleness.inMinutes}min | ${tMin.toStringAsFixed(1)}…'
+        '${tMax.toStringAsFixed(1)} | $subzero | $precipSlots | '
+        '$nClear/$nCaution/$nElev/$nSev |',
+      );
 
       // Icing-threshold sensitivity: how many slots are elevated-or-worse
       // under alternative icing temperature cutoffs (the production rule is
       // precip>0 && temp <= 0.5).
       final sweep = [0.0, 0.5, 1.0, 2.0].map((th) {
         return slots
-            .where((s) =>
-                (s.precipitationMmPerHour ?? 0) > 0 && s.tempCelsius <= th)
+            .where(
+              (s) => (s.precipitationMmPerHour ?? 0) > 0 && s.tempCelsius <= th,
+            )
             .length;
       }).toList();
-      sweepRows.add('| $name | ${sweep[0]} | ${sweep[1]} | ${sweep[2]} | '
-          '${sweep[3]} |');
+      sweepRows.add(
+        '| $name | ${sweep[0]} | ${sweep[1]} | ${sweep[2]} | '
+        '${sweep[3]} |',
+      );
 
       // Departure-verdict simulation: a 30-min discretionary trip departing
       // at each hourly slot start across the whole horizon — what does the
@@ -117,23 +122,31 @@ void main() {
         verdictCounts[b.verdict] = (verdictCounts[b.verdict] ?? 0) + 1;
       }
       String c(PretripVerdict v) => '${verdictCounts[v] ?? 0}';
-      verdictRows.add('| $name | ${c(PretripVerdict.clear)} | '
-          '${c(PretripVerdict.caution)} | ${c(PretripVerdict.waitAdvised)} | '
-          '${c(PretripVerdict.hazardPersists)} | '
-          '${c(PretripVerdict.noData)} |');
+      verdictRows.add(
+        '| $name | ${c(PretripVerdict.clear)} | '
+        '${c(PretripVerdict.caution)} | ${c(PretripVerdict.waitAdvised)} | '
+        '${c(PretripVerdict.hazardPersists)} | '
+        '${c(PretripVerdict.noData)} |',
+      );
     }
 
     print('=== PER-POINT: slices, horizon, staleness, temp, hazard bands ===');
-    print('| point | hourly | horizon | staleness | temp °C | subzero | '
-        'precip>0 | clear/caution/elev/severe |');
+    print(
+      '| point | hourly | horizon | staleness | temp °C | subzero | '
+      'precip>0 | clear/caution/elev/severe |',
+    );
     rows.forEach(print);
     print('=== ICING THRESHOLD SWEEP (slots with precip>0 and temp<=th) ===');
     print('| point | th=0.0 | th=0.5 (prod) | th=1.0 | th=2.0 |');
     sweepRows.forEach(print);
-    print('=== DEPARTURE-VERDICT SIMULATION (30-min discretionary trip, '
-        'departing each forecast hour) ===');
-    print('| point | clear | caution | waitAdvised | hazardPersists | '
-        'noData |');
+    print(
+      '=== DEPARTURE-VERDICT SIMULATION (30-min discretionary trip, '
+      'departing each forecast hour) ===',
+    );
+    print(
+      '| point | clear | caution | waitAdvised | hazardPersists | '
+      'noData |',
+    );
     verdictRows.forEach(print);
     print('=== AGGREGATE ===');
     print('total hourly slots analyzed: $totalSlots');
@@ -141,8 +154,12 @@ void main() {
 
     // The documented ceiling, asserted: live compact data (visibility null,
     // surface null) cannot reach the severe band.
-    expect(totalSevere, 0,
-        reason: 'compact product has no visibility/surface fields — if '
-            'severe fired, the documented live-data ceiling is wrong');
+    expect(
+      totalSevere,
+      0,
+      reason:
+          'compact product has no visibility/surface fields — if '
+          'severe fired, the documented live-data ceiling is wrong',
+    );
   });
 }

@@ -1,3 +1,51 @@
+## 0.1.2
+
+Additive and non-breaking. No existing API changes, no behaviour changes;
+English remains the default. If you do not want Japanese, nothing about this
+release affects you.
+
+### Japanese typography — corrected
+
+Two ja chips carried a spaced ASCII-style em dash (`GPSなし — 推定中`,
+`おおまかな推定 — 一度も…`), which is the visible fingerprint of an English
+sentence with Japanese words dropped into it. They now read 「GPSなし（推定中）」
+and 「おおまかな推定：一度も現在地を確定できていません」.
+
+These chips render next to the dot on the driver's screen at the exact moment the
+app is telling her it does not know where she is — the one place the copy must
+not look machine-produced. The package's Latin-residue test guard did not catch
+it (an em dash is not a Latin letter); the guard now rejects a spaced ASCII dash
+inside a ja string too.
+
+- feat: `LocalizationMessages` — driver-facing text for this package's honesty
+  states, in **English and Japanese**. `LocalizationMode`, `EstimateBasis`, the
+  confidence radius, the seconds-since-a-trusted-fix, and the "no position at
+  all" bootstrap state all now have plain-language strings a driver can read.
+  Resolve a table with `LocalizationMessages.forLanguage('ja')`; unsupported
+  languages fall back to English, never to silence.
+- **Why this is a safety change, not a cosmetic one.** `LocalizationMode` is an
+  honesty label first and a status second — it exists to tell the driver how
+  much to believe the dot. An honesty label the driver cannot read does not
+  reach her, and the silence where a caveat should be reads exactly like
+  confidence. This package's whole contract is that it never emits a
+  confidently-wrong fix; saying `lost` only in English, to a driver who reads
+  Japanese, breaks that contract at the last inch. `lost` now says 現在地不明 /
+  「現在地が分かりません。表示している地点は推定であり、実際の現在地ではありません。」
+- **Claim ceiling (binding).** Every string describes *what we know about the
+  position*. Not one makes a claim about the ROAD, the WEATHER, or whether it
+  is safe to proceed — this package measures none of those. "We do not know
+  where you are" is the strongest thing it may say, and it is never dressed as
+  reassurance. Tests forbid a safety assertion in any locale.
+- No new i18n mechanism: this is the hand-rolled locale-table idiom already
+  used by `pretrip_decision_advisor`'s `PretripMessages` — pure Dart, no
+  Flutter, no codegen, no network, so the zero-dependency / 32-bit-ARM contract
+  is untouched.
+- test: exhaustive coverage guards (every `LocalizationMode` / `EstimateBasis`
+  has text in every carried locale, so a future enum value cannot ship as a
+  blank label); a Latin-residue guard that fails if untranslated English leaks
+  into a Japanese string; a guard that no string claims safety; and a
+  rendered-output guard against stray ASCII spacing between Japanese sentences.
+
 ## 0.1.1
 
 - fix: `lost` is now TERMINAL until re-acquisition. Previously a time-triggered

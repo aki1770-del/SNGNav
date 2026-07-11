@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.0.6
+
+### Safety defect in 0.0.5 and earlier — please read
+
+**An UNMEASURED precipitation figure was read as 0.0 mm**, and that bought a
+severity downgrade on a freezing road.
+
+```dart
+// met_norway_advisory_provider.dart, 0.0.5
+final precipitation = _readNum(next1Details?['precipitation_amount']) ?? 0.0;
+```
+
+Two consequences, both fabrication:
+
+1. **Severity downgrade.** With a freezing temperature and an ABSENT
+   precipitation figure, `_classify` saw `precipitation == 0` and returned
+   `'Subzero forecast'` → `AdvisorySeverity.moderate`, instead of the
+   `'Freezing precipitation'` → `severe` it would have returned had the value
+   actually been measured above zero. Absence resolved to the benign branch.
+   `'Heavy precipitation'` could never fire from an absent figure either.
+2. **A fabricated number in driver-facing text.** `_composeDescription`
+   unconditionally emitted `next_1_hours precipitation_amount 0.0 mm` into the
+   advisory description — for a value the feed never sent.
+
+This is the same assertion-laundered-as-measurement defect that
+`driving_weather` 0.5.0 removed from the Digitraffic adapter.
+
+### Changed (behaviour)
+
+- `precipitation` is nullable end-to-end. A freezing temperature with an
+  unmeasured precipitation figure now yields the event class
+  **`'Freezing, precipitation not measured'`** at **`AdvisorySeverity.unknown`**
+  — never `moderate`. Per the contract's asymmetry: positive evidence fires on
+  partial data; only the BENIGN verdict requires complete data, so an unmeasured
+  field may not buy a downgrade.
+- A **measured** zero is still a measurement: `'Subzero forecast'` → `moderate`
+  is unchanged, and the description still prints `0.0 mm`.
+- The description omits the precipitation line entirely when the field was
+  absent (`"not reported"`), rather than printing a figure we do not have.
+
 ## 0.0.5 — Docs: restore dual NLOD 2.0 + CC-BY-4.0 license statement
 
 - Docs: restore the **NLOD 2.0** (Norwegian Licence for Open Government Data) statement alongside **CC BY 4.0** in the README "License + attribution" section, matching the Chair-ratified record and the sibling `pretrip_source_met_norway`. MET Norway data is dual-licensed under both; an integrator may rely on either. Consistency-only — CC-BY-4.0 alone was already legally sufficient; no behavior or attribution-string change.

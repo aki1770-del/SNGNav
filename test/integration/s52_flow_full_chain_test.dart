@@ -58,11 +58,11 @@ class _MockRoutingEngine implements RoutingEngine {
 class _ScriptedWeatherProvider implements WeatherProvider {
   _ScriptedWeatherProvider();
 
-  final _controller = StreamController<WeatherCondition>.broadcast();
+  final _controller = StreamController<WeatherReading>.broadcast();
   final List<Timer> _timers = [];
 
   @override
-  Stream<WeatherCondition> get conditions => _controller.stream;
+  Stream<WeatherReading> get conditions => _controller.stream;
 
   @override
   Future<void> startMonitoring() async {
@@ -75,6 +75,7 @@ class _ScriptedWeatherProvider implements WeatherProvider {
         visibilityMeters: 150,
         windSpeedKmh: 40,
         timestamp: DateTime.now(),
+        source: ObservationSource.measured,
       ),
       const Duration(milliseconds: 900),
     );
@@ -84,7 +85,7 @@ class _ScriptedWeatherProvider implements WeatherProvider {
   void _emit(WeatherCondition condition, Duration delay) {
     final timer = Timer(delay, () {
       if (!_controller.isClosed) {
-        _controller.add(condition);
+        _controller.add(WeatherObserved(condition));
       }
     });
     _timers.add(timer);
@@ -123,130 +124,159 @@ LatLng _northEastBounds(List<LatLng> shape) {
 }
 
 void main() {
-  test('S52 full-chain D3 proof: unexpected snow scenario holds through tunnel and recovery', () async {
-    final locationProvider = DeadReckoningProvider(
-      inner: SimulatedLocationProvider(
-        interval: const Duration(milliseconds: 100),
-        includeTunnel: true,
-      ),
-      mode: DeadReckoningMode.kalman,
-      gpsTimeout: const Duration(milliseconds: 200),
-      extrapolationInterval: const Duration(milliseconds: 100),
-    );
-    final weatherProvider = _ScriptedWeatherProvider();
-    final locationBloc = LocationBloc(provider: locationProvider);
-    final weatherBloc = WeatherBloc(provider: weatherProvider);
-    final routingBloc = RoutingBloc(engine: _MockRoutingEngine());
-    final navigationBloc = NavigationBloc();
-    final mapBloc = MapBloc();
-    final safetyConfig = NavigationSafetyConfig();
-
-    late final StreamSubscription<dynamic> locationSub;
-    late final StreamSubscription<dynamic> routingSub;
-    late final StreamSubscription<dynamic> weatherSub;
-
-    mapBloc.add(const MapInitialized(center: S52TestFixtures.nagoya, zoom: 14));
-
-    locationSub = locationBloc.stream.listen((state) {
-      if (!state.hasPosition) return;
-      if (!mapBloc.state.isFollowing) return;
-      mapBloc.add(CenterChanged(LatLng(
-        state.position!.latitude,
-        state.position!.longitude,
-      )));
-    });
-
-    routingSub = routingBloc.stream.listen((state) {
-      if (!state.hasRoute || navigationBloc.state.isNavigating) return;
-      final route = state.route!;
-      navigationBloc.add(NavigationStarted(
-        route: route.toNavigationRoute(),
-        destinationLabel: state.destinationLabel,
-      ));
-      mapBloc.add(FitToBounds(
-        southWest: _southWestBounds(route.shape),
-        northEast: _northEastBounds(route.shape),
-      ));
-      mapBloc.add(const CameraModeChanged(CameraMode.follow));
-    });
-
-    weatherSub = weatherBloc.stream.listen((state) {
-      if (!state.hasCondition) return;
-      final assessment = DrivingConditionAssessment.fromCondition(state.condition!);
-      const simulator = SafetyScoreSimulator();
-      final result = simulator.simulate(
-        runs: 200,
-        speed: 70,
-        gripFactor: assessment.gripFactor,
-        surface: assessment.surfaceState,
-        visibilityMeters: state.condition!.visibilityMeters,
-        seed: S52TestFixtures.transitionSeed,
+  test(
+    'S52 full-chain D3 proof: unexpected snow scenario holds through tunnel and recovery',
+    () async {
+      final locationProvider = DeadReckoningProvider(
+        inner: SimulatedLocationProvider(
+          interval: const Duration(milliseconds: 100),
+          includeTunnel: true,
+        ),
+        mode: DeadReckoningMode.kalman,
+        gpsTimeout: const Duration(milliseconds: 200),
+        extrapolationInterval: const Duration(milliseconds: 100),
       );
-      final severity = result.score.toAlertSeverity(safetyConfig);
-      if (severity != null) {
-        navigationBloc.add(SafetyAlertReceived(
-          message: assessment.advisoryMessage,
-          severity: severity,
-        ));
-      }
-    });
+      final weatherProvider = _ScriptedWeatherProvider();
+      final locationBloc = LocationBloc(provider: locationProvider);
+      final weatherBloc = WeatherBloc(provider: weatherProvider);
+      final routingBloc = RoutingBloc(engine: _MockRoutingEngine());
+      final navigationBloc = NavigationBloc();
+      final mapBloc = MapBloc();
+      final safetyConfig = NavigationSafetyConfig();
 
-    locationBloc.add(const LocationStartRequested());
-    weatherBloc.add(const WeatherMonitorStarted());
-    routingBloc.add(const RouteRequested(
-      origin: S52TestFixtures.sakae,
-      destination: S52TestFixtures.higashiokazaki,
-      destinationLabel: 'Mountain pass destination',
-    ));
+      late final StreamSubscription<dynamic> locationSub;
+      late final StreamSubscription<dynamic> routingSub;
+      late final StreamSubscription<dynamic> weatherSub;
 
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+      mapBloc.add(
+        const MapInitialized(center: S52TestFixtures.nagoya, zoom: 14),
+      );
 
-    expect(locationBloc.state.hasPosition, isTrue);
-    expect(routingBloc.state.hasRoute, isTrue);
-    expect(navigationBloc.state.isNavigating, isTrue);
-    expect(mapBloc.state.cameraMode, CameraMode.follow);
+      locationSub = locationBloc.stream.listen((state) {
+        if (!state.hasPosition) return;
+        if (!mapBloc.state.isFollowing) return;
+        mapBloc.add(
+          CenterChanged(
+            LatLng(state.position!.latitude, state.position!.longitude),
+          ),
+        );
+      });
 
-    await Future<void>.delayed(const Duration(milliseconds: 1100));
+      routingSub = routingBloc.stream.listen((state) {
+        if (!state.hasRoute || navigationBloc.state.isNavigating) return;
+        final route = state.route!;
+        navigationBloc.add(
+          NavigationStarted(
+            route: route.toNavigationRoute(),
+            destinationLabel: state.destinationLabel,
+          ),
+        );
+        mapBloc.add(
+          FitToBounds(
+            southWest: _southWestBounds(route.shape),
+            northEast: _northEastBounds(route.shape),
+          ),
+        );
+        mapBloc.add(const CameraModeChanged(CameraMode.follow));
+      });
 
-    expect(locationBloc.state.hasPosition, isTrue);
-    expect(locationBloc.state.isDeadReckoning, isTrue,
-        reason: 'Tunnel phase should be protected by DR');
-    expect(navigationBloc.state.isNavigating, isTrue);
-    expect(weatherBloc.state.isHazardous, isTrue,
-        reason: 'Unexpected snow should be hazardous by the tunnel segment');
-    expect(navigationBloc.state.hasSafetyAlert, isTrue);
-    expect(navigationBloc.state.alertSeverity, isNotNull);
-    expect(mapBloc.state.cameraMode, CameraMode.follow);
+      weatherSub = weatherBloc.stream.listen((state) {
+        if (!state.hasCondition) return;
+        final assessment = DrivingConditionAssessment.fromCondition(
+          state.condition!,
+        );
+        const simulator = SafetyScoreSimulator();
+        final result = simulator.simulate(
+          runs: 200,
+          speed: 70,
+          // These fixtures are fully measured, so the assessment classifies a
+          // surface and the condition carries a visibility. `!` asserts it —
+          // if a fixture ever stops being fully measured, this test FAILS
+          // rather than silently simulating a fabricated road.
+          gripFactor: assessment.gripFactor!,
+          surface: assessment.surfaceState!,
+          visibilityMeters: state.condition!.visibilityMeters!,
+          seed: S52TestFixtures.transitionSeed,
+        );
+        final severity = result.score.toAlertSeverity(safetyConfig);
+        if (severity != null) {
+          navigationBloc.add(
+            SafetyAlertReceived(
+              message: assessment.advisoryMessage,
+              severity: severity,
+            ),
+          );
+        }
+      });
 
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+      locationBloc.add(const LocationStartRequested());
+      weatherBloc.add(const WeatherMonitorStarted());
+      routingBloc.add(
+        const RouteRequested(
+          origin: S52TestFixtures.sakae,
+          destination: S52TestFixtures.higashiokazaki,
+          destinationLabel: 'Mountain pass destination',
+        ),
+      );
 
-    expect(locationBloc.state.hasPosition, isTrue);
-    expect(locationBloc.state.isDeadReckoning, isFalse,
-        reason: 'GPS should have recovered after the tunnel');
-    expect(locationBloc.state.quality, LocationQuality.fix);
-    expect(navigationBloc.state.isNavigating, isTrue);
-    expect(navigationBloc.state.hasSafetyAlert, isTrue);
-    expect(
-      navigationBloc.state.alertSeverity,
-      equals(AlertSeverity.critical),
-      reason: 'Black ice should drive the final advisory to critical',
-    );
-    expect(
-      navigationBloc.state.alertMessage,
-      contains('Black ice risk'),
-    );
-    expect(mapBloc.state.cameraMode, CameraMode.follow);
-    expect(mapBloc.state.center.latitude, lessThan(S52TestFixtures.nagoya.latitude));
-    expect(mapBloc.state.isLayerVisible(MapLayerType.safety), isTrue);
-    expect(mapBloc.state.isLayerVisible(MapLayerType.weather), isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
 
-    await locationSub.cancel();
-    await routingSub.cancel();
-    await weatherSub.cancel();
-    await locationBloc.close();
-    await weatherBloc.close();
-    await routingBloc.close();
-    await navigationBloc.close();
-    await mapBloc.close();
-  });
+      expect(locationBloc.state.hasPosition, isTrue);
+      expect(routingBloc.state.hasRoute, isTrue);
+      expect(navigationBloc.state.isNavigating, isTrue);
+      expect(mapBloc.state.cameraMode, CameraMode.follow);
+
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+
+      expect(locationBloc.state.hasPosition, isTrue);
+      expect(
+        locationBloc.state.isDeadReckoning,
+        isTrue,
+        reason: 'Tunnel phase should be protected by DR',
+      );
+      expect(navigationBloc.state.isNavigating, isTrue);
+      expect(
+        weatherBloc.state.hazard,
+        SafetyVerdict.hazardous,
+        reason: 'Unexpected snow should be hazardous by the tunnel segment',
+      );
+      expect(navigationBloc.state.hasSafetyAlert, isTrue);
+      expect(navigationBloc.state.alertSeverity, isNotNull);
+      expect(mapBloc.state.cameraMode, CameraMode.follow);
+
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+
+      expect(locationBloc.state.hasPosition, isTrue);
+      expect(
+        locationBloc.state.isDeadReckoning,
+        isFalse,
+        reason: 'GPS should have recovered after the tunnel',
+      );
+      expect(locationBloc.state.quality, LocationQuality.fix);
+      expect(navigationBloc.state.isNavigating, isTrue);
+      expect(navigationBloc.state.hasSafetyAlert, isTrue);
+      expect(
+        navigationBloc.state.alertSeverity,
+        equals(AlertSeverity.critical),
+        reason: 'Black ice should drive the final advisory to critical',
+      );
+      expect(navigationBloc.state.alertMessage, contains('Black ice risk'));
+      expect(mapBloc.state.cameraMode, CameraMode.follow);
+      expect(
+        mapBloc.state.center.latitude,
+        lessThan(S52TestFixtures.nagoya.latitude),
+      );
+      expect(mapBloc.state.isLayerVisible(MapLayerType.safety), isTrue);
+      expect(mapBloc.state.isLayerVisible(MapLayerType.weather), isTrue);
+
+      await locationSub.cancel();
+      await routingSub.cancel();
+      await weatherSub.cancel();
+      await locationBloc.close();
+      await weatherBloc.close();
+      await routingBloc.close();
+      await navigationBloc.close();
+      await mapBloc.close();
+    },
+  );
 }

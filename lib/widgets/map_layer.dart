@@ -175,14 +175,24 @@ class MapLayer extends StatelessWidget {
                                     if (mapState.isLayerVisible(MapLayerType.route) &&
                                         routingState.hasRoute)
                                       MarkerLayer(
+                                        // routing_engine 0.6.0: a maneuver whose
+                                        // location could not be parsed has NO
+                                        // position. It is not at 0,0 (Null
+                                        // Island, in the Gulf of Guinea) — it is
+                                        // simply not placed on the map. Its
+                                        // instruction and distance remain valid
+                                        // and are still narrated; only the
+                                        // MARKER is withheld, because we do not
+                                        // know where to put it.
                                         markers: routingState.route!.maneuvers
+                                            .where((m) => m.position != null)
                                             .map((maneuver) {
                                           final isCurrent =
                                               navState.currentManeuverIndex == maneuver.index &&
                                                   navState.status ==
                                                       NavigationStatus.navigating;
                                           return Marker(
-                                            point: maneuver.position,
+                                            point: maneuver.position!,
                                             width: isCurrent ? 34 : 24,
                                             height: isCurrent ? 34 : 24,
                                             child: Container(
@@ -298,10 +308,19 @@ class MapLayer extends StatelessWidget {
   // Weather-adaptive visuals
   // ---------------------------------------------------------------------------
 
+  /// The paint for a road nobody measured.
+  ///
+  /// Deliberately DISTINCT from both the hazard paint and the calm paint: an
+  /// unassessed road must not wear the same chrome as a road we checked and
+  /// found benign. Slate-grey, not blue.
+  static const Color _unknownFill = Color(0x2E607D8B);
+  static const Color _unknownBorder = Color(0x8C607D8B);
+
   static Color _snowZoneColor(WeatherState state) {
-    if (!state.hasCondition) return Colors.blue.withAlpha(30);
+    if (!state.hasCondition) return _unknownFill;
     final condition = state.condition!;
-    if (condition.iceRisk) return Colors.red.withAlpha(40);
+    if (condition.iceRisk == true) return Colors.red.withAlpha(40);
+    if (state.isConditionUnknown) return _unknownFill;
     return switch (condition.intensity) {
       PrecipitationIntensity.heavy => Colors.blue.withAlpha(60),
       PrecipitationIntensity.moderate => Colors.blue.withAlpha(40),
@@ -310,9 +329,10 @@ class MapLayer extends StatelessWidget {
   }
 
   static Color _snowZoneBorder(WeatherState state) {
-    if (!state.hasCondition) return Colors.blue.withAlpha(80);
+    if (!state.hasCondition) return _unknownBorder;
     final condition = state.condition!;
-    if (condition.iceRisk) return Colors.red.withAlpha(120);
+    if (condition.iceRisk == true) return Colors.red.withAlpha(120);
+    if (state.isConditionUnknown) return _unknownBorder;
     return switch (condition.intensity) {
       PrecipitationIntensity.heavy => Colors.blue.withAlpha(140),
       PrecipitationIntensity.moderate => Colors.blue.withAlpha(100),
@@ -321,13 +341,18 @@ class MapLayer extends StatelessWidget {
   }
 
   static String _snowZoneLabel(WeatherState state) {
-    if (!state.hasCondition) return 'Snow Zone';
+    // "Snow Zone" over a road we know nothing about is a claim. Say the truth.
+    if (!state.hasCondition) return '未計測 / Not measured';
     final condition = state.condition!;
+    if (state.isConditionUnknown && condition.iceRisk != true) {
+      return '未計測 / Not measured';
+    }
     final intensity = switch (condition.intensity) {
       PrecipitationIntensity.heavy => 'Heavy',
       PrecipitationIntensity.moderate => 'Moderate',
       PrecipitationIntensity.light => 'Light',
       PrecipitationIntensity.none => '',
+      null => '',
     };
     final prefix = intensity.isEmpty ? '' : '$intensity ';
     return '${prefix}Snow Zone';
@@ -359,8 +384,13 @@ class MapLayer extends StatelessWidget {
     }
 
     if (route.maneuvers.length >= 6) {
-      final startIndex = _nearestShapeIndex(route.shape, route.maneuvers[3].position);
-      final endIndex = _nearestShapeIndex(route.shape, route.maneuvers[5].position);
+      // A maneuver with no position cannot anchor a zone. Fall back to the
+      // whole shape rather than anchoring on Null Island.
+      final start = route.maneuvers[3].position;
+      final end = route.maneuvers[5].position;
+      if (start == null || end == null) return route.shape;
+      final startIndex = _nearestShapeIndex(route.shape, start);
+      final endIndex = _nearestShapeIndex(route.shape, end);
       final lower = math.min(startIndex, endIndex);
       final upper = math.max(startIndex, endIndex);
       return route.shape.sublist(lower, upper + 1);

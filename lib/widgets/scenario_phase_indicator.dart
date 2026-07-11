@@ -78,10 +78,19 @@ class ScenarioPhaseIndicator extends StatelessWidget {
     // "Clear — City Departure" beside the black-ice overlay, two surfaces
     // contradicting each other in the same view. Description is
     // ja-primary, matching the alert surface's precise vocabulary.
-    if (condition.iceRisk) {
+    if (condition.iceRisk == true) {
       return (
         'Ice Risk — Pass Descent',
         'ブラックアイスバーンに注意 — 減速 / black ice, reduce speed'
+      );
+    }
+    // An unreported precipitation type is NOT "clear". Saying "Clear — City
+    // Departure" about a road nobody measured is the fabrication this release
+    // exists to remove, spelled out in a phase label.
+    if (condition.precipType == null) {
+      return (
+        '未計測 / Not measured',
+        '路面状況を取得できていません。見える範囲で運転してください。'
       );
     }
     if (condition.precipType == PrecipitationType.none) {
@@ -92,27 +101,37 @@ class ScenarioPhaseIndicator extends StatelessWidget {
           'Light Snow — Mountain Approach',
           'Entering elevated terrain toward Toyota'
         ),
-      PrecipitationIntensity.moderate => condition.visibilityMeters < 1000
-          ? (
-              'Moderate Snow — Pass Approach',
-              'Visibility reduced, snow accumulating'
-            )
-          : (
-              'Moderate Snow — Clearing',
-              'Conditions improving, descending to valley'
-            ),
+      PrecipitationIntensity.moderate =>
+        (condition.visibilityMeters ?? double.infinity) < 1000
+            ? (
+                'Moderate Snow — Pass Approach',
+                'Visibility reduced, snow accumulating'
+              )
+            : (
+                // An UNMEASURED visibility is not "improving". Do not claim
+                // improvement we did not observe.
+                condition.visibilityMeters == null
+                    ? 'Moderate Snow — visibility not measured'
+                    : 'Moderate Snow — Clearing',
+                condition.visibilityMeters == null
+                    ? '視程の実測データはありません'
+                    : 'Conditions improving, descending to valley'
+              ),
       PrecipitationIntensity.heavy => (
           'Heavy Snow — Pass Summit',
           'Visibility critically low, hazardous conditions'
         ),
       PrecipitationIntensity.none => ('Clear', 'No precipitation'),
+      null => ('未計測 / Not measured', '降水強度の実測データはありません'),
     };
   }
 
   static IconData _phaseIcon(WeatherCondition condition) {
     // Ice first — same ordering fix as _phaseInfo: never a sun icon over
     // an ice-flagged road.
-    if (condition.iceRisk) return Icons.ac_unit;
+    if (condition.iceRisk == true) return Icons.ac_unit;
+    // No sun icon over a road we did not measure.
+    if (condition.precipType == null) return Icons.help_outline;
     if (condition.precipType == PrecipitationType.none) {
       return Icons.wb_sunny;
     }
@@ -121,6 +140,7 @@ class ScenarioPhaseIndicator extends StatelessWidget {
       PrecipitationIntensity.moderate => Icons.cloudy_snowing,
       PrecipitationIntensity.heavy => Icons.storm,
       PrecipitationIntensity.none => Icons.wb_sunny,
+      null => Icons.help_outline,
     };
   }
 }

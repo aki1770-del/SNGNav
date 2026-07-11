@@ -140,8 +140,11 @@ class _WeatherDisplay extends StatelessWidget {
   }
 
   Color _backgroundForCondition(WeatherCondition c) {
-    if (c.isHazardous) return const Color(0xFF1A0A0A);
-    if (c.isSnowing) return const Color(0xFF0A1A2A);
+    if (c.hazard == SafetyVerdict.hazardous) return const Color(0xFF1A0A0A);
+    if (c.snowing == SafetyVerdict.hazardous) return const Color(0xFF0A1A2A);
+    // Slate, not the green "all clear" — a road we did not measure must not
+    // paint the calm background.
+    if (c.hazard == SafetyVerdict.unknown) return const Color(0xFF11171A);
     return const Color(0xFF0A1A0A);
   }
 }
@@ -172,17 +175,20 @@ class _ScenarioHeader extends StatelessWidget {
   }
 
   String _phaseLabel(WeatherCondition c) {
+    if (c.precipType == null) return 'NOT MEASURED';
     if (c.precipType == PrecipitationType.none) {
       return 'PHASE 0 — CITY DEPARTURE (CLEAR)';
     }
-    if (c.iceRisk) return 'PHASE 4 — DESCENT (ICE RISK)';
+    if (c.iceRisk == true) return 'PHASE 4 — DESCENT (ICE RISK)';
     return switch (c.intensity) {
-      PrecipitationIntensity.light when c.visibilityMeters >= 2000 =>
+      PrecipitationIntensity.light
+          when (c.visibilityMeters ?? -1) >= 2000 =>
         'PHASE 5 — VALLEY (CLEARING)',
       PrecipitationIntensity.light => 'PHASE 1 — ENTERING MOUNTAINS',
       PrecipitationIntensity.moderate => 'PHASE 2 — PASS APPROACH',
       PrecipitationIntensity.heavy => 'PHASE 3 — PASS SUMMIT (HAZARDOUS)',
       PrecipitationIntensity.none => 'CLEAR',
+      null => 'NOT MEASURED',
     };
   }
 }
@@ -207,7 +213,9 @@ class _MainDisplay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${condition.temperatureCelsius.toStringAsFixed(0)}°C',
+              condition.temperatureCelsius == null
+                  ? '—°C'
+                  : '${condition.temperatureCelsius!.toStringAsFixed(0)}°C',
               style: const TextStyle(
                 fontSize: 64,
                 fontWeight: FontWeight.bold,
@@ -215,7 +223,7 @@ class _MainDisplay extends StatelessWidget {
               ),
             ),
             Text(
-              '${condition.precipType.name.toUpperCase()} — ${condition.intensity.name.toUpperCase()}',
+              '${condition.precipType?.name.toUpperCase() ?? 'NOT MEASURED'} — ${condition.intensity?.name.toUpperCase() ?? 'NOT MEASURED'}',
               style: const TextStyle(
                 fontSize: 18,
                 color: Colors.white70,
@@ -229,7 +237,7 @@ class _MainDisplay extends StatelessWidget {
   }
 
   IconData _iconForCondition(WeatherCondition c) {
-    if (c.iceRisk) return Icons.ac_unit;
+    if (c.iceRisk == true) return Icons.ac_unit;
     return switch (c.precipType) {
       PrecipitationType.none => Icons.wb_sunny,
       PrecipitationType.snow => switch (c.intensity) {
@@ -239,12 +247,15 @@ class _MainDisplay extends StatelessWidget {
       PrecipitationType.rain => Icons.water_drop,
       PrecipitationType.sleet => Icons.grain,
       PrecipitationType.hail => Icons.storm,
+      // A sun over an unmeasured sky is a claim.
+      null => Icons.help_outline,
     };
   }
 
   Color _iconColor(WeatherCondition c) {
-    if (c.isHazardous) return Colors.red.shade300;
-    if (c.isSnowing) return Colors.blue.shade200;
+    if (c.hazard == SafetyVerdict.hazardous) return Colors.red.shade300;
+    if (c.snowing == SafetyVerdict.hazardous) return Colors.blue.shade200;
+    if (c.hazard == SafetyVerdict.unknown) return Colors.blueGrey.shade300;
     return Colors.amber.shade300;
   }
 }
@@ -258,45 +269,70 @@ class _ConditionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Every tile renders "—" for a field the feed did not carry. A metric
+        // tile that prints a NUMBER for an unmeasured field is the whole defect,
+        // rendered at 64pt on the driver's screen.
         Expanded(
           child: _MetricTile(
             label: 'VISIBILITY',
-            value: condition.visibilityMeters >= 1000
-                ? '${(condition.visibilityMeters / 1000).toStringAsFixed(1)} km'
-                : '${condition.visibilityMeters.toStringAsFixed(0)} m',
+            value: _visibility(condition.visibilityMeters),
             icon: Icons.visibility,
-            alert: condition.hasReducedVisibility,
+            alert: condition.reducedVisibility == SafetyVerdict.hazardous,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _MetricTile(
             label: 'WIND',
-            value: '${condition.windSpeedKmh.toStringAsFixed(0)} km/h',
+            value: condition.windSpeedKmh == null
+                ? '—'
+                : '${condition.windSpeedKmh!.toStringAsFixed(0)} km/h',
             icon: Icons.air,
-            alert: condition.windSpeedKmh > 40,
+            alert: (condition.windSpeedKmh ?? 0) > 40,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _MetricTile(
             label: 'ICE RISK',
-            value: condition.iceRisk ? 'YES' : 'NO',
-            icon: condition.iceRisk ? Icons.warning : Icons.check_circle,
-            alert: condition.iceRisk,
+            // `null` is NOT "NO". 0.4.4 printed "NO" for an ice risk nobody had
+            // measured — on a road that may have been freezing.
+            value: switch (condition.iceRisk) {
+              true => 'YES',
+              false => 'NO',
+              null => '—',
+            },
+            icon: condition.iceRisk == true
+                ? Icons.warning
+                : condition.iceRisk == null
+                    ? Icons.help_outline
+                    : Icons.check_circle,
+            alert: condition.iceRisk == true,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _MetricTile(
             label: 'FREEZING',
-            value: condition.isFreezing ? 'YES' : 'NO',
+            value: switch (condition.freezing) {
+              SafetyVerdict.hazardous => 'YES',
+              SafetyVerdict.notHazardous => 'NO',
+              SafetyVerdict.unknown => '—',
+            },
             icon: Icons.thermostat,
-            alert: condition.isFreezing,
+            alert: condition.freezing == SafetyVerdict.hazardous,
           ),
         ),
       ],
     );
+  }
+
+  /// `null` metres = NOT MEASURED. It is not 10 km of clear air.
+  static String _visibility(double? m) {
+    if (m == null) return '—';
+    return m >= 1000
+        ? '${(m / 1000).toStringAsFixed(1)} km'
+        : '${m.toStringAsFixed(0)} m';
   }
 }
 
@@ -361,23 +397,38 @@ class _SafetyBanner extends StatelessWidget {
     final isHazardous = state.isHazardous;
     final condition = state.condition;
 
+    // THE THIRD STATE. Up to now this banner had exactly two: red HAZARD and
+    // green ALL CLEAR — so a road nobody had measured was painted green and
+    // labelled "Conditions clear — no safety alerts". "ALL CLEAR" is a POSITIVE
+    // claim, and it may only be made about a road we actually assessed.
+    final isUnknown = !isHazardous &&
+        !state.isSnowing &&
+        (condition == null || state.isConditionUnknown);
+
     final message = isHazardous
         ? _hazardMessage(condition!)
         : state.isSnowing
             ? 'Snow detected — drive with caution'
-            : 'Conditions clear — no safety alerts';
+            : isUnknown
+                ? '路面状況を取得できていません。見える範囲で運転してください。\n'
+                    'Road conditions unavailable — drive to what you can see.'
+                : 'Conditions clear — no safety alerts';
 
     final color = isHazardous
         ? Colors.red
         : state.isSnowing
             ? Colors.amber
-            : Colors.green;
+            : isUnknown
+                ? Colors.blueGrey
+                : Colors.green;
 
     final icon = isHazardous
         ? Icons.report_problem
         : state.isSnowing
             ? Icons.info
-            : Icons.check_circle;
+            : isUnknown
+                ? Icons.help_outline
+                : Icons.check_circle;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
@@ -400,7 +451,9 @@ class _SafetyBanner extends StatelessWidget {
                       ? 'SAFETY ALERT — HAZARDOUS CONDITIONS'
                       : state.isSnowing
                           ? 'WEATHER ADVISORY'
-                          : 'ALL CLEAR',
+                          : isUnknown
+                              ? '未計測 / CONDITIONS NOT MEASURED'
+                              : 'ALL CLEAR',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,
@@ -421,15 +474,20 @@ class _SafetyBanner extends StatelessWidget {
   }
 
   String _hazardMessage(WeatherCondition c) {
-    if (c.iceRisk) {
+    if (c.iceRisk == true) {
       // Precise term from the catalog's JAF-grounded announcement seam —
       // ja first (HER reads Japanese), EN kept for legibility.
       final a = RoadSurfaceState.blackIce.announcement!;
       return '${a.jaSpokenText}\n${a.enSpokenText}';
     }
-    if (c.visibilityMeters < 200) return 'Near-zero visibility — pull over if safe';
+    final vis = c.visibilityMeters;
+    if (vis != null && vis < 200) {
+      return 'Near-zero visibility — pull over if safe';
+    }
     if (c.intensity == PrecipitationIntensity.heavy) {
-      return 'Heavy snow — visibility ${c.visibilityMeters.toStringAsFixed(0)}m';
+      return vis == null
+          ? 'Heavy snow — visibility not measured'
+          : 'Heavy snow — visibility ${vis.toStringAsFixed(0)}m';
     }
     return 'Hazardous conditions detected';
   }

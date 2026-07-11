@@ -34,11 +34,18 @@ void main() {
       ),
       act: (bloc) => bloc.add(const ConsentLoadRequested()),
       expect: () => [
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.loading),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.loading,
+        ),
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
-            .having((s) => s.consents.length, 'count', ConsentPurpose.values.length)
+            .having(
+              (s) => s.consents.length,
+              'count',
+              ConsentPurpose.values.length,
+            )
             .having((s) => s.isAllDenied, 'all denied', true),
       ],
     );
@@ -55,10 +62,12 @@ void main() {
             p: ConsentRecord.unknown(purpose: p),
         },
       ),
-      act: (bloc) => bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.appi,
-      )),
+      act: (bloc) => bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.appi,
+        ),
+      ),
       expect: () => [
         isA<ConsentState>()
             .having((s) => s.isFleetGranted, 'fleet', true)
@@ -108,24 +117,31 @@ void main() {
       act: (bloc) async {
         bloc.add(const ConsentLoadRequested());
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        bloc.add(const ConsentGrantRequested(
-          purpose: ConsentPurpose.fleetLocation,
-          jurisdiction: Jurisdiction.gdpr,
-        ));
+        bloc.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.gdpr,
+          ),
+        );
         await Future<void>.delayed(const Duration(milliseconds: 50));
         bloc.add(
           const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),
         );
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        bloc.add(const ConsentGrantRequested(
-          purpose: ConsentPurpose.fleetLocation,
-          jurisdiction: Jurisdiction.appi,
-        ));
+        bloc.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.appi,
+          ),
+        );
       },
       expect: () => [
         // loading
-        isA<ConsentState>()
-            .having((s) => s.status, 'status', ConsentBlocStatus.loading),
+        isA<ConsentState>().having(
+          (s) => s.status,
+          'status',
+          ConsentBlocStatus.loading,
+        ),
         // ready (all unknown)
         isA<ConsentState>()
             .having((s) => s.status, 'status', ConsentBlocStatus.ready)
@@ -139,8 +155,7 @@ void main() {
               Jurisdiction.gdpr,
             ),
         // fleet revoked
-        isA<ConsentState>()
-            .having((s) => s.isFleetGranted, 'fleet', false),
+        isA<ConsentState>().having((s) => s.isFleetGranted, 'fleet', false),
         // fleet re-granted (APPI — jurisdiction changed)
         isA<ConsentState>()
             .having((s) => s.isFleetGranted, 'fleet', true)
@@ -152,42 +167,46 @@ void main() {
       ],
     );
 
-    test('persistence: grant in one BLoC, load in another on same DB',
-        () async {
-      final db = openConsentDatabase(':memory:');
-      final service1 = SqliteConsentService(db);
-      final bloc1 = ConsentBloc(service: service1);
+    test(
+      'persistence: grant in one BLoC, load in another on same DB',
+      () async {
+        final db = openConsentDatabase(':memory:');
+        final service1 = SqliteConsentService(db);
+        final bloc1 = ConsentBloc(service: service1);
 
-      // Grant fleet in BLoC 1
-      bloc1.add(const ConsentLoadRequested());
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      bloc1.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.appi,
-      ));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Grant fleet in BLoC 1
+        bloc1.add(const ConsentLoadRequested());
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        bloc1.add(
+          const ConsentGrantRequested(
+            purpose: ConsentPurpose.fleetLocation,
+            jurisdiction: Jurisdiction.appi,
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      // Don't close bloc1 — it would dispose the DB.
-      // Instead, create a second service on the same DB.
-      final service2 = SqliteConsentService(db);
-      final bloc2 = ConsentBloc(service: service2);
+        // Don't close bloc1 — it would dispose the DB.
+        // Instead, create a second service on the same DB.
+        final service2 = SqliteConsentService(db);
+        final bloc2 = ConsentBloc(service: service2);
 
-      bloc2.add(const ConsentLoadRequested());
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+        bloc2.add(const ConsentLoadRequested());
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      // BLoC 2 should see the grant from BLoC 1.
-      expect(bloc2.state.status, ConsentBlocStatus.ready);
-      expect(bloc2.state.isFleetGranted, true);
-      expect(
-        bloc2.state.consents[ConsentPurpose.fleetLocation]?.jurisdiction,
-        Jurisdiction.appi,
-      );
+        // BLoC 2 should see the grant from BLoC 1.
+        expect(bloc2.state.status, ConsentBlocStatus.ready);
+        expect(bloc2.state.isFleetGranted, true);
+        expect(
+          bloc2.state.consents[ConsentPurpose.fleetLocation]?.jurisdiction,
+          Jurisdiction.appi,
+        );
 
-      // Clean up — close bloc2 first (disposes service2, not db).
-      // Then close bloc1 (disposes service1 which disposes db).
-      await bloc2.close();
-      await bloc1.close();
-    });
+        // Clean up — close bloc2 first (disposes service2, not db).
+        // Then close bloc1 (disposes service1 which disposes db).
+        await bloc2.close();
+        await bloc1.close();
+      },
+    );
 
     test('audit trail: BLoC operations produce audit log entries', () async {
       final db = openConsentDatabase(':memory:');
@@ -196,10 +215,12 @@ void main() {
 
       bloc.add(const ConsentLoadRequested());
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      bloc.add(const ConsentGrantRequested(
-        purpose: ConsentPurpose.fleetLocation,
-        jurisdiction: Jurisdiction.gdpr,
-      ));
+      bloc.add(
+        const ConsentGrantRequested(
+          purpose: ConsentPurpose.fleetLocation,
+          jurisdiction: Jurisdiction.gdpr,
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 50));
       bloc.add(
         const ConsentRevokeRequested(purpose: ConsentPurpose.fleetLocation),

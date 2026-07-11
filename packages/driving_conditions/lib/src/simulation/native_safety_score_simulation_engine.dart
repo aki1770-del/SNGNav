@@ -4,11 +4,12 @@
 /// for higher throughput than the pure-Dart [CpuSafetyScoreSimulationEngine].
 library;
 
-import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 import '../models/road_surface_state.dart';
 import 'constant_fleet_confidence_provider.dart';
+import 'cpu_safety_score_simulation_engine.dart';
 import 'fleet_confidence_provider.dart';
+import 'simulated_safety_score.dart';
 import 'native_simulation_bindings.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_options.dart';
@@ -40,6 +41,23 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     required double visibilityMeters,
     required SimulationOptions options,
   }) {
+    final fleetConfidence = _provider.confidence;
+
+    // The native kernel's weighted mean takes a NON-nullable fleet term: it has
+    // no way to express "no fleet data", and passing any number would fabricate
+    // one (0.8 up to 0.5.4 — which raised the score on fleet silence). When the
+    // fleet said nothing, we run the honest CPU path, which re-normalises the
+    // weights over the terms that were measured. Correctness before throughput.
+    if (fleetConfidence == null) {
+      return CpuSafetyScoreSimulationEngine(provider: _provider).simulate(
+        speed: speed,
+        gripFactor: gripFactor,
+        surface: surface,
+        visibilityMeters: visibilityMeters,
+        options: options,
+      );
+    }
+
     final response = _bindings.runBatch(
       runs: options.runs,
       seed: options.seed ?? 0,
@@ -47,11 +65,11 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       gripFactor: gripFactor,
       surfaceCode: surface.index,
       visibilityMeters: visibilityMeters,
-      fleetConfidence: _provider.confidence,
+      fleetConfidence: fleetConfidence,
     );
 
     return SimulationResult(
-      score: SafetyScore(
+      score: SimulatedSafetyScore(
         overall: response.overallMean,
         gripScore: response.gripMean,
         visibilityScore: response.visibilityMean,

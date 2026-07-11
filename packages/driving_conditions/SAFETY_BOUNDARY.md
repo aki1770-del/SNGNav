@@ -1,13 +1,41 @@
 # driving_conditions — Safety-Class Boundary Record
 
 **Package**: `driving_conditions`
-**Version**: 0.5.0 (DEPLOY)
-**Boundary record version**: 1.0
+**Version**: 0.6.0 (DEPLOY)
+**Boundary record version**: 2.0
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-03
+**Date**: 2026-05-03; **corrected 2026-07-12**
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 
 ---
+
+## 0 — Correction notice (2026-07-12, record v2.0)
+
+Record v1.0 described a driver-experience surface the code did not honestly
+deliver, and §8 below explicitly obliged this record to be updated *"on material
+changes to the driver-experience surface"*. Two such changes were live and
+unrecorded; both are corrected here in the same commit as the code.
+
+**(a) The re-exported assessment could not say "I do not know".** This package
+re-exports `RoadSurfaceState` / `gripFactor` / `DrivingConditionAssessment` from
+`snow_rendering`. Up to 0.5.4 an unclassifiable road became `dry` with
+`gripFactor: 1.0` and the advisory "Conditions normal". In 0.6.0 the surface and
+the grip are **nullable** and a `conditionsUnknown` response tier exists.
+
+**(b) Fleet SILENCE raised the safety score.** `FleetHazardConfidenceAdapter`
+returned `0.8` — called a "neutral baseline" — when no recent fleet report
+existed, when the total observation weight was zero, and for a report whose road
+condition was EXPLICITLY `unknown`. `0.8` is not neutral (`dry` scores 1.0,
+`snowy` 0.4): it is an OPTIMISTIC report from a fleet that reported nothing, and
+it was folded into `SafetyScore.overall` with weight 0.2. **No fleet data
+therefore RAISED the computed safety score.** v1.0 §8 even certified the
+defaults as *"honest (0.8 explicit baseline; not hidden)"* — the value was
+explicit, but what it MEANT was not: an assertion was standing in for an absence.
+
+**0.6.0**: `FleetConfidenceProvider.confidence` is `double?` (`null` = no fleet
+data); an explicitly-unknown road report carries NO weight; and the overall score
+is computed by RE-NORMALISING the weights over the terms actually measured, so an
+absent fleet term is not folded in at any value. Disclosed in `CHANGELOG.md`.
 
 ## 1 — SAE J3016 driver-task regime
 
@@ -26,6 +54,8 @@
 **Stance**: **advisory not control.**
 **Reasoning**: SOTIF addresses Safety Of The Intended Functionality at automated-driving-feature scope. This package delivers neither an automated driving feature nor a control surface; it delivers `RoadSurfaceState` + `gripFactor` + `VisibilityDegradation` + `SafetyScoreSimulator` outputs that the integrator HMI surfaces to the driver as advisory information. SOTIF triage is performed by the integrator at the HMI scope where the driver sees the advisory.
 **Equal-dignity invariant**: this package does not consume `DriverProfile` or `DriverContext`. Severity-not-profile invariant applies at downstream consumer scope (`navigation_safety` 0.6.0 + integrator HMI). This package is profile-agnostic by design; severity emerges from physical computation (grip + visibility + speed) not from driver class.
+
+**Known performance insufficiency — ABSENT INPUT (SOTIF, the 0.6.0 correction)**: up to 0.5.4 two absent inputs resolved to the model's benign end. (i) An unclassifiable road surface became `dry` / `gripFactor 1.0` / "Conditions normal" (the re-exported `snow_rendering` chain; see that package's boundary record §0). (ii) An absent fleet-confidence term was substituted with `0.8` and folded into `SafetyScore.overall` at weight 0.2, so **the score rose when the fleet said nothing**. Both are specification insufficiencies of the absent-input class. **Mitigated in 0.6.0**: the surface and grip abstain (`null`); the fleet term is `double?` and, when absent, is NOT folded in at any value — the remaining weights are re-normalised over the measured terms, so silence neither raises nor lowers the score. The score object (`SimulatedSafetyScore`) reports `fleetConfidenceScore == null` so a consumer cannot render a fleet number that does not exist.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
@@ -59,9 +89,11 @@
 
 **Sakichi reading**: the loom measures the road-thread (precipitation + temperature + visibility + speed) and reports the tension HER cannot directly feel. The Monte Carlo run is the loom doing the measuring; HER does not have to scan grip and visibility independently. The variance is the loom's honesty: *"this score is uncertain; confidence depends on whether your fleet-confidence input is real."*
 
-**Audible-to-edge-developer**: integrator reading `SafetyScoreSimulator.simulate()` API today sees explicit `seed` parameter for deterministic tests, explicit `FleetConfidenceProvider` injection point for replacing the 0.8 default with real fleet data, and explicit `NativeSafetyScoreSimulationEngine` opt-in for higher throughput. Nothing patronizes the developer's modeling choices; defaults are honest (0.8 explicit baseline; not hidden).
+**Audible-to-edge-developer**: integrator reading `SafetyScoreSimulator.simulate()` API today sees explicit `seed` parameter for deterministic tests, explicit `FleetConfidenceProvider` injection point for supplying real fleet data, and explicit `NativeSafetyScoreSimulationEngine` opt-in for higher throughput. Nothing patronizes the developer's modeling choices.
 
-**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `driving_conditions` 0.5.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. variance reporting shape change → field update; internal Monte Carlo iteration count change → no field update).
+**Corrected in 0.6.0 (record v2.0)**: v1.0 claimed here that *"defaults are honest (0.8 explicit baseline; not hidden)"*. The NUMBER was explicit; its MEANING was not. `0.8` was returned for "no fleet data", and it is not a neutral value — it is an optimistic one, and it lifted `SafetyScore.overall`. An explicit fabrication is still a fabrication. In 0.6.0 the absence is typed (`confidence` is `double?`), the absent term is excluded from the weighted mean rather than defaulted, and `ConstantFleetConfidenceProvider(0.8)` survives ONLY as what it always honestly was: a caller ASSERTING a scenario (a test, a simulator) — the exact counterpart of `WeatherCondition.simulatedClear()`. `ConstantFleetConfidenceProvider.unavailable()` is the way to say "no fleet data".
+
+**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `driving_conditions` 0.6.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. variance reporting shape change → field update; internal Monte Carlo iteration count change → no field update).
 
 ## 9 — Cross-references
 
