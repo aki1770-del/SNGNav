@@ -6,7 +6,9 @@
 /// for an interior point, or the full containing set at a border (the
 /// boxes overlap along every shared border) — fetches each prefecture's
 /// `warning/{areacode}.json` **concurrently**, parses the current in-force
-/// warnings, filters to the snow / blizzard / icing classes, maps each to
+/// warnings, filters to the surfaced classes (`kJmaWarningCodes` — the
+/// snow / blizzard / icing classes plus, from 0.4.0, the downpour /
+/// typhoon-wind / thunder / fog turmoil classes), maps each to
 /// a source-neutral `Advisory`, and returns the **deduplicated union**.
 /// This is the conservative, over-warn handling of border ambiguity: a
 /// border driver never misses a neighbouring prefecture's warning because
@@ -295,8 +297,9 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       throw JmaAdvisoryFetchException(
         'Incomplete border read for prefectures '
         '(${prefectureCodes.join(', ')}): a containing prefecture fetch '
-        'failed and the reachable prefecture(s) reported no in-force snow '
-        'warning, so the result cannot be presented as an all-clear.',
+        'failed and the reachable prefecture(s) reported no in-force '
+        'surfaced warning, so the result cannot be presented as an '
+        'all-clear.',
         uri: firstFailure.uri,
         statusCode: firstFailure.statusCode,
       );

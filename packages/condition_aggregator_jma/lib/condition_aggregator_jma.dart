@@ -1,9 +1,10 @@
 /// condition_aggregator_jma — JMA (Japan Meteorological Agency) adapter
 /// for the `condition_aggregator` interface.
 ///
-/// Fetches live Japanese winter-snow advisories (大雪 / 暴風雪 / 着雪)
-/// for a lat/lon point and returns them as source-neutral [Advisory]
-/// records.
+/// Fetches live Japanese weather warnings — the winter-snow classes
+/// (大雪 / 暴風雪 / 着雪) plus, from 0.4.0, the downpour / typhoon-wind /
+/// thunder / fog turmoil classes (大雨 / 暴風・強風 / 雷 / 濃霧) — for a
+/// lat/lon point and returns them as source-neutral [Advisory] records.
 ///
 /// Usage: construct [JmaAdvisoryProvider], `await init()` once, then call
 /// `fetchActiveAdvisoriesAtPoint(latitude:, longitude:)`. It does real
@@ -28,9 +29,13 @@
 /// border) — fetches each prefecture's
 /// `https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`
 /// **concurrently**, parses the current in-force warnings, and surfaces
-/// the **deduplicated union** of the winter-snow-class advisories
-/// (大雪警報 / 大雪注意報 / 暴風雪警報 / 着雪注意報) as source-neutral
-/// `Advisory` records to the aggregator. This is the conservative,
+/// the **deduplicated union** of the surfaced warning classes
+/// (`kJmaWarningCodes`: the winter-snow classes 大雪警報 / 大雪注意報 /
+/// 暴風雪警報 / 着雪注意報 / 大雪特別警報 / 暴風雪特別警報 plus the
+/// 0.4.0 turmoil classes 大雨特別警報 / 大雨危険警報 / 大雨警報 /
+/// 大雨注意報 / 暴風特別警報 / 暴風警報 / 強風注意報 / 雷注意報 /
+/// 濃霧注意報) as source-neutral `Advisory` records to the aggregator.
+/// This is the conservative,
 /// over-warn handling of border ambiguity (0.3.0): a border driver
 /// never misses a neighbouring prefecture's warning because the resolver
 /// guessed a single side. When the union is non-empty but a containing
@@ -53,12 +58,14 @@
 ///       unexpected snow on a Japanese road.
 /// 4 hops.
 ///
-/// Driver-facing loom: when JMA has issued a 大雪 / 暴風雪 / 着雪
-/// advisory for the driver's current point in Japan, the integrator
-/// HMI surfaces a typed `Advisory` event with severity / certainty /
-/// urgency / area / effective / expires normalized at the boundary,
-/// with JMA's exact wording preserved verbatim per Article 17 (β)
-/// verbatim-relay discipline. The driver always drives.
+/// Driver-facing loom: when JMA has issued a surfaced-class warning —
+/// 大雪 / 暴風雪 / 着雪 in winter, or 大雨 / 暴風・強風 / 雷 / 濃霧 in
+/// sudden summer / typhoon turmoil — for the driver's current point in
+/// Japan, the integrator HMI surfaces a typed `Advisory` event with
+/// severity / certainty / urgency / area / effective / expires
+/// normalized at the boundary, with JMA's exact wording preserved
+/// verbatim per Article 17 (β) verbatim-relay discipline. The driver
+/// always drives.
 ///
 /// Composition:
 ///   JMA windowless per-prefecture warning JSON
@@ -81,6 +88,7 @@ export 'src/jma_advisory_mapper.dart'
         buildIncompleteReadNotice,
         kJmaIncompleteReadEventClass,
         parseJmaWarningJson,
+        kJmaWarningCodes,
         kJmaSnowWarningCodes,
         kJmaSnowAdvisoryEventNames,
         kJmaPrefectureBoundingBoxes,

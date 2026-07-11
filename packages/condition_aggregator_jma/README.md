@@ -1,8 +1,10 @@
 # condition_aggregator_jma
 
 A JMA (気象庁 / Japan Meteorological Agency) adapter that fetches live
-Japanese winter-snow advisories (大雪 / 暴風雪 / 着雪) for a lat/lon point
-and returns them as source-neutral `Advisory` records.
+Japanese weather warnings — the winter-snow classes (大雪 / 暴風雪 / 着雪)
+plus, from 0.4.0, the downpour / typhoon-wind / thunder / fog turmoil
+classes (大雨 / 暴風・強風 / 雷 / 濃霧) — for a lat/lon point and returns
+them as source-neutral `Advisory` records.
 
 ## Install
 
@@ -31,7 +33,7 @@ Future<void> main() async {
     );
     print(jma.source.attributionString);
     if (advisories.isEmpty) {
-      print('No active snow advisories for this point right now.');
+      print('No active JMA warnings for this point right now.');
     }
     for (final a in advisories) {
       print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');
@@ -46,8 +48,8 @@ Future<void> main() async {
 
 You get back a `List<Advisory>` — each record carries JMA's verbatim
 event name (`eventClass`, e.g. `大雪警報`), a normalized `severity`, and
-the area name (`areaDescription`). An empty list means no active snow
-advisory for that point. The provider does real HTTPS I/O against the
+the area name (`areaDescription`). An empty list means no active
+surfaced-class warning for that point. The provider does real HTTPS I/O against the
 public JMA feed, so it can fail offline — handle
 `JmaAdvisoryFetchException` as shown. The same snippet is in
 [`example/main.dart`](example/main.dart); run it with
@@ -73,9 +75,12 @@ provider resolves the caller's lat/lon to the snow-zone prefecture
 (office) code(s) whose bounding box contains the point, fetches each
 prefecture's
 `https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`,
-parses the current in-force warnings, and surfaces winter-snow-class
-advisories (大雪警報 / 大雪注意報 / 暴風雪警報 / 着雪注意報) as
-source-neutral `Advisory` records.
+parses the current in-force warnings, and surfaces the surfaced-class
+advisories (`kJmaWarningCodes` — the winter-snow classes 大雪警報 /
+大雪注意報 / 暴風雪警報 / 着雪注意報 / 大雪特別警報 / 暴風雪特別警報
+plus the 0.4.0 turmoil classes 大雨特別警報 / 大雨危険警報 / 大雨警報 /
+大雨注意報 / 暴風特別警報 / 暴風警報 / 強風注意報 / 雷注意報 /
+濃霧注意報) as source-neutral `Advisory` records.
 
 **Border behaviour (over-warn at prefecture borders).** The catalogued
 bounding boxes are crude axis-aligned rectangles over irregular
@@ -132,8 +137,10 @@ CHANGELOG 0.2.0.
 
 ### What this package does
 
-When JMA has issued a 大雪 / 暴風雪 / 着雪 warning or advisory for the
-driver's current point in Japan:
+When JMA has issued a surfaced-class warning or advisory — 大雪 /
+暴風雪 / 着雪 in winter, or 大雨 / 暴風・強風 / 雷 / 濃霧 in sudden
+summer / typhoon turmoil (0.4.0) — for the driver's current point in
+Japan:
 
 1. The caller's lat/lon resolves to the snow-zone prefecture (office)
    code(s) whose bounding box contains the point, via a bounding-box
@@ -149,11 +156,14 @@ driver's current point in Japan:
 3. The current in-force warnings (`areaTypes[].areas[].warnings[]`)
    are parsed; the `timeSeries` forecast block is ignored, and
    cancelled (`解除`) warnings are dropped.
-4. Warnings whose numeric `code` matches the snow-class catalog
-   (`kJmaSnowWarningCodes`: 06 大雪警報 / 12 大雪注意報 /
-   02 暴風雪警報 / 26 着雪注意報) are mapped to source-neutral
+4. Warnings whose numeric `code` matches the surfaced catalog
+   (`kJmaWarningCodes`: 06 大雪警報 / 12 大雪注意報 / 02 暴風雪警報 /
+   26 着雪注意報 / 36 大雪特別警報 / 32 暴風雪特別警報 /
+   33 大雨特別警報 / 43 大雨危険警報 / 03 大雨警報 / 10 大雨注意報 /
+   35 暴風特別警報 / 05 暴風警報 / 15 強風注意報 / 14 雷注意報 /
+   20 濃霧注意報) are mapped to source-neutral
    `Advisory` records via `mapJmaWarningToAdvisory`, deduplicated to
-   one record per distinct in-force snow code per prefecture. The
+   one record per distinct in-force code per prefecture. The
    prefecture label (`areaDescription`) is the Japanese prefecture name
    (e.g. `秋田県`), so at a border a driver can tell their own
    prefecture's warning from an over-warned neighbour's.
@@ -175,8 +185,10 @@ driver's current point in Japan:
 
 ### Driver-facing loom
 
-When JMA has issued a snow / heavy-snow / blizzard advisory for the
-driver's current point on a Japanese road, the integrator HMI
+When JMA has issued a surfaced-class warning — snow / blizzard in
+winter, or downpour / typhoon-wind / thunder / fog in sudden summer
+turmoil — for the driver's current point on a Japanese road, the
+integrator HMI
 surfaces a typed `Advisory` event normalized into the same shape as
 NWS records. The driver sees JMA's authoritative wording verbatim
 (event name, area name, headline) without aggregator-class
@@ -217,7 +229,7 @@ architecture → edge developer → driver.
 - **No sub-prefecture resolution.** The lat/lon resolves to
   prefecture (office) code(s) — one for an interior point, or the
   containing set at a border; results are deduplicated to one record
-  per distinct in-force snow code per prefecture. Finer sub-region
+  per distinct in-force code per prefecture. Finer sub-region
   targeting is below this adapter's resolution.
 - **No CAP-class certainty / urgency mapping.** `certainty` and
   `urgency` are `unknown`; the publisher's authoritative term is
@@ -226,12 +238,25 @@ architecture → edge developer → driver.
 ### Severity mapping
 
 - `特別警報` (emergency warning) suffix → `AdvisorySeverity.extreme`
+- `危険警報` (danger warning, JMA `level:40` / 警戒レベル4相当, e.g.
+  大雨危険警報) suffix → `AdvisorySeverity.extreme` — checked before the
+  bare `警報` suffix, which would under-grade a JMA level-40 to severe;
+  `AdvisorySeverity` has no rung between severe and extreme, so level 40
+  maps UP (caution-add-only)
 - `警報` (warning) suffix → `AdvisorySeverity.severe`
 - `注意報` (advisory) suffix → `AdvisorySeverity.moderate`
 - otherwise → `AdvisorySeverity.unknown`
 
 The publisher's authoritative event name is preserved in
 `Advisory.eventClass` either way per Article 17 (β).
+
+**Spoken-channel gating guidance (habituation / cry-wolf).** 雷注意報 is
+near-chronically in force on the Sea-of-Japan coast in winter, and
+濃霧注意報 can be similarly persistent — both render as `moderate` cards.
+An integrator whose spoken channel gates at ≥`severe` severity surfaces
+them visually without adding audio cry-wolf: the card informs without
+training the driver to tune out the voice lane she must trust when a
+警報-class event speaks.
 
 ### Composition with the NWS sibling adapter
 

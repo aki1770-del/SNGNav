@@ -3,14 +3,17 @@ description: >-
   JMA (気象庁) adapter for the condition_aggregator interface. Maps the
   JMA windowless per-prefecture warning JSON to source-neutral Advisory
   typed events. Pure Dart.
-version: 0.3.0
+version: 0.4.0
 
 # Reads the windowless per-prefecture warning JSON
 # (bosai/warning/data/warning/{areacode}.json), which always reflects the
 # current in-force warning state (0.2.0, replacing the 0.1.x atom-feed
 # path's scroll-off false-negative). 0.3.0 resolves a border point to ALL
 # containing prefectures and returns the conservative union (over-warn;
-# partial reads flagged). See README.md "Status" + CHANGELOG.md.
+# partial reads flagged). 0.4.0 widens the surfaced warning classes from
+# snow-only to include the downpour / typhoon-wind / thunder / fog
+# turmoil classes (kJmaWarningCodes). See README.md "Status" +
+# CHANGELOG.md.
 
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues

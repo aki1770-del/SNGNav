@@ -1,5 +1,108 @@
 # Changelog
 
+## 0.4.0 — 2026-07-11 — Surfaced warning classes widened: downpour / typhoon-wind / thunder / fog turmoil classes added (snow-only → all-season)
+
+**Warning-class widening (minor bump).** The surfaced warning-class table
+widens from the six winter-snow classes to fifteen: nine downpour /
+typhoon-wind / thunder / fog turmoil classes are added, so a driver caught in
+sudden summer / typhoon turmoil (大雨・暴風-class events) sees JMA's in-force
+warnings on the same path that already served the winter-snow classes.
+
+reach-disposition(sngnav-app): pin-lift `^0.3.0` → `^0.4.0` queued behind the
+Chair publish batch (hosted resolve; the app's 荒天ウォッチ warnings lane is
+the consumer this widening exists for). The SNGNav monorepo pre-trip surface
+consumes by path and keeps its winter-scoped road-condition merge — the
+turmoil classes reach it as advisory-card work, recorded as a paired W3
+follow-on on the portfolio board (its "no active winter warning" caption
+stays true as written).
+
+- **New surfaced classes (9), keyed on the bosai warning JSON numeric
+  `code`:**
+  - `33` → 大雨特別警報 (**extreme** — `level:50`)
+  - `43` → 大雨危険警報 (**extreme** — `level:40`, 警戒レベル4相当; see the
+    severity note below)
+  - `03` → 大雨警報 (severe — `level:30`)
+  - `10` → 大雨注意報 (moderate — `level:20`)
+  - `35` → 暴風特別警報 (**extreme** — `level:50`)
+  - `05` → 暴風警報 (severe — `level:30`)
+  - `15` → 強風注意報 (moderate — `level:20`)
+  - `14` → 雷注意報 (moderate — `level:20`)
+  - `20` → 濃霧注意報 (moderate — `level:20`)
+- **Verification provenance:** every code↔name pair above was verified
+  directly against the JMA bosai warning frontend's own served
+  `code2WarningInfo` lookup (`https://www.jma.go.jp/bosai/warning/`, page
+  fetched and the inlined map extracted 2026-07-10 — entries shaped like
+  `"03":{shortNameParts:s.rain[3],nameParts:e.rain[3],elem:"rain",level:30}`
+  with `e.rain[3]=["レベル３","大雨","警報"]`; the rain-family `nameParts`
+  carry a leading `レベルＮ` display part which the composed event name
+  drops), and independently cross-checked against a second same-day read of
+  the same source. **Both reads agree on every code**, and both reproduce the
+  six existing snow codes (06/12/02/26/36/32) exactly.
+- **New severity rung handled — 危険警報 (JMA `level:40`, 警戒レベル4相当)
+  maps to `extreme`.** The suffix-derived severity mapping previously had no
+  危険警報 rule, so 大雨危険警報 would have fallen through to the bare 警報
+  suffix → `severe` — under-grading a JMA level-40 (strictly above 警報,
+  level 30). A 危険警報 suffix check is added BEFORE the 警報 check;
+  `AdvisorySeverity` has no rung between `severe` and `extreme`, so level 40
+  maps UP to `extreme` alongside 特別警報 (level 50) — the caution-add-only
+  direction.
+- **API:** new `kJmaWarningCodes` — the complete surfaced map (6 snow + 9
+  turmoil classes) that the parse filter now consumes. `kJmaSnowWarningCodes`
+  is **retained unchanged** (its six snow entries only) for back-compat with
+  consumers that key on the snow classes specifically; `kJmaSnowAdvisoryEventNames`
+  is unchanged. No signature changes.
+- **Behaviour change (deliberate):** codes that were previously dropped as
+  non-snow now surface — e.g. a prefecture whose only in-force warning is a
+  雷注意報 returned `[]` through 0.3.0 and now returns one `moderate`
+  Advisory. Consumers that want the snow classes only should filter on
+  `kJmaSnowWarningCodes` / `eventClass`. This also shifts one partial-border
+  shape: a border read where the reachable prefecture holds ONLY a new
+  turmoil class and a sibling fetch fails **threw** (`JmaAdvisoryFetchException`,
+  empty-union-with-failure) through 0.3.0, and now returns the turmoil
+  Advisory **plus the in-band incomplete-read notice** (the non-empty-union
+  path); the truly-empty partial read still throws.
+- **濃霧注意報 (fog) included deliberately** for the visibility mission: it
+  renders as a moderate card; an integrator whose spoken channel gates at
+  ≥warning severity surfaces it visually without adding audio cry-wolf.
+- **雷注意報 (thunder) — same severity-gated modality guidance, stated for
+  its own habituation profile:** 雷注意報 is near-chronically in force on
+  the Sea-of-Japan coast in winter, so integrator UIs will now routinely
+  show a moderate thunder card beside snow cards. An integrator whose
+  spoken channel gates at ≥warning (`severe`) severity keeps it visual-only
+  — the card informs without training the driver to tune out the voice
+  lane (the cry-wolf dignity cost falls on the integrator's gating choice,
+  which is why it is stated here).
+- **Honest scope — NOT covered by this widening:**
+  - **氾濫 (river-flood) classes are NOT included.** They ride JMA's separate
+    served `code2FloodWarningInfo` map — its own code space
+    (`20`/`21`/`22`/`30`/`31`/`40`/`41`/`51`/`53`), colliding with the main
+    map's codes — and a different JSON branch, so they cannot be added to
+    this table without a source-branch change. Recorded explicitly as out of
+    scope.
+  - **土砂災害 (landslide) classes were considered and deferred** — the
+    driver-facing framing (what a driver should DO with a landslide warning
+    while driving) needs domain sign-off before surfacing.
+  - Other served classes (波浪 / 高潮 / 風雪 13 / 融雪 17 / 乾燥 21 /
+    なだれ 22 / 低温 23 / 霜 24 / 着氷 25) remain unsurfaced at this version;
+    adding any of them stays a deliberate version bump.
+  - There is **no 暴風危険警報 / 大雪危険警報 / 暴風雪危険警報**: the served
+    level-40 slot is populated only for the rain / landslide / flood / tide
+    families (`e.wind[4]`, `e.snow[4]`, `e.wind_snow[4]` are all `[]`), so of
+    the surfaced classes only 大雨 has a 危険警報 rung.
+- **Tests:** every new code pinned to its verbatim name; 危険警報 → `extreme`
+  (and 大雨警報 stays `severe` / 大雨注意報 stays `moderate`); the six snow
+  codes pinned unchanged in BOTH maps; a realistic warning JSON carrying
+  codes `03`+`15` produces the right Advisories; 解除 exclusion covered for
+  the new classes; the fixtures that used 雷注意報 (code 14) as the
+  "non-surfaced drop" proof updated — 雷注意報 now surfaces (that is the
+  point of the widening), and the drop-proof role moved to a genuinely
+  non-surfaced code (`21` 乾燥注意報).
+- **Unchanged:** the public entrypoint, the prefecture bounding-box catalog
+  (6 snow-zone prefectures — coverage widening is a separate, deliberate
+  bump), the border-union / partial-read behaviour (0.3.0), `init()`, the
+  politeness constants (30 s budget / 256 KiB cap / User-Agent requirement),
+  and verbatim event-name relay (Article 17 β).
+
 ## 0.3.0 — 2026-06-29 — Conservative prefecture union at borders (over-warn on resolution; partial reads signalled)
 
 **Border-resolution change (minor bump).** Prefecture resolution at a border
