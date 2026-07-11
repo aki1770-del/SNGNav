@@ -86,6 +86,26 @@ regardless of which coverage tier originally populated that tile.
 - Missing or unreadable MBTiles archives degrade to online or placeholder,
   depending on manager configuration.
 
+## Android consumers: the SQLite native-library trap (read before shipping offline)
+
+MBTiles reading rides `package:sqlite3`, which needs a native `libsqlite3.so`
+on the device. On Flutter Android that library is NOT guaranteed to be
+present:
+
+- `sqlite3_flutter_libs` `0.6.0+eol` is a deprecated **no-op** — depending on
+  it ships nothing. Pin the `0.5.x` line (e.g. `sqlite3_flutter_libs:
+  ^0.5.42`, which is also 16 KB-page-size aligned) until you have verified a
+  `package:sqlite3` build-hooks-delivered library on a real device.
+- **The failure is silent and offline-shaped**: without the `.so`, opening
+  the MBTiles archive throws, a broad `catch` degrades to the online tile
+  path, and every host-side test still passes — the blank map appears only
+  on a device in airplane mode. (Found in production integration testing,
+  2026-07-10: the offline basemap had never actually rendered on Android
+  while 220 host tests painted it.)
+- Verification that counts: install a release build on a device/emulator,
+  enable airplane mode BEFORE launch, and SEE the bundled region paint.
+  Log MBTiles open-failures loudly instead of swallowing them.
+
 ## Example
 
 Run the package example:

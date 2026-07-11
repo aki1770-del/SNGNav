@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (rides the next republish — the core ^0.11 wave)
+- docs: Android SQLite native-library trap section — `sqlite3_flutter_libs`
+  0.6.0+eol is a no-op; pin 0.5.x until a hooks-delivered `.so` is
+  device-verified; the failure mode is a silent blank offline map with green
+  host tests (production-found 2026-07-10). Verification recipe: airplane
+  mode BEFORE launch, SEE the bundled region paint.
+
 ## 0.5.3
 - docs: correct stale README install pin to current version (no API change).
 
