@@ -231,8 +231,8 @@ void main() {
           latitude: 47.9,
           longitude: -97.0,
         );
-        expect(result.advisories, containsAll(<Advisory>[a1, a2]));
-        expect(result.providerErrors, isEmpty);
+        expect(result.seen, containsAll(<Advisory>[a1, a2]));
+        expect(result.failures, isEmpty);
       },
     );
 
@@ -268,13 +268,21 @@ void main() {
           latitude: 0,
           longitude: 0,
         );
-        expect(result.advisories, equals(<Advisory>[goodAdvisory]));
-        expect(result.providerErrors, hasLength(1));
-        expect(result.providerErrors.single.source, AdvisorySource.jmaJapan);
+        expect(result.seen, equals(<Advisory>[goodAdvisory]));
+        expect(result.failures, hasLength(1));
+        expect(result.failures.single.source, AdvisorySource.jmaJapan);
+        // The reason is now TYPED, not a string. A driver cannot be shown
+        // 'transport timeout'; she can be shown "the source did not answer in
+        // time", in her own language — and only a typed reason survives that
+        // translation.
         expect(
-          result.providerErrors.single.message,
-          contains('transport timeout'),
+          result.failures.single.reason,
+          AdvisoryUnavailableReason.timedOut,
         );
+        // And the guarantee that matters: one source failed, so we may NOT tell
+        // her nothing is in force.
+        expect(result.canAssertNoAdvisory, isFalse);
+        expect(result, isA<AdvisoryLookupPartial>());
       },
     );
 

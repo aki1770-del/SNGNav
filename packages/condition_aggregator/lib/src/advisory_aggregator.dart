@@ -13,6 +13,7 @@
 library;
 
 import 'advisory.dart';
+import 'advisory_lookup.dart';
 import 'advisory_provider.dart';
 
 /// Result of one aggregator query — the merged advisory list plus any
@@ -85,7 +86,7 @@ class AdvisoryAggregator {
   /// caller invokes explicitly).
   ///
   /// Throws [StateError] if called before [init].
-  Future<AdvisoryAggregateResult> fetchActiveAdvisoriesAtPoint({
+  Future<AdvisoryLookup> fetchActiveAdvisoriesAtPoint({
     required double latitude,
     required double longitude,
   }) async {
@@ -95,7 +96,7 @@ class AdvisoryAggregator {
       );
     }
     final advisories = <Advisory>[];
-    final errors = <AdvisoryProviderError>[];
+    final failures = <AdvisorySourceFailure>[];
     for (final p in _providers) {
       try {
         final found = await p.fetchActiveAdvisoriesAtPoint(
@@ -104,14 +105,74 @@ class AdvisoryAggregator {
         );
         advisories.addAll(found);
       } on Object catch (e) {
-        errors.add(
-          AdvisoryProviderError(source: p.source, message: e.toString()),
+        // The lamp stays lit. Up to 0.0.7 this caught the adapter's honest
+        // refusal, flattened it to a String, filed it in a `providerErrors` list
+        // that NOTHING in the tree ever read, and returned the advisories list
+        // anyway — so a JMA outage in a blizzard reached the integrator as `[]`,
+        // the same value as a clear night. The failure is now part of the RESULT
+        // TYPE and cannot be dropped on the floor.
+        failures.add(
+          AdvisorySourceFailure(
+            source: p.source,
+            reason: classifyAdvisoryFailure(e),
+            cause: e,
+          ),
         );
       }
     }
-    return AdvisoryAggregateResult(
+
+    // The whole point of the type: an empty list is only "no advisory in force"
+    // when every source actually answered.
+    if (failures.isEmpty) {
+      return AdvisoryLookupComplete(advisories);
+    }
+    if (failures.length == _providers.length) {
+      // We did not look. We know nothing. This is NOT clear.
+      return AdvisoryLookupUnavailable(failures);
+    }
+    return AdvisoryLookupPartial(
       advisories: advisories,
-      providerErrors: errors,
+      unreachable: failures,
     );
   }
+}
+
+/// Best-effort classification of an adapter failure into a reason a driver can
+/// be told about.
+///
+/// It is deliberately conservative: anything it cannot place becomes
+/// [AdvisoryUnavailableReason.unclassified] rather than being guessed into a
+/// specific reason. A wrong reason is worse than an honest "we don't know why" —
+/// telling her "the network is down" when the source actually refused us sends
+/// her looking for the wrong problem.
+///
+/// Adapters SHOULD throw a typed exception carrying their own reason; this
+/// exists so that an adapter which does not is still not silently swallowed.
+AdvisoryUnavailableReason classifyAdvisoryFailure(Object error) {
+  final text = error.toString().toLowerCase();
+  if (error is StateError) return AdvisoryUnavailableReason.notInitialised;
+  if (text.contains('incomplete') || text.contains('coverage')) {
+    return AdvisoryUnavailableReason.incompleteAreaCoverage;
+  }
+  if (text.contains('timeout') || text.contains('timed out')) {
+    return AdvisoryUnavailableReason.timedOut;
+  }
+  if (text.contains('socket') ||
+      text.contains('network') ||
+      text.contains('connection') ||
+      text.contains('failed host lookup')) {
+    return AdvisoryUnavailableReason.networkUnreachable;
+  }
+  if (text.contains('format') ||
+      text.contains('parse') ||
+      text.contains('unexpected')) {
+    return AdvisoryUnavailableReason.unparseable;
+  }
+  if (text.contains('403') ||
+      text.contains('401') ||
+      text.contains('429') ||
+      text.contains('refused')) {
+    return AdvisoryUnavailableReason.refused;
+  }
+  return AdvisoryUnavailableReason.unclassified;
 }

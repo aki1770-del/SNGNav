@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.1.0
+
+### Safety defect in 0.0.7 and earlier — please read
+
+**A weather-feed outage was indistinguishable from a clear sky.**
+
+`fetchActiveAdvisoriesAtPoint` returned `List<Advisory>`. When every provider
+failed, it returned an **empty list** — the exact same value it returns when the
+sky is genuinely clear and no advisory is in force.
+
+The adapter was never at fault. `condition_aggregator_jma` refuses to lie: on an
+unreachable prefecture it throws *"Incomplete border read for prefectures …"*.
+**The lamp was lit.** This package caught that, flattened it into a `String`,
+filed it in a `providerErrors` list that **nothing anywhere ever read**, and
+returned the empty list anyway. The lamp was lit and put in a drawer.
+
+**If you called this during a JMA outage in a blizzard, your app told your driver
+that no advisory was in force. It did not know that. It could not have known
+that. It had not looked.**
+
+### The fix, and why it is breaking
+
+`List<Advisory>` **cannot express "I could not look."** So the return type is now
+a sealed `AdvisoryLookup`:
+
+* `AdvisoryLookupComplete` — every source answered. An empty list here genuinely
+  means *no advisory in force*. **This is the only shape in which that sentence
+  is true.**
+* `AdvisoryLookupPartial` — act on what was `seen`; you may **not** conclude
+  "nothing is in force", because the warning you are missing may be in the source
+  that did not answer.
+* `AdvisoryLookupUnavailable` — **we did not look. We know nothing.** Not clear.
+
+A sealed class cannot be ignored: Dart's exhaustive `switch` refuses to compile a
+consumer who has not written the unreachable branch. A field you *can* ignore
+*will* be ignored — that is precisely how this shipped.
+
+### Migration — it is two lines, and we owe you the map
+
+```dart
+// before
+final r = await agg.fetchActiveAdvisoriesAtPoint(...);
+for (final a in r.advisories) { ... }
+
+// after — act on what was seen (a hazard seen is a hazard real, even on
+// partial data), and only claim "nothing in force" when you are allowed to
+final r = await agg.fetchActiveAdvisoriesAtPoint(...);
+for (final a in r.seen) { ... }
+
+if (r.canAssertNoAdvisory && r.seen.isEmpty) {
+  showNoAdvisory();          // every source answered; the silence is real
+} else if (r.seen.isEmpty) {
+  showFeedDown(r.failures);  // we could not look — tell her that, not "clear"
+}
+```
+
+`r.failures` carries a **typed** `AdvisoryUnavailableReason`, not a string, so you
+can render it in the language your driver actually reads. She can act on *"the
+weather service did not answer."* She cannot act on a `SocketException`.
+
+**The asymmetry, stated once:** positive evidence fires on partial knowledge; a
+negative conclusion requires whole knowledge. That is what lets a system be
+honest without crying wolf.
+
+
 ## 0.0.7 — 2026-06-30 — Doc honesty
 
 - Docs: library dartdoc no longer claims `Phase: explore` /
