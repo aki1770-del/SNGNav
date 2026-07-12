@@ -1,35 +1,65 @@
-/// KUKSA in-vehicle condition source — the compound-failure worst-case data path.
+/// KUKSA in-vehicle condition source — an EMBEDDED / IVI-target signal source.
 ///
-/// When the network and GPS are gone, the vehicle's *own* signals are still on
-/// the local KUKSA databroker bus: road-friction estimate (ESC), TCS/ABS
-/// engagement, wiper / rain-sensor intensity, and ambient temperature. This
-/// provider subscribes to those VSS signals over gRPC via our published
-/// `kuksa_dart_sdk` client and feeds them into the deterministic, safety-
-/// calibrated fusion that now lives ONCE in the `vehicle_condition_fusion`
-/// package — producing the SAME `driving_conditions` picture
-/// (`DrivingConditionAssessment`) that already drives the 3D Snow Scene. No
-/// network, no GPS, no cloud weather: just the bus the car already speaks.
+/// ## What this path IS
 ///
-/// ## Thin KUKSA adapter — fusion lives in the package
+/// An **opt-in** live condition source for a build running **on a vehicle
+/// head-unit (IVI) or an embedded target that is already on the vehicle's own
+/// network**, wired only when the edge developer passes
+/// `--dart-define=KUKSA_HOST=<broker host>` (default port 55555). It subscribes
+/// over gRPC to the COVESA VSS leaves the `vehicle_condition_fusion` package
+/// reads (road friction, TCS/ABS/ESC engagement, wiper / rain-sensor intensity,
+/// ambient temperature, humidity) and feeds them into that package's
+/// deterministic, safety-calibrated fusion — producing the SAME
+/// `DrivingConditionAssessment` that drives the 3D Snow Scene.
 ///
-/// This file is intentionally a THIN adapter. The calibration (icy-friction /
-/// cold-slip / assumed-temp thresholds), the deterministic VSS→condition
-/// mapping, the carry-forward merge of partial frames, the HysteresisFilter
-/// debounce, and the honest-degradation rail are NOT duplicated here — they are
-/// the single source of truth in `package:vehicle_condition_fusion`. The only
-/// KUKSA-SDK-coupled responsibility kept here is [vehicleSignalsFromDatapoints]:
-/// decoding one raw `path → Datapoint` frame into the package's
-/// transport-neutral `VehicleConditionSignals`. Decoded partial frames are fed
-/// straight through to `VehicleConditionFusion.fromPartialFrames`, which does
-/// the last-known-value carry-forward, fusion, debounce, and degradation.
+/// ## What this path IS NOT — read this before trusting it
+///
+/// **It is NOT the driver's compound-failure lifeline, and it is NOT the
+/// offline safety path.**
+///
+///  * A KUKSA databroker is **another network hop** — a gRPC dial to a vehicle
+///    bus. "No cloud" is not "no network". If the host is unreachable, this
+///    source produces nothing.
+///  * A **phone cannot touch that bus.** This stack ships **zero bytes onto the
+///    driver's handset**; on the phone build `KUKSA_HOST` is unset and this
+///    entire file is a no-op.
+///  * Therefore it does **NOT** work in the no-network / phone-in-a-dead-zone
+///    case. The offline safety path is the bundled, on-device one — not this.
+///
+/// Where this path DOES earn its keep is an IVI/embedded target wired to a real
+/// vehicle bus: there the car's own ECUs are a genuine sensor the cloud cannot
+/// replace. That is a real and different thing from the D3 worst case. Claiming
+/// it as the D3 lifeline would be a fabrication about our own reach.
+///
+/// ## Thin KUKSA adapter — ONE adapter, and it lives in the package
+///
+/// The SDK-coupled responsibility kept here is exactly one step:
+/// [vssLeavesFromDatapoints] decodes a raw `path → Datapoint` frame to the
+/// `{leaf-path: scalar}` map shape that the package's
+/// `VehicleConditionSignals.fromVss` consumes. **The VSS→typed-signals mapping
+/// itself is NOT duplicated here** — `fromVss` owns it, including the
+/// load-bearing unit conversion (`ESC.RoadFriction.MostProbable` is a VSS
+/// **PERCENT, 0–100**, which `fromVss` divides by 100 and clamps into the
+/// `VehicleConditionSignals` 0.0–1.0 contract).
+///
+/// This file previously carried a *second*, bespoke mapping
+/// (`vehicleSignalsFromDatapoints`) that passed the raw percent straight
+/// through. A real ESC reporting **18.0 %** (black ice) therefore arrived as
+/// `roadFriction: 18.0`, which is not `< 0.3`, so the classifier did not
+/// abstain — it positively asserted *"friction measured, road is fine"* and
+/// returned **dry / grip 1.0 / "Conditions normal"**. Two adapters for one job
+/// is HOW they diverged. There is now one.
+///
+/// The calibration, the carry-forward merge of partial frames, the
+/// HysteresisFilter debounce, and the honest-degradation rail are likewise the
+/// single source of truth in `package:vehicle_condition_fusion`.
 ///
 /// ## Honest degradation (no fabrication)
 ///
 /// If no databroker is reachable, or the stream errors / ends mid-session, no
 /// condition is ever invented: the package emits a
 /// `VehicleConditionUpdate.unavailable` marker (so the caller can keep its
-/// last-good / offline-first default and stop claiming "live") — exactly the
-/// honest-degradation contract the GPS-loss path already follows. Reads only;
+/// last-good / offline-first default and stop claiming "live"). Reads only;
 /// this provider never writes to or commands the vehicle.
 library;
 
@@ -50,46 +80,28 @@ typedef KuksaConditionUpdate = VehicleConditionUpdate;
 // KUKSA-SDK-coupled adapter: per-frame decode. The ONLY databroker-aware code.
 // ---------------------------------------------------------------------------
 
-/// Decodes one KUKSA subscribe/getValues snapshot (path → [Datapoint]) into the
-/// package's transport-neutral [VehicleConditionSignals].
+/// Decodes one KUKSA subscribe/getValues snapshot (`path → `[Datapoint]`) to the
+/// `{leaf-path: scalar}` frame shape that `VehicleConditionSignals.fromVss`
+/// consumes — a `Datapoint`'s scalar `.value` is a `bool` / `int` / `double`, or
+/// `null` when the leaf is absent / None.
 ///
-/// This is a per-frame decode only — it does NOT merge across frames. A signal
-/// that is absent, value-less, or carries an unexpected wire type decodes to
-/// `null` (never guessed). The carry-forward merge of partial KUKSA frames is
-/// the package's job: decoded partial frames are fed straight into
-/// `VehicleConditionFusion.fromPartialFrames`, so a `null` here means simply
-/// "not present in THIS frame" and the package carries the last-known value
-/// forward.
-VehicleConditionSignals vehicleSignalsFromDatapoints(
+/// **This is the ONLY KUKSA-SDK-coupled code in the app, and it does NOT map
+/// units, fields, or paths.** That is deliberate: the VSS→signals mapping (and
+/// with it the `RoadFriction.MostProbable` **percent → 0.0–1.0** conversion)
+/// belongs to `VehicleConditionSignals.fromVss` and must exist exactly once. It
+/// is the same four-line decode the package's own runnable bridge uses
+/// (`packages/vehicle_condition_fusion/example/kuksa_databroker.dart`).
+///
+/// Per-frame decode only — it does NOT merge across frames. A leaf absent from
+/// THIS frame simply does not appear in the map; `fromVss` leaves that field
+/// `null` and `VehicleConditionFusion.fromPartialFrames` carries the last-known
+/// value forward. Nothing is ever guessed.
+Map<String, Object?> vssLeavesFromDatapoints(
   Map<String, Datapoint> datapoints,
 ) {
-  double? readDouble(String path) {
-    final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.floatValue ?? dp.doubleValue ?? dp.int32Value?.toDouble();
-  }
-
-  bool? readBool(String path) {
-    final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.boolValue;
-  }
-
-  int? readInt(String path) {
-    final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.int32Value ?? dp.uint32Value ?? dp.int64Value;
-  }
-
-  return VehicleConditionSignals(
-    roadFriction: readDouble(kRoadFrictionMostProbable),
-    tcsEngaged: readBool(kTcsIsEngaged),
-    absEngaged: readBool(kAbsIsEngaged),
-    wiperIntensity: readInt(kWiperFrontIntensity),
-    rainIntensity: readInt(kRaindetectionIntensity),
-    airTempC: readDouble(kAirTemperature),
-    speedKmh: readDouble(kVehicleSpeed),
-  );
+  return {
+    for (final entry in datapoints.entries) entry.key: entry.value.value,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -102,21 +114,25 @@ VehicleConditionSignals vehicleSignalsFromDatapoints(
 /// Construct directly from any `Stream<Map<String, Datapoint>>` — including a
 /// test stream of mock [Datapoint]s — for full testability without a running
 /// databroker; or use [KuksaConditionProvider.connect] to wire a real
-/// [KuksaClient]. The raw frames are decoded ([vehicleSignalsFromDatapoints])
-/// and handed to `VehicleConditionFusion.fromPartialFrames`, which owns the
-/// carry-forward, fusion, debounce, and honest-degradation behaviour.
+/// [KuksaClient]. Raw frames are decoded to VSS leaves
+/// ([vssLeavesFromDatapoints]), typed by the package's
+/// `VehicleConditionSignals.fromVss` — which owns the friction percent→0.0–1.0
+/// conversion — and handed to `VehicleConditionFusion.fromPartialFrames`, which
+/// owns carry-forward, fusion, debounce, and honest degradation.
 class KuksaConditionProvider {
   /// Primary, injectable constructor. [updates] is the raw KUKSA subscribe
   /// shape (`path → Datapoint`, partial after the first emission). Each frame is
-  /// decoded to a package [VehicleConditionSignals] and the resulting stream
-  /// drives `VehicleConditionFusion.fromPartialFrames` (which carries the
-  /// last-known value of any field a partial frame did not re-send).
+  /// decoded to VSS leaves, typed by `VehicleConditionSignals.fromVss`, and the
+  /// resulting stream drives `VehicleConditionFusion.fromPartialFrames` (which
+  /// carries the last-known value of any field a partial frame did not re-send).
   KuksaConditionProvider({
     required Stream<Map<String, Datapoint>> updates,
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
     DateTime Function()? clock,
   }) : _fusion = VehicleConditionFusion.fromPartialFrames(
-          partialFrames: updates.map(vehicleSignalsFromDatapoints),
+          partialFrames: updates
+              .map(vssLeavesFromDatapoints)
+              .map(VehicleConditionSignals.fromVss),
           surfaceFilter: surfaceFilter,
           clock: clock,
         );
@@ -132,15 +148,24 @@ class KuksaConditionProvider {
   /// Releases the source subscription and closes the output stream.
   Future<void> dispose() => _fusion.dispose();
 
-  /// Connects [client] and subscribes to [paths] (default
-  /// [kSnowSafetySignals]), returning a wired provider.
+  /// Connects [client] and subscribes to [paths], returning a wired provider.
+  ///
+  /// The default is `VehicleConditionSignals.recognizedVssPaths` — **exactly the
+  /// leaves the fusion actually reads**, so the subscription cannot drift from
+  /// the consumer. This deliberately replaces the SDK's `kSnowSafetySignals`,
+  /// which omits `Vehicle.ADAS.ESC.IsEngaged` and `Vehicle.Exterior.Humidity`
+  /// (the fusion reads both) and carries leaves the fusion ignores
+  /// (`RoadFriction.LowerBound`, tire pressures). Humidity is load-bearing: with
+  /// the ambient temperature it is what lets the classifier catch radiative-frost
+  /// black ice BEFORE friction/traction fire — those only reveal ice once the
+  /// wheels have already slipped.
   ///
   /// Connection failure rethrows — the caller owns the honest no-broker
   /// fallback (keep the offline default; never wire a fabricated source),
   /// matching the app's existing live-source opt-in pattern.
   static Future<KuksaConditionProvider> connect(
     KuksaClient client, {
-    List<String> paths = kSnowSafetySignals,
+    List<String> paths = VehicleConditionSignals.recognizedVssPaths,
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
   }) async {
     await client.connect();

@@ -81,7 +81,7 @@ jobs:
       - name: Run pure Dart package tests with coverage
         run: |
           export PATH="$HOME/.pub-cache/bin:$PATH"
-          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine; do
+          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine vehicle_condition_fusion; do
             echo "--- packages/$pkg ---"
             (
               cd "packages/$pkg"

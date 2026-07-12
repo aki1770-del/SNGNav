@@ -43,10 +43,20 @@ Datapoint _valuelessDp(String path) =>
     Datapoint(raw: pb.Datapoint(), path: path);
 
 void main() {
-  group('vehicleSignalsFromDatapoints (KUKSA decode adapter)', () {
-    test('decodes mock Datapoints to typed fields', () {
-      final signals = vehicleSignalsFromDatapoints({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+  // The app's job is the SDK decode ONLY (Datapoint → scalar). The VSS mapping —
+  // paths, types, and the load-bearing friction PERCENT→0..1 conversion — is
+  // `VehicleConditionSignals.fromVss`, and exists exactly once, in the package.
+  // These tests therefore assert the composed pipeline the provider runs:
+  //   Datapoints → vssLeavesFromDatapoints → fromVss
+  VehicleConditionSignals signalsFrom(Map<String, Datapoint> dps) =>
+      VehicleConditionSignals.fromVss(vssLeavesFromDatapoints(dps));
+
+  group('vssLeavesFromDatapoints + fromVss (KUKSA decode → typed signals)', () {
+    test('decodes REAL wire values to typed fields (friction is a PERCENT)', () {
+      final signals = signalsFrom({
+        // 20.0 PERCENT — the value a real ESC emits. NOT 0.2. VSS
+        // `ESC.RoadFriction.MostProbable` is float, unit percent, min 0 max 100.
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
         kTcsIsEngaged: _boolDp(kTcsIsEngaged, true),
         kAbsIsEngaged: _boolDp(kAbsIsEngaged, false),
         kWiperFrontIntensity: _intDp(kWiperFrontIntensity, 5),
@@ -55,6 +65,7 @@ void main() {
         kVehicleSpeed: _floatDp(kVehicleSpeed, 42.0),
       });
 
+      // NORMALIZED into the VehicleConditionSignals 0.0–1.0 contract.
       expect(signals.roadFriction, closeTo(0.2, 1e-4));
       expect(signals.tcsEngaged, isTrue);
       expect(signals.absEngaged, isFalse);
@@ -65,8 +76,15 @@ void main() {
       expect(signals.hasAnySignal, isTrue);
     });
 
+    test('a full-grip wire value (95 %) normalizes to 0.95, not 95.0', () {
+      final signals = signalsFrom({
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 95.0),
+      });
+      expect(signals.roadFriction, closeTo(0.95, 1e-4));
+    });
+
     test('absent / value-less signals decode to null (never guessed)', () {
-      final signals = vehicleSignalsFromDatapoints({
+      final signals = signalsFrom({
         kRoadFrictionMostProbable: _valuelessDp(kRoadFrictionMostProbable),
         // everything else simply absent from the map
       });
@@ -172,7 +190,9 @@ void main() {
       final sub = provider.conditions.listen(results.add);
 
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+        // PERCENT wire value (20 %) → normalizes to 0.20 → below the 0.3 icy
+        // threshold.
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
         kAirTemperature: _floatDp(kAirTemperature, -5.0),
       });
       await pumpEventQueue();
@@ -204,9 +224,9 @@ void main() {
       final results = <KuksaConditionUpdate>[];
       final sub = provider.conditions.listen(results.add);
 
-      // First: friction + temp.
+      // First: friction + temp. 50 % wire → 0.50 (above the icy threshold).
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.5),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 50.0),
         kAirTemperature: _floatDp(kAirTemperature, -5.0),
       });
       await pumpEventQueue();
@@ -240,20 +260,21 @@ void main() {
         surfaces.add(u.assessment?.surfaceState);
       });
 
-      // dry baseline
+      // dry baseline — 95 % wire → 0.95
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.95),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 95.0),
         kAirTemperature: _floatDp(kAirTemperature, 5.0),
       });
       await pumpEventQueue();
-      // one icy reading (should be HELD — below the hysteresis threshold)
+      // one icy reading, 20 % wire → 0.20 (should be HELD — below the
+      // hysteresis threshold)
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
       });
       await pumpEventQueue();
       // a second icy reading (now persists → flip allowed)
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
       });
       await pumpEventQueue();
 
@@ -290,6 +311,67 @@ void main() {
         await pumpEventQueue();
 
         expect(results, isEmpty);
+
+        await sub.cancel();
+        await provider.dispose();
+        await source.close();
+      },
+    );
+
+    // ── REGRESSION: the 100× friction-unit bug ────────────────────────────
+    //
+    // `Vehicle.ADAS.ESC.RoadFriction.MostProbable` is a COVESA VSS **percent**
+    // (float, min 0, max 100). A real ESC on black ice emits 18.0 — NOT 0.18.
+    //
+    // The app's bespoke adapter passed that raw percent straight into
+    // `VehicleConditionSignals.roadFriction`, whose contract is 0.0–1.0 and
+    // whose icy threshold is 0.3. `18.0 < 0.3` is false, so the classifier did
+    // not merely abstain — it POSITIVELY asserted "we measured the friction and
+    // the road is fine" (`_iceRisk` returns false on a non-null friction), and
+    // returned a DRY road at full grip.
+    //
+    // +1.0 °C with the wipers off is exactly the radiative-frost black-ice
+    // window this product exists for: the air is above freezing, nothing is
+    // falling, and the road is ice.
+    test(
+      'REGRESSION: real ESC wire value 18.0 PERCENT at +1°C, wipers off '
+      '→ black ice (was: dry, full grip — the 100× unit bug)',
+      () async {
+        final source = StreamController<Map<String, Datapoint>>();
+        // Pinned no-debounce filter so this asserts the CLASSIFICATION, not the
+        // hysteresis hold.
+        final provider = KuksaConditionProvider(
+          updates: source.stream,
+          surfaceFilter: HysteresisFilter<RoadSurfaceState>(
+            windowSize: 1,
+            threshold: 1,
+          ),
+        );
+        final results = <KuksaConditionUpdate>[];
+        final sub = provider.conditions.listen(results.add);
+
+        source.add({
+          // The wire value a real ESC emits on black ice: 18.0 PERCENT.
+          kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 18.0),
+          // Above freezing — the air, not the road.
+          kAirTemperature: _floatDp(kAirTemperature, 1.0),
+          // Nothing falling. Nothing to see. That is the hazard.
+          kWiperFrontIntensity: _intDp(kWiperFrontIntensity, 0),
+        });
+        await pumpEventQueue();
+
+        expect(results, hasLength(1));
+        final update = results.single;
+
+        // The percent MUST be normalized to the 0.0–1.0 contract.
+        expect(
+          update.signals!.roadFriction,
+          closeTo(0.18, 1e-6),
+          reason: 'VSS friction is a percent; the signals contract is 0..1',
+        );
+        // And the road MUST read as ice, not as a dry road at full grip.
+        expect(update.assessment!.surfaceState, RoadSurfaceState.blackIce);
+        expect(update.assessment!.gripFactor, lessThan(0.5));
 
         await sub.cancel();
         await provider.dispose();

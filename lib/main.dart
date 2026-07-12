@@ -157,20 +157,31 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // or the simulated default.
   bool _liveConditionReceived = false;
 
-  // LIVE IN-VEHICLE CONDITION SOURCE (D3 worst-case — network AND GPS gone).
+  // LIVE IN-VEHICLE CONDITION SOURCE — an EMBEDDED / IVI-TARGET signal source.
   //
-  // The compound-failure path: when Google Maps fails AND GPS fails, the
-  // vehicle's own ECUs are still publishing road-friction (ESC), TCS/ABS
-  // engagement, wiper/rain intensity and ambient temperature onto the local
-  // KUKSA databroker bus. We consume those VSS signals over gRPC via our
-  // published `kuksa_dart_sdk` client and fuse them DETERMINISTICALLY into the
-  // exact same DrivingConditionAssessment the Digitraffic path produces — no
-  // network, no GPS, no cloud weather.
+  // WHAT IT IS: on a build running on a vehicle head-unit (or an embedded target
+  // already attached to the vehicle's own network), the car's ECUs publish
+  // road-friction (ESC), TCS/ABS/ESC engagement, wiper/rain intensity, ambient
+  // temperature and humidity onto a local KUKSA databroker. We subscribe to
+  // those VSS leaves over gRPC via the `kuksa_dart_sdk` client and fuse them
+  // DETERMINISTICALLY (in `package:vehicle_condition_fusion`) into the exact
+  // same DrivingConditionAssessment the Digitraffic path produces. On a real
+  // vehicle bus this is a genuine sensor the cloud cannot replace.
+  //
+  // WHAT IT IS NOT — and this comment previously claimed otherwise:
+  // it is NOT the D3 compound-failure lifeline and NOT the offline safety path.
+  //  * A databroker is ANOTHER NETWORK HOP (a gRPC dial). "No cloud" != "no
+  //    network". Unreachable host → this source produces nothing at all.
+  //  * A PHONE CANNOT TOUCH THAT BUS. This stack ships ZERO BYTES onto the
+  //    driver's handset; on the phone build KUKSA_HOST is unset and every line
+  //    below is a no-op. The offline safety path is the bundled on-device one.
+  // Claiming this as the "network AND GPS gone" path was a fabrication about our
+  // own reach. It is a real capability — on a different target.
   //
   // SOURCE SELECTION (additive — never replaces the offline default or the
-  // Digitraffic opt-in): this live source is wired ONLY when the edge developer
-  // opts in with `--dart-define=KUKSA_HOST=<broker host>` (e.g. localhost on an
-  // IVI headunit). On every other path it is a no-op and the scene keeps its
+  // Digitraffic opt-in): wired ONLY when the edge developer opts in with
+  // `--dart-define=KUKSA_HOST=<broker host>` (e.g. localhost on an IVI
+  // headunit). On every other path it is a no-op and the scene keeps its
   // simulated/Digitraffic behaviour unchanged.
   //
   // HONEST FALLBACK (no fabrication): if the broker is unreachable, or the
@@ -580,8 +591,10 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   Widget _buildForwardView() {
     final String caption;
     if (_liveVehicleReceived) {
+      // NOT "offline-capable": a KUKSA databroker is a network hop to a vehicle
+      // bus. It is a live IVI/embedded source, not the offline path.
       caption = 'Forward-view \u2014 CPU-projected still frame, '
-          'LIVE in-vehicle VSS signals (KUKSA databroker, offline-capable)';
+          'LIVE in-vehicle VSS signals (KUKSA databroker on the vehicle bus)';
     } else if (_liveConditionReceived) {
       caption = 'Forward-view \u2014 CPU-projected still frame, '
           'live Digitraffic winter-road severity';
