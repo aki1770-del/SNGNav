@@ -27,6 +27,7 @@ import 'package:navigation_safety_calibration/navigation_safety_calibration.dart
 import 'commute_shape.dart';
 import 'daylight.dart';
 import 'driver_profile_spec.dart';
+import 'pretrip_absence.dart';
 import 'pretrip_advisor.dart';
 import 'pretrip_messages.dart';
 import 'pretrip_recommendation.dart';
@@ -62,6 +63,15 @@ enum HourHazard {
 /// not have to re-parse prose.
 enum PretripVerdict {
   /// Forecast does not cover the departure window — no recommendation.
+  ///
+  /// As of 0.5.2 [SnowAwarePretripAdvisor.brief] no longer PRODUCES this
+  /// verdict: it throws [PretripForecastCoverageException] instead, because
+  /// the briefing it would have had to build carries a non-nullable
+  /// [PretripBriefing.peakHazard] and [HourHazard] has no "unknown" member —
+  /// so the only briefing it could return was one that reported a morning with
+  /// no forecast as [HourHazard.clear]. The member is kept (removing it would
+  /// break your build) and remains available to other [PretripAdvisor]
+  /// implementations and to your own verdict handling.
   noData,
 
   /// No winter hazard signals across the trip window.
@@ -96,10 +106,17 @@ class PretripBriefing {
   /// Plain-language reason chips (also carried on the recommendation).
   final List<String> chips;
 
-  /// The contract-shaped recommendation, `null` only for [PretripVerdict.noData].
+  /// The contract-shaped recommendation. Nullable by contract; every briefing
+  /// [SnowAwarePretripAdvisor] now returns carries a non-null one (the one case
+  /// that carried `null` — no forecast coverage — is a
+  /// [PretripForecastCoverageException] as of 0.5.2, not a briefing).
   final PretripRecommendation? recommendation;
 
   /// Worst per-hour hazard inside the trip window.
+  ///
+  /// This value is ALWAYS derived from at least one real forecast slot. It is
+  /// safe to colour a card from it. (Before 0.5.2 it was [HourHazard.clear] on
+  /// a briefing built from no forecast at all.)
   final HourHazard peakHazard;
 }
 
@@ -155,11 +172,42 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     required CommuteShape commute,
     required DriverProfileSpec profile,
   }) =>
-      brief(forecast: forecast, commute: commute, profile: profile)
-          .recommendation;
+      briefOrNull(forecast: forecast, commute: commute, profile: profile)
+          ?.recommendation;
 
   /// The richer briefing the app UI consumes; [advise] derives from it.
+  ///
+  /// Throws [PretripForecastCoverageException] when NO forecast slot covers the
+  /// planned trip window. Before 0.5.2 this case returned a briefing whose
+  /// `peakHazard` was [HourHazard.clear] — a morning nobody forecast, handed to
+  /// the driver as a clear morning. [HourHazard] has no `unknown` member and
+  /// [PretripBriefing.peakHazard] is non-nullable, so there is no honest
+  /// briefing to build here; the advisor stops and says why rather than paint
+  /// green over a data blackout.
+  ///
+  /// If you would rather branch than catch, [briefOrNull] returns `null` in
+  /// exactly this case. [advise] is unchanged and still returns `null`.
   PretripBriefing brief({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) {
+    final briefing =
+        briefOrNull(forecast: forecast, commute: commute, profile: profile);
+    if (briefing == null) {
+      throw PretripForecastCoverageException(
+        plannedDeparture: commute.plannedDeparture,
+        plannedDuration: commute.plannedDuration,
+        forecastSlotCount: forecast.hourly.length,
+      );
+    }
+    return briefing;
+  }
+
+  /// [brief], but returns `null` instead of throwing when no forecast slot
+  /// covers the planned trip window. Added in 0.5.2 as the branch-don't-catch
+  /// way forward; a `null` here means "we do not know", never "clear".
+  PretripBriefing? briefOrNull({
     required WeatherForecast forecast,
     required CommuteShape commute,
     required DriverProfileSpec profile,
@@ -169,14 +217,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       commute.plannedDeparture,
       commute.plannedDuration,
     );
-    if (window.isEmpty) {
-      return const PretripBriefing(
-        verdict: PretripVerdict.noData,
-        chips: [],
-        recommendation: null,
-        peakHazard: HourHazard.clear,
-      );
-    }
+    if (window.isEmpty) return null;
 
     final peak = window.map(hazardOf).reduce(_worse);
     final worstSlot =

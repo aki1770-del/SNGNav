@@ -69,7 +69,10 @@ void main() {
     expect(
       fields,
       {
-        'areaHazard',
+        // Backing field for the `areaHazard` getter as of 0.5.2 (the getter
+        // throws AreaForecastNotCoveredException when the window is uncovered,
+        // rather than returning a fabricated HourHazard.clear placeholder).
+        '_areaHazard',
         'forecastCovered',
         'officialWarningVerbatim',
         'warningCheckAvailable',

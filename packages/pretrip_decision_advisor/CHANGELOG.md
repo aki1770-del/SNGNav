@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.5.2
+
+### Safety defect in 0.5.1 and earlier — please read
+
+**Up to and including 0.5.1, a trip with NO forecast data reported its peak
+hazard as `HourHazard.clear`.** A morning that nobody forecast was handed to the
+driver as a clear morning. A UI that colours a card from `briefing.peakHazard`
+(this catalog's own example does: `pretrip_source_met_norway` prints
+`briefing.peakHazard.name` with no verdict check) painted **green on a total
+data blackout** — in the package that speaks to the driver *before she leaves
+the house*. `AreaConditionRead.areaHazard` had the same hole: an uncovered
+window returned `HourHazard.clear` as a "non-asserted placeholder", invisible to
+a caller colouring from the band.
+
+`HourHazard` has no `unknown` member and both fields are non-nullable, so on the
+0.5.x line there was nowhere to put "we do not know". Adding an enum value or a
+nullable field would break every consumer's build, so instead of fabricating a
+value where an honest one does not exist, **this release STOPS**: it throws a
+typed, catchable exception that names exactly what happened and how to proceed.
+
+pub.dev releases are immutable and cannot be withdrawn; this note is the recall.
+
+### Non-breaking (no signature changed; source-compatible on `^0.5.1`)
+
+- **`SnowAwarePretripAdvisor.brief(...)` now throws
+  `PretripForecastCoverageException`** when no forecast slot covers the trip
+  window (previously it returned a briefing with `peakHazard: HourHazard.clear`).
+  The exception message says what happened, why we refuse to guess, and the way
+  forward. `PretripBriefing.peakHazard` on any briefing `brief` returns is now
+  always derived from at least one real slot — safe to colour from.
+- **`SnowAwarePretripAdvisor.briefOrNull(...)`** (new) returns `null` in exactly
+  that case if you would rather branch than catch.
+- **`AreaConditionRead.areaHazard` now throws `AreaForecastNotCoveredException`**
+  when `forecastCovered` is false (previously it returned `HourHazard.clear`).
+  Guard with `forecastCovered` first (as `areaConditionChips` always has), or
+  read the new **`AreaConditionRead.areaHazardOrNull()`**, which returns `null`.
+- **New exception types** `PretripDataAbsentException` (base),
+  `PretripForecastCoverageException`, `AreaForecastNotCoveredException` — catch
+  the base to handle every absence stop.
+- `advise(...)` is **unchanged**: it still returns `null` when the window is not
+  covered, exactly as before.
+
+Migration in two lines:
+
+```dart
+// If you called brief() and rendered peakHazard directly:
+try { render(advisor.brief(...)); }
+on PretripDataAbsentException catch (e) { renderNoForecastCard(e.message); }
+// or: final b = advisor.briefOrNull(...); if (b == null) renderNoForecastCard();
+```
+
+Absence is a first-class value on the 0.6.x line (`HourHazard.unknown`); this
+patch delivers the honest stop inside the `^0.5.1` range that a 0.6.0 upgrade
+would not reach.
+
 ## 0.5.1
 
 - Internal: `radiativeFrostRisk` now delegates to

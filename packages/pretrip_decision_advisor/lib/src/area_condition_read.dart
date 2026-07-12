@@ -23,6 +23,7 @@
 /// a bool; this file never reaches a network for it.
 library;
 
+import 'pretrip_absence.dart';
 import 'pretrip_messages.dart';
 import 'snow_aware_pretrip_advisor.dart';
 import 'visibility_observation.dart';
@@ -34,7 +35,7 @@ import 'weather_forecast.dart';
 /// field: the read informs the driver's own decision, it does not make it.
 class AreaConditionRead {
   const AreaConditionRead({
-    required this.areaHazard,
+    required HourHazard areaHazard,
     required this.forecastCovered,
     required this.officialWarningVerbatim,
     required this.warningCheckAvailable,
@@ -42,13 +43,31 @@ class AreaConditionRead {
     required this.visibilityStationName,
     required this.visibilityDistanceKm,
     required this.areaLabel,
-  });
+  }) : _areaHazard = areaHazard;
 
-  /// Peak forecast hazard over the look-ahead window. Only meaningful when
-  /// [forecastCovered] is true; when the window is uncovered this is
-  /// [HourHazard.clear] as a non-asserted placeholder (the chip layer shows
-  /// "not covered", never a band).
-  final HourHazard areaHazard;
+  final HourHazard _areaHazard;
+
+  /// Peak forecast hazard over the look-ahead window.
+  ///
+  /// Throws [AreaForecastNotCoveredException] when [forecastCovered] is false:
+  /// no forecast slot covered the window, so no band was computed. Before 0.5.2
+  /// this returned [HourHazard.clear] as a "non-asserted placeholder" — which a
+  /// caller colouring a card from the band could not see, so a place nothing was
+  /// known about rendered green. It is not clear there; it is unknown there, and
+  /// [HourHazard] has no member for that.
+  ///
+  /// Guard with [forecastCovered] (as [areaConditionChips] always has), or read
+  /// [areaHazardOrNull], added in 0.5.2.
+  HourHazard get areaHazard {
+    if (!forecastCovered) {
+      throw AreaForecastNotCoveredException(areaLabel: areaLabel);
+    }
+    return _areaHazard;
+  }
+
+  /// [areaHazard], but `null` instead of throwing when the forecast does not
+  /// cover the window. A `null` here means "we do not know", never "clear".
+  HourHazard? areaHazardOrNull() => forecastCovered ? _areaHazard : null;
 
   /// False ⇒ the forecast does not cover the window; the band is NOT asserted.
   final bool forecastCovered;
@@ -78,7 +97,7 @@ class AreaConditionRead {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is AreaConditionRead &&
-        other.areaHazard == areaHazard &&
+        other._areaHazard == _areaHazard &&
         other.forecastCovered == forecastCovered &&
         other.officialWarningVerbatim == officialWarningVerbatim &&
         other.warningCheckAvailable == warningCheckAvailable &&
@@ -90,7 +109,7 @@ class AreaConditionRead {
 
   @override
   int get hashCode => Object.hash(
-        areaHazard,
+        _areaHazard,
         forecastCovered,
         officialWarningVerbatim,
         warningCheckAvailable,
