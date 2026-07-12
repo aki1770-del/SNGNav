@@ -42,8 +42,10 @@ jobs:
             (cd "$pkg" && flutter pub get)
           done
 
-      - name: Analyze
-        run: dart analyze lib test
+      - name: Analyze (root app + EVERY discovered package, lib + test)
+        # Was: `dart analyze lib test` — the ROOT ONLY. Root is not a pub workspace, so
+        # this analyzed 0 of 36 packages. test_all.sh --analyze-only analyzes all of them.
+        run: ./scripts/test_all.sh --analyze-only
 
   test:
     name: Test
@@ -75,33 +77,24 @@ jobs:
       - name: Install coverage tooling
         run: dart pub global activate coverage
 
-      - name: Run app tests with coverage
-        run: flutter test --coverage --exclude-tags=probe
-
-      - name: Run pure Dart package tests with coverage
+      # ── LOOM A ───────────────────────────────────────────────────────────────
+      # This ONE step replaces the three by-name loops that used to live here
+      # (root app + 7 named dart packages + 5 named flutter packages = 12 of 36).
+      # 23 packages with test/ suites — including navigation_safety_core's 309 tests,
+      # compound_failure_advisor, every condition_aggregator adapter, and
+      # pretrip_decision_advisor — were NEVER EXECUTED. They all passed. Nobody knew,
+      # because nobody ran them. A by-name list can only test what someone remembered
+      # to write down.
+      #
+      # test_all.sh DISCOVERS the package set from the filesystem, runs every suite,
+      # and then GUARDS: it re-scans packages/*/test/ INDEPENDENTLY of discovery and
+      # HALTS if any package with tests went unexecuted. That guard — not the running
+      # of tests — is the loom. It is the step that makes the machine able to detect
+      # its own blind spot.
+      - name: Run EVERY discovered suite + GUARD against skipped packages
         run: |
           export PATH="$HOME/.pub-cache/bin:$PATH"
-          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine vehicle_condition_fusion; do
-            echo "--- packages/$pkg ---"
-            (
-              cd "packages/$pkg"
-              rm -rf coverage
-              dart test --coverage=coverage/raw
-              dart pub global run coverage:format_coverage \
-                --packages=.dart_tool/package_config.json \
-                --report-on=lib \
-                --in=coverage/raw \
-                --out=coverage/lcov.info \
-                --lcov
-            )
-          done
-
-      - name: Run Flutter package tests with coverage
-        run: |
-          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc voice_guidance; do
-            echo "--- packages/$pkg ---"
-            (cd "packages/$pkg" && flutter test --coverage)
-          done
+          ./scripts/test_all.sh --test-only --coverage --concurrency=1
 
       - name: Merge coverage reports
         run: ./scripts/coverage_report.sh
@@ -185,12 +178,32 @@ jobs:
       - name: App tests on target Dart
         run: flutter test --exclude-tags=probe
 
+  discover-overrides:
+    # LOOM A, third list. hosted-resolve used to carry a BY-NAME matrix of SIX packages.
+    # TEN packages actually ship `dependency_overrides: path:`. The four that were never
+    # hosted-resolve-checked — pretrip_decision_advisor, route_condition_forecast,
+    # snow_rendering, vehicle_condition_fusion — meant the lane built to catch resolution
+    # blind spots HAD a resolution blind spot. The matrix is now derived from the pubspecs.
+    name: Discover override-bearing packages
+    runs-on: ubuntu-24.04
+    outputs:
+      packages: ${{ steps.discover.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        run: |
+          PKGS="$(./scripts/discover_packages.sh --overrides --json)"
+          echo "discovered override-bearing packages: $PKGS"
+          echo "packages=$PKGS" >> "$GITHUB_OUTPUT"
+
   hosted-resolve:
+    needs: [discover-overrides]
     name: Hosted-resolve (pub add)
-    # The resolution-masking lane. Six published packages ship monorepo-only
-    # `dependency_overrides: path:` on their siblings (adaptive_reroute, driving_conditions,
-    # driving_weather, navigation_safety, routing_bloc, voice_guidance). Every OTHER job above
-    # runs `pub get` HONORING those overrides, so they only ever certify "works on this checkout."
+    # The resolution-masking lane. Published packages that ship monorepo-only
+    # `dependency_overrides: path:` on their siblings — DISCOVERED from the pubspecs by the
+    # discover-overrides job above, never named here (naming them here is what let the set
+    # drift to 6 while the disk said 10). Every OTHER job above runs `pub get` HONORING
+    # those overrides, so they only ever certify "works on this checkout."
     # This job reproduces what a CLEAN `pub add <pkg>` consumer gets: it strips the
     # `dependency_overrides:` block and resolves each package's DECLARED hosted sibling constraints
     # against pub.dev (NOT local path), then runs that package's own tests against the PUBLISHED
@@ -206,13 +219,8 @@ jobs:
     strategy:
       fail-fast: false   # one package's failure must not hide the others'
       matrix:
-        package:
-          - adaptive_reroute
-          - driving_conditions
-          - driving_weather
-          - navigation_safety
-          - routing_bloc
-          - voice_guidance
+        # DISCOVERED, not enumerated — see the discover-overrides job above.
+        package: ${{ fromJSON(needs.discover-overrides.outputs.packages) }}
     steps:
       - uses: actions/checkout@v4
 
