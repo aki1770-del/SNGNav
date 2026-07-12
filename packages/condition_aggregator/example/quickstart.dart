@@ -33,5 +33,10 @@ Future<void> main() async {
   for (final a in r.advisories) {
     print('[${a.source.name}] ${a.severity.name}: ${a.headline}');
   }
+  // An empty list is only an all-clear when `canAssertNoAdvisory` is true —
+  // otherwise a source was down and we simply could not look.
+  if (r.advisories.isEmpty && !r.canAssertNoAdvisory) {
+    print('Advisory feed unavailable — NOT clear.');
+  }
   print('${r.advisories.length} advisory, ${r.providerErrors.length} errors');
 }

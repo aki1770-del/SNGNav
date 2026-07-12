@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.0.8
+
+### Safety defect in 0.0.7 and earlier — please read
+
+**A weather-feed outage looked exactly like a clear sky.**
+
+`fetchActiveAdvisoriesAtPoint` returns an `AdvisoryAggregateResult`. When every
+advisory source failed, `result.advisories` was an **empty list** — the same
+value it holds when the sky is genuinely clear and no advisory is in force.
+
+The truth was available: the failures were recorded in `result.providerErrors`.
+But nothing obliged you to read that list, and a field you *can* ignore *will*
+be ignored. **If you rendered `result.advisories.isEmpty` as "no advisory in
+force" — the obvious reading — then during a feed outage in a blizzard your app
+told your driver the road was clear. It had not looked.**
+
+### The fix in 0.0.8 — non-breaking, nothing you have changes meaning
+
+No type or signature changed, so your code still compiles and behaves as
+before. What is **added** is the question you can no longer skip cheaply:
+
+* `result.canAssertNoAdvisory` — `true` **only** when every source answered.
+  **An empty `advisories` list means "no advisory in force" only when this is
+  `true`.** Otherwise the emptiness means "we could not look."
+* `result.fold(complete:, partial:, unavailable:)` — handles all three cases;
+  the callbacks are `required`, so it will not let you forget the outage case.
+* `result.requireCompleteLookup()` — an opt-in loud stop that throws
+  `AdvisoryLookupIncompleteException` (with the way forward in its message)
+  rather than let you report an all-clear you did not earn.
+* Each `providerErrors` entry now carries a typed `reason`
+  (`AdvisoryUnavailableReason`) alongside its string `message`, so you can tell
+  the driver *"the weather service did not answer"* in her language instead of
+  showing her a `SocketException`.
+
+### Two-line migration
+
+```dart
+final r = await agg.fetchActiveAdvisoriesAtPoint(latitude: …, longitude: …);
+for (final a in r.advisories) show(a);            // unchanged — always safe
+
+// add this before you ever say "clear":
+if (r.advisories.isEmpty && !r.canAssertNoAdvisory) showFeedDown(r.providerErrors);
+```
+
+### The version where the compiler enforces it
+
+0.0.8 puts the question in your hands. **0.1.0** changes the return type to a
+sealed `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) so Dart's
+exhaustive `switch` *refuses to compile* a caller who never handled "could not
+look." That is a breaking change and a deliberate one — move to it when you can.
+0.0.8 is the patch that reaches you without breaking your build first.
+
+**The asymmetry, stated once:** a hazard *seen* is a hazard *real*, even on
+partial data — act on `advisories` always. But "nothing is in force" is a claim
+about completeness, and you may only make it when the lookup was complete. That
+is what lets a system be honest without crying wolf.
+
 ## 0.0.7 — 2026-06-30 — Doc honesty
 
 - Docs: library dartdoc no longer claims `Phase: explore` /

@@ -33,5 +33,15 @@ Future<void> main() async {
   for (final a in r.advisories) {
     print('[${a.source.name}] ${a.severity.name}: ${a.headline}');
   }
-  print('${r.advisories.length} advisory, ${r.providerErrors.length} errors');
+  // An empty list is only an all-clear when every source answered. If a feed is
+  // down, `advisories` is empty for a completely different reason — do not
+  // render that as "clear".
+  if (r.advisories.isEmpty) {
+    if (r.canAssertNoAdvisory) {
+      print('No advisory in force (every source answered).');
+    } else {
+      print('Advisory feed unavailable — could NOT confirm clear: '
+          '${r.providerErrors.map((e) => "${e.source.name}:${e.reason.name}").join(", ")}');
+    }
+  }
 }
