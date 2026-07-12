@@ -24,9 +24,13 @@
 ///      reflects the advisory severity, so the unchanged
 ///      `WeatherStatusBar` bridge raises a `SafetyAlertReceived`.
 ///
-/// Offline fallback mirrors [OpenMeteoWeatherProvider]: on fetch failure the
-/// last known condition is re-emitted rather than letting the stream go
-/// silent.
+/// ## Absence stops the loom (changed in 0.4.5)
+///
+/// An **empty** advisory feed and an **unreachable** feed are both absence of
+/// data, not observations of a clear road. Neither produces a
+/// [WeatherCondition] any more: the stream emits a
+/// [WeatherDataUnavailableException] saying what happened, why we will not
+/// guess, and how to move forward. Listen with `onError`.
 ///
 /// Attribution: data © Fintraffic, CC BY 4.0. The
 /// [DigitrafficAdvisoryProvider] already appends the Fintraffic credit line
@@ -39,6 +43,7 @@ import 'dart:async';
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_digitraffic/condition_aggregator_digitraffic.dart';
 
+import 'weather_absence.dart';
 import 'weather_condition.dart';
 import 'weather_provider.dart';
 
@@ -128,23 +133,46 @@ class DigitrafficWeatherProvider implements WeatherProvider {
 
   Future<void> _fetchAndEmit() async {
     if (_controller == null || _controller!.isClosed) return;
+
+    List<Advisory> advisories;
     try {
-      final advisories = await _source.fetchActiveAdvisoriesAtPoint(
+      advisories = await _source.fetchActiveAdvisoriesAtPoint(
         latitude: latitude,
         longitude: longitude,
       );
+    } catch (error) {
+      // The feed is unreachable. We do NOT re-emit the last condition as if it
+      // were current: old data with no staleness marker is indistinguishable
+      // from fresh data, and a road that was clear ten minutes ago is not a
+      // measurement of the road now. The stream STOPS and SAYS WHY; the
+      // listener decides (and may still choose to show the last value, clearly
+      // marked as old — lastObservedAt carries its age).
       if (_controller == null || _controller!.isClosed) return;
-      final condition = advisoriesToCondition(advisories);
+      _controller!.addError(
+        WeatherDataUnavailableException(
+          reason: WeatherAbsenceReason.feedUnreachable,
+          latitude: latitude,
+          longitude: longitude,
+          lastObservedAt: _lastCondition?.timestamp,
+          cause: error,
+        ),
+      );
+      return;
+    }
+
+    if (_controller == null || _controller!.isClosed) return;
+
+    try {
+      final condition = advisoriesToCondition(
+        advisories,
+        latitude: latitude,
+        longitude: longitude,
+      );
       _lastCondition = condition;
       _controller!.add(condition);
-    } catch (_) {
-      // Offline fallback: re-emit last known condition if available, mirroring
-      // OpenMeteoWeatherProvider. If none, stay silent — application keeps its
-      // current state rather than flashing a spurious clear.
+    } on WeatherDataUnavailableException catch (absence) {
       if (_controller == null || _controller!.isClosed) return;
-      if (_lastCondition != null) {
-        _controller!.add(_lastCondition!);
-      }
+      _controller!.addError(absence);
     }
   }
 
@@ -152,18 +180,56 @@ class DigitrafficWeatherProvider implements WeatherProvider {
   ///
   /// Visible for testing. The worst-severity advisory drives the condition;
   /// a driver needs the most severe hazard on the road ahead, not an average.
-  /// Empty list → clear.
-  static WeatherCondition advisoriesToCondition(List<Advisory> advisories) {
+  ///
+  /// **An empty list THROWS [WeatherDataUnavailableException]** — it does not
+  /// return a clear condition. Digitraffic publishing no advisory means no
+  /// authority announced anything at this point; it says nothing whatever about
+  /// the temperature, the visibility or the ice on the road, and black ice is
+  /// routine with zero advisories published. Up to and including 0.4.4 this
+  /// returned `WeatherCondition.clear()` — hardcoded +5 °C, 10 km visibility,
+  /// `iceRisk: false` — which was a manufactured all-clear. It now stops.
+  static WeatherCondition advisoriesToCondition(
+    List<Advisory> advisories, {
+    double? latitude,
+    double? longitude,
+  }) {
     final now = DateTime.now();
     if (advisories.isEmpty) {
-      return WeatherCondition.clear(timestamp: now);
+      throw WeatherDataUnavailableException(
+        reason: WeatherAbsenceReason.noAdvisoryPublished,
+        latitude: latitude,
+        longitude: longitude,
+      );
     }
 
     final worst = advisories.reduce(
-      (a, b) => a.severity.index >= b.severity.index ? a : b,
+      (a, b) => _severityRank(a.severity) >= _severityRank(b.severity) ? a : b,
     );
 
     return _severityToCondition(worst.severity, now);
+  }
+
+  /// Orders severities for the worst-advisory reduction.
+  ///
+  /// [AdvisorySeverity.unknown] is declared FIRST in `condition_aggregator`, so
+  /// its `index` is 0 — the lowest. Comparing raw indexes therefore made an
+  /// advisory whose severity the authority never stated LOSE to a `minor` one
+  /// and be discarded. An unstated severity means "something was declared, and
+  /// how bad it is was not said" — it is not the benign end of the scale. It
+  /// ranks above `minor`/`moderate` and below the stated `severe`/`extreme`.
+  static int _severityRank(AdvisorySeverity severity) {
+    switch (severity) {
+      case AdvisorySeverity.minor:
+        return 0;
+      case AdvisorySeverity.moderate:
+        return 1;
+      case AdvisorySeverity.unknown:
+        return 2;
+      case AdvisorySeverity.severe:
+        return 3;
+      case AdvisorySeverity.extreme:
+        return 4;
+    }
   }
 
   /// Maps a CAP-class [AdvisorySeverity] onto a [WeatherCondition] whose
@@ -182,6 +248,16 @@ class DigitrafficWeatherProvider implements WeatherProvider {
   /// Digitraffic announces road *situations*, not sensor weather. The snow
   /// precip-type is used because this provider serves the winter-road mission
   /// and the existing HMI renders snow tinting on hazard.
+  ///
+  /// **Known limitation, not fixable inside 0.4.x.** The temperature,
+  /// visibility and wind numbers below are carriers for an advisory's severity
+  /// — Digitraffic never published them. `WeatherCondition`'s fields are
+  /// non-nullable in this line, so a hazard *declared* by an authority cannot
+  /// be carried without putting *some* number in them, and dropping the
+  /// condition entirely would drop the driver's alert. They err toward caution
+  /// (they never manufacture an all-clear), but do not read them as
+  /// measurements. The 0.5.x line carries the declaration as an assertion and
+  /// leaves the unmeasured fields null.
   static WeatherCondition _severityToCondition(
     AdvisorySeverity severity,
     DateTime now,
@@ -199,6 +275,11 @@ class DigitrafficWeatherProvider implements WeatherProvider {
           timestamp: now,
         );
       case AdvisorySeverity.moderate:
+      // An advisory whose severity the authority did not state is NOT the
+      // benign end of the scale. Up to 0.4.4 it was mapped alongside `minor`,
+      // to a light, not-hazardous condition — downgrading an unstated severity
+      // to "nothing much". It now carries the same caution band as `moderate`.
+      case AdvisorySeverity.unknown:
         return WeatherCondition(
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
@@ -208,7 +289,6 @@ class DigitrafficWeatherProvider implements WeatherProvider {
           timestamp: now,
         );
       case AdvisorySeverity.minor:
-      case AdvisorySeverity.unknown:
         return WeatherCondition(
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.light,

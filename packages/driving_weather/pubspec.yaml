@@ -2,7 +2,7 @@ name: driving_weather
 description: >-
   Real-time weather monitoring with snow, ice, and visibility hazard
   detection. Open-Meteo integration (free, no API key). Pure Dart.
-version: 0.4.4
+version: 0.4.5
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

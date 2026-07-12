@@ -73,10 +73,39 @@ void main() {
           description: 'body',
         );
 
-    test('empty list maps to clear (not hazardous)', () {
-      final c = DigitrafficWeatherProvider.advisoriesToCondition(const []);
-      expect(c.isHazardous, isFalse);
-      expect(c.precipType, PrecipitationType.none);
+    test('empty list THROWS — no advisory is not a clear road', () {
+      // Up to 0.4.4 this returned WeatherCondition.clear() — hardcoded +5 °C,
+      // 10 km visibility, iceRisk:false — for an EMPTY advisory feed. An empty
+      // feed means no authority announced anything; black ice is routine with
+      // zero advisories. Absence must STOP, not fabricate an all-clear.
+      expect(
+        () => DigitrafficWeatherProvider.advisoriesToCondition(
+          const [],
+          latitude: 65.0,
+          longitude: 25.0,
+        ),
+        throwsA(
+          isA<WeatherDataUnavailableException>().having(
+            (e) => e.reason,
+            'reason',
+            WeatherAbsenceReason.noAdvisoryPublished,
+          ),
+        ),
+      );
+    });
+
+    test('unstated severity outranks minor (not sorted onto the benign end)',
+        () {
+      // AdvisorySeverity.unknown is index 0 in condition_aggregator, so a raw
+      // index compare made an unstated-severity advisory LOSE to a minor one
+      // and be discarded. "Severity not stated" is not "least severe".
+      final c = DigitrafficWeatherProvider.advisoriesToCondition([
+        advisory(AdvisorySeverity.minor),
+        advisory(AdvisorySeverity.unknown),
+      ]);
+      // unknown now maps to the moderate caution band, minor to light.
+      expect(c.intensity, PrecipitationIntensity.moderate);
+      expect(c.hasReducedVisibility, isTrue);
     });
 
     test('severe advisory maps to a hazardous condition', () {
@@ -144,24 +173,36 @@ void main() {
       provider.dispose();
     });
 
-    test('emits a clear condition when no advisories are active', () async {
+    test('emits a stream ERROR when no advisories are active', () async {
+      // Was: "emits a clear condition when no advisories are active" — the lie.
+      // No advisory published is absence, not a clear road; the stream stops
+      // and says why instead of emitting a manufactured all-clear.
       final source = _mockSource(const []);
       final provider = DigitrafficWeatherProvider.withSource(source);
 
-      final first = provider.conditions.first;
+      final firstError = provider.conditions.first;
       await provider.startMonitoring();
-      final condition = await first;
 
-      expect(condition.isHazardous, isFalse);
-      expect(condition.precipType, PrecipitationType.none);
+      await expectLater(
+        firstError,
+        throwsA(
+          isA<WeatherDataUnavailableException>().having(
+            (e) => e.reason,
+            'reason',
+            WeatherAbsenceReason.noAdvisoryPublished,
+          ),
+        ),
+      );
 
       provider.dispose();
     });
 
-    test('filters features outside the bounding box around the query point',
+    test('a feature outside the bounding box is not a clear road (errors)',
         () async {
       // Feature is far south (Helsinki ~60.17), query point is Oulu (65.01):
-      // > 0.5° away, so it is filtered and the condition is clear.
+      // > 0.5° away, so it is filtered — leaving NO advisory for this point.
+      // Was: asserted a non-hazardous clear condition. Filtered-to-empty is
+      // absence, not "the road here is fine".
       final source = _mockSource([
         _feature(
           trafficAnnouncementType: 'accident report',
@@ -172,19 +213,30 @@ void main() {
       ]);
       final provider = DigitrafficWeatherProvider.withSource(source);
 
-      final first = provider.conditions.first;
+      final firstError = provider.conditions.first;
       await provider.startMonitoring();
-      final condition = await first;
 
-      expect(condition.isHazardous, isFalse);
+      await expectLater(
+        firstError,
+        throwsA(
+          isA<WeatherDataUnavailableException>().having(
+            (e) => e.reason,
+            'reason',
+            WeatherAbsenceReason.noAdvisoryPublished,
+          ),
+        ),
+      );
 
       provider.dispose();
     });
 
-    test('on fetch failure re-emits last known condition (offline fallback)',
+    test('on fetch failure the stream errors, it does NOT re-emit stale data',
         () async {
-      // First call: severe (hazardous). Second call: HTTP 503 → fallback to
-      // the last known hazardous condition rather than going silent.
+      // Was: "on fetch failure re-emits last known condition (offline
+      // fallback)" — old data with no staleness marker was indistinguishable
+      // from fresh. First call: severe (hazardous, emitted). Second call: HTTP
+      // 503 → the stream emits a feedUnreachable error carrying the age of the
+      // last real observation, NOT a silently re-dated copy of it.
       var call = 0;
       final mock = MockClient((http.Request request) async {
         call++;
@@ -207,7 +259,8 @@ void main() {
       );
 
       final emitted = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emitted.add);
+      final errors = <Object>[];
+      final sub = provider.conditions.listen(emitted.add, onError: errors.add);
 
       await provider.startMonitoring();
       // Wait for at least one poll-driven (failing) fetch to fire.
@@ -216,9 +269,15 @@ void main() {
       await sub.cancel();
       provider.dispose();
 
-      // At least two emissions; all hazardous (fallback re-emitted the first).
-      expect(emitted.length, greaterThanOrEqualTo(2));
-      expect(emitted.every((c) => c.isHazardous), isTrue);
+      // Exactly one real (hazardous) condition; the failure surfaced as an
+      // error, never as a duplicate condition.
+      expect(emitted.length, 1);
+      expect(emitted.single.isHazardous, isTrue);
+      expect(errors, isNotEmpty);
+      final absence = errors.whereType<WeatherDataUnavailableException>().first;
+      expect(absence.reason, WeatherAbsenceReason.feedUnreachable);
+      // It carries the age of the last real observation for the caller to judge.
+      expect(absence.lastObservedAt, isNotNull);
     });
   });
 }

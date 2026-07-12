@@ -304,19 +304,22 @@ void main() {
       });
 
       test(
-        'offline fallback: re-emits last condition on HTTP failure',
+        'HTTP failure errors the stream, it does NOT re-emit stale data',
         () async {
+          // Was: "offline fallback: re-emits last condition on HTTP failure" —
+          // old data with no staleness marker, indistinguishable from fresh.
+          // First call succeeds (one real emission). Second call 500 → the
+          // stream emits a feedUnreachable error carrying the last real
+          // observation's age, NOT a silently re-dated copy of the condition.
           int callCount = 0;
           final mockClient = MockClient((_) async {
             callCount++;
             if (callCount == 1) {
-              // First call succeeds.
               return http.Response(
                 _jsonResponse(weatherCode: 71, temperature: -2.0),
                 200,
               );
             }
-            // Subsequent calls fail.
             return http.Response('Server Error', 500);
           });
 
@@ -326,26 +329,33 @@ void main() {
           );
 
           final emissions = <WeatherCondition>[];
-          final sub = provider.conditions.listen(emissions.add);
+          final errors = <Object>[];
+          final sub = provider.conditions
+              .listen(emissions.add, onError: errors.add);
           await provider.startMonitoring();
 
           // Wait for initial success + at least one failed poll.
           await Future<void>.delayed(const Duration(milliseconds: 150));
 
-          // Should have at least 2 emissions (first real, then fallback).
-          expect(emissions.length, greaterThanOrEqualTo(2));
-          // All emissions should be the same condition (fallback).
-          for (final e in emissions) {
-            expect(e.precipType, PrecipitationType.snow);
-            expect(e.temperatureCelsius, -2.0);
-          }
+          // Exactly one real condition; the failure surfaced as an error.
+          expect(emissions.length, 1);
+          expect(emissions.single.precipType, PrecipitationType.snow);
+          expect(emissions.single.temperatureCelsius, -2.0);
+          expect(errors, isNotEmpty);
+          final absence =
+              errors.whereType<WeatherDataUnavailableException>().first;
+          expect(absence.reason, WeatherAbsenceReason.feedUnreachable);
+          expect(absence.lastObservedAt, isNotNull);
 
           await sub.cancel();
           provider.dispose();
         },
       );
 
-      test('offline fallback: no emission when no prior condition', () async {
+      test('failure with no prior condition errors — never silent', () async {
+        // Was: "offline fallback: no emission when no prior condition" — a
+        // silent stream is indistinguishable from "still loading". Absence
+        // with no history is said out loud, with a null lastObservedAt.
         final mockClient = MockClient((_) async {
           return http.Response('Server Error', 500);
         });
@@ -356,16 +366,51 @@ void main() {
         );
 
         final emissions = <WeatherCondition>[];
-        final sub = provider.conditions.listen(emissions.add);
+        final errors = <Object>[];
+        final sub =
+            provider.conditions.listen(emissions.add, onError: errors.add);
         await provider.startMonitoring();
 
-        // Wait a bit — should emit nothing.
         await Future<void>.delayed(const Duration(milliseconds: 150));
 
         expect(emissions, isEmpty);
+        expect(errors, isNotEmpty);
+        final absence =
+            errors.whereType<WeatherDataUnavailableException>().first;
+        expect(absence.reason, WeatherAbsenceReason.feedUnreachable);
+        expect(absence.lastObservedAt, isNull);
 
         await sub.cancel();
         provider.dispose();
+      });
+
+      test('an incomplete hourly block errors, it does NOT fabricate 10 km',
+          () async {
+        // A truncated/empty hourly.visibility used to silently become
+        // visibility = 10000 ("clear, see 10 km"), feeding hasReducedVisibility
+        // and isHazardous. A visibility we were not given is not 10 km.
+        final json = {
+          'current': {
+            'temperature_2m': -2.0,
+            'weather_code': 0,
+            'wind_speed_10m': 5.0,
+            'relative_humidity_2m': 90.0,
+          },
+          'hourly': {
+            'snowfall': <double>[],
+            'visibility': <double>[],
+          },
+        };
+        expect(
+          () => OpenMeteoWeatherProvider.parseWeatherResponse(json),
+          throwsA(
+            isA<WeatherDataUnavailableException>().having(
+              (e) => e.reason,
+              'reason',
+              WeatherAbsenceReason.incompleteResponse,
+            ),
+          ),
+        );
       });
 
       test('stopMonitoring stops polling', () async {

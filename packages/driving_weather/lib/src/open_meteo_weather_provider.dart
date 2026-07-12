@@ -17,6 +17,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'weather_absence.dart';
 import 'weather_condition.dart';
 import 'weather_provider.dart';
 
@@ -98,13 +99,29 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       if (_controller == null || _controller!.isClosed) return;
       _lastCondition = condition;
       _controller!.add(condition);
-    } catch (_) {
-      // Offline fallback: re-emit last known condition if available.
+    } on WeatherDataUnavailableException catch (absence) {
+      // Already a typed absence (incomplete response) — forward it as-is.
       if (_controller == null || _controller!.isClosed) return;
-      if (_lastCondition != null) {
-        _controller!.add(_lastCondition!);
-      }
-      // If no last condition, silently skip — application stays in current state.
+      _controller!.addError(absence);
+    } catch (error) {
+      // The feed is unreachable. Up to 0.4.4 the last known condition was
+      // silently re-emitted here, with no staleness marker, so old data was
+      // indistinguishable from fresh data — and with no previous condition the
+      // stream simply went silent, which a UI cannot tell apart from "still
+      // loading". Both are absence pretending to be an observation. The stream
+      // now STOPS and SAYS WHY; the listener decides what to show (and may
+      // still show the last value, clearly marked as old — `lastObservedAt`
+      // carries its age).
+      if (_controller == null || _controller!.isClosed) return;
+      _controller!.addError(
+        WeatherDataUnavailableException(
+          reason: WeatherAbsenceReason.feedUnreachable,
+          latitude: latitude,
+          longitude: longitude,
+          lastObservedAt: _lastCondition?.timestamp,
+          cause: error,
+        ),
+      );
     }
   }
 
@@ -138,6 +155,14 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
   /// Parses an Open-Meteo JSON response into a [WeatherCondition].
   ///
   /// Visible for testing — allows unit-testing the parser without HTTP.
+  ///
+  /// **Throws [WeatherDataUnavailableException]** when the response does not
+  /// carry a visibility for the current hour. Up to and including 0.4.4 a
+  /// missing, empty or truncated `hourly` block silently became
+  /// `visibility = 10000` — i.e. "you can see for 10 km" — a figure the API
+  /// never sent, and one that feeds `hasReducedVisibility` and `isHazardous`
+  /// directly. `WeatherCondition` (0.4.x) has no way to say "unknown", so the
+  /// parse stops instead of inventing a value.
   static WeatherCondition parseWeatherResponse(Map<String, dynamic> json) {
     final current = json['current'] as Map<String, dynamic>;
     final hourly = json['hourly'] as Map<String, dynamic>;
@@ -150,24 +175,33 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
     // radiative-frost classifier simply abstains rather than guessing.
     final humidityRH = (current['relative_humidity_2m'] as num?)?.toDouble();
 
-    // Get current hour's snowfall and visibility from hourly data.
-    final snowfallList = hourly['snowfall'] as List<dynamic>;
-    final visibilityList = hourly['visibility'] as List<dynamic>;
+    // Current hour's snowfall and visibility. The index is NOT clamped into the
+    // list: a truncated `hourly` array would then return a DIFFERENT hour's
+    // reading and present it as "now". A value we do not hold for this hour is
+    // absent — not the nearest hour we happen to have.
+    final snowfallList = hourly['snowfall'] as List<dynamic>?;
+    final visibilityList = hourly['visibility'] as List<dynamic>?;
+    final hourIndex = DateTime.now().hour;
 
-    double snowfall = 0;
-    double visibility = 10000;
-
-    if (snowfallList.isNotEmpty && visibilityList.isNotEmpty) {
-      // Find the current hour index (use first entry as approximation).
-      final now = DateTime.now();
-      final currentHourIndex = now.hour.clamp(0, snowfallList.length - 1);
-      snowfall = (snowfallList[currentHourIndex] as num?)?.toDouble() ?? 0;
-      visibility =
-          (visibilityList[currentHourIndex] as num?)?.toDouble() ?? 10000;
+    final visibility = _hourlyValue(visibilityList, hourIndex);
+    if (visibility == null) {
+      // No visibility for this hour. It is not 10 km.
+      throw WeatherDataUnavailableException(
+        reason: WeatherAbsenceReason.incompleteResponse,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
+        cause: 'hourly.visibility carries no value for hour $hourIndex',
+      );
     }
 
+    // Snowfall is only ever used to ESCALATE a weather code that reports no
+    // precipitation. An absent snowfall therefore cannot manufacture an
+    // all-clear: the WMO code we did receive still decides. Absence simply
+    // means the escalation check abstains — it is never read as "0 cm of snow".
+    final snowfall = _hourlyValue(snowfallList, hourIndex);
+
     // Map WMO weather code to our model.
-    final (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall);
+    final (precipType, intensity) = _mapWeatherCode(weatherCode, snowfall ?? 0);
 
     // Ice risk: sub-zero temperature + any precipitation.
     final iceRisk = temperature <= 0 && precipType != PrecipitationType.none;
@@ -182,6 +216,16 @@ class OpenMeteoWeatherProvider implements WeatherProvider {
       humidityRH: humidityRH,
       timestamp: DateTime.now(),
     );
+  }
+
+  /// Reads the value at [hourIndex] from an Open-Meteo hourly array, or `null`
+  /// when the array is missing, or does not extend to that hour, or carries a
+  /// null there. The index is deliberately NOT clamped: a missing hour is
+  /// absent, not the nearest hour we happen to hold.
+  static double? _hourlyValue(List<dynamic>? list, int hourIndex) {
+    if (list == null) return null;
+    if (hourIndex < 0 || hourIndex >= list.length) return null;
+    return (list[hourIndex] as num?)?.toDouble();
   }
 
   /// Maps WMO weather code to (PrecipitationType, PrecipitationIntensity).

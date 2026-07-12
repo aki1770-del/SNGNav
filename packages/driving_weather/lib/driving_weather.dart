@@ -9,7 +9,9 @@
 /// - **[WeatherProvider]**: Abstract interface — implement to plug any weather
 ///   data source into a driving application.
 /// - **[OpenMeteoWeatherProvider]**: Concrete provider using the free Open-Meteo
-///   API with offline fallback (re-emits last known condition on failure).
+///   API. On a failed or incomplete fetch it emits a
+///   [WeatherDataUnavailableException] (absence, said out loud) rather than a
+///   silently re-dated old value or an invented "clear".
 /// - **[SimulatedWeatherProvider]**: Demo provider generating a realistic
 ///   mountain-pass snow scenario (clear → light → heavy → ice → clearing).
 ///
@@ -31,6 +33,7 @@
 /// ```
 library;
 
+export 'src/weather_absence.dart';
 export 'src/weather_condition.dart';
 export 'src/weather_provider.dart';
 export 'src/open_meteo_weather_provider.dart';
