@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.3.2
+
+**Safety fix — an absent ambient temperature no longer hides an ice hazard.**
+
+Up to and including 0.3.1, a vehicle that published *no* ambient temperature
+(`Vehicle.Exterior.AirTemperature` absent, `airTempC == null`) was treated as if
+the temperature were **+5 °C** — above freezing. Because the cold-slip ice rule
+required a temperature at or below +2 °C, a car that was **actively losing
+traction** (TCS, ABS, or ESC engaged) on a road whose temperature it did not
+publish was classified as **`iceRisk: false`** — reported as aquaplaning, not
+ice.
+
+What you may have been shown: on such a vehicle, a real traction-loss event with
+no temperature signal produced a *non-icy* road-surface verdict (e.g. `wet`
+instead of `blackIce`) and no black-ice advisory, while the car was skidding.
+
+- An absent temperature is now treated as **unknown, not warm**. A present
+  traction-loss event (TCS/ABS/ESC engaged) keeps the ice concern when the
+  temperature is unknown — absence never downgrades a hazard (caution-add-only).
+  When a real temperature *is* published, behaviour is unchanged: a genuine
+  warm-road traction-loss (e.g. +12 °C) is still not classified as ice.
+- The friction path is unchanged (it was always temperature-independent): a
+  low-friction reading still asserts ice with or without a temperature.
+- `kAssumedAboveFreezingCelsius` is now **`@Deprecated`**. It is still exported
+  and still `5.0` (nothing removed, no signature changed), but it no longer
+  decides ice risk. It is retained only to fill the non-nullable temperature
+  field and disambiguate rain-vs-snow when no ice hazard is at stake.
+
+Known residual (needs a breaking type change, tracked for the next `x.y` line):
+the downstream `WeatherCondition.temperatureCelsius` field is non-nullable, so an
+absent temperature is still back-filled for the rain-vs-snow split. A
+freezing-rain road with a dead temperature sensor **and** no friction/traction
+signal can still be classified `wet`. Modelling temperature-absence as a
+first-class value resolves it but changes the type contract.
+
+Migration: none required — this release is source-compatible. If your code reads
+`kAssumedAboveFreezingCelsius`, expect a deprecation notice; the value is
+unchanged.
+
 ## 0.3.1
 
 - **Runnable KUKSA-databroker bridge example** —

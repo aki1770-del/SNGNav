@@ -95,6 +95,44 @@ void main() {
       final a = assess(const VehicleConditionSignals(roadFriction: 0.2));
       expect(a.surfaceState, RoadSurfaceState.blackIce);
     });
+
+    // REGRESSION (0.3.2): an ABSENT temperature must not be assumed warm and
+    // used to dismiss a real traction-loss event. Against 0.3.1 this returned
+    // iceRisk:false (assumed +5 °C) — a live skid reported as a non-icy road.
+    test('traction loss (TCS) + UNKNOWN temperature → ice risk '
+        '(absence never downgrades a hazard)', () {
+      final c = vehicleSignalsToWeatherCondition(
+        const VehicleConditionSignals(tcsEngaged: true), // no airTempC
+      );
+      expect(c.iceRisk, isTrue);
+      final a = assess(const VehicleConditionSignals(tcsEngaged: true));
+      expect(a.surfaceState, RoadSurfaceState.blackIce);
+      expect(a.advisoryMessage.toLowerCase(), contains('ice'));
+    });
+
+    test('traction loss (ABS/ESC) + UNKNOWN temperature → ice risk', () {
+      expect(
+        vehicleSignalsToWeatherCondition(
+          const VehicleConditionSignals(absEngaged: true),
+        ).iceRisk,
+        isTrue,
+      );
+      expect(
+        vehicleSignalsToWeatherCondition(
+          const VehicleConditionSignals(escEngaged: true),
+        ).iceRisk,
+        isTrue,
+      );
+    });
+
+    // Guard the other direction: a KNOWN warm temperature must still clear a
+    // traction-loss event as aquaplaning, not ice (no new cry-wolf).
+    test('traction loss (TCS) + KNOWN warm temperature → NOT ice', () {
+      final c = vehicleSignalsToWeatherCondition(
+        const VehicleConditionSignals(tcsEngaged: true, airTempC: 12.0),
+      );
+      expect(c.iceRisk, isFalse);
+    });
   });
 
   group('VehicleConditionFusion (injected snapshot stream)', () {
