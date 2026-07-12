@@ -6,6 +6,7 @@ void main() {
   group('FleetReport', () {
     test('snowy report isHazard is true', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-001',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -17,6 +18,7 @@ void main() {
 
     test('icy report isHazard is true', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-002',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -28,6 +30,7 @@ void main() {
 
     test('dry report isHazard is false', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-003',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -39,6 +42,7 @@ void main() {
 
     test('wet report isHazard is false', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-004',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -50,6 +54,7 @@ void main() {
 
     test('unknown report isHazard is false', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-005',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -65,6 +70,7 @@ void main() {
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
         condition: RoadCondition.snowy,
+        confidence: 0.8,
       );
 
       expect(report.isRecent(), true);
@@ -76,6 +82,7 @@ void main() {
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
         condition: RoadCondition.snowy,
+        confidence: 0.8,
       );
 
       expect(report.isRecent(), false);
@@ -87,6 +94,7 @@ void main() {
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
         condition: RoadCondition.snowy,
+        confidence: 0.8,
       );
 
       expect(report.isRecent(maxAge: const Duration(minutes: 30)), true);
@@ -94,6 +102,7 @@ void main() {
 
     test('default confidence is 0.8', () {
       final report = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-009',
         position: const LatLng(35.05, 137.25),
         timestamp: DateTime(2026, 3, 8),
@@ -127,12 +136,14 @@ void main() {
     test('equatable: different condition is not equal', () {
       final timestamp = DateTime(2026, 3, 8);
       final snowy = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-011',
         position: const LatLng(35.05, 137.25),
         timestamp: timestamp,
         condition: RoadCondition.snowy,
       );
       final icy = FleetReport(
+      confidence: 0.8,
         vehicleId: 'V-011',
         position: const LatLng(35.05, 137.25),
         timestamp: timestamp,

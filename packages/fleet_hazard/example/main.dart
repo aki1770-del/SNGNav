@@ -18,6 +18,7 @@ void main() {
       confidence: 0.95,
     ),
     FleetReport(
+      confidence: 0.8,
       vehicleId: 'V-003',
       position: const LatLng(35.090, 137.290),
       timestamp: DateTime.now(),

@@ -42,9 +42,18 @@ class HazardZone extends Equatable {
   /// re-identification key that would let the trail be reconstructed.
   final int vehicleCount;
 
-  /// Average confidence across all observations in the zone.
-  double get averageConfidence {
-    if (reports.isEmpty) return 0;
+  /// Average confidence across all observations in the zone, or `null` when there
+  /// are no observations.
+  ///
+  /// `null` means NOT KNOWN. It never means "zero confidence".
+  ///
+  /// Up to and including 0.5.0 this returned `0` for an empty zone — a NUMBER,
+  /// indistinguishable from observations that genuinely carried zero confidence.
+  /// A consumer could not tell "nobody has reported this road" apart from "everyone
+  /// who reported it was certain of nothing". Those are different facts and a driver
+  /// deserves them kept apart.
+  double? get averageConfidence {
+    if (reports.isEmpty) return null;
     return reports.fold<double>(
           0,
           (sum, observation) => sum + observation.confidence,

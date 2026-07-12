@@ -39,6 +39,13 @@ class FleetReport extends Equatable {
   final RoadCondition condition;
 
   /// Confidence in the observation (0.0-1.0).
+  ///
+  /// REQUIRED as of 0.6.0. Up to and including 0.5.0 this defaulted to `0.8` —
+  /// so a caller who never stated a confidence had one asserted on their behalf,
+  /// and that manufactured 0.8 was averaged into [HazardZone.averageConfidence],
+  /// inflating how certain a hazard zone appeared to be. A confidence you did not
+  /// state is not a confidence. If you do not know it, you must decide what it is;
+  /// this package will not decide for you.
   final double confidence;
 
   const FleetReport({
@@ -46,7 +53,7 @@ class FleetReport extends Equatable {
     required this.position,
     required this.timestamp,
     required this.condition,
-    this.confidence = 0.8,
+    required this.confidence,
   });
 
   /// Whether this report indicates a hazard (snowy or icy).

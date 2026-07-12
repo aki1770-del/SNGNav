@@ -76,7 +76,11 @@ void main() {
       expect(zone.averageConfidence, closeTo(0.8, 0.001));
     });
 
-    test('averageConfidence is zero for empty observations', () {
+    // INVERTED at 0.6.0. This test used to assert `averageConfidence == 0` for a zone
+    // with no observations — i.e. it asserted the fabrication as correct behaviour.
+    // A zone nobody has reported is not a zone everybody doubts. It knows nothing, and
+    // it must now SAY nothing (null), never a number a consumer could act on.
+    test('averageConfidence is NULL (not 0) when there are no observations', () {
       const zone = HazardZone(
         center: LatLng(35.05, 137.25),
         radiusMeters: 500,
@@ -85,7 +89,7 @@ void main() {
         vehicleCount: 0,
       );
 
-      expect(zone.averageConfidence, 0);
+      expect(zone.averageConfidence, isNull);
     });
 
     test('equatable: same values are equal', () {

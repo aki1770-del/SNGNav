@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.6.0
+
+### Safety defect in 0.5.0 and earlier — please read
+
+**Up to and including 0.5.0, this package asserted a confidence nobody gave it, and
+reported a number for a road nobody had driven.**
+
+Two fabrications, both fixed here, both BREAKING to fix:
+
+* **`FleetReport.confidence` defaulted to `0.8`.** A caller who never stated a
+  confidence had one manufactured on their behalf — and that invented `0.8` was then
+  averaged into `HazardZone.averageConfidence`, inflating how certain a hazard zone
+  appeared to be. **If you constructed `FleetReport` without passing `confidence`, every
+  one of your reports has been claiming 80% certainty that you never expressed.**
+  `confidence` is now **required**. A confidence you did not state is not a confidence.
+
+* **`HazardZone.averageConfidence` returned `0` for a zone with no observations.** That
+  is a NUMBER, and a consumer could not tell it apart from observations that genuinely
+  carried zero confidence. **"Nobody has reported this road" and "everybody who reported
+  it was certain of nothing" are different facts, and a driver deserves them kept apart.**
+  It now returns `double?` — `null` means NOT KNOWN, and never means zero.
+
+### Migration
+
+* Pass `confidence:` explicitly to `FleetReport`. If you were relying on the old default,
+  the honest port is to decide what your confidence actually is and say it. `0.8` is
+  available to you — but now it is your claim, not ours.
+* `averageConfidence` is now `double?`. Handle `null` as *unknown*: do not coalesce it to
+  `0`, and do not render it as a percentage. An empty zone has nothing to tell the driver.
+
+### Why this was found
+
+A standing scanner (`fabrication_sweep.sh`) that looks for one thing — *an absent,
+failed, or unmeasured input silently resolving to a safe-looking value*. This defect was
+missed by a full adversarial review and by every human who read the file. The machine
+found it on its first run.
+
+
 ## 0.5.0
 
 **Breaking — anonymization fix (dignity-class).** A retained `HazardZone` no
