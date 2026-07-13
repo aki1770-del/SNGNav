@@ -4,6 +4,39 @@ Additive and non-breaking. No existing API changes, no behaviour changes;
 English remains the default. If you do not want Japanese, nothing about this
 release affects you.
 
+### The trust signal — we pointed you at a package that does not exist
+
+The README and the API docs told you to source your `TrustSignal` from a
+`position_integrity` package, and linked to it. **That package is not published.**
+The link was a monorepo-relative path that resolves to nothing on pub.dev. If you
+went looking for it and found a 404, that was our error, not yours, and we are
+sorry for the time it cost you.
+
+This release corrects every one of those references and, in their place, documents
+**how to compute the verdict yourself** — a worked assessment using only fields a
+platform locator already reports (finite geometry, the receiver's own accuracy
+estimate, and an implied-speed jump check that catches multipath teleports). It is
+in the README under "Computing the trust signal" and on `TrustSignal` itself.
+
+### The default is `trusted`, and we are saying so plainly rather than changing it
+
+`onFix(fix)` defaults to `TrustSignal.trusted` — **it believes the fix.** With the
+verdict package missing, that default is what almost everyone was riding, and a
+multipath or teleported fix therefore became a confident dot with guidance spoken
+from it.
+
+We considered flipping the default to `suspect` in this patch and **decided not
+to**, because it would not be the safety improvement it looks like: `suspect` does
+not blend the fix at all, it *degrades*. A caller relying on the default would
+never anchor on GPS again — permanently degraded, then lost. That is a functional
+break wearing a safety costume, and it would arrive silently in a patch.
+
+So the default stands, and is now documented as the hazard it is — at the call
+site, on the enum, and in the README. The honest remedy is the one thing the
+missing package prevented: **compute a verdict and pass it.** Three field checks
+get you most of the way, and they are written out for you.
+
+
 ### Japanese typography — corrected
 
 Two ja chips carried a spaced ASCII-style em dash (`GPSなし — 推定中`,

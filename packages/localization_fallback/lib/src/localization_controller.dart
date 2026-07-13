@@ -74,9 +74,20 @@ class LocalizationController {
   /// The most recently emitted estimate, or `null` before any input.
   LocalizationEstimate? get current => _last;
 
-  /// Process a newly arrived raw [fix] with its [trust] verdict (the caller
-  /// maps `trust` from e.g. `position_integrity`). Returns the one honest
-  /// estimate for this moment.
+  /// Process a newly arrived raw [fix] with its [trust] verdict. Returns the one
+  /// honest estimate for this moment.
+  ///
+  /// **[trust] defaults to [TrustSignal.trusted] — this default believes the
+  /// fix.** It is not a safe default; it is a *usable* one (a controller that
+  /// trusted nothing could never anchor, and would degrade forever). If you do
+  /// not supply a verdict, a multipath or teleported fix is presented as a
+  /// confident dot, and guidance will be spoken from it.
+  ///
+  /// You are expected to compute the verdict — see [TrustSignal] for a worked
+  /// assessment using only the fields a platform locator already gives you
+  /// (finite geometry, reported accuracy, and an implied-speed jump check).
+  /// No package in this catalog computes it for you: the `position_integrity`
+  /// package these docs once pointed at is **not published**.
   LocalizationEstimate onFix(
     RawFix fix, {
     TrustSignal trust = TrustSignal.trusted,

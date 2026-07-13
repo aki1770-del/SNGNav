@@ -64,9 +64,9 @@ A small, synchronous state machine. You give it:
 
 - a stream of **raw fixes** (`RawFix`: lat, lon, accuracyMeters, timestamp,
   optional speed/heading), and
-- per fix, a **trust signal** (`TrustSignal.trusted/suspect/failed`) that you
-  map from a position-trust verdict such as
-  [`position_integrity`](../position_integrity), and
+- per fix, a **trust signal** (`TrustSignal.trusted/suspect/failed`) that
+  **you compute** — see [Computing the trust signal](#computing-the-trust-signal)
+  below; no package in this catalog computes it for you, and
 - optionally a **dead-reckoning seam** (`DeadReckoningSeam`) that you back with a
   dead-reckoning engine such as [`kalman_dr`](../kalman_dr), and
 - optionally vehicle speed/heading on the fix.
@@ -166,20 +166,56 @@ These are enforced in code and proven in
 
 - **Pure Dart, zero runtime dependencies, no FFI, no Flutter.** The core runs on
   32-bit ARM (`armv7`) car-class hardware.
-- **Decoupled by seams.** It does not depend on `position_integrity` or
-  `kalman_dr` — you wire those in via the trust signal and the dead-reckoning
-  seam. Same pattern as `pretrip_decision_advisor`.
+- **Decoupled by seams.** It computes neither position trust nor dead reckoning
+  — you wire those in via the trust signal and the dead-reckoning seam. A
+  dead-reckoning engine such as [`kalman_dr`](https://pub.dev/packages/kalman_dr)
+  fits the DR seam directly. The trust verdict you compute yourself (below).
 
 ### Why this exists
 
 In the compound-failure worst case — GPS fails, maps fail, whiteout, "the driver
 does not see where she is" — an app must still show a position and decide
 guidance **after GPS becomes untrustworthy**. A confidently-wrong dot sends the
-driver off a snowy road. The catalog had a position-trust verdict
-(`position_integrity`) and a dead-reckoning stream (`kalman_dr`), but nothing
+driver off a snowy road. A dead-reckoning stream
+([`kalman_dr`](https://pub.dev/packages/kalman_dr)) existed, but nothing
 orchestrated the handoff with honest, growing uncertainty. This package is that
 handoff: one estimate, degrading truthfully, that would rather say "lost" than
 lie.
+
+## Computing the trust signal
+
+This package does **not** compute trust, and — correcting an earlier version of
+this README — **no published package in this catalog does either.** The
+`position_integrity` package these docs used to link to is not on pub.dev. If you
+followed that link and found nothing, that was our error, not yours.
+
+`onFix` therefore defaults to `TrustSignal.trusted`: **it believes the fix.** That
+default is usable (a controller that trusted nothing could never anchor) but it is
+not safe — a multipath or teleported fix becomes a confident dot, and guidance is
+spoken from it. Compute a verdict from what your locator already reports:
+
+```dart
+TrustSignal assess(RawFix fix, RawFix? previous) {
+  if (!fix.hasFiniteGeometry) return TrustSignal.failed;      // impossible geometry
+
+  final acc = fix.accuracyMeters;
+  if (acc == null || acc > 100) return TrustSignal.suspect;   // the receiver doubts itself
+
+  if (previous != null) {                                     // a jump no car could make
+    final s = fix.timestamp.difference(previous.timestamp).inMilliseconds / 1000.0;
+    if (s > 0 && metresBetween(previous, fix) / s * 3.6 > 250) {
+      return TrustSignal.suspect;
+    }
+  }
+  return TrustSignal.trusted;
+}
+
+controller.onFix(fix, trust: assess(fix, lastFix));
+```
+
+Tune the thresholds to your receiver and vehicle. The point is that *some* verdict
+is computed — the failure this package exists to prevent begins with believing a
+fix you never checked.
 
 ## License
 

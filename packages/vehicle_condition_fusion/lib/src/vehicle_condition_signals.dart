@@ -68,7 +68,8 @@ class VehicleConditionSignals extends Equatable {
   // -------------------------------------------------------------------------
 
   /// VSS leaf path for [roadFriction] — most-probable road-friction estimate.
-  /// **PERCENT (0–100)** in VSS, so [fromVss] divides by 100 and clamps to 0–1.
+  /// **PERCENT (0–100)** in VSS, so [fromVss] divides by 100. A finite value
+  /// outside `0..100` is out of spec and reads as **absent** — never clamped.
   static const String vssRoadFriction =
       'Vehicle.ADAS.ESC.RoadFriction.MostProbable';
 
@@ -130,7 +131,11 @@ class VehicleConditionSignals extends Equatable {
   ///
   /// **Mapping notes.**
   ///  * [vssRoadFriction] (`ESC.RoadFriction.MostProbable`) is a **PERCENT
-  ///    (0–100)** in VSS, so it is divided by 100 and clamped to `0.0..1.0`.
+  ///    (0–100)** in VSS, so it is divided by 100. A finite value **outside**
+  ///    `0..100` is out of spec — the producer is broken — and degrades to
+  ///    `null` (absent). It is **never clamped**: clamping an out-of-range
+  ///    reading to the maximum would assert *perfect grip* on a road nobody
+  ///    measured, which is the exact failure this seam exists to prevent.
   ///  * [vssRainIntensity] is a PERCENT, rounded to `int` and clamped `0..100`.
   ///  * [vssWiperIntensity] is a relative `uint8` level with **no fixed max** in
   ///    VSS, so it is rounded to `int` and clamped `>= 0` only (not to any upper
@@ -165,10 +170,9 @@ class VehicleConditionSignals extends Equatable {
   /// [carriedForwardOnto]) so a once-seen ice signal is held across later partial
   /// frames — do **not** feed partial frames to the complete-snapshot rail.
   factory VehicleConditionSignals.fromVss(Map<String, Object?> leaves) {
-    final frictionPct = _asDouble(leaves[vssRoadFriction]);
+    final frictionPct = _asSpecFriction(leaves[vssRoadFriction]);
     return VehicleConditionSignals(
-      roadFriction:
-          frictionPct == null ? null : (frictionPct / 100.0).clamp(0.0, 1.0),
+      roadFriction: frictionPct == null ? null : frictionPct / 100.0,
       tcsEngaged: _asVssBool(leaves[vssTcsEngaged]),
       absEngaged: _asVssBool(leaves[vssAbsEngaged]),
       escEngaged: _asVssBool(leaves[vssEscEngaged]),
@@ -189,6 +193,32 @@ class VehicleConditionSignals extends Equatable {
     if (v is double) return v.isFinite ? v : null;
     if (v is int) return v.toDouble();
     return null;
+  }
+
+  /// The road-friction leaf, in VSS **percent** (0..100), or `null` if the
+  /// producer did not give us a usable reading.
+  ///
+  /// A finite value **outside** `0..100` is out of spec: the producer is broken,
+  /// and we say so by returning `null` (absent) rather than by clamping it into
+  /// range. The old code clamped, and that is how the classic `255` "no reading"
+  /// sentinel became `(255/100).clamp(0,1) == 1.0` — a *positively measured* full
+  /// grip, manufactured out of a broken sensor. That value then satisfies
+  /// `friction != null` downstream, so the tri-state ice check answers the
+  /// confident "we measured it, and it is not icy" instead of the honest
+  /// "we do not know".
+  ///
+  /// Clamping an out-of-range reading to the maximum asserts perfect grip, which
+  /// is precisely the failure this seam exists to prevent — the same rule
+  /// `kuksa_dart_sdk`'s `RoadFriction` enforces on the producer side, where an
+  /// out-of-spec value is `RoadGrip.unknown`, never coerced.
+  ///
+  /// Note this is a *narrowing*: values that used to be fabricated into a
+  /// measurement now correctly read as absent.
+  static double? _asSpecFriction(Object? v) {
+    final d = _asDouble(v);
+    if (d == null) return null;
+    if (d < 0 || d > 100) return null; // out of spec → absent, never clamped
+    return d;
   }
 
   /// Coerce a VSS numeric leaf to `int` (rounding a `double`); returns `null` on

@@ -109,18 +109,62 @@ void main() {
       expect(s.tcsEngaged, isNull);
     });
 
-    test('friction clamp: 150% → 1.0, -5% → 0.0', () {
+    test('out-of-spec friction → null (absent), NEVER clamped into a measurement',
+        () {
+      // This test used to assert the opposite — `150% → 1.0, -5% → 0.0` — and it
+      // passed, which is how the defect stayed green. Clamping an out-of-range
+      // reading to the maximum asserts PERFECT GRIP: the classic 255 "no reading"
+      // sentinel from a broken ESC became (255/100).clamp(0,1) == 1.0, a
+      // positively-measured clear road manufactured out of a dead sensor.
+      //
+      // It is the same harm the NaN case below already refused, on the same
+      // clamp, fifteen lines apart. The producer is broken; say so — return
+      // absent, and let the tri-state answer "we do not know".
+      for (final outOfSpec in const [255.0, 150.0, 100.5, -5.0, -0.1]) {
+        expect(
+          VehicleConditionSignals.fromVss(
+            {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': outOfSpec},
+          ).roadFriction,
+          isNull,
+          reason: '$outOfSpec is outside the VSS 0..100 percent spec. It must '
+              'read as ABSENT, not be clamped into a fabricated measurement.',
+        );
+      }
+
+      // The spec boundaries themselves remain valid measurements.
       expect(
         VehicleConditionSignals.fromVss(
-          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 150.0},
+          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 0.0},
         ).roadFriction,
-        1.0,
+        0.0,
       );
       expect(
         VehicleConditionSignals.fromVss(
-          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': -5.0},
+          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 100.0},
         ).roadFriction,
-        0.0,
+        1.0,
+      );
+    });
+
+    test('a broken ESC (255 sentinel) does NOT become a confident "not icy"', () {
+      // The whole point, end to end: the fabricated 1.0 used to satisfy
+      // `friction != null` in _iceRisk, which then returned FALSE — "we actually
+      // MEASURED the road friction and it was fine" — painting an all-clear over
+      // a road whose only sensor was announcing that it is broken.
+      final signals = VehicleConditionSignals.fromVss(
+        const {
+          'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 255.0,
+          'Vehicle.Exterior.AirTemperature': -6.0,
+        },
+      );
+      expect(signals.roadFriction, isNull);
+
+      final weather = vehicleSignalsToWeatherCondition(signals);
+      expect(
+        weather.iceRisk,
+        isNull,
+        reason: 'No friction measurement exists. The honest answer is "unknown", '
+            'never the confident "not icy" that a fabricated 1.0 produced.',
       );
     });
 
