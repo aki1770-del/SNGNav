@@ -198,10 +198,10 @@ class AdvisoryAggregateResult {
                 'warning that is really in force. We will not report an '
                 'all-clear we did not earn. Forward: act on the advisories you '
                 'did get (a hazard seen is a hazard real), tell the driver which '
-                'sources are down instead of telling her it is clear, or upgrade '
-                'to condition_aggregator 0.1.0, where the return type is a '
-                'sealed AdvisoryLookup and the compiler asks this question for '
-                'you.',
+                'sources are down instead of telling her it is clear, or — when '
+                'it is available on pub.dev — upgrade to condition_aggregator '
+                '0.1.0, where the return type is a sealed AdvisoryLookup and '
+                'the compiler asks this question for you.',
     );
   }
 }
@@ -220,9 +220,9 @@ class AdvisoryAggregateResult {
 ///   data; just do not claim "nothing is in force";
 /// * catch this and tell the driver *which* sources are down ([unreachable]
 ///   names them, with a typed [AdvisoryProviderError.reason] you can translate);
-/// * or move to `condition_aggregator` 0.1.0, where the return type is a sealed
-///   `AdvisoryLookup` and the compiler refuses a caller who never handled
-///   "could not look".
+/// * or move to `condition_aggregator` 0.1.0 — when it is available on
+///   pub.dev — where the return type is a sealed `AdvisoryLookup` and the
+///   compiler refuses a caller who never handled "could not look".
 class AdvisoryLookupIncompleteException implements Exception {
   /// The sources that could not be read, and why.
   final List<AdvisoryProviderError> unreachable;

@@ -99,11 +99,12 @@ false all-clear, `r.requireCompleteLookup()` throws
 **The asymmetry:** act on what was *seen* even on partial data; only claim
 *silence* when the lookup was complete. That is honesty without crying wolf.
 
-> **Want the compiler to enforce this?** `condition_aggregator` **0.1.0** changes
-> the return type to a sealed `AdvisoryLookup` (`Complete` / `Partial` /
-> `Unavailable`) — Dart's exhaustive `switch` then refuses to compile a caller
-> who never handled "could not look." That is a breaking change; 0.0.8 is the
-> non-breaking patch that reaches you first.
+> **Want the compiler to enforce this?** `condition_aggregator` **0.1.0** —
+> when it is available on pub.dev — changes the return type to a sealed
+> `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) — Dart's exhaustive
+> `switch` then refuses to compile a caller who never handled "could not look."
+> That is a breaking change; 0.0.8 is the non-breaking patch that reaches you
+> first.
 
 Running the snippet (`dart run example/quickstart.dart`) prints:
 

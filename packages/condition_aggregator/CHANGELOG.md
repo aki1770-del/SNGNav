@@ -49,8 +49,9 @@ if (r.advisories.isEmpty && !r.canAssertNoAdvisory) showFeedDown(r.providerError
 0.0.8 puts the question in your hands. **0.1.0** changes the return type to a
 sealed `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) so Dart's
 exhaustive `switch` *refuses to compile* a caller who never handled "could not
-look." That is a breaking change and a deliberate one — move to it when you can.
-0.0.8 is the patch that reaches you without breaking your build first.
+look." That is a breaking change and a deliberate one — move to it when it is
+available on pub.dev and you can take the break. 0.0.8 is the patch that
+reaches you without breaking your build first.
 
 **The asymmetry, stated once:** a hazard *seen* is a hazard *real*, even on
 partial data — act on `advisories` always. But "nothing is in force" is a claim
