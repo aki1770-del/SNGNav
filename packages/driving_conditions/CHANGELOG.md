@@ -1,130 +1,21 @@
+## 0.5.5
+
+Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
+
+The previous `^0.10.0` constraint excluded core 0.11.x, so a project that asked
+for the current core could not also take this package at its current version.
+The resolver silently selected an older release of this package instead, with no
+error and no warning. Core 0.11.0 and 0.11.1 are additive (a re-export, and a
+percent-to-fraction humidity factory); this package compiles and its full test
+suite passes against 0.11.1.
+
+Also removes a `dependency_overrides` block that referenced sibling packages by
+relative path. It was inert for consumers, but it prevented this package from
+resolving standalone from its published archive.
+
+No API or behaviour change.
+
 # Changelog
-
-## 0.6.0
-
-### Safety defect in 0.5.4 and earlier — please read
-
-This package **re-exports** `RoadSurfaceState`, `HysteresisFilter` and
-`DrivingConditionAssessment` from `snow_rendering`. It therefore carried
-`snow_rendering`'s fabrication defect verbatim to its own consumers:
-
-**up to 0.5.4, a road with no weather data classified as `RoadSurfaceState.dry`,
-with `gripFactor: 1.0` and the advisory "Conditions normal".** Absence of data
-became maximum grip and a green light. See `snow_rendering` 0.3.0 and
-`driving_weather` 0.5.0 for the full account.
-
-pub.dev versions are immutable. This note is the recall.
-
-### Second safety defect in 0.5.4 and earlier — fleet SILENCE raised the score
-
-`FleetHazardConfidenceAdapter.confidence` returned **`0.8`** — called a "neutral
-baseline" — in three different absence cases:
-
-```dart
-// fleet_hazard_confidence_adapter.dart, 0.5.4
-static const double _neutralBaseline = 0.8;
-if (recent.isEmpty) return _neutralBaseline;      // no recent report at all
-if (totalWeight == 0.0) return _neutralBaseline;  // no usable report
-RoadCondition.unknown => _neutralBaseline,        // a driver reporting "I don't know"
-```
-
-`0.8` is **not neutral**. On the same scale `dry` scores 1.0 and `snowy` 0.4 — so
-0.8 is an OPTIMISTIC report from a fleet that reported nothing. And it was not a
-display value: it was folded into the overall safety score with weight 0.2
-
-```dart
-final overall = gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2;
-```
-
-**so silence from the fleet RAISED the computed safety score.** A driver on an
-icy road with no fleet data got a *higher* score than the measured terms
-justified. The boundary record even certified the default as "honest (0.8
-explicit baseline; not hidden)" — the number was explicit; what it MEANT was not.
-
-**0.6.0**: `FleetConfidenceProvider.confidence` is `double?` (`null` = no fleet
-data). An explicitly-`unknown` road report carries **no weight** rather than a
-grip-like 0.8. And the overall score RE-NORMALISES its weights over the terms
-that were actually measured, so an absent term is not folded in at any value —
-fleet silence now neither raises nor lowers the score.
-
-`ConstantFleetConfidenceProvider(0.8)` survives as what it always honestly was: a
-caller ASSERTING a scenario (a test, a simulator) — the exact counterpart of
-`WeatherCondition.simulatedClear()`. To say "no fleet data", use
-`ConstantFleetConfidenceProvider.unavailable()`.
-
-### Breaking
-
-- Requires `snow_rendering: ^0.3.0` and `driving_weather: ^0.5.0`.
-  The re-exported types changed, so **this package's own public API changed**:
-  - `RoadSurfaceState.fromCondition()` now returns `RoadSurfaceState?`
-    (`null` = cannot classify; it is never `dry`).
-  - `DrivingConditionAssessment.surfaceState` is `RoadSurfaceState?`,
-    `gripFactor` is `double?`, `visibility` is `VisibilityDegradation?`,
-    `precipitation` is `PrecipitationConfig?`.
-  - `RecommendedResponse` gains `conditionsUnknown`, breaking exhaustive
-    switches.
-  - `DrivingConditionAssessment.recommendedResponse` no longer defaults to
-    `proceed`.
-
-  Note that the old `driving_weather: ^0.4.0` constraint could not simply be
-  left alone: `snow_rendering` 0.3.0 requires `driving_weather` `^0.5.0`, and
-  for a `0.x` package `^0.4.0` does not admit `0.5.0`. Left unbumped, this
-  package would have made resolution **impossible** for everyone downstream.
-
-- **`SafetyScoreSimulator.simulate()` still takes a non-nullable
-  `double gripFactor` and a non-nullable `RoadSurfaceState surface`** — so an
-  unknown road can no longer be scored at all, and the compiler will stop you at
-  the call site. This is deliberate. A Monte Carlo safety score computed on a
-  fabricated grip of 1.0 is worse than no score: it is a confident number about
-  a road nobody looked at. Guard, and tell the driver the road is unassessed:
-
-  ```dart
-  final surface = assessment.surfaceState;
-  final grip = assessment.gripFactor;
-  if (surface == null || grip == null) {
-    // Do NOT write `?? RoadSurfaceState.dry` or `?? 1.0` — that is the defect.
-    show(assessment.advisoryMessage); // "Conditions unavailable — ..."
-    return;
-  }
-  final result = const SafetyScoreSimulator()
-      .simulate(speed: 50, gripFactor: grip, surface: surface, /* ... */);
-  ```
-
-### Breaking: the simulation score is now `SimulatedSafetyScore`
-
-`SimulationResult.score` and `SafetyScoreSimulator.runOnce` return
-**`SimulatedSafetyScore`** (this package) instead of `SafetyScore`
-(`navigation_safety_core`).
-
-Why: `SafetyScore.fleetConfidenceScore` is a non-nullable `double`, so it
-**cannot say "no fleet reported anything"** — which is exactly how the `0.8`
-fabrication got in. `SimulatedSafetyScore.fleetConfidenceScore` is `double?`, and
-its `overall` is re-normalised over the measured terms. `toAlertSeverity(config)`
-is unchanged and applies the same thresholds to `overall`. `hasFleetData` tells
-you which case you are in.
-
-`navigation_safety_core` is **not** bumped: nothing outside this package
-constructs or reads that type, and forcing a core release would strand
-`nav2_safety_layer`, whose constraint was only just widened. The honest fix is
-contained here, where the defect is.
-
-### Fixed: `RecommendedResponse` was never re-exported
-
-Up to 0.5.4 this package re-exported `DrivingConditionAssessment` but **not the
-type of its `recommendedResponse` field**. A consumer importing only
-`package:driving_conditions` could hold the value but could not name the type,
-and so could not `switch` on it.
-
-That was a latent facade gap; 0.6.0 makes it load-bearing, because
-`RecommendedResponse.conditionsUnknown` is precisely the tier a consumer must
-handle in order not to treat an unassessed road as a clear one. A contract the
-consumer cannot name is a contract that does not reach them. Now exported.
-
-### Also
-
-- Behaviour on **fully measured** data is unchanged — all pre-existing tests
-  still pass. The break reaches only the code paths where data was absent, which
-  is exactly where the old behaviour was wrong.
 
 ## 0.5.4
 

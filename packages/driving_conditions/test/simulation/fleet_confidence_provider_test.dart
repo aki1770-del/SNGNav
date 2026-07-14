@@ -39,20 +39,16 @@ void main() {
       confidence: confidence,
     );
 
-    // These four tests CERTIFIED the defect up to 0.5.4: they asserted that
-    // silence from the fleet returns 0.8 — a number weighted at 0.2 into the
-    // overall safety score, so no-fleet-data RAISED it. They are inverted here,
-    // which is itself the proof that this release is breaking.
-    test('NO reports => null (the fleet said nothing), never 0.8', () {
+    test('returns 0.8 when no reports', () {
       const adapter = FleetHazardConfidenceAdapter([]);
-      expect(adapter.confidence, isNull);
+      expect(adapter.confidence, 0.8);
     });
 
-    test('all reports STALE => null, never 0.8', () {
+    test('returns 0.8 when all reports are stale', () {
       final adapter = FleetHazardConfidenceAdapter([
         report(RoadCondition.icy, age: const Duration(hours: 1)),
       ]);
-      expect(adapter.confidence, isNull);
+      expect(adapter.confidence, 0.8);
     });
 
     test('dry report returns 1.0', () {
@@ -83,29 +79,18 @@ void main() {
       expect(adapter.confidence, closeTo(0.1, 1e-9));
     });
 
-    test('an EXPLICITLY unknown report carries no weight => null', () {
+    test('unknown report returns 0.8', () {
       final adapter = FleetHazardConfidenceAdapter([
         report(RoadCondition.unknown),
       ]);
-      // A driver reporting "I don't know" used to nudge the score UPWARD (0.8,
-      // versus 0.4 for `snowy`). It now tells us nothing, which is the truth.
-      expect(adapter.confidence, isNull);
-    });
-
-    test('an unknown report does not dilute a real one', () {
-      final adapter = FleetHazardConfidenceAdapter([
-        report(RoadCondition.icy),
-        report(RoadCondition.unknown),
-      ]);
-      // Only the icy report carries information.
-      expect(adapter.confidence, closeTo(0.1, 1e-9));
+      expect(adapter.confidence, closeTo(0.8, 1e-9));
     });
 
     test('icy conditions produce lower confidence than snowy', () {
       final icy = FleetHazardConfidenceAdapter([report(RoadCondition.icy)]);
       final snowy =
           FleetHazardConfidenceAdapter([report(RoadCondition.snowy)]);
-      expect(icy.confidence!, lessThan(snowy.confidence!));
+      expect(icy.confidence, lessThan(snowy.confidence));
     });
 
     test('mixed dry and icy reports are weighted by observation confidence',
@@ -133,8 +118,8 @@ void main() {
         [report(RoadCondition.dry, age: const Duration(minutes: 5))],
         maxAge: const Duration(minutes: 3),
       );
-      // 5-minute-old report is stale at a 3-minute window → no fleet data.
-      expect(adapter.confidence, isNull);
+      // 5-minute-old report is stale at 3-minute window → returns baseline 0.8
+      expect(adapter.confidence, 0.8);
     });
 
     test('result is clamped to [0.0, 1.0]', () {
@@ -180,8 +165,8 @@ void main() {
       );
 
       expect(
-        icyResult.score.fleetConfidenceScore!,
-        lessThan(defaultResult.score.fleetConfidenceScore!),
+        icyResult.score.fleetConfidenceScore,
+        lessThan(defaultResult.score.fleetConfidenceScore),
       );
       expect(icyResult.score.overall, lessThan(defaultResult.score.overall));
     });

@@ -2,12 +2,11 @@
 library;
 
 import 'package:equatable/equatable.dart';
-
-import 'simulated_safety_score.dart';
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 /// The full output of a [SafetyScoreSimulationEngine.simulate] call.
 ///
-/// Wraps the mean [SimulatedSafetyScore] and adds statistical measures that a
+/// Wraps the mean [SafetyScore] and adds statistical measures that a
 /// single-point score cannot express: variance across runs, incident
 /// count (runs where overall score fell below the danger threshold),
 /// and — for the native engine — wall-clock execution time.
@@ -20,13 +19,8 @@ class SimulationResult extends Equatable {
     this.executionMs,
   });
 
-  /// Mean [SimulatedSafetyScore] across all Monte Carlo runs.
-  ///
-  /// Was `SafetyScore` (from `navigation_safety_core`) up to 0.5.4. That type's
-  /// `fleetConfidenceScore` is a non-nullable `double` and therefore cannot say
-  /// "no fleet reported anything" — so absence was filled with `0.8`. See
-  /// [SimulatedSafetyScore] for the whole story.
-  final SimulatedSafetyScore score;
+  /// Mean [SafetyScore] across all Monte Carlo runs.
+  final SafetyScore score;
 
   /// Variance of the overall score across all runs.
   ///

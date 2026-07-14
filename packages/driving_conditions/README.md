@@ -8,14 +8,6 @@
 that convert a weather condition into road surface classification, grip
 estimation, visibility degradation, and Monte Carlo safety scores.
 
-> **0.6.0 fixes a safety defect present through 0.5.4.** An unclassifiable road
-> became `RoadSurfaceState.dry` / `gripFactor: 1.0` / "Conditions normal", and
-> SILENCE from the fleet was folded into the safety score as a `0.8` "neutral
-> baseline" — so no fleet data RAISED the computed score. Surfaces, grips and
-> the fleet term are now nullable, and the overall score is re-normalised over
-> the terms actually measured. Read the [CHANGELOG](CHANGELOG.md) before
-> upgrading — the compile errors are the fix.
-
 This package converts a `WeatherCondition` into structured driving guidance:
 
 - Road surface classification (`dry`, `wet`, `slush`, `compactedSnow`, `blackIce`, `standingWater`)
@@ -38,7 +30,7 @@ pulling in Flutter UI code.
 
 ```yaml
 dependencies:
-  driving_conditions: ^0.6.0
+  driving_conditions: ^0.5.3
 ```
 
 ## Core Models
@@ -151,24 +143,12 @@ final condition = WeatherCondition(
 
 final assessment = DrivingConditionAssessment.fromCondition(condition);
 
-// `surfaceState`, `gripFactor` and `visibilityMeters` are all NULLABLE now:
-// a road that could not be classified has no surface and no grip coefficient,
-// and a feed that reported no visibility did not report 10 km of clear air.
-// Decide what to do when you do not know — the compiler will make you.
-final surface = assessment.surfaceState;
-final grip = assessment.gripFactor;
-final vis = condition.visibilityMeters;
-if (surface == null || grip == null || vis == null) {
-  print(assessment.advisoryMessage); // "…not measured — drive to what you can see"
-  return;
-}
-
 final simulator = SafetyScoreSimulator();
 final result = simulator.simulate(
   speed: 50,
-  gripFactor: grip,
-  surface: surface,
-  visibilityMeters: vis,
+  gripFactor: assessment.gripFactor,
+  surface: assessment.surfaceState,
+  visibilityMeters: condition.visibilityMeters,
   seed: 42,
 );
 // result.score     — mean SafetyScore across all Monte Carlo runs
@@ -221,8 +201,8 @@ class ConditionsSummaryCard extends StatelessWidget {
         return Card(
           child: ListTile(
             title: Text(
-              '${assessment.surfaceState?.name ?? 'not measured'} '
-              'grip=${assessment.gripFactor?.toStringAsFixed(2) ?? '—'}',
+              '${assessment.surfaceState.name} '
+              'grip=${assessment.gripFactor.toStringAsFixed(2)}',
             ),
             subtitle: Text(
               '${assessment.advisoryMessage}\n'

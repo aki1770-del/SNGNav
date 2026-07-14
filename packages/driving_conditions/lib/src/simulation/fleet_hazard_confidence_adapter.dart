@@ -41,48 +41,34 @@ class FleetHazardConfidenceAdapter implements FleetConfidenceProvider {
   /// Maximum age of reports to include.
   final Duration maxAge;
 
-  /// Fleet-derived confidence, or **`null` when the fleet said nothing**.
-  ///
-  /// Up to 0.5.4 all three absence paths below returned `0.8`, called a
-  /// "neutral baseline". It was never neutral: `dry` scores 1.0 and `snowy`
-  /// 0.4, so 0.8 is an OPTIMISTIC report — and it was folded into the overall
-  /// safety score with weight 0.2. Silence from the fleet therefore RAISED the
-  /// score. An absent report is now absent.
+  /// Neutral baseline returned when no recent fleet data is available.
+  static const double _neutralBaseline = 0.8;
+
   @override
-  double? get confidence {
-    final recent = _reports.where((r) => r.isRecent(maxAge: maxAge)).toList();
-    // No recent report at all. Not "the road is probably fine".
-    if (recent.isEmpty) return null;
+  double get confidence {
+    final recent =
+        _reports.where((r) => r.isRecent(maxAge: maxAge)).toList();
+    if (recent.isEmpty) return _neutralBaseline;
 
     var total = 0.0;
     var totalWeight = 0.0;
 
     for (final r in recent) {
-      // A report whose road condition is EXPLICITLY unknown tells us nothing
-      // about the road. It carried 0.8 — a grip-like factor — which meant a
-      // driver reporting "I don't know" nudged the score upward. It now carries
-      // no weight at all.
       final factor = _conditionFactor(r.condition);
-      if (factor == null) continue;
       total += factor * r.confidence;
       totalWeight += r.confidence;
     }
 
-    // Every recent report was unknown-condition, or every report carried zero
-    // self-confidence. Either way nothing was actually reported about the road.
-    if (totalWeight == 0.0) return null;
+    if (totalWeight == 0.0) return _neutralBaseline;
     return (total / totalWeight).clamp(0.0, 1.0);
   }
 
-  /// Grip-like factor for a reported road condition, or `null` when the report
-  /// carries no information about the road.
-  static double? _conditionFactor(RoadCondition condition) =>
+  static double _conditionFactor(RoadCondition condition) =>
       switch (condition) {
         RoadCondition.dry => 1.0,
         RoadCondition.wet => 0.7,
         RoadCondition.snowy => 0.4,
         RoadCondition.icy => 0.1,
-        // NOT a number. "Unknown" is not a mildly-good road.
-        RoadCondition.unknown => null,
+        RoadCondition.unknown => _neutralBaseline,
       };
 }

@@ -36,8 +36,8 @@ void main() {
       closeTo(cpu.score.visibilityScore, 0.005),
     );
     expect(
-      native.score.fleetConfidenceScore!,
-      closeTo(cpu.score.fleetConfidenceScore!, 0.0001),
+      native.score.fleetConfidenceScore,
+      closeTo(cpu.score.fleetConfidenceScore, 0.0001),
     );
     expect(native.variance, isNonNegative);
     expect(native.executionMs, isNotNull);

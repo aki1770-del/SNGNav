@@ -20,24 +20,12 @@ import 'fleet_confidence_provider.dart';
 class ConstantFleetConfidenceProvider implements FleetConfidenceProvider {
   /// Creates a constant provider with the given [value].
   ///
-  /// Defaults to `0.8` — the pre-Sprint 91 baseline. This is an ASSERTED
-  /// value, not a measurement, and that is legitimate here: the caller is
-  /// deliberately declaring a fleet confidence (a test fixture, a scenario, a
-  /// simulator). It is the exact counterpart of
-  /// `WeatherCondition.simulatedClear()` in `driving_weather` — asserting a
-  /// scenario is honest; laundering an ABSENCE into an assertion is not.
-  ///
-  /// For "no fleet data", use [ConstantFleetConfidenceProvider.unavailable]
-  /// rather than passing a number.
-  const ConstantFleetConfidenceProvider([double value = 0.8])
-    : assert(value >= 0.0 && value <= 1.0, 'value must be in [0.0, 1.0]'),
-      _value = value;
+  /// Defaults to `0.8` — the pre-Sprint 91 baseline.
+  const ConstantFleetConfidenceProvider([this._value = 0.8])
+    : assert(_value >= 0.0 && _value <= 1.0, 'value must be in [0.0, 1.0]');
 
-  /// A provider that has NO fleet data. [confidence] is `null`.
-  const ConstantFleetConfidenceProvider.unavailable() : _value = null;
-
-  final double? _value;
+  final double _value;
 
   @override
-  double? get confidence => _value;
+  double get confidence => _value;
 }

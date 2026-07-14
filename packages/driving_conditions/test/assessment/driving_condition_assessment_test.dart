@@ -16,7 +16,6 @@ WeatherCondition _condition({
       visibilityMeters: visibilityMeters,
       windSpeedKmh: 0,
       iceRisk: iceRisk,
-      source: ObservationSource.measured,
       timestamp: DateTime(2026),
     );
 
@@ -122,11 +121,11 @@ void main() {
 
       expect(assessment.surfaceState, RoadSurfaceState.compactedSnow);
       expect(assessment.gripFactor, 0.3);
-      expect(assessment.visibility!.opacity, 0.8);
-      expect(assessment.visibility!.blurSigma, 6.0);
-      expect(assessment.precipitation!.particleCount, 500);
-      expect(assessment.precipitation!.minVelocity, 2.0);
-      expect(assessment.precipitation!.maxVelocity, 4.0);
+      expect(assessment.visibility.opacity, 0.8);
+      expect(assessment.visibility.blurSigma, 6.0);
+      expect(assessment.precipitation.particleCount, 500);
+      expect(assessment.precipitation.minVelocity, 2.0);
+      expect(assessment.precipitation.maxVelocity, 4.0);
     });
 
     test('assessment remains value-comparable for identical conditions', () {

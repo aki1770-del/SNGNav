@@ -15,7 +15,6 @@ import 'fleet_confidence_provider.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
-import 'simulated_safety_score.dart';
 import 'simulation_result.dart';
 
 /// CPU (pure Dart) Monte Carlo safety score engine.
@@ -44,7 +43,7 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   ///
   /// Jitter (±10%) is applied to grip and visibility inputs
   /// to model real-world sensor noise.
-  SimulatedSafetyScore runOnce({
+  SafetyScore runOnce({
     required double speed,
     required double gripFactor,
     required RoadSurfaceState surface,
@@ -65,14 +64,14 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     final visNorm = (visibilityMeters / 1000.0).clamp(0.0, 1.0);
     final visibilityScore = (visNorm * (1.0 - visJitter)).clamp(0.0, 1.0);
 
-    // NULLABLE. `null` = the fleet said nothing. It is NOT folded into the
-    // overall score at any value: SimulatedSafetyScore re-normalises the
-    // weights over the terms that were actually measured. Up to 0.5.4 absence
-    // arrived here as 0.8 and was weighted at 0.2 — so fleet silence RAISED the
-    // score.
     final fleetConfidenceScore = _provider.confidence;
 
-    return SimulatedSafetyScore(
+    // Weighted mean: grip 0.4, visibility 0.4, fleet 0.2.
+    final overall =
+        gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2;
+
+    return SafetyScore(
+      overall: overall,
       gripScore: gripScore,
       visibilityScore: visibilityScore,
       fleetConfidenceScore: fleetConfidenceScore,
@@ -100,7 +99,6 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     var totalGrip = 0.0;
     var totalVis = 0.0;
     var totalFleet = 0.0;
-    var fleetSamples = 0;
     var totalOverallSquared = 0.0;
     var incidentCount = 0;
 
@@ -115,11 +113,7 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       totalOverall += score.overall;
       totalGrip += score.gripScore;
       totalVis += score.visibilityScore;
-      final fleet = score.fleetConfidenceScore;
-      if (fleet != null) {
-        totalFleet += fleet;
-        fleetSamples++;
-      }
+      totalFleet += score.fleetConfidenceScore;
       totalOverallSquared += score.overall * score.overall;
       if (score.overall < 0.4) incidentCount++;
     }
@@ -128,13 +122,11 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     final variance = (totalOverallSquared / effectiveRuns) - (mean * mean);
 
     return SimulationResult(
-      score: SimulatedSafetyScore(
+      score: SafetyScore(
         overall: mean,
         gripScore: totalGrip / effectiveRuns,
         visibilityScore: totalVis / effectiveRuns,
-        // No fleet sample in ANY run => no fleet term. Never an averaged
-        // stand-in.
-        fleetConfidenceScore: fleetSamples == 0 ? null : totalFleet / fleetSamples,
+        fleetConfidenceScore: totalFleet / effectiveRuns,
       ),
       variance: variance,
       incidentCount: incidentCount,
