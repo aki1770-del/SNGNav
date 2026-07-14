@@ -68,6 +68,7 @@ case 2 as case 1 tells a driver the road is clear when you never looked.
 is `true` only when every source answered:
 
 ```dart
+// oracle:placeholders r, show, showNoAdvisory, showFeedDown
 for (final a in r.advisories) show(a);      // always safe: a hazard seen is real
 
 if (r.advisories.isEmpty) {
@@ -83,6 +84,7 @@ Or use `r.fold(...)`, whose three callbacks are `required` so it will not let yo
 forget the outage case:
 
 ```dart
+// oracle:placeholders r
 final banner = r.fold(
   complete: (advisories) => advisories.isEmpty ? '警報なし' : advisories.first.headline,
   partial: (seen, down) => seen.isEmpty ? '一部の気象情報を取得できません' : seen.first.headline,

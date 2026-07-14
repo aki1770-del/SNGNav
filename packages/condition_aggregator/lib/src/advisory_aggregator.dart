@@ -93,7 +93,9 @@ class AdvisoryAggregateResult {
   /// an all-clear; it is a gap.
   ///
   /// ```dart
-  /// final r = await agg.fetchActiveAdvisoriesAtPoint(lat: …, lon: …);
+  /// // oracle:placeholders agg, show, showNoAdvisory, showFeedDown
+  /// final r = await agg.fetchActiveAdvisoriesAtPoint(
+  ///     latitude: 39.7186, longitude: 140.1024);
   /// for (final a in r.advisories) show(a);          // always safe
   /// if (r.advisories.isEmpty) {
   ///   if (r.canAssertNoAdvisory) {
@@ -143,6 +145,7 @@ class AdvisoryAggregateResult {
   /// breaking your build.
   ///
   /// ```dart
+  /// // oracle:placeholders r
   /// final banner = r.fold(
   ///   complete: (a) => a.isEmpty ? '警報なし' : a.first.headline,
   ///   partial: (seen, down) => seen.isEmpty
