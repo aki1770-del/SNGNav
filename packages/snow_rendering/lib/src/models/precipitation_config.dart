@@ -46,36 +46,17 @@ class PrecipitationConfig extends Equatable {
     lifetime: 0,
   );
 
-  /// Derive particle configuration from current weather, or `null` when the
-  /// feed did not report precipitation at all.
-  ///
-  /// ## `null` is not [none]
-  ///
-  /// [none] is a POSITIVE statement — "nothing is falling" — and it renders a
-  /// clear sky. Returning it for a condition whose `precipType` was never
-  /// reported would paint a clear sky over weather nobody measured: the same
-  /// defect as a fabricated temperature, one layer down at the rendering seam.
-  ///
-  /// So: `null` when precipitation was NOT REPORTED; [none] only when the feed
-  /// actually said there is none. A renderer that receives `null` should draw
-  /// no particles AND surface the unknown state (see
-  /// [RecommendedResponse.conditionsUnknown]) — not silently show fair weather.
+  /// Derive particle configuration from current weather.
   ///
   /// Particle count formula: `(intensityFactor * 500).round()`.
   /// Velocity and size ranges vary by precipitation type.
-  static PrecipitationConfig? fromCondition(WeatherCondition condition) {
-    final type = condition.precipType;
-    final intensity = condition.intensity;
-
-    // Not reported → we do not know. Never `none`.
-    if (type == null || intensity == null) return null;
-
-    if (type == PrecipitationType.none ||
-        intensity == PrecipitationIntensity.none) {
+  factory PrecipitationConfig.fromCondition(WeatherCondition condition) {
+    if (condition.precipType == PrecipitationType.none ||
+        condition.intensity == PrecipitationIntensity.none) {
       return none;
     }
 
-    final intensityFactor = switch (intensity) {
+    final intensityFactor = switch (condition.intensity) {
       PrecipitationIntensity.light => 0.3,
       PrecipitationIntensity.moderate => 0.6,
       PrecipitationIntensity.heavy => 1.0,
@@ -84,7 +65,7 @@ class PrecipitationConfig extends Equatable {
 
     final count = (intensityFactor * 500).round();
 
-    final (minV, maxV, minS, maxS, lt) = switch (type) {
+    final (minV, maxV, minS, maxS, lt) = switch (condition.precipType) {
       PrecipitationType.snow => (2.0, 4.0, 2.0, 6.0, 4.0),
       PrecipitationType.rain => (7.0, 12.0, 1.0, 3.0, 1.5),
       PrecipitationType.sleet => (4.0, 8.0, 1.5, 4.0, 2.5),

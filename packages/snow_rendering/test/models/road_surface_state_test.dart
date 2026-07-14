@@ -18,7 +18,6 @@ WeatherCondition _condition({
   windSpeedKmh: 0,
   iceRisk: iceRisk,
   humidityRH: humidityRH,
-  source: ObservationSource.measured,
   timestamp: DateTime(2026),
 );
 

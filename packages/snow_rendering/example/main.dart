@@ -14,11 +14,10 @@ void main() {
     temperatureCelsius: -2.0,
     visibilityMeters: 800.0,
     windSpeedKmh: 15.0,
-    source: ObservationSource.measured,
     timestamp: DateTime.now(),
   );
   final assessment = DrivingConditionAssessment.fromCondition(condition);
-  print('Surface: ${assessment.surfaceState?.name ?? "unknown"}');
-  print('Particle count: ${assessment.precipitation?.particleCount ?? "unknown"}');
-  print('Visibility blur: ${assessment.visibility?.blurSigma ?? "unknown"}');
+  print('Surface: ${assessment.surfaceState.name}');
+  print('Particle count: ${assessment.precipitation.particleCount}');
+  print('Visibility blur: ${assessment.visibility.blurSigma}');
 }

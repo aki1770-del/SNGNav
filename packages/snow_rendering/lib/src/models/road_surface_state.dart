@@ -38,73 +38,16 @@ enum RoadSurfaceState {
 
   const RoadSurfaceState({required this.gripFactor});
 
-  /// Classify road surface from current weather, or `null` when the weather
-  /// data does not permit a classification.
-  ///
-  /// ## `null` means "cannot classify" — it is never [dry]
-  ///
-  /// Up to 0.2.7 this returned a non-nullable [RoadSurfaceState], so a
-  /// [WeatherCondition] carrying no measurements fell through the decision tree
-  /// to [dry] — and [dry] carries `gripFactor: 1.0`. Absence of data became
-  /// MAXIMUM GRIP, then `RecommendedResponse.proceed`, then the advisory
-  /// "Conditions normal", shown to a driver on a road nobody had measured.
-  /// That was the fatal path of the Measured-or-Absent defect (see CHANGELOG).
-  ///
-  /// Under the contract, absence is a value: this returns `null` when the
-  /// condition does not carry enough to classify. `null` is not a surface —
-  /// it has no grip factor, and callers must say so rather than invent one.
-  ///
-  /// The asymmetry is deliberate and matches `driving_weather`'s
-  /// [SafetyVerdict]: POSITIVE evidence of a hazard classifies even on partial
-  /// data (an asserted `iceRisk`, or deep cold), while any benign
-  /// classification — above all [dry] — requires knowing BOTH the temperature
-  /// and the precipitation type. Being offline does not mean "ice"; it means
-  /// "unknown", and unknown is a thing the driver is TOLD.
+  /// Classify road surface from current weather.
   ///
   /// Decision tree follows the position paper specification.
   /// For debounced classification, wrap with [HysteresisFilter].
-  static RoadSurfaceState? fromCondition(WeatherCondition condition) {
-    // POSITIVE evidence fires even when every other field is absent.
-    if (condition.iceRisk == true) return blackIce;
+  static RoadSurfaceState fromCondition(WeatherCondition condition) {
+    if (condition.iceRisk) return blackIce;
 
     final temp = condition.temperatureCelsius;
-    final precip = condition.precipType;
 
-    if (precip == null) {
-      // Precipitation unreported. We cannot tell snow from a dry road — but two
-      // POSITIVE ice determinations rest on the temperature alone and therefore
-      // still fire (caution-add-only; this state could not arise before 0.3.0,
-      // so it regresses nothing, and an absent field must never SUPPRESS a
-      // hazard a known field already justifies).
-      if (temp != null) {
-        // Deep cold: residual ice, whatever the sky is doing.
-        if (temp <= -3) return blackIce;
-
-        // Radiative-frost black ice — the classic Akita pre-dawn bridge-deck
-        // hazard, and the one that matters most here: it is detected from
-        // temperature + humidity, NOT from precipitation. Gating it behind a
-        // *reported* `precipType` would mean a vehicle with a real thermometer
-        // and a real hygrometer, but no rain sensor, silently lost its black-ice
-        // detection — the offline path, which is exactly where this check earns
-        // its keep (it fires BEFORE friction/traction, i.e. before the wheels
-        // have already slipped). Still humidity-gated: absent humidity abstains
-        // and never fabricates the hazard.
-        if (isRadiativeFrostBlackIce(
-          ambientCelsius: temp,
-          humidityRHPercent: condition.humidityRH,
-        )) {
-          return blackIce;
-        }
-      }
-      return null;
-    }
-
-    // Every remaining branch needs the temperature: it is what separates rain
-    // from freezing rain, and slush from compacted snow. Without it we do not
-    // know the surface — and we will not guess in the benign direction.
-    if (temp == null) return null;
-
-    if (precip == PrecipitationType.none) {
+    if (condition.precipType == PrecipitationType.none) {
       // Cold dry conditions can still have residual ice.
       if (temp <= -3) return blackIce;
       // Radiative-frost black ice: with NO precipitation and the air still a
@@ -128,7 +71,7 @@ enum RoadSurfaceState {
       return dry;
     }
 
-    switch (precip) {
+    switch (condition.precipType) {
       case PrecipitationType.rain:
         if (temp <= 0) return blackIce; // Freezing rain.
         if (condition.intensity == PrecipitationIntensity.heavy && temp > 3) {
@@ -171,32 +114,10 @@ class HysteresisFilter<T> {
   final List<T> _buffer = [];
   T? _current;
 
-  /// Whether [_current] holds a real reading.
-  ///
-  /// This exists because `T` may itself be NULLABLE. Since 0.3.0,
-  /// `RoadSurfaceState.fromCondition` can honestly return `null` ("cannot
-  /// classify"), so a filter is routinely instantiated as
-  /// `HysteresisFilter<RoadSurfaceState?>` — and then a genuine `null` reading
-  /// is a VALID state, not the absence of one.
-  ///
-  /// Up to 0.2.7 this class used `_current == null` as its "nothing seen yet"
-  /// sentinel. With a nullable `T` that sentinel is ambiguous: every real `null`
-  /// reading would look like "not seeded", the seeding branch would fire on
-  /// every frame, and the filter would **silently stop debouncing** — accepting
-  /// the very single-frame flicker it exists to suppress. A separate flag is the
-  /// only way to tell "I have seen nothing" from "I have seen an unknown".
-  bool _seeded = false;
-
   HysteresisFilter({this.windowSize = 3, this.threshold = 2});
 
-  /// Current stabilised state.
-  ///
-  /// When `T` is nullable this is ambiguous on its own — check [hasCurrent] to
-  /// distinguish "no readings yet" from "a reading whose value is `null`".
+  /// Current stabilised state, or `null` if no readings yet.
   T? get current => _current;
-
-  /// Whether any reading has been accepted yet.
-  bool get hasCurrent => _seeded;
 
   /// Add a new reading and return the stabilised state.
   T add(T reading) {
@@ -207,9 +128,8 @@ class HysteresisFilter<T> {
 
     // Count occurrences of the new reading in the window.
     final count = _buffer.where((e) => e == reading).length;
-    if (count >= threshold || !_seeded) {
+    if (count >= threshold || _current == null) {
       _current = reading;
-      _seeded = true;
     }
     return _current as T;
   }
@@ -221,6 +141,5 @@ class HysteresisFilter<T> {
   void reset() {
     _buffer.clear();
     _current = null;
-    _seeded = false;
   }
 }
