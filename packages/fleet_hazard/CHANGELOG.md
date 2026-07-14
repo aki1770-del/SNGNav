@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.5.1
+
+### The aggregator could not tell "no data" from "the road is clear"
+
+Up to and including 0.5.0, `HazardAggregator.aggregate()` returned **the same
+empty list for three different roads**:
+
+* nobody had reported it — *no vehicle has been down this road*;
+* the fleet had reported it and found it fine — *the road is clear*;
+* every vehicle that drove it returned `RoadCondition.unknown` — *the road was
+  driven and could not be read*.
+
+A caller receiving `[]` had no way to tell which. If your surface rendered an
+empty result as a clear road, it has been showing drivers a clear road for
+stretches where **nothing was known at all** — including roads no vehicle had
+touched. Absence rendered as calm is the failure that matters here: the driver
+is told the road is fine precisely where we have nothing to say about it.
+
+`RoadCondition.unknown` was part of this: the hazard filter keeps only `snowy`
+and `icy`, so a report saying *"I drove it and my sensor could not tell"* was
+dropped without leaving any trace in the result.
+
+**Recency was documented but never enforced.** `FleetReport.isRecent` existed and
+was never called by anything in this package. The safety boundary document
+described surfacing counts like *"N vehicles reported in the last 30 min"*, but
+no code applied any age limit — every report counted, however old. That window
+was a promise the API could not keep.
+
+### Fixed, without breaking you
+
+Nothing existing changed. `aggregate()` keeps its exact signature, return type
+and clustering behavior; there is a regression test pinning that. This release
+only **adds**:
+
+* **`HazardAggregator.aggregateWithProvenance()`** — returns the new
+  **`FleetAggregate`** instead of a bare list, carrying `zones`, `reportCount`,
+  `unknownCount`, `staleCount` and `freshestReportAt`, plus the accessors that
+  separate the three worlds: `isSilent` (nobody reported), `isMeasuredClear`
+  (reported, readable, and clear) and `isAllUnknown` (reported, and unreadable).
+  `freshestReportAt` is `null` when there is nothing to report — `null` means NOT
+  KNOWN and must not be coalesced into a time.
+* **A `maxAge` argument on that method** that actually consults
+  `FleetReport.isRecent`. Reports older than `maxAge` are excluded from
+  clustering and counted in `staleCount`. If you tell a driver "in the last 30
+  minutes", pass `maxAge: const Duration(minutes: 30)` and the window is now
+  genuinely enforced. When `maxAge` is omitted, no age filter is applied — and
+  that is stated rather than implied.
+* Documentation on `aggregate()` stating plainly that it cannot distinguish
+  absence from an all-clear, and applies no recency filter.
+
+If you render fleet data to a driver, moving to `aggregateWithProvenance()` is
+the point of this release. `aggregate()` continues to work and is not
+deprecated, but it cannot tell you whether the empty list it just handed you
+means the road is safe or means nobody has looked.
+
 ## 0.5.0
 
 **Breaking — anonymization fix (dignity-class).** A retained `HazardZone` no
