@@ -1,3 +1,31 @@
+## 0.1.3
+
+**The code we told you to copy did not compile. We are sorry.**
+
+`0.1.2` corrected a README that pointed you at a `position_integrity` package which
+does not exist — and, in the same breath, gave you a replacement snippet that called
+**`metresBetween(...)`, a function that does not exist either.** The API-reference
+example on `TrustSignal` had the same broken call.
+
+If you copied the trust-assessment snippet — the one seam this package exists to make
+honest, where you decide whether a GPS fix can be believed — you got
+`undefined_function`. That is our error, twice over, at the worst possible place.
+
+`0.1.3` ships the snippet **with the distance helper included**, so it compiles as
+written. No API change, no behaviour change. Docs only.
+
+### Why it happened, and what now stops it
+
+`0.1.2` was published on "analyze clean, tests green". Neither of those compiles a
+README code block or a dartdoc snippet — **nothing we owned ever ran the example.**
+Every check we had measured code we wrote for ourselves; not one measured the code we
+wrote for you.
+
+There is now a gate that compiles every `dart` block in the README and in the public
+API docs against the package's own real API, and refuses the publish if a snippet
+names a symbol that does not exist. It was proven by pointing it at `0.1.2`: it
+rejects it, by name.
+
 ## 0.1.2
 
 Additive and non-breaking. No existing API changes, no behaviour changes;

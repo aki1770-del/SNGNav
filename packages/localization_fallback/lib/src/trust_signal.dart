@@ -9,10 +9,12 @@ library;
 /// docs pointed at a `position_integrity` package that is **not on pub.dev**,
 /// and that reference was wrong.
 ///
-/// A workable verdict from the fields a platform locator already gives you:
+/// A workable verdict from the fields a platform locator already gives you.
+/// The full, copy-pasteable version — including the distance helper — is in the
+/// README under "Computing the trust signal":
 ///
 /// ```dart
-/// TrustSignal assess(RawFix fix, RawFix? previous) {
+/// TrustSignal assess(RawFix fix, RawFix? previous, double Function(RawFix, RawFix) metresBetween) {
 ///   // 1. Geometry that cannot be true.
 ///   if (!fix.hasFiniteGeometry) return TrustSignal.failed;
 ///
@@ -24,9 +26,8 @@ library;
 ///   if (previous != null) {
 ///     final seconds =
 ///         fix.timestamp.difference(previous.timestamp).inMilliseconds / 1000.0;
-///     if (seconds > 0) {
-///       final impliedKmh = _metresBetween(previous, fix) / seconds * 3.6;
-///       if (impliedKmh > 250) return TrustSignal.suspect;
+///     if (seconds > 0 && metresBetween(previous, fix) / seconds * 3.6 > 250) {
+///       return TrustSignal.suspect;
 ///     }
 ///   }
 ///   return TrustSignal.trusted;

@@ -195,21 +195,46 @@ not safe — a multipath or teleported fix becomes a confident dot, and guidance
 spoken from it. Compute a verdict from what your locator already reports:
 
 ```dart
+// oracle:placeholders controller, fix, lastFix
+import 'dart:math' as math;
+
+/// Decide whether a raw fix can be believed. Copy this, then tune the numbers
+/// to your receiver and vehicle.
 TrustSignal assess(RawFix fix, RawFix? previous) {
-  if (!fix.hasFiniteGeometry) return TrustSignal.failed;      // impossible geometry
+  // 1. Geometry that cannot be true.
+  if (!fix.hasFiniteGeometry) return TrustSignal.failed;
 
+  // 2. Accuracy the receiver itself does not believe.
   final acc = fix.accuracyMeters;
-  if (acc == null || acc > 100) return TrustSignal.suspect;   // the receiver doubts itself
+  if (acc == null || acc > 100) return TrustSignal.suspect;
 
-  if (previous != null) {                                     // a jump no car could make
-    final s = fix.timestamp.difference(previous.timestamp).inMilliseconds / 1000.0;
-    if (s > 0 && metresBetween(previous, fix) / s * 3.6 > 250) {
-      return TrustSignal.suspect;
+  // 3. A jump no vehicle could have made (multipath / teleport).
+  if (previous != null) {
+    final seconds =
+        fix.timestamp.difference(previous.timestamp).inMilliseconds / 1000.0;
+    if (seconds > 0) {
+      final impliedKmh = _metresBetween(previous, fix) / seconds * 3.6;
+      if (impliedKmh > 250) return TrustSignal.suspect;
     }
   }
   return TrustSignal.trusted;
 }
 
+/// Great-circle distance in metres.
+double _metresBetween(RawFix a, RawFix b) {
+  const earthRadiusM = 6371000.0;
+  double rad(double d) => d * math.pi / 180.0;
+  final dLat = rad(b.latitude - a.latitude);
+  final dLon = rad(b.longitude - a.longitude);
+  final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(rad(a.latitude)) *
+          math.cos(rad(b.latitude)) *
+          math.sin(dLon / 2) *
+          math.sin(dLon / 2);
+  return 2 * earthRadiusM * math.asin(math.min(1.0, math.sqrt(h)));
+}
+
+// Then pass the verdict with every fix:
 controller.onFix(fix, trust: assess(fix, lastFix));
 ```
 
