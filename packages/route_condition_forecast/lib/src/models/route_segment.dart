@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 /// A portion of a route between two waypoints.

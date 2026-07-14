@@ -1,4 +1,3 @@
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 import '../models/route_segment.dart';
 

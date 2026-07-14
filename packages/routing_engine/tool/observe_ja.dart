@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:routing_engine/src/maneuver_localizer.dart';
 

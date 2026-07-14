@@ -63,16 +63,46 @@ filter.update(
 
 ### Wrap a location provider
 
+`LocationProvider` is an interface — **this package ships no concrete
+implementation**, because the platform locator is yours (geolocator, GeoClue2,
+Android/iOS, a replay of a recorded drive). You supply it; `DeadReckoningProvider`
+wraps it and keeps predicting when it goes silent.
+
 ```dart
+// A minimal provider. In a real app this wraps geolocator / GeoClue2 / your CAN
+// bridge — the only contract is: emit GeoPosition on `positions`.
+class MyLocationProvider implements LocationProvider {
+  final _controller = StreamController<GeoPosition>.broadcast();
+
+  @override
+  Stream<GeoPosition> get positions => _controller.stream;
+
+  @override
+  Future<void> start() async {
+    // subscribe to your platform locator here and add() each fix
+  }
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> dispose() async => _controller.close();
+}
+
 final provider = DeadReckoningProvider(
-  inner: SimulatedLocationProvider(),
+  inner: MyLocationProvider(),
   mode: DeadReckoningMode.kalman,
 );
 
+// start() is required — without it the inner provider never emits.
+await provider.start();
+
 provider.positions.listen((position) {
-  // Receives GPS when available, Kalman predictions when GPS is lost
+  // Receives GPS when available, Kalman predictions when GPS is lost.
+  // `accuracy` is in metres and GROWS while dead-reckoning: it is the honest
+  // "the dot could be anywhere within this circle".
   print('${position.latitude}, ${position.longitude} '
-      '(accuracy: ${position.accuracyMetres}m)');
+      '(accuracy: ${position.accuracy}m)');
 });
 ```
 
@@ -130,7 +160,7 @@ class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
           return const Text('Waiting for location...');
         }
 
-        final degraded = position.accuracyMetres > 25;
+        final degraded = position.accuracy > 25;
         return ListTile(
           title: Text(
             '${position.latitude.toStringAsFixed(5)}, '
@@ -139,9 +169,9 @@ class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
           subtitle: Text(
             degraded
                 ? 'Predicted path — accuracy '
-                    '${position.accuracyMetres.toStringAsFixed(0)}m'
+                    '${position.accuracy.toStringAsFixed(0)}m'
                 : 'Live GPS lock — accuracy '
-                    '${position.accuracyMetres.toStringAsFixed(0)}m',
+                    '${position.accuracy.toStringAsFixed(0)}m',
           ),
         );
       },

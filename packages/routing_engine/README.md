@@ -190,6 +190,7 @@ polyline (Valhalla). It never means "the origin", and it is never
 `LatLng(0, 0)`.
 
 ```dart
+// oracle:placeholders result, map, speak
 for (final m in result.maneuvers) {
   if (m.hasPosition) {
     map.addMarker(m.position!);

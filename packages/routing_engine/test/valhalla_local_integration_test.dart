@@ -2,7 +2,6 @@ library;
 
 import 'dart:io';
 
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:test/test.dart';
 

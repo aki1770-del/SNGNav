@@ -1,6 +1,5 @@
-import 'dart:math' as math;
-import 'package:driving_weather/driving_weather.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:math' as math;
 import 'package:route_condition_forecast/route_condition_forecast.dart';
 import '../models/adaptive_reroute_config.dart';
 import '../models/reroute_decision.dart';

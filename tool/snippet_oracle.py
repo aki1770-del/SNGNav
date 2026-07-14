@@ -126,9 +126,18 @@ def declared_placeholders(code):
     return names
 
 
+def is_flutter_snippet(code):
+    """A Flutter snippet inside a pure-Dart package cannot be compiled here.
+
+    We do NOT silently pass it — we report it UNVERIFIED. Claiming a block is fine
+    because we could not check it is precisely the failure this oracle exists to end.
+    """
+    return "package:flutter/" in code
+
+
 def wrap(code, pkg_name):
     """Make a fragment compilable: import the package, hoist imports, wrap statements."""
-    lines = [l for l in code.split("\n") if not re.match(r"\s*//\s*oracle:placeholders", l)]
+    lines = [l for l in code.split("\n") if not re.match(r"\s*//\s*oracle:", l)]
     imports = [l for l in lines if re.match(r"\s*import\s+", l)]
     body = [l for l in lines if not re.match(r"\s*import\s+", l)]
 
@@ -136,20 +145,29 @@ def wrap(code, pkg_name):
     header = list(imports)
     if not have_self:
         header.insert(0, f"import 'package:{pkg_name}/{pkg_name}.dart';")
+    # Snippets routinely use StreamController / Future / math without showing the
+    # dart: import. Supplying them removes noise WITHOUT hiding a package defect:
+    # a wrong package symbol still fails.
+    src_all = "\n".join(body)
+    if "StreamController" in src_all or "Completer" in src_all:
+        header.append("import 'dart:async';")
+    if re.search(r"\bmath\.", src_all):
+        header.append("import 'dart:math' as math;")
 
-    src = "\n".join(body)
-    # A block with only top-level declarations compiles as-is; otherwise it is a
-    # fragment of statements and needs a main().
+    # Ignore leading comments when deciding whether this is a top-level block.
+    probe = "\n".join(
+        l for l in body if l.strip() and not l.strip().startswith("//")
+    )
     toplevel = re.match(
-        r"\s*(class |enum |mixin |extension |void main|Future<void> main|final \w+ \w+\s*=|const \w+ )",
-        src,
+        r"\s*(class |enum |mixin |extension |abstract |void main|Future<void> main)",
+        probe,
     )
     if toplevel:
-        return "\n".join(header) + "\n\n" + src + "\n"
+        return "\n".join(header) + "\n\n" + src_all + "\n"
     return (
         "\n".join(header)
         + "\n\nFuture<void> _oracleSnippet() async {\n"
-        + src
+        + src_all
         + "\n}\n"
     )
 
@@ -162,14 +180,21 @@ def analyze(pkg, blocks):
             name = m.group(1)
             break
     if not name:
-        return [], []
+        return [], [], []
+
+    has_flutter = "flutter:" in open(os.path.join(pkg, "pubspec.yaml"), encoding="utf-8").read()
 
     d = os.path.join(pkg, ORACLE_DIR)
     shutil.rmtree(d, ignore_errors=True)
     os.makedirs(d)
 
     index = {}
+    skipped = []
     for i, (src, line, code) in enumerate(blocks):
+        if is_flutter_snippet(code) and not has_flutter:
+            # Honest: NOT a pass. We could not compile it, and we say so.
+            skipped.append(f"{src}:~{line} (Flutter snippet in a pure-Dart package — NOT VERIFIED)")
+            continue
         f = os.path.join(d, f"s{i}.dart")
         open(f, "w", encoding="utf-8").write(wrap(code, name))
         index[os.path.abspath(f)] = (src, line, declared_placeholders(code))
@@ -185,7 +210,7 @@ def analyze(pkg, blocks):
         diags = json.loads(p.stdout).get("diagnostics", [])
     except Exception:
         shutil.rmtree(d, ignore_errors=True)
-        return [], [f"{pkg}: analyzer produced no parsable output — ORACLE CANNOT VOUCH"]
+        return [], [f"{pkg}: analyzer produced no parsable output — ORACLE CANNOT VOUCH"], skipped
 
     for diag in diags:
         code_name = (diag.get("code") or "").lower()
@@ -211,7 +236,7 @@ def analyze(pkg, blocks):
             }
         )
     shutil.rmtree(d, ignore_errors=True)
-    return violations, []
+    return violations, [], skipped
 
 
 def main():
@@ -228,9 +253,11 @@ def main():
         if not blocks:
             print(f"  {os.path.basename(pkg):32} no dart snippets")
             continue
-        violations, errs = analyze(pkg, blocks)
+        violations, errs, skipped = analyze(pkg, blocks)
         for e in errs:
             print(f"  !! {e}")
+        for s in skipped:
+            print(f"  ??   {os.path.basename(pkg):32} {s}")
         if violations:
             bad_pkgs += 1
             total += len(violations)

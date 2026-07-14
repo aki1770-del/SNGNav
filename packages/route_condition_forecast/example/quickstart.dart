@@ -1,4 +1,3 @@
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:driving_weather/driving_weather.dart';
 import 'package:route_condition_forecast/route_condition_forecast.dart';

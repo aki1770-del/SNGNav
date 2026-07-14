@@ -24,7 +24,8 @@ import 'route_segmenter.dart';
 ///   speedKmh: 60.0,
 /// );
 /// final forecast = await forecaster.forecast(routeResult);
-/// if (forecast.hasAnyHazard) { ... }
+/// if (forecast.hazard == SafetyVerdict.hazardous) { ... }
+/// // NOTE: `unknown` is NOT `notHazardous` — an unmeasured route is not a clear one.
 /// ```
 class RouteConditionForecaster {
   const RouteConditionForecaster({

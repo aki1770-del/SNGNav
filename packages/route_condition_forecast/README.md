@@ -49,6 +49,7 @@ dependencies:
 ## Use
 
 ```dart
+// oracle:placeholders currentWeather, myHazardZones, routeResult
 import 'package:route_condition_forecast/route_condition_forecast.dart';
 
 final forecaster = RouteConditionForecaster(

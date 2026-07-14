@@ -25,6 +25,15 @@
 /// ```
 library;
 
+// Our public API (RouteRequest, RouteResult, RouteManeuver) takes and returns
+// latlong2's LatLng. A package whose API requires a type MUST export that type:
+// without this, the very first block of our own README —
+//   import 'package:routing_engine/routing_engine.dart';
+//   ... origin: LatLng(35.1709, 136.9066)
+// — does not compile, and every stranger's first contact with us is an
+// `undefined_function`. (Found 2026-07-14 by the L35 snippet oracle.)
+export 'package:latlong2/latlong.dart' show LatLng;
+
 export 'src/exceptions.dart';
 // NOTE: src/maneuver_localizer.dart is deliberately NOT exported — it is an
 // internal product piece (§9: no pub.dev-facing API without edge-developer

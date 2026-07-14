@@ -11,8 +11,11 @@
 /// Safety: ASIL-QM — display only, no vehicle control.
 ///
 /// ```dart
+/// // oracle:placeholders myGpsProvider
 /// import 'package:kalman_dr/kalman_dr.dart';
 ///
+/// // myGpsProvider is YOUR LocationProvider — this package ships no concrete
+/// // implementation; the platform locator (geolocator / GeoClue2 / CAN) is yours.
 /// final provider = DeadReckoningProvider(
 ///   inner: myGpsProvider,
 ///   mode: DeadReckoningMode.kalman,

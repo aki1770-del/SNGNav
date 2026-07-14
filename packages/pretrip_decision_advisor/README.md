@@ -156,7 +156,19 @@ void main() {
         profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
   );
 
-  // 4. Read the typed result out — this is what an edge dev renders in their UI.
+  // 4. HANDLE THE ABSENCE FIRST. If no forecast hour covers the trip window, the
+  //    peak hazard is HourHazard.unknown — NOT "clear". Up to 0.5.1 this package
+  //    reported an unforecast morning as `clear`, and a driver was handed a
+  //    green briefing for a morning nobody had forecast. Render your own
+  //    "no forecast for your window" state here; do not fall through to a
+  //    verdict UI that reads as an all-clear.
+  if (briefing.peakHazard == HourHazard.unknown) {
+    print('No forecast covers your departure window — condition UNKNOWN.');
+    print('Do NOT present this as a clear morning.');
+    return;
+  }
+
+  // 5. Read the typed result out — this is what an edge dev renders in their UI.
   print('Verdict : ${briefing.verdict.name}');
   print('Strength: ${briefing.recommendation?.strength.name ?? "(none)"}');
   print('Delay   : ${briefing.recommendation?.suggestedDelay ?? Duration.zero}');

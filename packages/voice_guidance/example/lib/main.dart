@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:voice_guidance/voice_guidance.dart';

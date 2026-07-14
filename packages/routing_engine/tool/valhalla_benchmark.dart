@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 const _localDefaultBaseUrl = 'http://localhost:8005';
