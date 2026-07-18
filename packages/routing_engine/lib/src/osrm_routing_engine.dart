@@ -122,7 +122,13 @@ class OsrmRoutingEngine implements RoutingEngine {
         //
         // An imprecise point on her road is a small error. A confident point in the
         // Atlantic is a lie.
-        final LatLng? position = location != null && location.length >= 2
+        // 0.3.2: the maneuver's own position is RESOLVED only when OSRM gave us
+        // a well-formed `location`. When it did not, we still clamp into the
+        // corridor (previous maneuver, or route origin) for backward
+        // compatibility, but flag it `positionResolved: false` so the consumer
+        // can refuse to narrate a place / distance it must not trust.
+        final bool positionResolved = location != null && location.length >= 2;
+        final LatLng? position = positionResolved
             ? LatLng(
                 (location[1] as num).toDouble(),
                 (location[0] as num).toDouble(),
@@ -146,6 +152,7 @@ class OsrmRoutingEngine implements RoutingEngine {
           lengthKm: stepDistanceM / 1000,
           timeSeconds: stepDurationS,
           position: position,
+          positionResolved: positionResolved,
         ));
       }
     }

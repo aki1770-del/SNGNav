@@ -16,6 +16,25 @@ class RouteManeuver extends Equatable {
   final double timeSeconds;
   final LatLng position;
 
+  /// Whether [position] was resolved from the routing response for THIS
+  /// maneuver, or substituted.
+  ///
+  /// `true`  — [position] is this maneuver's own resolved coordinate.
+  /// `false` — [position] is a **substituted** point (a nearby corridor point,
+  ///            or the route origin) that this package clamped in because the
+  ///            maneuver's own location could not be resolved (OSRM omitted
+  ///            `maneuver.location`; Valhalla's `begin_shape_index` was missing
+  ///            or ran past the decoded shape). It is somewhere on the route,
+  ///            but it is NOT where this turn happens.
+  ///
+  /// Prior 0.3.x releases exposed no way to tell these apart, so a clamped,
+  /// imprecise point was narrated and plotted with the same confidence as a
+  /// real one. Guard reads with [hasPosition] before you narrate a place,
+  /// drop a marker, or measure distance-to-next-maneuver.
+  ///
+  /// Defaults to `true` so that existing direct constructions are unchanged.
+  final bool positionResolved;
+
   const RouteManeuver({
     required this.index,
     required this.instruction,
@@ -23,15 +42,35 @@ class RouteManeuver extends Equatable {
     required this.lengthKm,
     required this.timeSeconds,
     required this.position,
+    this.positionResolved = true,
   });
 
+  /// `true` when [position] is this maneuver's own resolved coordinate;
+  /// `false` when [position] is a substituted/approximated point that must not
+  /// be trusted as the turn's location. See [positionResolved].
+  ///
+  /// Migration for a `^0.3.0` consumer (no signature changed — additive):
+  /// ```dart
+  /// if (m.hasPosition) {
+  ///   // safe: announce the place, draw the marker, measure distance
+  /// } else {
+  ///   // announce the turn WITHOUT a place; skip the marker; no distance
+  /// }
+  /// ```
+  bool get hasPosition => positionResolved;
+
+  // NOTE: [positionResolved] is deliberately NOT in [props]. Equality on 0.3.x
+  // stays byte-identical to 0.3.1 so this patch changes no observable equality
+  // behavior — the resolved/substituted signal is exposed via [hasPosition] and
+  // [toString] only.
   @override
   List<Object?> get props =>
       [index, instruction, type, lengthKm, timeSeconds, position];
 
   @override
-  String toString() =>
-      'RouteManeuver($index: $type "$instruction" ${lengthKm}km)';
+  String toString() => positionResolved
+      ? 'RouteManeuver($index: $type "$instruction" ${lengthKm}km)'
+      : 'RouteManeuver($index: $type "$instruction" ${lengthKm}km, position unknown)';
 }
 
 /// Which routing engine produced this result.

@@ -143,10 +143,20 @@ class ValhallaRoutingEngine implements RoutingEngine {
       final maneuvers = legMap['maneuvers'] as List<dynamic>? ?? [];
       for (final m in maneuvers) {
         final mMap = m as Map<String, dynamic>;
-        final shapeIdx = mMap['begin_shape_index'] as int? ?? 0;
+        final rawShapeIdx = mMap['begin_shape_index'] as int?;
+        final shapeIdx = rawShapeIdx ?? 0;
         // No decoded shape => no truthful point exists for this maneuver. We drop it
         // rather than fabricate one. A missing turn is visible; a fabricated one is not.
         if (allPoints.isEmpty) continue;
+        // 0.3.2: honest signal on top of the 0.3.1 clamp. The maneuver's own
+        // position is RESOLVED only when we had a real `begin_shape_index` that
+        // lands inside the decoded shape. A MISSING index (defaulted to 0, i.e.
+        // silently "at the route start") or one PAST the shape (clamped to the
+        // last decoded point) is a substitution — imprecise, on the route, but
+        // NOT this turn's location. We keep the same clamped [position] for
+        // backward compatibility and flag it via `positionResolved: false`.
+        final positionResolved =
+            rawShapeIdx != null && rawShapeIdx >= 0 && rawShapeIdx < allPoints.length;
         allManeuvers.add(RouteManeuver(
           index: maneuverIndex++,
           instruction: mMap['instruction'] as String? ?? '',
@@ -160,6 +170,7 @@ class ValhallaRoutingEngine implements RoutingEngine {
           position: shapeIdx < allPoints.length
               ? allPoints[shapeIdx]
               : allPoints.last,
+          positionResolved: positionResolved,
         ));
       }
     }
