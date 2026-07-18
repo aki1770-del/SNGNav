@@ -1,3 +1,39 @@
+## 0.3.3
+
+**Stops a set of malformed-response CRASHES. Additive/defensive only — no API
+changed, no signature changed. Includes everything in 0.3.2 below.**
+
+A crash is worse than a wrong coordinate: a thrown exception takes down the
+**entire** `calculateRoute()` call, so a consumer who asked for a route home
+gets nothing. Up to and including 0.3.1, several malformed-but-plausible
+responses threw a raw `RangeError`/`TypeError`/`FormatException` that escaped
+this package's documented `RoutingException` and crashed the caller. Each now
+either returns a safe result or throws a `RoutingException` you already catch —
+never a raw crash, never a fabricated place.
+
+* **Valhalla — negative `begin_shape_index`** previously threw `RangeError`
+  (`allPoints[-1]`). It is now clamped onto a real decoded point on your route
+  and flagged `positionResolved: false`. For every non-negative index the
+  position is unchanged from 0.3.1.
+* **Valhalla — `begin_shape_index` or `type` sent as a JSON double** (e.g.
+  `1.0`) previously threw `type 'double' is not a subtype of type 'int?'`. Both
+  are now read as `num` and coerced to `int`.
+* **OSRM — `maneuver.location` with non-numeric elements** (e.g. `["a","b"]`)
+  previously threw a cast error. It is now treated as an unresolved position
+  (clamped into the corridor + `positionResolved: false`), never a throw.
+* **Both engines — a non-JSON body returned with HTTP 200** (a proxy or captive
+  portal serving an HTML error page) previously threw a raw `FormatException`.
+  It is now a `RoutingException('… non-JSON body (HTTP 200)')`.
+* **Both engines — a crash backstop** now wraps response parsing: any remaining
+  malformed-response throw (a non-object leg/step, a text field sent as a
+  number, an undecodable shape) surfaces as a `RoutingException` instead of a
+  raw crash. The targeted fixes above still return a usable, flagged route for
+  the common cases; this only catches what they do not.
+
+Nothing here is breaking: `RouteManeuver.position` is still a non-nullable
+`LatLng`, no signature changed, and `RoutingException` is the error type this
+package already documents. Take it without touching your code.
+
 ## 0.3.2
 
 **Adds an honest signal for substituted maneuver positions. Additive only —

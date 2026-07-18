@@ -103,14 +103,47 @@ class ValhallaRoutingEngine implements RoutingEngine {
         );
       }
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      return _parseRouteResponse(json, stopwatch.elapsed);
+      // 0.3.3: a 200 body may still be non-JSON (proxy/portal/cache). 0.3.1 threw
+      // a raw FormatException/TypeError here that escaped the RoutingException
+      // contract and crashed the caller. Convert it to a RoutingException.
+      final dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        throw RoutingException('Valhalla returned a non-JSON body (HTTP 200)');
+      }
+      if (decoded is! Map<String, dynamic>) {
+        throw RoutingException('Valhalla returned an unexpected JSON shape (HTTP 200)');
+      }
+      return _parseRouteResponse(decoded, stopwatch.elapsed);
     } on http.ClientException catch (e) {
       throw RoutingException('Valhalla network error: $e');
     }
   }
 
   RouteResult _parseRouteResponse(
+    Map<String, dynamic> json,
+    Duration latency,
+  ) {
+    // 0.3.3: crash backstop. The targeted guards below fix the high-reach
+    // malformations (they still return a usable, flagged route). This wrapper
+    // catches ANY residual parse throw — a non-object leg/maneuver, a numeric
+    // field sent as a string, a shape this decoder cannot handle — and converts
+    // it to the documented RoutingException instead of letting a raw
+    // RangeError/TypeError/FormatException escape and crash the caller.
+    // RoutingExceptions raised deliberately below pass through unchanged.
+    try {
+      return _parseRouteResponseImpl(json, latency);
+    } on RoutingException {
+      rethrow;
+    } catch (e) {
+      throw RoutingException(
+        'Valhalla returned a response this package could not parse: $e',
+      );
+    }
+  }
+
+  RouteResult _parseRouteResponseImpl(
     Map<String, dynamic> json,
     Duration latency,
   ) {
@@ -143,7 +176,10 @@ class ValhallaRoutingEngine implements RoutingEngine {
       final maneuvers = legMap['maneuvers'] as List<dynamic>? ?? [];
       for (final m in maneuvers) {
         final mMap = m as Map<String, dynamic>;
-        final rawShapeIdx = mMap['begin_shape_index'] as int?;
+        // 0.3.3: read as `num?` not `int?`. 0.3.1's `as int?` threw a raw cast
+        // error when a server sent `begin_shape_index: 1.0` (a JSON double),
+        // crashing the whole route call. `num?.toInt()` accepts int or double.
+        final rawShapeIdx = (mMap['begin_shape_index'] as num?)?.toInt();
         final shapeIdx = rawShapeIdx ?? 0;
         // No decoded shape => no truthful point exists for this maneuver. We drop it
         // rather than fabricate one. A missing turn is visible; a fabricated one is not.
@@ -157,19 +193,23 @@ class ValhallaRoutingEngine implements RoutingEngine {
         // backward compatibility and flag it via `positionResolved: false`.
         final positionResolved =
             rawShapeIdx != null && rawShapeIdx >= 0 && rawShapeIdx < allPoints.length;
+        // 0.3.3: CRASH FIX. 0.3.1 used `shapeIdx < allPoints.length ? [shapeIdx]
+        // : last`, which threw RangeError for a NEGATIVE index (`-1 < len` is
+        // true, then `allPoints[-1]`). A crash takes down the entire route call —
+        // deeper harm than an imprecise point. Clamp into the real decoded range:
+        // for every non-negative index the value is byte-identical to 0.3.1
+        // (in-range -> that point; past-the-end -> the last point); a negative
+        // index now lands on the first point instead of throwing. Never fabricates
+        // (allPoints is non-empty here), never throws.
+        final safeIdx = shapeIdx.clamp(0, allPoints.length - 1);
         allManeuvers.add(RouteManeuver(
           index: maneuverIndex++,
           instruction: mMap['instruction'] as String? ?? '',
-          type: _maneuverTypeString(mMap['type'] as int? ?? 0),
+          // 0.3.3: `num?.toInt()` — 0.3.1's `as int?` threw on a double `type`.
+          type: _maneuverTypeString((mMap['type'] as num?)?.toInt() ?? 0),
           lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
           timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
-          // 0.3.1: a `begin_shape_index` past the decoded shape used to substitute
-          // `const LatLng(0, 0)` — Null Island. The maneuver is on this route; the
-          // closest truthful point we hold is the end of the shape we could decode.
-          // Imprecise, but never in an ocean.
-          position: shapeIdx < allPoints.length
-              ? allPoints[shapeIdx]
-              : allPoints.last,
+          position: allPoints[safeIdx],
           positionResolved: positionResolved,
         ));
       }

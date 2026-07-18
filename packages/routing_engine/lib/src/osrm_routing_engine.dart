@@ -67,7 +67,21 @@ class OsrmRoutingEngine implements RoutingEngine {
         );
       }
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      // 0.3.3: a 200 response is not a promise of well-formed JSON. A proxy,
+      // captive portal, or cache can return an HTML/error body with status 200.
+      // 0.3.1 threw a raw FormatException/TypeError here, which escaped the
+      // documented RoutingException contract and crashed the caller. Convert it
+      // to a RoutingException a `^0.3.0` consumer already catches.
+      final dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        throw RoutingException('OSRM returned a non-JSON body (HTTP 200)');
+      }
+      if (decoded is! Map<String, dynamic>) {
+        throw RoutingException('OSRM returned an unexpected JSON shape (HTTP 200)');
+      }
+      final json = decoded;
 
       final code = json['code'] as String?;
       if (code != 'Ok') {
@@ -83,6 +97,28 @@ class OsrmRoutingEngine implements RoutingEngine {
   }
 
   RouteResult _parseRouteResponse(
+    Map<String, dynamic> json,
+    Duration latency,
+  ) {
+    // 0.3.3: crash backstop. The targeted guards above fix the high-reach
+    // malformations (they still return a usable, flagged route). This wrapper
+    // catches ANY residual parse throw — a non-object element, a numeric field
+    // sent as a string, a shape this decoder cannot handle — and converts it to
+    // the documented RoutingException instead of letting a raw
+    // RangeError/TypeError/FormatException escape and crash the caller.
+    // RoutingExceptions raised deliberately below pass through unchanged.
+    try {
+      return _parseRouteResponseImpl(json, latency);
+    } on RoutingException {
+      rethrow;
+    } catch (e) {
+      throw RoutingException(
+        'OSRM returned a response this package could not parse: $e',
+      );
+    }
+  }
+
+  RouteResult _parseRouteResponseImpl(
     Map<String, dynamic> json,
     Duration latency,
   ) {
@@ -127,7 +163,15 @@ class OsrmRoutingEngine implements RoutingEngine {
         // corridor (previous maneuver, or route origin) for backward
         // compatibility, but flag it `positionResolved: false` so the consumer
         // can refuse to narrate a place / distance it must not trust.
-        final bool positionResolved = location != null && location.length >= 2;
+        // 0.3.3: a well-formed `location` must be TWO NUMBERS. 0.3.1 checked
+        // only `length >= 2`, so a malformed `["a","b"]` threw a raw cast error
+        // (`String` is not a `num`) that escaped RoutingException and crashed the
+        // caller. Now a non-numeric location is treated as unresolved (clamped +
+        // flagged), never a throw.
+        final bool positionResolved = location != null &&
+            location.length >= 2 &&
+            location[0] is num &&
+            location[1] is num;
         final LatLng? position = positionResolved
             ? LatLng(
                 (location[1] as num).toDouble(),
