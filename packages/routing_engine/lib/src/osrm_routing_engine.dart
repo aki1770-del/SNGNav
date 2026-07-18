@@ -110,12 +110,31 @@ class OsrmRoutingEngine implements RoutingEngine {
         final stepMap = step as Map<String, dynamic>;
         final maneuver = stepMap['maneuver'] as Map<String, dynamic>? ?? {};
         final location = maneuver['location'] as List<dynamic>?;
-        final position = location != null && location.length >= 2
+        // 0.3.1: when OSRM omits or malforms `maneuver.location`, this used to
+        // substitute `const LatLng(0, 0)` — Null Island, a real coordinate in the
+        // Gulf of Guinea, thousands of kilometres from any route. Consumers had no
+        // way to know it was fabricated: it is a valid LatLng like any other.
+        //
+        // We cannot know where the maneuver actually is. But we DO know it is
+        // somewhere on this route, and the route shape is already decoded above.
+        // So we clamp into the corridor: the last maneuver we placed, or the route
+        // origin. The result may be imprecise — it can never be in an ocean.
+        //
+        // An imprecise point on her road is a small error. A confident point in the
+        // Atlantic is a lie.
+        final LatLng? position = location != null && location.length >= 2
             ? LatLng(
                 (location[1] as num).toDouble(),
                 (location[0] as num).toDouble(),
               )
-            : const LatLng(0, 0);
+            : (allManeuvers.isNotEmpty
+                ? allManeuvers.last.position
+                : (shape.isNotEmpty ? shape.first : null));
+
+        // If we cannot place this maneuver ANYWHERE truthful, we do not invent a
+        // place for it. We drop it rather than hand the caller a coordinate we made
+        // up. A missing turn is visible; a fabricated one is not.
+        if (position == null) continue;
 
         final stepDistanceM = (stepMap['distance'] as num?)?.toDouble() ?? 0;
         final stepDurationS = (stepMap['duration'] as num?)?.toDouble() ?? 0;

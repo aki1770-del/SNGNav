@@ -469,7 +469,7 @@ void main() {
       await engine.dispose();
     });
 
-    test('begin_shape_index beyond decoded points defaults to (0, 0)',
+    test('begin_shape_index beyond decoded points is never placed at Null Island',
         () async {
       final engine = ValhallaRoutingEngine(
         baseUrl: 'http://test',
@@ -488,7 +488,11 @@ void main() {
       );
 
       final result = await engine.calculateRoute(_request);
-      expect(result.maneuvers.first.position, const LatLng(0, 0));
+      // INVERTED at 0.3.1. This asserted that an unresolvable maneuver lands at
+      // LatLng(0, 0) — Null Island, in the Gulf of Guinea — and called that correct.
+      // A test that encodes the lie is the lie with a green tick beside it.
+      expect(result.maneuvers.first.position.latitude == 0 && result.maneuvers.first.position.longitude == 0, isFalse,
+          reason: 'a maneuver was placed at Null Island');
 
       await engine.dispose();
     });

@@ -144,15 +144,22 @@ class ValhallaRoutingEngine implements RoutingEngine {
       for (final m in maneuvers) {
         final mMap = m as Map<String, dynamic>;
         final shapeIdx = mMap['begin_shape_index'] as int? ?? 0;
+        // No decoded shape => no truthful point exists for this maneuver. We drop it
+        // rather than fabricate one. A missing turn is visible; a fabricated one is not.
+        if (allPoints.isEmpty) continue;
         allManeuvers.add(RouteManeuver(
           index: maneuverIndex++,
           instruction: mMap['instruction'] as String? ?? '',
           type: _maneuverTypeString(mMap['type'] as int? ?? 0),
           lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
           timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
+          // 0.3.1: a `begin_shape_index` past the decoded shape used to substitute
+          // `const LatLng(0, 0)` — Null Island. The maneuver is on this route; the
+          // closest truthful point we hold is the end of the shape we could decode.
+          // Imprecise, but never in an ocean.
           position: shapeIdx < allPoints.length
               ? allPoints[shapeIdx]
-              : const LatLng(0, 0),
+              : allPoints.last,
         ));
       }
     }
