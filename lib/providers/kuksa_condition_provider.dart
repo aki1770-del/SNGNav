@@ -129,15 +129,77 @@ class KuksaConditionProvider {
     required Stream<Map<String, Datapoint>> updates,
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
     DateTime Function()? clock,
-  }) : _fusion = VehicleConditionFusion.fromPartialFrames(
+    Set<String> unsubscribedPaths = const {},
+  })  : _fusion = VehicleConditionFusion.fromPartialFrames(
           partialFrames: updates
               .map(vssLeavesFromDatapoints)
               .map(VehicleConditionSignals.fromVss),
           surfaceFilter: surfaceFilter,
           clock: clock,
-        );
+        ),
+        unsubscribedPaths = Set.unmodifiable(unsubscribedPaths);
 
   final VehicleConditionFusion _fusion;
+
+  /// VSS leaves the fusion reads that this broker does **not** expose, so the
+  /// subscription deliberately omitted them ([connect]'s per-signal degradation).
+  ///
+  /// **Empty is the only state that means "the fusion is seeing everything it
+  /// reads".** A non-empty set means the live picture is INCOMPLETE, and the
+  /// caller MUST NOT present it as an unqualified live reading.
+  ///
+  /// Use this to NAME the absent leaves to an edge developer. Do **not** derive
+  /// a detection-capability claim from it — derive that from the signals that
+  /// actually arrived (see the note below).
+  final Set<String> unsubscribedPaths;
+
+  // NOTE — deliberately NO static "which paths are load-bearing" set lives here.
+  //
+  // A first cut of this change carried `preSlipVssPaths = {humidity,
+  // airTemperature}` and let it drive the on-screen capability sentence. That
+  // was WRONG, and wrong in the dangerous direction: `_iceRisk`
+  // (`vehicle_signal_fusion.dart:108-126`) needs the ambient temperature for the
+  // POST-slip path too — `if (tractionLoss && temp != null && temp <=
+  // kColdSlipCelsius) return true` — and with no friction signal it returns
+  // `null`. So a vehicle missing temperature cannot attribute ice EITHER side of
+  // a slip, while the caption promised detection "AFTER traction is lost". An
+  // explicit on-screen false assurance is worse than the silence this change was
+  // written to fix.
+  //
+  // A hand-maintained path classification must be kept in sync with `_iceRisk`
+  // by hand, and that is exactly what broke. Capability is therefore derived by
+  // the CALLER from the signals that actually ARRIVED
+  // ([VehicleConditionUpdate.signals] — on the partial-frame rail that is the
+  // carried-forward merged snapshot). Reading capability from data rather than
+  // from the subscription set also covers the leaf that is exposed but never
+  // valued, and the value `fromVss` rejected as out-of-spec — neither of which a
+  // path set can see.
+
+  /// Whether the fusion can attribute black ice **at all** from the signals that
+  /// actually arrived in [s].
+  ///
+  /// Mirrors `_iceRisk` (`vehicle_signal_fusion.dart:108-126`): a positive ice
+  /// verdict needs EITHER a friction reading, OR an ambient temperature together
+  /// with at least one traction-loss signal to attribute a slip to. With neither,
+  /// `_iceRisk` returns `null` — the honest "we do not know" — and no ice warning
+  /// can ever be raised from vehicle sensors, before OR after the wheels slip.
+  ///
+  /// `null` signals (an unavailable update) return `true`: absence of data is not
+  /// evidence of incapability, and we never caption a capability claim we have
+  /// not measured.
+  static bool iceAttributableFrom(VehicleConditionSignals? s) =>
+      s == null ||
+      s.roadFriction != null ||
+      (s.airTempC != null &&
+          (s.tcsEngaged != null || s.absEngaged != null || s.escEngaged != null));
+
+  /// Whether black ice can be seen **before** traction is lost.
+  ///
+  /// The radiative-frost pair: humidity WITH the ambient temperature is what lets
+  /// the classifier flag the frost morning that friction and traction only reveal
+  /// once the wheels have already slipped.
+  static bool preSlipCapableFrom(VehicleConditionSignals? s) =>
+      s == null || (s.humidityRH != null && s.airTempC != null);
 
   /// The fused condition stream driving the Snow Scene.
   Stream<KuksaConditionUpdate> get conditions => _fusion.conditions;
@@ -163,15 +225,82 @@ class KuksaConditionProvider {
   /// Connection failure rethrows — the caller owns the honest no-broker
   /// fallback (keep the offline default; never wire a fabricated source),
   /// matching the app's existing live-source opt-in pattern.
+  ///
+  /// ## Per-signal degradation — why a whole-stream failure was wrong
+  ///
+  /// `kuksa.val.v2` `Subscribe` is **all-or-nothing**: if ANY requested path is
+  /// unknown to the broker it rejects the entire stream with a trailers-only
+  /// error, and the caller's `onError` sees one opaque failure. Measured
+  /// 2026-07-21 against a real databroker: two absent leaves out of nine
+  /// (`Vehicle.Exterior.Humidity`, `Vehicle.ADAS.ESC.IsEngaged`) produced **zero
+  /// emissions, silently, forever**, while the scene kept showing a confident
+  /// simulated default. A vehicle whose VSS tree simply does not publish humidity
+  /// — the least universally-implemented of the nine — lost the *entire* live
+  /// in-vehicle path, with no error, no log, and no visible symptom.
+  ///
+  /// So we ask the broker what it actually has ([KuksaClient.listMetadata]) and
+  /// subscribe to the intersection, recording the remainder in
+  /// [unsubscribedPaths].
+  ///
+  /// ## …and why degrading quietly would have been worse
+  ///
+  /// Degradation trades a LOUD total failure for a QUIET partial one, and the
+  /// quiet direction is the dangerous one: the fusion refuses to fabricate from a
+  /// missing signal, so a signal it never receives makes it **fail toward NO ice
+  /// warning while the ice is real**. Losing the ambient temperature does not
+  /// merely dim a feature — per `_iceRisk` it removes the ability to attribute
+  /// ice on EITHER side of a slip whenever no friction signal exists.
+  /// Therefore this method never degrades silently:
+  ///
+  ///  * every omitted leaf is published on [unsubscribedPaths] for the caller to
+  ///    NAME (the caller derives detection CAPABILITY from arrived signals, not
+  ///    from this set — see the note on the class);
+  ///  * if the intersection is **empty** there is no live source at all and we
+  ///    [StateError] rather than hand back a provider that can never emit —
+  ///    the caller's existing no-broker fallback is the honest outcome;
+  ///  * if `listMetadata` itself is unavailable (older broker, restricted
+  ///    permissions) we fall back to subscribing the full set — identical to the
+  ///    previous behaviour, never worse, and [unsubscribedPaths] stays empty
+  ///    because in that case we genuinely do not know.
   static Future<KuksaConditionProvider> connect(
     KuksaClient client, {
     List<String> paths = VehicleConditionSignals.recognizedVssPaths,
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
   }) async {
     await client.connect();
+
+    Set<String>? exposed;
+    try {
+      final metadata = await client.listMetadata();
+      exposed = {for (final m in metadata.metadata) m.path};
+    } catch (_) {
+      // Discovery unsupported/denied — subscribe the full set exactly as before.
+      // We do NOT claim knowledge of what is missing when we could not look.
+      exposed = null;
+    }
+
+    if (exposed == null) {
+      return KuksaConditionProvider(
+        updates: client.subscribe(paths),
+        surfaceFilter: surfaceFilter,
+      );
+    }
+
+    final available = paths.where(exposed.contains).toList(growable: false);
+    final missing = paths.where((p) => !exposed!.contains(p)).toSet();
+
+    if (available.isEmpty) {
+      throw StateError(
+        'KUKSA broker exposes none of the ${paths.length} VSS leaves the '
+        'condition fusion reads; there is no live in-vehicle source to '
+        'subscribe to. Missing: ${paths.join(', ')}',
+      );
+    }
+
     return KuksaConditionProvider(
-      updates: client.subscribe(paths),
+      updates: client.subscribe(available),
       surfaceFilter: surfaceFilter,
+      unsubscribedPaths: missing,
     );
   }
 }

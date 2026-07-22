@@ -15,7 +15,7 @@ packages:
       path: "packages/adaptive_reroute"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.2.0"
   analyzer:
     dependency: transitive
     description:
@@ -110,21 +110,21 @@ packages:
       path: "packages/condition_aggregator"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.1.0"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
       path: "packages/condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.7"
   condition_aggregator_jma:
     dependency: "direct main"
     description:
       path: "packages/condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.4.0"
   convert:
     dependency: transitive
     description:
@@ -187,7 +187,7 @@ packages:
       path: "packages/driving_conditions"
       relative: true
     source: path
-    version: "0.5.4"
+    version: "0.6.0"
   driving_consent:
     dependency: "direct main"
     description:
@@ -201,7 +201,7 @@ packages:
       path: "packages/driving_weather"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.5.0"
   dylib:
     dependency: transitive
     description:
@@ -256,7 +256,7 @@ packages:
       path: "packages/fleet_hazard"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -509,7 +509,7 @@ packages:
       path: "packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.4"
   matcher:
     dependency: transitive
     description:
@@ -580,7 +580,7 @@ packages:
       path: "packages/navigation_safety"
       relative: true
     source: path
-    version: "0.9.3"
+    version: "0.9.5"
   navigation_safety_calibration:
     dependency: "direct overridden"
     description:
@@ -594,7 +594,7 @@ packages:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.1"
+    version: "0.11.3"
   nested:
     dependency: transitive
     description:
@@ -625,7 +625,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.5.4"
   package_config:
     dependency: transitive
     description:
@@ -728,28 +728,28 @@ packages:
       path: "packages/pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.6.0"
   pretrip_source_digitraffic:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_digitraffic"
       relative: true
     source: path
-    version: "0.2.2"
+    version: "0.2.3"
   pretrip_source_jma:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_jma"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.2.1"
   pretrip_source_met_norway:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_met_norway"
       relative: true
     source: path
-    version: "0.2.1"
+    version: "0.2.2"
   proj4dart:
     dependency: transitive
     description:
@@ -788,21 +788,21 @@ packages:
       path: "packages/route_condition_forecast"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.2.0"
   routing_bloc:
     dependency: "direct main"
     description:
       path: "packages/routing_bloc"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.4.5"
   routing_engine:
     dependency: "direct main"
     description:
       path: "packages/routing_engine"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   shelf:
     dependency: transitive
     description:
@@ -846,7 +846,7 @@ packages:
       path: "packages/snow_rendering"
       relative: true
     source: path
-    version: "0.2.7"
+    version: "0.3.0"
   source_map_stack_trace:
     dependency: transitive
     description:
@@ -973,7 +973,7 @@ packages:
       path: "packages/vehicle_condition_fusion"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.5.0"
   vm_service:
     dependency: transitive
     description:

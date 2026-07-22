@@ -70,7 +70,7 @@ packages:
       path: "../packages/condition_aggregator"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.1.0"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
@@ -177,7 +177,7 @@ packages:
       path: "../packages/fleet_hazard"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -350,7 +350,7 @@ packages:
       path: "../packages/map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.4"
   matcher:
     dependency: transitive
     description:
@@ -405,7 +405,7 @@ packages:
       path: "../packages/navigation_safety"
       relative: true
     source: path
-    version: "0.9.3"
+    version: "0.9.5"
   navigation_safety_calibration:
     dependency: "direct overridden"
     description:
@@ -419,7 +419,7 @@ packages:
       path: "../packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.1"
+    version: "0.11.3"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
@@ -449,7 +449,7 @@ packages:
       path: "../packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.5.4"
   path:
     dependency: transitive
     description:

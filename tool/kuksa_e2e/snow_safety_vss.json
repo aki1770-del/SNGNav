@@ -16,6 +16,11 @@
             "type": "sensor",
             "datatype": "float",
             "description": "Ambient outside air temperature (degC)."
+          },
+          "Humidity": {
+            "type": "sensor",
+            "datatype": "float",
+            "description": "Relative humidity (%). Load-bearing: with AirTemperature this is what lets the fusion catch radiative-frost black ice BEFORE friction/traction fire."
           }
         }
       },
@@ -42,6 +47,11 @@
                     "description": "Lower bound of friction confidence interval."
                   }
                 }
+              },
+              "IsEngaged": {
+                "type": "sensor",
+                "datatype": "boolean",
+                "description": "Electronic Stability Control currently engaged."
               }
             }
           },

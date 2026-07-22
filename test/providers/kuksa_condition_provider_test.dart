@@ -16,6 +16,11 @@ import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 // to construct mock Datapoints for injection we reach into the generated types.
 // ignore: implementation_imports
 import 'package:kuksa_dart_sdk/src/generated/kuksa/val/v2/types.pb.dart' as pb;
+// ListMetadataResponse is the broker's answer to the discovery call connect()
+// makes; like Datapoint it is a generated message the SDK does not re-export.
+// ignore: implementation_imports
+import 'package:kuksa_dart_sdk/src/generated/kuksa/val/v2/val.pb.dart'
+    as val_pb;
 import 'package:sngnav_snow_scene/providers/kuksa_condition_provider.dart';
 // The calibrated fusion now lives ONCE in the package; the app file is a thin
 // KUKSA adapter (vehicleSignalsFromDatapoints) over it. The types and the
@@ -422,4 +427,244 @@ void main() {
       await provider.dispose();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Per-signal degradation: DETECTION-CAPABILITY predicates.
+  //
+  // These pin the mapping the driver-facing caption depends on. They exist
+  // because a first cut derived that caption from a static "load-bearing paths"
+  // set and so promised detection "AFTER traction is lost" on a vehicle that
+  // could not attribute ice at ALL — an explicit on-screen false assurance,
+  // worse than the silence per-signal degradation was written to fix. The
+  // predicates must track `_iceRisk` (`vehicle_signal_fusion.dart:108-126`);
+  // these tests are what makes a future divergence fail loudly.
+  // -------------------------------------------------------------------------
+  group('detection capability from ARRIVED signals', () {
+    const cold = -2.4;
+
+    test('friction alone attributes ice — no temperature needed', () {
+      const s = VehicleConditionSignals(roadFriction: 0.18);
+      expect(KuksaConditionProvider.iceAttributableFrom(s), isTrue);
+    });
+
+    test('temperature + a traction signal attributes ice', () {
+      const s = VehicleConditionSignals(airTempC: cold, tcsEngaged: true);
+      expect(KuksaConditionProvider.iceAttributableFrom(s), isTrue);
+    });
+
+    test(
+      'REGRESSION: traction signals WITHOUT temperature cannot attribute ice — '
+      'the caption must never promise post-slip detection here',
+      () {
+        // The measured failing case: a trim publishing TCS/ABS but no exterior
+        // temperature and no ESC friction. `_iceRisk` returns null, so no ice
+        // warning is possible on EITHER side of a slip.
+        const s = VehicleConditionSignals(tcsEngaged: true, absEngaged: true);
+        expect(KuksaConditionProvider.iceAttributableFrom(s), isFalse);
+        expect(KuksaConditionProvider.preSlipCapableFrom(s), isFalse);
+      },
+    );
+
+    test('temperature WITHOUT any traction signal or friction cannot attribute',
+        () {
+      const s = VehicleConditionSignals(airTempC: cold);
+      expect(KuksaConditionProvider.iceAttributableFrom(s), isFalse);
+    });
+
+    test('pre-slip needs humidity AND temperature together', () {
+      expect(
+        KuksaConditionProvider.preSlipCapableFrom(
+          const VehicleConditionSignals(humidityRH: 95, airTempC: cold),
+        ),
+        isTrue,
+      );
+      expect(
+        KuksaConditionProvider.preSlipCapableFrom(
+          const VehicleConditionSignals(humidityRH: 95),
+        ),
+        isFalse,
+        reason: 'humidity without temperature cannot infer radiative frost',
+      );
+      expect(
+        KuksaConditionProvider.preSlipCapableFrom(
+          const VehicleConditionSignals(airTempC: cold),
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+      'an EXPOSED-but-never-valued leaf reads as incapable — the reason '
+      'capability comes from arrived signals, not the subscription set',
+      () {
+        // A broker may advertise humidity in its VSS tree and never publish a
+        // value; `unsubscribedPaths` would be EMPTY and a path-set check would
+        // wrongly report full capability.
+        const s = VehicleConditionSignals(
+          roadFriction: 0.18,
+          airTempC: cold,
+        );
+        expect(KuksaConditionProvider.iceAttributableFrom(s), isTrue);
+        expect(KuksaConditionProvider.preSlipCapableFrom(s), isFalse);
+      },
+    );
+
+    test('null signals (unavailable update) claim nothing either way', () {
+      expect(KuksaConditionProvider.iceAttributableFrom(null), isTrue);
+      expect(KuksaConditionProvider.preSlipCapableFrom(null), isTrue);
+    });
+
+    test('unsubscribedPaths defaults empty and is unmodifiable', () {
+      final provider = KuksaConditionProvider(
+        updates: const Stream<Map<String, Datapoint>>.empty(),
+      );
+      expect(provider.unsubscribedPaths, isEmpty);
+      expect(
+        () => provider.unsubscribedPaths.add('Vehicle.Exterior.Humidity'),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('unsubscribedPaths carries the omitted leaves through', () {
+      final provider = KuksaConditionProvider(
+        updates: const Stream<Map<String, Datapoint>>.empty(),
+        unsubscribedPaths: const {
+          'Vehicle.Exterior.Humidity',
+          'Vehicle.ADAS.ESC.IsEngaged',
+        },
+      );
+      expect(provider.unsubscribedPaths, hasLength(2));
+      expect(
+        provider.unsubscribedPaths,
+        contains('Vehicle.Exterior.Humidity'),
+      );
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // THE FOUNDING DEFECT, REPRODUCED (added 2026-07-22).
+  //
+  // `kuksa.val` Subscribe is ALL-OR-NOTHING: if the broker does not expose even
+  // ONE requested leaf it rejects the ENTIRE stream with a trailers-only error,
+  // `main.dart`'s `onError` swallows it, and the scene keeps painting a
+  // confident SIMULATED default — no error, no log, no symptom for anyone.
+  // Measured 2026-07-21 against a real databroker: 2 absent leaves out of 9
+  // produced ZERO emissions, silently, forever. The leaf most likely to be
+  // missing from a production VSS tree — `Vehicle.Exterior.Humidity` — is the
+  // one pre-slip black-ice detection depends on.
+  //
+  // `connect()` therefore asks the broker what it holds and subscribes to the
+  // intersection. Until these tests, NOTHING exercised that: `listMetadata`
+  // appeared nowhere under `test/`, and the e2e fixture was widened in the same
+  // change to carry all 9 leaves — so the harness can no longer reproduce the
+  // defect it was written for. The whole suite stayed green over the branch
+  // that decides whether HER vehicle feed comes up at all.
+  group('connect() — per-signal degradation (the founding defect)', () {
+    const humidity = 'Vehicle.Exterior.Humidity';
+    final all = VehicleConditionSignals.recognizedVssPaths;
+
+    test('a broker missing ONE leaf still yields a live feed — the whole '
+        'stream is no longer lost to the absent leaf', () async {
+      final exposed = all.where((p) => p != humidity).toList();
+      final client = _FakeKuksaClient(exposed: exposed);
+
+      final provider = await KuksaConditionProvider.connect(client);
+
+      // The subscription must omit ONLY the leaf the broker lacks.
+      expect(client.subscribedPaths, isNotNull);
+      expect(client.subscribedPaths, hasLength(all.length - 1));
+      expect(client.subscribedPaths, isNot(contains(humidity)));
+      // And the omission must be DISCLOSED, not swallowed — a silent partial
+      // feed captioned as a plain live feed is the false-clear this fix exists
+      // to end.
+      expect(provider.unsubscribedPaths, <String>{humidity});
+    });
+
+    test('a broker exposing every leaf subscribes all of them and reports '
+        'nothing absent', () async {
+      final client = _FakeKuksaClient(exposed: List<String>.from(all));
+
+      final provider = await KuksaConditionProvider.connect(client);
+
+      expect(client.subscribedPaths, hasLength(all.length));
+      expect(provider.unsubscribedPaths, isEmpty);
+    });
+
+    test('when discovery is unavailable it falls back to the full-set '
+        'subscribe — never worse than before, and claims no knowledge of '
+        'what is missing', () async {
+      final client = _FakeKuksaClient(metadataError: StateError('unimplemented'));
+
+      final provider = await KuksaConditionProvider.connect(client);
+
+      expect(client.subscribedPaths, hasLength(all.length));
+      // We could not look, so we must not assert emptiness as a finding — the
+      // empty set here means "unknown", and the caller derives capability from
+      // arrived signals, never from this set.
+      expect(provider.unsubscribedPaths, isEmpty);
+    });
+
+    test('a broker exposing NONE of the leaves throws rather than handing back '
+        'a provider that can never emit', () async {
+      final client = _FakeKuksaClient(exposed: const <String>[]);
+
+      await expectLater(
+        KuksaConditionProvider.connect(client),
+        throwsStateError,
+      );
+      expect(
+        client.subscribedPaths,
+        isNull,
+        reason: 'must not subscribe at all when there is nothing to subscribe to',
+      );
+    });
+  });
+}
+
+/// Stands in for a real databroker's client so the discovery branch of
+/// [KuksaConditionProvider.connect] can be exercised with no broker running.
+///
+/// `KuksaClient` is a plain class (no `final`/`base`/`sealed`), so Dart's
+/// implicit interface permits `implements`; `noSuchMethod` supplies forwarders
+/// for the members these tests never call.
+class _FakeKuksaClient implements KuksaClient {
+  _FakeKuksaClient({this.exposed, this.metadataError});
+
+  /// VSS leaves this broker admits to holding. Ignored when [metadataError] is
+  /// set (the discovery-unavailable case).
+  final List<String>? exposed;
+
+  /// When non-null, `listMetadata` throws this — an older broker, a restricted
+  /// permission, or a databroker that simply does not implement discovery.
+  final Object? metadataError;
+
+  /// What `connect()` actually asked the broker for; null when never called.
+  List<String>? subscribedPaths;
+
+  @override
+  Future<void> connect() async {}
+
+  @override
+  Future<val_pb.ListMetadataResponse> listMetadata({String filter = ''}) async {
+    final err = metadataError;
+    if (err != null) throw err;
+    return val_pb.ListMetadataResponse(
+      metadata: <pb.Metadata>[
+        for (final path in exposed!) pb.Metadata(path: path),
+      ],
+    );
+  }
+
+  @override
+  Stream<Map<String, Datapoint>> subscribe(
+    List<String> paths, {
+    int bufferSize = 0,
+  }) {
+    subscribedPaths = List<String>.unmodifiable(paths);
+    return const Stream<Map<String, Datapoint>>.empty();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
 }

@@ -148,11 +148,120 @@ class SavedPlaceStore {
   }
 }
 
+/// The single directory name the store lives under, in every fallback root.
+/// Named once so the writability probe and the file path can never drift apart
+/// — the drift is what let a parent-probe pass while the real target failed.
+const String _storeDirName = 'sngnav';
+
+/// Whether [dir] can be created AND actually written to.
+///
+/// `Directory.createSync(recursive: true)` is NOT a writability test, and using
+/// it as one is why the fallback chain below silently picked a directory it
+/// could not write. On a directory that ALREADY EXISTS but is not writable —
+/// the locked ARM-IVI rootfs this fallback exists for — `createSync` returns
+/// normally, so the `catch` labelled "not writable" never fires, the loop
+/// accepts the bad candidate and `break`s, and the systemTemp fallback below it
+/// becomes unreachable. The throw then surfaces at `writeAsString` time — after
+/// the driver has already entered her destination area.
+///
+/// Measured 2026-07-22 (`dart run`, existing dir at chmod 500):
+/// `createSync(recursive: true)` → returned normally; the subsequent
+/// `writeAsStringSync` → threw `PathAccessException`.
+///
+/// So probe with a real write, and remove the probe file afterwards.
+///
+/// HONEST BOUNDS — what this probe does NOT promise:
+///  * Cleanup is NOT crash-safe. A kill between the write and the `finally`
+///    strands one 1-byte dotfile. The name is pid-suffixed, so the residue is
+///    bounded by the pid space and a later run with the same pid overwrites
+///    rather than adds — but it is residue, and calling it crash-safe would be
+///    a claim we have not earned.
+///  * It answers only for [dir] itself. Callers must probe the directory they
+///    will actually WRITE, not its parent — see [_storeDirName] and the loop in
+///    [openDefaultSavedPlaceStore], where probing the parent was exactly the
+///    defect this function was introduced to remove.
+///  * It is a point-in-time answer. A directory writable at boot can be
+///    remounted read-only afterwards; nothing here detects that later.
+bool isDirectoryWritable(Directory dir) {
+  File? probe;
+  try {
+    dir.createSync(recursive: true);
+    probe = File(
+      p.join(dir.path, '.sngnav-write-probe-$pid'),
+    );
+    probe.writeAsStringSync('w', flush: true);
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    try {
+      if (probe != null && probe.existsSync()) probe.deleteSync();
+    } catch (_) {
+      // Best-effort cleanup: a probe we could write but not delete still
+      // proves the directory is writable, which is the question asked.
+    }
+  }
+}
+
 /// Opens the production store at the app-support dir's
 /// `sngnav/saved_place.json`. This is the ONLY place `path_provider`/`path` is
 /// used; the rest of the store is pure `dart:io`.
-Future<SavedPlaceStore> openDefaultSavedPlaceStore() async {
-  final appDir = await getApplicationSupportDirectory();
-  final file = File(p.join(appDir.path, 'sngnav', 'saved_place.json'));
+///
+/// [debugEnvOverride] is a TEST SEAM ONLY; production passes nothing and reads
+/// the real environment. It exists because the fallback chain keys off `HOME`,
+/// and under `flutter test` the real `HOME` is always writable — which makes
+/// the fall-through branch (a candidate REJECTED, the next one taken) the one
+/// branch no test could reach. That branch is the whole point of the chain, so
+/// leaving it unreachable is how a probe defect survives a green suite. Same
+/// reason and shape as `debugMbtilesEnvOverride` in main.dart.
+Future<SavedPlaceStore> openDefaultSavedPlaceStore({
+  Map<String, String>? debugEnvOverride,
+}) async {
+  Directory appDir;
+  try {
+    if (debugEnvOverride != null) {
+      // A test is exercising the fallback chain; do not consult the host's
+      // real path_provider, whose answer would bypass the chain entirely.
+      throw const FileSystemException('debugEnvOverride: forcing fallback');
+    }
+    appDir = await getApplicationSupportDirectory();
+  } catch (_) {
+    // Embedder without a path_provider registrant (e.g. ivi-homescreen on the
+    // ARM-IVI head unit): fall back to a writable app-data dir so saved places
+    // still persist on target instead of throwing MissingPluginException. Try
+    // HOME first, then systemTemp — and if NEITHER is actually writable (a
+    // locked rootfs), land on systemTemp itself as the last resort.
+    //
+    // Writability is probed with a real write ([isDirectoryWritable]), never
+    // with `createSync` alone — see that function for why.
+    final env = debugEnvOverride ?? Platform.environment;
+    final home = env['HOME'];
+    final candidates = <Directory>[
+      if (home != null && home.isNotEmpty)
+        Directory(p.join(home, '.local', 'share')),
+      Directory(p.join(Directory.systemTemp.path, 'sngnav-data')),
+    ];
+    Directory? chosen;
+    for (final c in candidates) {
+      // Probe the directory the store ACTUALLY writes into — `<candidate>/
+      // sngnav` — never its parent. A writable parent holding an unwritable
+      // (or file-occupied) `sngnav` passes a parent-probe and then throws at
+      // save() time: the very late failure this probe exists to prevent,
+      // reachable one level down. Measured 2026-07-22: with `sngnav` present
+      // at chmod 500, probing the PARENT returned true while the real write
+      // threw PathAccessException.
+      if (isDirectoryWritable(Directory(p.join(c.path, _storeDirName)))) {
+        chosen = c;
+        break;
+      }
+    }
+    // Last resort, deliberately UNPROBED: if neither candidate is writable
+    // there is nowhere further to fall back to, so probing this would only
+    // tell us we are stuck. Persistence is best-effort by contract — both
+    // callers wrap save()/clear() in try/catch so a failure here costs the
+    // driver her saved area across a restart, never the read in front of her.
+    appDir = chosen ?? Directory.systemTemp;
+  }
+  final file = File(p.join(appDir.path, _storeDirName, 'saved_place.json'));
   return SavedPlaceStore(file);
 }

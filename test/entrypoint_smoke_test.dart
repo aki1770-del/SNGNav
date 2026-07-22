@@ -21,10 +21,18 @@ void main() {
       expect(find.text('SNGNav — Offline Map Demo'), findsOneWidget);
     });
 
-    testWidgets('shows status message on startup', (tester) async {
+    testWidgets('status message is reachable from the 2D map view', (
+      tester,
+    ) async {
       await tester.pumpWidget(const main_app.SNGNavGettingStarted());
-      // Either "Initializing..." or the actual status after init
-      expect(find.textContaining('Initializing'), findsWidgets);
+      // Boot default is the forward glance scene (Lane-3, 2026-07-19); the
+      // status line lives on the 2D map view — switch to it, then assert a
+      // status is SHOWN (keyed: the copy varies as async init lands —
+      // "Initializing..." / "Offline — MBTiles loaded" / the honest-absence
+      // message — and any of these is a live status, which is the contract).
+      await tester.tap(find.text('2D map'));
+      await tester.pump();
+      expect(find.byKey(const Key('status-message')), findsOneWidget);
     });
   });
 

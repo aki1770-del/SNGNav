@@ -380,7 +380,9 @@ void main() {
         expect(zone.averageConfidence, closeTo(0.8, 0.001));
       });
 
-      test('empty reports → 0', () {
+      test('empty reports → honest null (absence, not zero certainty)', () {
+        // fleet_hazard 0.6.0 honest-absence contract: no reports means the
+        // confidence is UNKNOWN — null, never a manufactured 0.
         const zone = HazardZone(
           center: _nagoya,
           radiusMeters: 500,
@@ -388,7 +390,7 @@ void main() {
           reports: [],
           vehicleCount: 0,
         );
-        expect(zone.averageConfidence, 0);
+        expect(zone.averageConfidence, isNull);
       });
 
       test('single report → its confidence', () {

@@ -239,7 +239,10 @@ void main() {
       expect(zone.vehicleCount, 2);
     });
 
-    test('averageConfidence handles empty reports', () {
+    test('averageConfidence is honestly null on empty reports', () {
+      // fleet_hazard 0.6.0 honest-absence contract: "nobody has reported"
+      // must stay distinguishable from "reported with zero certainty" —
+      // empty reports yield null, never a manufactured 0.
       const zone = HazardZone(
         center: LatLng(35.05, 137.25),
         radiusMeters: 500,
@@ -247,7 +250,7 @@ void main() {
         severity: HazardSeverity.snowy,
         vehicleCount: 0,
       );
-      expect(zone.averageConfidence, 0);
+      expect(zone.averageConfidence, isNull);
     });
 
     test('toString contains severity and report count', () {

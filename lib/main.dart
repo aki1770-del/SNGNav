@@ -22,6 +22,7 @@ import 'dart:io';
 
 import 'package:driving_weather/driving_weather.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:kalman_dr/kalman_dr.dart';
@@ -73,6 +74,17 @@ class SNGNavGettingStarted extends StatelessWidget {
 /// perspective forward-looking 3D snow scene, or the pre-trip briefing.
 enum _ViewMode { map, forward, pretrip }
 
+/// Test seams for the offline-basemap resolver (OPS-068 2026-07-19): under
+/// `flutter test` the repo-relative mbtiles candidate always exists, so the
+/// extraction and honest-absence branches are unreachable without these.
+/// Production leaves all three null.
+@visibleForTesting
+List<String>? debugMbtilesCandidatesOverride;
+@visibleForTesting
+Map<String, String>? debugMbtilesEnvOverride;
+@visibleForTesting
+Directory? debugMbtilesExtractBaseOverride;
+
 class OfflineMapPage extends StatefulWidget {
   const OfflineMapPage({
     super.key,
@@ -108,7 +120,10 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   // Default view is the existing 2D map — the toggle is opt-in, the app's
   // default behaviour is unchanged.
-  _ViewMode _viewMode = _ViewMode.map;
+  // Boot default = the glanceable forward scene (purpose: on the IVI the
+  // compositor owns layout and the app cannot self-foreground — the default
+  // view IS the glance; the map/pretrip stay one tap away).
+  _ViewMode _viewMode = _ViewMode.forward;
 
   // The driving-condition picture fed to the 3D forward-view.
   //
@@ -200,6 +215,35 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // caption tells the truth about the active source.
   bool _liveVehicleReceived = false;
 
+  // VSS leaves the fusion reads that THIS vehicle's broker does not publish, so
+  // the subscription omitted them (KuksaConditionProvider.connect's per-signal
+  // degradation). Empty is the only state meaning "the fusion sees everything".
+  //
+  // WHY THIS IS ON SCREEN AND NOT JUST IN A LOG: the fusion refuses to fabricate
+  // from a missing signal, so a signal it never receives makes it fail toward NO
+  // ice warning while the ice is real. Losing humidity does not dim a feature —
+  // it removes the ability to warn BEFORE the wheels slip. A partial feed
+  // captioned as a plain live feed would be exactly that silent false-clear.
+  Set<String> _kuksaUnsubscribed = const {};
+
+  // Black-ice detection CAPABILITY, derived per-update from the signals that
+  // ACTUALLY ARRIVED — never from the subscription set.
+  //
+  // Reading capability from data closes three doors one path-set cannot see: the
+  // leaf that was never subscribed, the leaf that is exposed but never valued,
+  // and the value `fromVss` rejected as out-of-spec. `fromVss` has already
+  // nulled each of them.
+  //
+  // The predicates mirror `_iceRisk` (`vehicle_signal_fusion.dart:108-126`):
+  //  * ice can be attributed AT ALL when there is a friction reading, OR an
+  //    ambient temperature together with at least one traction-loss signal;
+  //  * it can be seen BEFORE a slip only with humidity AND temperature — the
+  //    radiative-frost pair.
+  // `true` until a live update says otherwise, so we never caption a capability
+  // claim before any signal has arrived.
+  bool _kuksaIceAttributable = true;
+  bool _kuksaPreSlipCapable = true;
+
   // HONEST GPS-LOSS DEGRADATION (D3 worst-case — GPS fails).
   //
   // The 3D forward-view is driven by weather alone; on its own it would keep
@@ -251,12 +295,24 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     }
   }
 
-  // Nagoya Station — default center for Chūbu region tiles
-  static const _nagoya = LatLng(35.1709, 136.8815);
+  // Akita City — the bundled basemap's own center (archive metadata:
+  // center 140.10,39.72; bounds cover Akita prefecture). The pre-position
+  // view must open on REAL tiles, not a blank region outside the archive.
+  static const _akitaCenter = LatLng(39.72, 140.10);
 
-  // MBTiles file path — relative to the project directory.
-  // The edge developer places her .mbtiles file here.
-  static const _mbtilesPath = 'data/offline_tiles.mbtiles';
+  // Offline basemap resolution — offline is constitutive (purpose clause 4).
+  // Candidates are tried in order; if none is a real file, the bundled asset
+  // is extracted once to a writable dir (embedder-safe: no path_provider —
+  // ivi-homescreen registers none; same fallback family as saved_place_store).
+  static const _mbtilesEnvVar = 'SNGNAV_MBTILES';
+  static const _mbtilesCandidates = <String>[
+    // IVI image / integrator-installed absolute path:
+    '/usr/share/sngnav/akita_offline.mbtiles',
+    // Repo/dev working-dir paths (edge-developer workflow, unchanged):
+    'assets/tiles/akita_offline.mbtiles',
+    'data/offline_tiles.mbtiles',
+  ];
+  static const _mbtilesAsset = 'assets/tiles/akita_offline.mbtiles';
 
   @override
   void initState() {
@@ -284,6 +340,12 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       _kuksaClient = client;
       final provider = await KuksaConditionProvider.connect(client);
       _kuksaProvider = provider;
+      // Per-signal degradation is only honest if it is DISCLOSED. Capture which
+      // leaves this broker could not supply, so the caption can NAME them.
+      // Detection capability is NOT derived from this set — see the listener.
+      if (provider.unsubscribedPaths.isNotEmpty && mounted) {
+        setState(() => _kuksaUnsubscribed = provider.unsubscribedPaths);
+      }
       _kuksaSub = provider.conditions.listen(
         (update) {
           if (!mounted) return;
@@ -293,9 +355,19 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             setState(() => _liveVehicleReceived = false);
             return;
           }
+          // Capability from the ARRIVED signals (carried-forward merged snapshot
+          // on the partial-frame rail), mirroring `_iceRisk`. A path set cannot
+          // see a leaf that is exposed-but-never-valued, nor a value `fromVss`
+          // rejected as out-of-spec; a null field can.
+          final iceAttributable =
+              KuksaConditionProvider.iceAttributableFrom(update.signals);
+          final preSlipCapable =
+              KuksaConditionProvider.preSlipCapableFrom(update.signals);
           setState(() {
             _assessment = update.assessment!;
             _liveVehicleReceived = true;
+            _kuksaIceAttributable = iceAttributable;
+            _kuksaPreSlipCapable = preSlipCapable;
           });
         },
         onError: (Object _) {/* keep last-good assessment */},
@@ -363,31 +435,104 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     }
   }
 
-  Future<void> _initTileProvider() async {
-    final file = File(_mbtilesPath);
+  /// Resolve the offline basemap to a real file path: env override → file
+  /// candidates → one-time extraction of the bundled asset to a writable dir.
+  /// Returns null only when every route fails — the map then degrades
+  /// HONESTLY (no silent online fetch; purpose clause 4).
+  ///
+  /// Test seams ([debugMbtilesCandidatesOverride] etc.) exist because under
+  /// `flutter test` the repo-relative candidate always exists, which would
+  /// leave the extraction + honest-absence branches untestable (OPS-068
+  /// review finding, 2026-07-19).
+  Future<String?> _resolveMbtilesPath() async {
+    final env = debugMbtilesEnvOverride ?? Platform.environment;
+    final candidates = debugMbtilesCandidatesOverride ?? _mbtilesCandidates;
+    final override = env[_mbtilesEnvVar];
+    for (final p in [if (override != null && override.isNotEmpty) override,
+        ...candidates]) {
+      if (File(p).existsSync()) return p;
+    }
+    // Extract the bundled asset (sqlite needs a real file). Writable-dir
+    // fallback chain mirrors saved_place_store (embedder has no path_provider).
     try {
-      if (await file.exists()) {
+      final home = env['HOME'];
+      // The test seam REPLACES the base list (not prepends): otherwise the
+      // always-writable systemTemp candidate would make the honest-absence
+      // branch unreachable in tests — the exact blind spot the seam closes.
+      final bases = debugMbtilesExtractBaseOverride != null
+          ? <Directory>[debugMbtilesExtractBaseOverride!]
+          : <Directory>[
+              if (home != null && home.isNotEmpty)
+                Directory('$home/.local/share/sngnav'),
+              Directory('${Directory.systemTemp.path}/sngnav'),
+            ];
+      Directory? base;
+      for (final b in bases) {
+        // Real write probe, not `createSync` — an existing-but-unwritable dir
+        // (locked IVI rootfs) passes `createSync` silently and would be
+        // accepted here, making the systemTemp candidate below unreachable and
+        // deferring the failure to the 16 MB extraction write. See
+        // [isDirectoryWritable] in services/saved_place_store.dart.
+        if (isDirectoryWritable(b)) {
+          base = b;
+          break;
+        }
+      }
+      if (base == null) return null;
+      final out = File('${base.path}/akita_offline.mbtiles');
+      final data = await rootBundle.load(_mbtilesAsset);
+      if (!out.existsSync() || out.lengthSync() != data.lengthInBytes) {
+        await out.writeAsBytes(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+          flush: true,
+        );
+      }
+      return out.path;
+    } catch (e) {
+      debugPrint('offline basemap asset extraction failed: $e');
+      return null;
+    }
+  }
+
+  Future<void> _initTileProvider() async {
+    try {
+      final path = await _resolveMbtilesPath();
+      if (path != null) {
         final manager = offline_tiles.OfflineTileManager(
           tileSource: offline_tiles.TileSourceType.mbtiles,
-          mbtilesPath: _mbtilesPath,
+          mbtilesPath: path,
+          // Honest degradation must be QUIET, not a crash: with online
+          // fallback on (the package default), an out-of-archive tile would
+          // resolve to the network route and the urlTemplate-less TileLayer
+          // throws an unguarded ArgumentError inside flutter_map. False ⇒
+          // out-of-coverage tiles render the transparent placeholder
+          // (OPS-068 review MUST, 2026-07-19).
+          allowOnlineFallback: false,
         );
         setState(() {
           _offlineTileManager = manager;
           _isOffline = true;
           _statusMessage =
-              'Offline — MBTiles loaded (${_formatSize(file.lengthSync())})';
+              'Offline — MBTiles loaded (${_formatSize(File(path).lengthSync())})';
         });
       } else {
+        // Honest degradation: NO silent online basemap. The ground stays
+        // visibly absent and the status line says why; position/route layers
+        // still orient. (Offline is constitutive — an online fallback would
+        // fabricate capability the snow will take away.)
         setState(() {
           _offlineTileManager = null;
           _isOffline = false;
           _statusMessage =
-              'No MBTiles file at $_mbtilesPath — using online fallback';
+              'オフライン地図が利用できません — offline basemap unavailable '
+              '(no file, asset extraction failed)';
         });
       }
     } catch (e) {
       setState(() {
-        _statusMessage = 'MBTiles error: $e — using online fallback';
+        _offlineTileManager = null;
+        _isOffline = false;
+        _statusMessage = 'MBTiles error: $e — offline map unavailable';
       });
     }
   }
@@ -538,20 +683,32 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       children: [
         FlutterMap(
           options: MapOptions(
-            initialCenter: _nagoya,
+            initialCenter: _akitaCenter,
             initialZoom: 11,
             minZoom: 6,
             maxZoom: 16,
           ),
           children: [
-            TileLayer(
-              tileProvider:
-                  _offlineTileManager?.tileProvider ?? NetworkTileProvider(),
-              urlTemplate: _offlineTileManager == null
-                  ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-                  : null,
-              userAgentPackageName: 'com.sngnav.getting_started',
-            ),
+            if (_offlineTileManager != null)
+              TileLayer(
+                tileProvider: _offlineTileManager!.tileProvider,
+                userAgentPackageName: 'com.sngnav.getting_started',
+              )
+            else
+              // Honest offline-degraded ground (purpose clause 4): no silent
+              // online OSM — a network basemap fabricates capability the snow
+              // will take away. Position/route layers below still orient.
+              IgnorePointer(
+                child: Container(
+                  color: const Color(0xFFE8E4DA),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'オフライン地図が利用できません\noffline basemap unavailable',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF8A8578), fontSize: 16),
+                  ),
+                ),
+              ),
             const SimpleAttributionWidget(
               source: Text('\u00a9 OpenStreetMap contributors'),
             ),
@@ -566,6 +723,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Text(
               _statusMessage,
+              key: const Key('status-message'),
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 12,
@@ -593,8 +751,27 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     if (_liveVehicleReceived) {
       // NOT "offline-capable": a KUKSA databroker is a network hop to a vehicle
       // bus. It is a live IVI/embedded source, not the offline path.
-      caption = 'Forward-view \u2014 CPU-projected still frame, '
+      const base = 'Forward-view \u2014 CPU-projected still frame, '
           'LIVE in-vehicle VSS signals (KUKSA databroker on the vehicle bus)';
+      // Three states, and the SAFETY sentence is driven by measured capability \u2014
+      // never by the subscription set. An earlier cut derived it from a static
+      // path list and so promised detection "AFTER traction is lost" on vehicles
+      // that could not attribute ice at all: an explicit on-screen false
+      // assurance, worse than the silence this change was written to fix.
+      final missing = _kuksaUnsubscribed.isEmpty
+          ? ''
+          : ' (absent: ${(_kuksaUnsubscribed.toList()..sort()).join(', ')})';
+      if (!_kuksaIceAttributable) {
+        caption = '$base \u2014 PARTIAL$missing: this vehicle cannot determine '
+            'black ice from its own sensors. Treat the road as unknown.';
+      } else if (!_kuksaPreSlipCapable) {
+        caption = '$base \u2014 PARTIAL$missing: early black-ice detection '
+            'unavailable on this vehicle.';
+      } else if (_kuksaUnsubscribed.isNotEmpty) {
+        caption = '$base \u2014 PARTIAL$missing.';
+      } else {
+        caption = base;
+      }
     } else if (_liveConditionReceived) {
       caption = 'Forward-view \u2014 CPU-projected still frame, '
           'live Digitraffic winter-road severity';
