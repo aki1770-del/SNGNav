@@ -7,6 +7,25 @@
   host tests (production-found 2026-07-10). Verification recipe: airplane
   mode BEFORE launch, SEE the bundled region paint.
 
+## 0.5.4
+
+Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
+
+The previous `^0.10.0` constraint excluded core 0.11.x, so a project that asked
+for the current core could not also take this package at its current version.
+The resolver silently selected an older release of this package instead, with no
+error and no warning. Core 0.11.0 and 0.11.1 are additive (a re-export, and a
+percent-to-fraction humidity factory); this package compiles and its full test
+suite passes against 0.11.1.
+
+Also removes a `dependency_overrides` block that referenced sibling packages by
+relative path. It was inert for consumers, but it prevented this package from
+resolving standalone from its published archive.
+
+No API or behaviour change.
+
+# Changelog
+
 ## 0.5.3
 - docs: correct stale README install pin to current version (no API change).
 

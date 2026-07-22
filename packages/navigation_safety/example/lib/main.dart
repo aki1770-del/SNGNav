@@ -137,6 +137,43 @@ class _ExampleScreen extends StatelessWidget {
             ),
           ),
           const SafetyOverlay(),
+          // Hazard-owner clear path — deliberately ABOVE SafetyOverlay.
+          //
+          // Everything below the overlay (the Wrap of demo buttons
+          // included) is unreachable while an alert is active: the
+          // overlay's modal barrier swallows those taps by design. A
+          // non-dismissible alert therefore needs a clear path that does
+          // not go through the driver-facing UI under the barrier.
+          //
+          // In a real app this is NOT a button: the condition pipeline
+          // that raised the alert adds
+          // SafetyAlertDismissed(conditionCleared: true) when its data
+          // says the hazard has passed. This demo stands a button in
+          // for that pipeline so the flow can be exercised by hand.
+          // Do not wire conditionCleared: true to a driver-facing
+          // dismiss control — that would defeat the non-dismissible
+          // contract (plain SafetyAlertDismissed() is the driver's
+          // verb, and it stays refused for non-dismissible alerts).
+          BlocBuilder<NavigationBloc, NavigationState>(
+            builder: (context, state) {
+              if (!state.hasSafetyAlert) return const SizedBox.shrink();
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => context.read<NavigationBloc>().add(
+                        const SafetyAlertDismissed(conditionCleared: true),
+                      ),
+                      icon: const Icon(Icons.cloud_done_outlined),
+                      label: const Text('Condition passed (hazard owner)'),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

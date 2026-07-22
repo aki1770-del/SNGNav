@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.4.4
+## Unreleased
+
+- docs: `// oracle:placeholders` annotations on the `kalman_dr.dart` and
+  `DeadReckoningProvider` snippets, naming the caller-supplied
+  `LocationProvider` the examples stand in for (this package ships no concrete
+  implementation — the platform locator is the integrator's).
+
+  **Recorded because it is a version drift, not a change.** These landed in the
+  tree AFTER 0.4.4 was published and without a bump, so repo-0.4.4 and
+  pub.dev-0.4.4 are two different artifacts under one version — a divergence no
+  version check can detect, which is why it went unseen until the 2026-07-22
+  registry audit. Measured then: stripping comment lines makes the two byte-
+  identical, so the divergence is doc-only and no consumer is running different
+  code. Not republished as 0.4.5 on its own — a version bump that reaches every
+  consumer should carry something they need. It ships with the next real change.
 
 - Provenance correction (honesty-of-record): the 0.4.3 CHANGELOG stated "No code
   change", but 0.4.3 in fact shipped — carried in from the 2026-06-27
