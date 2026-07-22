@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.11.3
+
+One Japanese explainer string corrected — a caution the driver could not hear.
+
+- **Fixed the `professional` WET explainer, which was spoken as silence.**
+  The string was 「濡路、注意」. Measured through open_jtalk, 濡路 renders as
+  SILENCE, so a professional-profile driver hears 「（無音）、注意」 — a caution
+  with no hazard named at all. It was also the single outlier among six
+  profiles that otherwise all say 「濡れた路面」. Terseness is right for this
+  profile; an unpronounceable term is not. Now 「濡れた路面、注意」, which keeps
+  the profile's brevity and names the hazard aloud. Terminology per 表記規準 v1
+  (2026-07-21) §V2 — do not put a term in a spoken string whose reading is not
+  certain. A regression test pins it.
+- No API changes; only this one string changed.
+
+**Note on provenance.** 0.11.2 was published from a working tree that never
+reached git, so this repository's copy sat at 0.11.1 and carried the false
+「気温0°C以下で薄氷ができています」 string that 0.11.2 had already corrected on
+pub.dev. The 0.11.2 sources were reconstructed here from the published archive
+and proven byte-identical to it before this change was applied on top, so
+0.11.3 supersedes 0.11.2 rather than reverting it.
+
+## 0.11.2
+
+Two Japanese explainer strings corrected — ice does not need sub-zero air.
+
+- **Fixed a false claim in the `ageingRural` ICE explainer.** The previous
+  string said 「気温0°C以下で薄氷ができています」 — that ice forms only when
+  the air temperature is at or below 0°C. That is wrong: road surfaces
+  radiate heat and can drop below the air temperature, so thin ice forms
+  while the air is above zero — bridges and tunnel exits first (JAF
+  snow-driving guidance). The old wording taught a driver checking the
+  thermometer on a clear cold morning that above-zero air means no ice —
+  the exact misjudgement this package exists to prevent, and it
+  contradicted the above-zero black-ice classification that
+  `snow_rendering` 0.2.7+ already ships. The corrected string states that
+  the surface can freeze even when the air is above 0°C and keeps the
+  30 km/h speed advisory unchanged.
+- **Fixed the `ageingRural` WET explainer** the same way (the road can
+  freeze with above-zero air; bridge/tunnel-exit guidance kept) and aligned
+  its terminology to the JAF authoritative term ブラックアイスバーン
+  (previously bare ブラックアイス), matching `japanese_snow_vocabulary` and
+  `snow_rendering` so the driver hears one consistent hazard name.
+- Regression tests pin both corrections. No API changes; only these two
+  strings changed.
+
 ## 0.11.1
 
 The percent door — a correct home for percent-sourced humidity readings.
