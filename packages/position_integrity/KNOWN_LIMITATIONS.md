@@ -1,8 +1,8 @@
 # Known limitations
 
-This package is a **floor**, not a guarantee. It is deliberately honest about
-what it does not do, because a safety component that overstates itself becomes
-the false confidence it exists to prevent.
+This package is a **floor**, not a guarantee. It states plainly what it does not
+do, because a safety component that overstates itself becomes the false
+confidence it exists to prevent.
 
 ## 1. `trusted` is not "correct"
 
@@ -11,6 +11,16 @@ this fix. Measurement plausibility is **not** state correctness. A fix can be
 perfectly consistent with recent motion and still be wrong (e.g. a coherent
 multipath that mirrors real movement). Never present `trusted` to a driver as
 "your position is verified".
+
+**In particular, a MODERATE jump within road-plausible speed is not caught.**
+The gates trip on a jump that implies more than `maxPlausibleSpeed` — at a 1 Hz
+fix rate that is roughly a **> 50 m** sideways jump. A smaller coherent
+multipath offset — measured at ~19–45 m sideways at 1 Hz — implies a legal
+speed, so it reads `trusted` (or at most a single `suspect` from the
+acceleration gate) with **no source handoff**. That smaller offset is the
+*common* urban-canyon multipath the lead describes; this floor catches only the
+gross version of it. Catching the moderate case needs the roadmap NIS /
+motion-consistency layer, not this floor.
 
 ## 2. It is not anti-spoofing
 
@@ -56,8 +66,16 @@ finer.
 
 After a teleport, the fix that jumps *back* to the true track is itself a large
 jump, so the monitor reports `failed` again on that return fix before returning
-to `trusted` on the next clean fix. This is honest — the return is also
-implausible — but means recovery lags the real recovery by one fix.
+to `trusted` on the next clean fix. The return fix is genuinely implausible, so
+this is expected — but it means recovery lags the real recovery by one fix.
+
+**And if the position does NOT jump back — a sustained jump onto a parallel
+street — the monitor re-baselines onto the displaced fix and reads `trusted`
+again on the very next fix.** Measured: a 200 m teleport reports `failed` once,
+then `trusted`/`gps` for every subsequent fix that continues along the wrong
+street. So the floor flags the *transition* onto the wrong position, not the
+ongoing wrong position: act on the `failed` when it fires; do not expect a
+standing fault while a displaced-but-now-self-consistent track continues.
 
 ## 8. The first fix after a long gap is only weakly checked
 
@@ -73,8 +91,8 @@ regardless of this floor's verdict.
 
 `impossibleAccel` needs two prior motion fixes, so the first moving fix — and the
 first fix after any sub-`minSpeedDelta` fix — is checked by the speed/teleport
-gates only, not by acceleration. The `gateResults` map honestly omits the gate
-when it was not evaluated; do not read an absent gate as a pass.
+gates only, not by acceleration. The `gateResults` map omits the gate when it
+was not evaluated; do not read an absent gate as a pass.
 
 ## 10. Sub-`minSpeedDelta` jumps under the teleport distance are not speed-checked
 

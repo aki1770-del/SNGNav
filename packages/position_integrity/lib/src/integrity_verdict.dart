@@ -104,19 +104,32 @@ class IntegrityVerdict {
   /// Per-gate result for this fix: `true` means the gate PASSED (no violation),
   /// `false` means it was violated. Gates that could not be evaluated for this
   /// fix (e.g. rate gates on the first fix, or when the time delta was too
-  /// small) are simply ABSENT from the map. Prefer the [violatedGates] /
-  /// [hasViolation] getters at call sites — they read unambiguously and avoid
-  /// the `true == passed` polarity and the absent-key null trap.
+  /// small) are simply ABSENT from the map.
+  ///
+  /// [violatedGates] / [hasViolation] describe GATE outcomes ONLY. They are NOT
+  /// a substitute for [status]: a non-finite or out-of-range fix is `failed`
+  /// and an out-of-order fix is `suspect` BEFORE any gate runs, so both carry an
+  /// empty [gateResults] and report `hasViolation == false`. Always branch on
+  /// [status] (or [isClean]) for the trust decision; use these getters only to
+  /// see WHICH gate fired once you already know the fix was gated.
   final Map<GateId, bool> gateResults;
 
-  /// The gates that were VIOLATED for this fix (empty on a clean fix).
+  /// The gates that were VIOLATED for this fix (empty on a clean fix, and also
+  /// empty on a pre-gate `failed`/`suspect` — see [gateResults]).
   Set<GateId> get violatedGates => gateResults.entries
       .where((e) => !e.value)
       .map((e) => e.key)
       .toSet();
 
-  /// Whether any gate was violated this fix.
+  /// Whether any GATE was violated this fix. NOT the trust decision — a
+  /// pre-gate `failed`/`suspect` fix returns `false` here. Branch on [status]
+  /// or [isClean], never on this alone.
   bool get hasViolation => gateResults.values.any((passed) => !passed);
+
+  /// The single safe trust check: `true` only when the fix is `trusted`.
+  /// A `suspect` or `failed` verdict — whether from a gate or a pre-gate reject
+  /// (non-finite / out-of-order) — is not clean.
+  bool get isClean => status == IntegrityStatus.trusted;
 
   @override
   String toString() =>

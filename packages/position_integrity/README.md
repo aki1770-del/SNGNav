@@ -8,12 +8,21 @@ The platform tells you GPS **accuracy**. It never tells you when GPS has started
 navigation app that believes it issues a wrong-street turn at the worst possible
 moment.
 
-`position_integrity` is the decision layer we're not aware of any pub.dev package
-filling: wrap your fused location stream, hand each fix to the monitor, and act
-on a first-class **integrity verdict** — `trusted` / `suspect` / `failed`, plus a
-source recommendation (`gps` = keep current / `deadReckoning` / `hold`). It is
-the upstream **trigger** that tells the rest of your stack *when to stop
-believing GPS* and fall back to dead reckoning.
+`position_integrity` wraps your fused location stream: hand each fix to the
+monitor and act on a first-class **integrity verdict** — `trusted` / `suspect` /
+`failed`, plus a source recommendation (`gps` = keep current / `deadReckoning` /
+`hold`). It is the upstream **trigger** that tells the rest of your stack *when
+to stop believing GPS* and fall back to dead reckoning.
+
+> **What this release catches — and what it does not.** The floor trips on
+> *large, abrupt* faults: a teleport whose implied speed exceeds ~50 m/s
+> (roughly a **> 50 m** jump at a 1 Hz fix rate), impossible speed, impossible
+> acceleration, and stationary jitter. A **moderate** coherent multipath offset
+> within road-plausible speed — a ~19–45 m sideways jump at 1 Hz — is **not**
+> caught: it reads `trusted`. And a *sustained* jump onto a parallel street is
+> flagged `failed` **once**, then reads `trusted` again from the displaced
+> baseline. Catching those middle cases is the roadmap NIS layer's job (below),
+> not this floor's. Read the honesty bound before you rely on it.
 
 Pure Dart. Offline. Deterministic. No motion model, no road graph, no network,
 no calibration — it runs on the `latitude / longitude / accuracy / timestamp`
@@ -43,7 +52,9 @@ import 'package:position_integrity/position_integrity.dart';
 final monitor = PositionIntegrityMonitor(); // sensible road defaults
 
 // For each fused fix from your location plugin, map it into a PositionFix.
-// (geolocator: Position.timestamp was nullable before v12 — use `?? DateTime.now()`;
+// (geolocator: Position.timestamp was nullable before v12; `?? DateTime.now()`
+//  is only safe when fixes arrive in real time — the monitor needs the fix's
+//  OWN time, not the receive time, to compute speed/acceleration correctly.
 //  Position.accuracy can be 0 / negative when the platform reports "unknown".)
 final verdict = monitor.update(
   PositionFix(

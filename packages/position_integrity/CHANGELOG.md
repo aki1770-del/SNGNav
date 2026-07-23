@@ -7,7 +7,7 @@ First release — the calibration-free position-integrity **floor**.
 - `PositionIntegrityMonitor` — wrap a fused location stream; each `update` of a
   `PositionFix` returns an `IntegrityVerdict` (`status` trusted/suspect/failed +
   `recommendedSource` gps/deadReckoning/hold + a human-readable `reason` + a
-  per-gate `tests` audit map).
+  per-gate `gateResults` audit map).
 - Four calibration-free plausibility gates: `teleport`, `impossibleSpeed`,
   `impossibleAccel`, `stationaryJitter`. Hard faults fail immediately; soft
   faults debounce before escalating.

@@ -41,6 +41,7 @@ void main() {
   // Pretend the app also runs a dead-reckoning estimate that is currently fresh.
   const drAge = Duration(seconds: 3);
 
+  print('SCENARIO 1 - a 200 m multipath teleport (LARGE, abrupt: caught)');
   print('t   status    source         reason');
   print('--  --------  -------------  ------------------------------------------');
   track.forEach((second, offset) {
@@ -54,7 +55,39 @@ void main() {
         '${v.reason}');
   });
 
-  print('\nThe floor flagged the teleport the instant it arrived — the app can '
-      'suppress the wrong-street turn and hold the dead-reckoned dot until GPS '
-      'is trustworthy again. No network, no calibration, no road graph.');
+  print('\nThe floor flagged the 200 m teleport the instant it arrived, so the '
+      'app can suppress the wrong-street turn and hold the dead-reckoned dot. '
+      'Note t=6: once GPS returns to the true track the return fix is itself a '
+      'large jump, so it reports failed once more, then trusted.');
+
+  // SCENARIO 2 - the bound. A MODERATE offset within road-plausible speed is
+  // NOT caught. A ~18 m sideways multipath offset at 1 Hz implies a legal
+  // speed, so it reads `trusted` with no handoff - the common urban-canyon case
+  // this floor does NOT cover (see KNOWN_LIMITATIONS.md #1; the roadmap NIS
+  // layer is what catches it).
+  final monitor2 = PositionIntegrityMonitor();
+  final track2 = <int, List<double>>{
+    0: [0, 0],
+    1: [20, 0],
+    2: [40, 18], // <-- 18 m sideways multipath offset while moving north
+    3: [60, 0],
+    4: [80, 0],
+  };
+  print('\nSCENARIO 2 - a ~18 m offset (MODERATE, road-plausible: NOT caught)');
+  print('t   status    source         reason');
+  print('--  --------  -------------  ------------------------------------------');
+  track2.forEach((second, offset) {
+    final v = monitor2.update(
+      fix(offset[0], offset[1], second),
+      deadReckoningAge: drAge,
+    );
+    print('${second.toString().padRight(3)} '
+        '${v.status.name.padRight(8)}  '
+        '${v.recommendedSource.name.padRight(13)}  '
+        '${v.reason}');
+  });
+
+  print('\nThe moderate offset implies a legal speed, so the floor lets it pass '
+      '- this release catches the gross teleport and impossible motion, not the '
+      'moderate multipath. Read KNOWN_LIMITATIONS.md before you rely on it.');
 }
