@@ -83,9 +83,23 @@ The `impossibleSpeed` gate allows a jump up to `maxPlausibleSpeed × dt`. After 
 long inter-fix gap (a tunnel or GPS blackout — exactly the scenario this package
 leads with), `dt` is large, so the first reacquired fix can be far off and still
 pass: a 20 s gap permits a ~1000 m jump as `trusted`. The teleport gate does not
-cover this (it only runs for sub-`minSpeedDelta` deltas). If your app knows it
-just emerged from a blackout, treat the first reacquired fix with extra caution
-regardless of this floor's verdict.
+cover this (it only runs for sub-`minSpeedDelta` deltas). To make this codeable
+rather than prose-only, every gated verdict carries `interFixInterval` (the
+elapsed time since the previous fix); treat the first fix after a large
+`interFixInterval` with extra caution regardless of this floor's verdict.
+
+**The acceleration gate stays weak one fix FURTHER — extend the caution one
+fix.** Its speed baseline is the average over the previous (long) interval, so
+the fix IMMEDIATELY AFTER a large-gap fix is checked against a poor baseline: a
+jointly-impossible motion — 100 m over 10 s, then 45 m in the next 1 s — reads
+`trusted`, even though no bounded-acceleration path fits both legs (that 45 m/1 s
+leg needs a prior speed the 100 m/10 s leg cannot have produced). That shadow fix
+carries a *small* `interFixInterval` (the 1 s leg), so `interFixInterval` alone
+does not flag it. When you have just seen a large `interFixInterval`, treat the
+NEXT fix as weakly-gated too. This is a floor limitation: a joint impossibility
+spread across a long-then-short sampling pattern is what the roadmap
+motion-consistency (NIS) layer is for; the pairwise floor cannot catch it without
+crying wolf on legitimate reacquisition bursts.
 
 ## 9. The rate gates warm up
 

@@ -88,6 +88,7 @@ class IntegrityVerdict {
     required this.recommendedSource,
     required this.reason,
     required this.gateResults,
+    this.interFixInterval,
   });
 
   /// Whether the latest fix is trusted, suspect, or failed.
@@ -113,6 +114,21 @@ class IntegrityVerdict {
   /// [status] (or [isClean]) for the trust decision; use these getters only to
   /// see WHICH gate fired once you already know the fix was gated.
   final Map<GateId, bool> gateResults;
+
+  /// The elapsed time since the previous usable fix — set only when this fix was
+  /// gated against a prior one; `null` on the first fix, a non-finite/out-of-range
+  /// fix, and an out-of-order/duplicate fix.
+  ///
+  /// After a long GPS blackout the rate gates are weak: the speed gate permits a
+  /// jump up to `maxPlausibleSpeed × interFixInterval`, so a large gap lets a far
+  /// reacquisition fix pass as `trusted` (see `KNOWN_LIMITATIONS.md` #8). An app
+  /// that just reacquired GPS should treat the first fix after a large
+  /// [interFixInterval] with extra caution regardless of the verdict — AND the
+  /// NEXT fix too: the acceleration gate's baseline is the previous (long)
+  /// interval's average speed, so it stays weak for one more fix, which itself
+  /// carries only a small [interFixInterval]. Extend the caution one fix beyond
+  /// a large gap.
+  final Duration? interFixInterval;
 
   /// The gates that were VIOLATED for this fix (empty on a clean fix, and also
   /// empty on a pre-gate `failed`/`suspect` — see [gateResults]).

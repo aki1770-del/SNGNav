@@ -227,4 +227,56 @@ void main() {
     // first fix again -> trusted, proving the baseline was cleared.
     expect(m.update(_fix(100000, at(2))).status, IntegrityStatus.trusted);
   });
+
+  test('irregular sampling (dropout then burst) does not fabricate impossible '
+      'acceleration — the gate uses the mean of the two intervals', () {
+    final m = PositionIntegrityMonitor();
+    m.update(_fix(0, at(0)));
+    m.update(_fix(20, at(1))); // 20 m/s over 1 s
+    m.update(_fix(40, at(2))); // 20 m/s over 1 s
+    // A burst fix 0.15 s later, 3.3 m on -> 22 m/s: a mild, legitimate 2 m/s
+    // change. Dividing it by the 0.15 s burst alone gives ~13 m/s^2 (a
+    // FABRICATED impossibleAccel — the old behaviour); dividing by the mean of
+    // 0.15 s and the prior 1 s gives ~3.5 m/s^2, which is fine.
+    final v = m.update(_fix(43.3, at(2.15)));
+    expect(v.status, IntegrityStatus.trusted,
+        reason: 'a mild speed change sampled as a burst must not fabricate '
+            'impossibleAccel: ${v.reason}');
+    expect(v.gateResults[GateId.impossibleAccel], isTrue);
+  });
+
+  test('interFixInterval exposes the gap since the previous fix (null when '
+      'there is no comparable prior fix) so an app can flag a post-blackout '
+      'reacquisition that the weak rate gates let pass', () {
+    final m = PositionIntegrityMonitor();
+    expect(m.update(_fix(0, at(0))).interFixInterval, isNull,
+        reason: 'first fix has no prior to compare against');
+    expect(
+        m.update(_fix(20, at(1))).interFixInterval, const Duration(seconds: 1));
+    // A 20 s blackout then a 200 m jump = 10 m/s (legal), so the speed gate
+    // lets it pass as trusted — but the 20 s interFixInterval is the signal the
+    // app needs to treat the reacquisition with caution (KNOWN_LIMITATIONS #8).
+    final v = m.update(_fix(220, at(21)));
+    expect(v.status, IntegrityStatus.trusted);
+    expect(v.interFixInterval, const Duration(seconds: 20));
+    // An out-of-order fix is skipped and carries no interval.
+    expect(m.update(_fix(230, at(20))).interFixInterval, isNull);
+  });
+
+  test('KNOWN LIMITATION (pinned): a jointly-impossible motion across a long '
+      'gap is not caught — the accel baseline is stale one fix past the gap, so '
+      '100 m/10 s then 45 m/1 s reads trusted (KNOWN_LIMITATIONS.md #8)', () {
+    final m = PositionIntegrityMonitor();
+    m.update(_fix(0, at(0)));
+    m.update(_fix(100, at(10))); // 10 m/s averaged over a 10 s gap
+    // 45 m in the next 1 s needs a prior speed the 100 m/10 s leg cannot have
+    // produced under accel <= 8 m/s^2 — jointly impossible — yet the pairwise
+    // floor, comparing against the long-interval average baseline, lets it
+    // pass. Pinned so a change to the accel gate cannot silently alter this
+    // documented bound (and to prove the mitigation is disclosure, not a claim
+    // that the floor catches it).
+    final v = m.update(_fix(145, at(11)));
+    expect(v.status, IntegrityStatus.trusted,
+        reason: 'documented floor limitation, not a regression: ${v.reason}');
+  });
 }

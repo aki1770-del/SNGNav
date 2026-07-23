@@ -93,6 +93,11 @@ class PositionIntegrityMonitor {
 
   PositionFix? _last;
   double? _lastImpliedSpeed;
+  // The interval (seconds) over which _lastImpliedSpeed was measured. Paired
+  // with _lastImpliedSpeed — always set and cleared together — so the
+  // acceleration gate can divide the speed change by the mean of the two
+  // intervals rather than the current one alone.
+  double? _lastDtSeconds;
   int _consecutiveSoft = 0;
   final Queue<PositionFix> _recent = Queue<PositionFix>();
 
@@ -103,6 +108,7 @@ class PositionIntegrityMonitor {
   void reset() {
     _last = null;
     _lastImpliedSpeed = null;
+    _lastDtSeconds = null;
     _consecutiveSoft = 0;
     _recent.clear();
   }
@@ -156,8 +162,8 @@ class PositionIntegrityMonitor {
     _pushRecent(fix);
 
     final distance = _haversineMetres(previous, fix);
-    final dtSeconds =
-        fix.timestamp.difference(previous.timestamp).inMicroseconds / 1e6;
+    final interval = fix.timestamp.difference(previous.timestamp);
+    final dtSeconds = interval.inMicroseconds / 1e6;
 
     final tests = <GateId, bool>{};
     final faults = <_Fault>[];
@@ -172,7 +178,9 @@ class PositionIntegrityMonitor {
             'teleport: ${distance.toStringAsFixed(0)} m in '
             '${dtSeconds.toStringAsFixed(2)} s'));
       }
-      _lastImpliedSpeed = null; // no reliable speed to carry forward
+      // no reliable speed to carry forward — clear the paired speed+interval
+      _lastImpliedSpeed = null;
+      _lastDtSeconds = null;
     } else {
       final impliedSpeed = distance / dtSeconds;
 
@@ -185,8 +193,17 @@ class PositionIntegrityMonitor {
       }
 
       final lastSpeed = _lastImpliedSpeed;
-      if (lastSpeed != null) {
-        final accel = (impliedSpeed - lastSpeed).abs() / dtSeconds;
+      final lastDt = _lastDtSeconds;
+      if (lastSpeed != null && lastDt != null) {
+        // Each implied speed is an average over its own interval, best
+        // attributed to that interval's midpoint; the elapsed time between the
+        // two speed samples is therefore the MEAN of the two intervals.
+        // Dividing the speed change by the current dt alone inflates the
+        // acceleration when sampling is irregular — a short burst after a long
+        // dropout, the winter-canyon reacquisition pattern — and fabricates an
+        // impossibleAccel fault on legitimate motion.
+        final accelDt = 0.5 * (dtSeconds + lastDt);
+        final accel = (impliedSpeed - lastSpeed).abs() / accelDt;
         final tooHard = accel > maxPlausibleAccel;
         tests[GateId.impossibleAccel] = !tooHard;
         if (tooHard) {
@@ -197,7 +214,9 @@ class PositionIntegrityMonitor {
       }
       // Never seed the acceleration baseline with a speed that already failed
       // its own gate — that would spuriously flag the next legitimate fix.
+      // Keep the speed and its interval paired.
       _lastImpliedSpeed = tooFast ? null : impliedSpeed;
+      _lastDtSeconds = tooFast ? null : dtSeconds;
     }
 
     // Stationary-jitter gate (history-based; suspect-only).
@@ -210,13 +229,14 @@ class PositionIntegrityMonitor {
     }
 
     _last = fix;
-    return _aggregate(faults, tests, deadReckoningAge);
+    return _aggregate(faults, tests, deadReckoningAge, interval);
   }
 
   IntegrityVerdict _aggregate(
     List<_Fault> faults,
     Map<GateId, bool> tests,
     Duration? deadReckoningAge,
+    Duration interFixInterval,
   ) {
     if (faults.isEmpty) {
       _consecutiveSoft = 0;
@@ -225,6 +245,7 @@ class PositionIntegrityMonitor {
         recommendedSource: SourceHint.gps,
         reason: 'no fault detected',
         gateResults: Map.unmodifiable(tests),
+        interFixInterval: interFixInterval,
       );
     }
 
@@ -236,6 +257,7 @@ class PositionIntegrityMonitor {
         recommendedSource: _faultSource(deadReckoningAge),
         reason: hard.map((f) => f.reason).join('; '),
         gateResults: Map.unmodifiable(tests),
+        interFixInterval: interFixInterval,
       );
     }
 
@@ -249,6 +271,7 @@ class PositionIntegrityMonitor {
         recommendedSource: SourceHint.gps,
         reason: faults.map((f) => f.reason).join('; '),
         gateResults: Map.unmodifiable(tests),
+        interFixInterval: interFixInterval,
       );
     }
 
@@ -261,6 +284,7 @@ class PositionIntegrityMonitor {
       reason: '${faults.map((f) => f.reason).join('; ')}'
           '${escalated ? ' (sustained ×$_consecutiveSoft)' : ''}',
       gateResults: Map.unmodifiable(tests),
+      interFixInterval: interFixInterval,
     );
   }
 
