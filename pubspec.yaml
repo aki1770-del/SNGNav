@@ -146,3 +146,9 @@ flutter:
     # assets/bridges_akita.ATTRIBUTION.md). Generated offline by
     # tool/generate_bridge_asset.dart; pre-trip bridge count is an offline read.
     - assets/bridges_akita.csv.gz
+    # Real Akita offline basemap (OSM render, © OpenStreetMap contributors,
+    # ODbL 1.0; Geofabrik tohoku-260709 cut; z8–13, ja labels). Offline is
+    # constitutive (purpose clause 4): the map must ride WITH the app so it
+    # serves when the network has gone away. Extracted to a writable dir at
+    # first run (mbtiles/sqlite needs a real file path; embedder-safe).
+    - assets/tiles/akita_offline.mbtiles
