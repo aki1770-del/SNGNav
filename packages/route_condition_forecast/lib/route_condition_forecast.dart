@@ -39,3 +39,6 @@ export 'src/providers/current_conditions_forecast_provider.dart';
 export 'src/providers/forecast_provider.dart';
 export 'src/services/route_condition_forecaster.dart';
 export 'src/services/route_segmenter.dart';
+// The surface read RETURNS RoadSurfaceState (same hand-out rule as SafetyVerdict).
+export 'package:snow_rendering/snow_rendering.dart' show RoadSurfaceState;
+export 'src/services/route_surface_read.dart';

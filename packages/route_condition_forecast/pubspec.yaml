@@ -21,7 +21,10 @@ dependencies:
   latlong2: ^0.9.1
   driving_weather: ^0.5.0
   fleet_hazard: ^0.5.0
-  routing_engine: '>=0.6.0 <0.7.0'
+  routing_engine: ">=0.6.0 <0.7.0"
+  # Surface classification along the route (G2 seam): the family single source
+  # of truth for what-is-under-the-tyre. null means CANNOT CLASSIFY, never dry.
+  snow_rendering: ^0.3.0
 
 dev_dependencies:
   test: ^1.25.0
@@ -34,3 +37,5 @@ dependency_overrides:
     path: ../driving_weather
   routing_engine:
     path: ../routing_engine
+  snow_rendering:
+    path: ../snow_rendering

@@ -24,3 +24,8 @@
 library;
 
 export 'src/fuse.dart';
+
+/// Spatial hazard-zone advisory state machine, refactored from the nav2
+/// ZoneParameterFilter (#6104): HER position selects a hazard zone whose advisory
+/// is offered to her (display-only), holding caution on an uncertain fix.
+export 'src/advisory_zone_advisor.dart';
