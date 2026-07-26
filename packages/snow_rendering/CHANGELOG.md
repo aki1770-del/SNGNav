@@ -1,3 +1,42 @@
+# Changelog
+
+## 0.2.9
+
+### Safety notice for every 0.2.x consumer — please read
+
+**`RoadSurfaceState.fromCondition()` in this line cannot say "I don't know" —
+and a `WeatherCondition` built from filler values will classify as `dry`
+(gripFactor 1.0, "Conditions normal").**
+
+The 0.2.x line depends on `driving_weather` 0.4.x, whose `WeatherCondition`
+has REQUIRED non-nullable fields (`temperatureCelsius`, `precipType`,
+`visibilityMeters`). Absence of a measurement cannot be represented in the
+type: if you have no reading, the constructor forces you to invent one, and
+the classifier cannot tell an invented +5 degC from a measured one. The chain
+
+```
+no data -> filler values -> RoadSurfaceState.dry -> gripFactor 1.0
+        -> "Conditions normal", shown for a road nobody measured
+```
+
+is exactly what a driver in unexpected snow must never see.
+
+**What to do in this line (0.2.x):** never construct a `WeatherCondition`
+from unmeasured fields. Gate at the call site — if any input you would pass
+is absent, do not call `fromCondition()`; surface "unknown" to your user
+yourself. (`driving_weather` 0.4.5 already stopped its provider
+manufacturing a clear-sky condition on an empty feed; this notice covers
+conditions YOUR code constructs.)
+
+**The real fix is 0.3.0**: `fromCondition()` returns `RoadSurfaceState?`
+where `null` means "cannot classify — and that is a thing the driver is
+told", on `driving_weather` 0.5.0's nullable measurement fields. Upgrading
+is a breaking change (nullable return; nullable condition fields) and worth
+it: the compiler then forces every caller to handle the unknown case.
+
+This release changes NO code — it is documentation only, so it arrives to
+every `^0.2.0` consumer without altering behavior.
+
 ## 0.2.8
 
 Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
@@ -14,8 +53,6 @@ relative path. It was inert for consumers, but it prevented this package from
 resolving standalone from its published archive.
 
 No API or behaviour change.
-
-# Changelog
 
 ## 0.2.7
 

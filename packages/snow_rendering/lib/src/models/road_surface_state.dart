@@ -40,6 +40,14 @@ enum RoadSurfaceState {
 
   /// Classify road surface from current weather.
   ///
+  /// **SAFETY NOTE (0.2.x line):** this method cannot say "I don't know" —
+  /// its return is non-nullable, and the 0.4.x-era [WeatherCondition] forces
+  /// every field to hold a value. A condition built from FILLER values
+  /// classifies as [dry] (gripFactor 1.0). Never call this with fields you
+  /// did not measure; gate absence at your call site and tell your user
+  /// "unknown". The 0.3.0 line fixes this in the type system (nullable
+  /// return; nullable measurements) — prefer it for any new integration.
+  ///
   /// Decision tree follows the position paper specification.
   /// For debounced classification, wrap with [HysteresisFilter].
   static RoadSurfaceState fromCondition(WeatherCondition condition) {
