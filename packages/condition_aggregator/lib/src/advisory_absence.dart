@@ -51,6 +51,24 @@ enum AdvisoryUnavailableReason {
   /// exist in the part we could not read.
   incompleteAreaCoverage,
 
+  /// The adapter declared, via `AdvisoryCoverage`, that this point lies outside
+  /// the area it ships — so it was **not asked**, and its silence is not an
+  /// answer.
+  ///
+  /// This is not a fault of the adapter and not a transport failure; it is the
+  /// honest shape of "nobody here covers that point". It reaches you only when
+  /// **no** provider covered the point, as the reason on an
+  /// `AdvisoryLookupUnavailable`: a gap to show the driver, never an all-clear.
+  outOfCoverage,
+
+  /// The adapter neither failed nor declared whether it covers this point, and
+  /// the aggregator was constructed with `requireDeclaredCoverage: true`.
+  ///
+  /// Its advisories are still carried and still safe to act on. What we refuse
+  /// is the *negative* conclusion: an empty list from an adapter that may never
+  /// have sent a request cannot buy an all-clear.
+  coverageUndeclared,
+
   /// The adapter was never brought into service.
   notInitialised,
 

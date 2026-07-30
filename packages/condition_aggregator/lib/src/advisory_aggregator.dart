@@ -29,6 +29,7 @@ import 'dart:async' show TimeoutException;
 
 import 'advisory.dart';
 import 'advisory_absence.dart';
+import 'advisory_coverage.dart';
 import 'advisory_lookup.dart';
 import 'advisory_provider.dart';
 
@@ -199,8 +200,37 @@ class AdvisoryAggregator {
   final List<AdvisoryProvider> _providers;
   bool _initialized = false;
 
-  AdvisoryAggregator({required List<AdvisoryProvider> providers})
-    : _providers = List<AdvisoryProvider>.unmodifiable(providers);
+  /// Refuse to call a lookup complete while any consulted provider's coverage
+  /// is **unknown**. Default `false` — today's behaviour, unchanged.
+  ///
+  /// The sealed [AdvisoryLookup] closes the *failure* path: a provider that
+  /// throws can no longer be mistaken for a clear sky. It does not close the
+  /// **silent-coverage-gap** path: a provider that returns an empty list
+  /// *without failing*, because the point is outside the area it ships, is
+  /// counted as asked-and-answered though it never sent a request. See
+  /// [AdvisoryCoverage].
+  ///
+  /// An adapter that implements [AdvisoryCoverage] answers that question for
+  /// itself and is handled precisely, whatever this flag says. This flag is for
+  /// the rest: set it `true` and any provider whose coverage is undeclared
+  /// contributes an [AdvisoryUnavailableReason.coverageUndeclared] failure, so
+  /// the lookup can never be [AdvisoryLookupComplete] while we cannot prove we
+  /// looked.
+  ///
+  /// **It is opt-in for a reason, and the reason is not comfort.** No adapter
+  /// published today declares coverage, so with `true` a lookup will be
+  /// `Partial` or `Unavailable` every time — which is the truth, and is also
+  /// useless as a default: making it the default would put
+  /// [AdvisoryLookupComplete] out of reach for every existing consumer, a
+  /// reversal of this release's central type rather than a guard on it.
+  /// Advisories seen are still returned and still safe to act on
+  /// (caution-add-only) — what is withheld is only the all-clear.
+  final bool requireDeclaredCoverage;
+
+  AdvisoryAggregator({
+    required List<AdvisoryProvider> providers,
+    this.requireDeclaredCoverage = false,
+  }) : _providers = List<AdvisoryProvider>.unmodifiable(providers);
 
   /// Read-only view of registered providers.
   List<AdvisoryProvider> get providers => _providers;
@@ -238,6 +268,17 @@ class AdvisoryAggregator {
   /// claim completeness (caution-add-only; same verdict 0.0.8 gave that
   /// case via `canAssertNoAdvisory == false`).
   ///
+  /// **What "every source answered" can and cannot see.** It sees a provider
+  /// that *failed*. It does not, on its own, see a provider that returned an
+  /// empty list *without failing* because the point lies outside the area it
+  /// ships — that provider is counted as an answer though it never sent a
+  /// request. A provider implementing [AdvisoryCoverage] is handled precisely:
+  /// declared out-of-coverage means **not asked and not counted**, and when no
+  /// provider covers the point the result is [AdvisoryLookupUnavailable] with
+  /// [AdvisoryUnavailableReason.outOfCoverage] — a gap, never a clear sky. For
+  /// providers that declare nothing, set [requireDeclaredCoverage] to refuse
+  /// completeness rather than assume it.
+  ///
   /// Throws [StateError] if called before [init].
   Future<AdvisoryLookup> fetchActiveAdvisoriesAtPoint({
     required double latitude,
@@ -254,13 +295,43 @@ class AdvisoryAggregator {
     }
     final advisories = <Advisory>[];
     final failures = <AdvisorySourceFailure>[];
+    // Providers that declared, for THIS point, that they cover nothing here.
+    // They are not failures — they have honestly nothing to say — so they leave
+    // the completeness denominator instead of contributing a silent "answer".
+    final outOfCoverage = <AdvisorySourceFailure>[];
     for (final p in _providers) {
+      if (p is AdvisoryCoverage &&
+          !(p as AdvisoryCoverage).coversPoint(
+            latitude: latitude,
+            longitude: longitude,
+          )) {
+        outOfCoverage.add(
+          AdvisorySourceFailure(
+            source: p.source,
+            reason: AdvisoryUnavailableReason.outOfCoverage,
+          ),
+        );
+        continue;
+      }
+      // Coverage unknown and the caller asked us not to assume it. We still ASK
+      // — a hazard seen is a hazard real — but the answer cannot buy an
+      // all-clear, because an empty list from an adapter that may never have
+      // looked is exactly the silence this package exists to refuse.
+      final undeclared = requireDeclaredCoverage && p is! AdvisoryCoverage;
       try {
         final found = await p.fetchActiveAdvisoriesAtPoint(
           latitude: latitude,
           longitude: longitude,
         );
         advisories.addAll(found);
+        if (undeclared) {
+          failures.add(
+            AdvisorySourceFailure(
+              source: p.source,
+              reason: AdvisoryUnavailableReason.coverageUndeclared,
+            ),
+          );
+        }
       } on Object catch (e) {
         // The lamp stays lit. Up to 0.0.7 this caught the adapter's honest
         // refusal, flattened it to a String, filed it in a `providerErrors` list
@@ -278,12 +349,27 @@ class AdvisoryAggregator {
       }
     }
 
+    // Every provider declared it covers nothing here. Nobody was asked, so
+    // there is no all-clear to give — the same verdict as zero registered
+    // providers, and the case a hand-drawn coverage box turns into a fabricated
+    // clear (the founding sngnav-app defect: a Tokyo point where JMA ships no
+    // catalog and NWS is a different hemisphere).
+    final asked = _providers.length - outOfCoverage.length;
+    if (asked == 0) {
+      return AdvisoryLookupUnavailable(outOfCoverage);
+    }
+
     // The whole point of the type: an empty list is only "no advisory in force"
     // when every source actually answered.
     if (failures.isEmpty) {
       return AdvisoryLookupComplete(advisories);
     }
-    if (failures.length == _providers.length) {
+    // `advisories.isEmpty` is a strict refinement, not a behaviour change: when
+    // every failure is a THROWN one, a provider that failed contributed nothing,
+    // so `failures.length == asked` already implied an empty list. It becomes
+    // load-bearing only for the coverageUndeclared failure, which rides an
+    // answer — and a hazard seen must never be demoted to "we know nothing".
+    if (advisories.isEmpty && failures.length == asked) {
       // We did not look. We know nothing. This is NOT clear.
       return AdvisoryLookupUnavailable(failures);
     }

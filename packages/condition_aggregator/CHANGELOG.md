@@ -27,6 +27,83 @@ exhaustive `switch` refuses to compile a consumer who has not written the
   consulted nothing cannot claim completeness (0.0.8's published rule — *"zero
   sources asked is not an all-clear either"* — kept).
 
+### What the sealed type does NOT catch — read this before you rely on it
+
+The guarantee above is real and it is **narrower than it sounds**, so here is its
+true scope, stated where the claim is made rather than discovered later by an
+integrator.
+
+**The sealed type forces you to handle "could not look" when a provider FAILS.
+It does not catch a provider that returns empty WITHOUT failing.**
+
+An adapter that ships a bounded catalog can answer `const <Advisory>[]` for a
+point outside that catalog, send no request, and throw nothing. The aggregator
+counts that as asked-and-answered. The result is `AdvisoryLookupComplete`,
+`canAssertNoAdvisory` is `true`, and no exhaustive `switch` anywhere can see the
+problem — because the value really is `Complete`. This is the
+**silent-coverage-gap** class, and it survives the migration you are reading
+about.
+
+It is not hypothetical. `condition_aggregator_jma` ships a six-prefecture
+snow-zone catalog and returns an empty list without throwing for any point
+outside it (`jma_advisory_provider.dart:169-175`). Its stated fallback — *"the
+aggregator's other providers cover points outside the catalog"* — is false
+whenever no sibling actually covers the point: for a Tokyo or Osaka point, a
+JMA + NWS aggregator asks nobody and reports **complete**. Our own integrator app
+hit this and wrote the finding down before this package did:
+
+> *"`canAssertNoAdvisory` cannot catch that: the provider lied by silence — it
+> counted as asked-and-answered while never asking."*
+
+**What closes it today: your own coverage guard, and you still need one.** Before
+you render an all-clear, ask whether any adapter you registered actually covers
+the point — and ask **that adapter's own catalog**, never a box you drew
+yourself. A box wider than the catalog re-creates the defect exactly: it declares
+coverage the adapter does not have, and the empty answer becomes a fabricated
+all-clear again. The working precedent is the app above: its coverage predicate
+delegates to `prefectureCodesForPoint`, which `condition_aggregator_jma` exports
+and its own fetch path consults, so the two cannot drift apart — when the catalog
+grows, coverage grows with it in the same release. A point no registered adapter
+covers then renders as *"no source here covers this point"*, which is true, and
+is not an all-clear.
+
+### New in this release: `AdvisoryCoverage`, an opt-in declaration
+
+Additive; `AdvisoryProvider` is unchanged and no published adapter implements
+this, so nothing you have behaves differently.
+
+* `AdvisoryCoverage` — an adapter MAY implement this **alongside**
+  `AdvisoryProvider` to declare, for a given point, whether its own catalog
+  reaches there. A provider that declares **out of coverage** is **not asked** and
+  is **not counted** — it is not a failure, it simply has nothing to say at that
+  point, so it leaves the completeness denominator instead of contributing a
+  silent "answer". When **no** provider covers the point the lookup is
+  `AdvisoryLookupUnavailable` carrying the new
+  `AdvisoryUnavailableReason.outOfCoverage` — a gap to show the driver, never a
+  clear sky.
+* `AdvisoryAggregator(..., requireDeclaredCoverage: true)` — opt-in, default
+  `false`. With it on, any provider whose coverage is **undeclared** contributes
+  an `AdvisoryUnavailableReason.coverageUndeclared` failure, so the lookup can
+  never be `Complete` while we cannot prove we looked. Advisories seen are still
+  returned and still safe to act on (caution-add-only); only the all-clear is
+  withheld. It is opt-in because no adapter published today declares coverage —
+  making it the default would put `AdvisoryLookupComplete` out of reach for every
+  existing consumer, which would be a reversal of this release's central type,
+  not a guard on it.
+
+An adapter adopting `AdvisoryCoverage` needs no new knowledge: the predicate is
+the one it already runs internally before deciding to fetch.
+
+### Coming in 0.2.0: coverage becomes part of the provider contract
+
+The gap above is closed **by default** only when the aggregator can distinguish
+*asked-and-empty* from *never-asked* without asking permission — which means
+coverage has to move into the `AdvisoryProvider` contract itself rather than
+riding an optional side interface. That is a breaking change to every adapter, so
+it is named here as a **0.2.0 contract item** and is not attempted in this
+release. No date is promised; what is promised is that the gap is not being left
+unnamed while the release above claims a guarantee it does not have.
+
 ### Migrating from 0.0.8 (the version on pub.dev)
 
 Everything 0.0.8 shipped survives, and almost all of it keeps its name. The
@@ -53,13 +130,16 @@ you ever render "no advisory in force".
 
 Also in this release:
 
-* `AdvisoryUnavailableReason` gains two values: `refused` (auth / rate limit /
-  bad request) and `incompleteAreaCoverage` (the source answered for part of
-  the area — a warning may exist in the part we could not read). **Breaking for
-  exhaustive `switch`es** over the enum: add the two branches. The union with
-  0.0.8 is name-level only: both values are inserted mid-enum, so the `.index`
-  of `unparseable` / `notInitialised` / `unclassified` shifts — do not persist
-  or compare this enum by `.index`.
+* `AdvisoryUnavailableReason` gains four values: `refused` (auth / rate limit /
+  bad request), `incompleteAreaCoverage` (the source answered for part of the
+  area — a warning may exist in the part we could not read), `outOfCoverage`
+  (the adapter declared this point outside what it ships, so it was not asked),
+  and `coverageUndeclared` (the adapter said nothing about coverage and
+  `requireDeclaredCoverage` is on). **Breaking for exhaustive `switch`es** over
+  the enum: add the four branches. The union with 0.0.8 is name-level only: all
+  four are inserted mid-enum, so the `.index` of `unparseable` /
+  `notInitialised` / `unclassified` shifts — do not persist or compare this enum
+  by `.index`.
 * `AdvisoryAggregateResult` and `AdvisoryProviderError` are retained with their
   full 0.0.8 surface (getters, `fold`, `requireCompleteLookup`) for hand-built
   results — test fakes and fixtures written against 0.0.8 keep compiling. The
@@ -85,6 +165,67 @@ what lets a system be honest without crying wolf.
 
 ### Who receives this release
 
+**Nobody, yet — and that is the whole point of saying so here.** Every known
+consumer of this package is measured below, not a chosen one. Verdicts are the
+gate's own live G8 output (`scripts/package_update_gate.sh condition_aggregator`,
+run 2026-07-31 against `scripts/known_consumers.list`); every published pin was
+re-read this turn from the pub.dev API's frozen
+`latest.pubspec.dependencies`, not from memory.
+
+| Consumer | Pin on `condition_aggregator` | Verdict for 0.1.0 |
+|---|---|---|
+| `sngnav-app` | `>=0.0.3 <0.1.0` | LEFT-BEHIND — serve-decision recorded below |
+| `condition_aggregator_jma` (published 0.3.1) | `^0.0.5` | LEFT-BEHIND |
+| `condition_aggregator_nws` (published 0.0.7) | `^0.0.5` | LEFT-BEHIND |
+| `condition_aggregator_digitraffic` (published 0.0.6) | `^0.0.5` | LEFT-BEHIND |
+| `condition_aggregator_met_norway` (published 0.0.5) | `^0.0.5` | LEFT-BEHIND |
+| `condition_aggregator_owm_road_risk` (published 0.1.4) | `^0.0.5` | LEFT-BEHIND |
+| `driving_weather` (published 0.5.0) | `^0.0.5` | LEFT-BEHIND |
+| `drive_situation_fusion` (published 0.1.0) | `^0.0.7` | LEFT-BEHIND |
+| `example-app` | *(none — path override only)* | NO-DEP |
+| `jitreq-drunkenv2` | **unreadable** | GONE |
+
+`^0.0.5` on a `0.0.x` base is `>=0.0.5 <0.1.0` — pub_semver's `nextBreaking`
+increments the MINOR while major is `0`. Measured against the real solver on
+2026-07-31, not recalled: a probe pinning `condition_aggregator: ^0.0.5`
+resolved to `condition_aggregator 0.0.8`. So every pin above excludes 0.1.0.
+
+**The consequence, stated rather than left for a stranger to discover: today
+0.1.0 composes with no first-party adapter, and "lift the pin to `^0.1.0`" does
+not work on its own.** A consumer who lifts this pin while depending on any of
+our adapters gets an **unsatisfiable resolve**, because the adapter's own
+published pin caps below 0.1.0 and pub must satisfy both. This is not one stale
+release: across **every published version** of all seven — 9 of
+`condition_aggregator_jma`, 6 of `_nws`, 5 of `_digitraffic`, 5 of `_met_norway`,
+5 of `_owm_road_risk`, 12 of `driving_weather`, 1 of `drive_situation_fusion` —
+not one admits 0.1.0. Widening the adapters is the **sequenced next wave**;
+until it lands, 0.1.0 is usable only by a consumer composing its own providers
+directly against this interface.
+
+*Honest bound on that claim:* the unsatisfiability is arithmetic on two measured
+constraints (the adapters' frozen `^0.0.x` ceiling and a `^0.1.0` floor), and it
+cannot be demonstrated end-to-end by the live solver until 0.1.0 is published —
+asked today, pub answers *"`^0.1.0` doesn't match any versions"*, which is a
+different sentence.
+
+**`jitreq-drunkenv2` — GONE, not cleared.** Measured 2026-07-31:
+`raw.githubusercontent.com/Jitreq/drunkenv2/HEAD/pubspec.yaml` and
+`api.github.com/repos/Jitreq/drunkenv2` both return **HTTP 404**. The repo is
+deleted, renamed, or now private, so whether it depends on this package cannot be
+answered at all. It is recorded as the unit's first verified external adoption,
+so the row stays in the registry carrying its honest state rather than being
+retired into a NO-DEP nobody measured. A dead verifier renders UNVERIFIED, never
+*cleared*.
+
+**`example-app` — NO-DEP.** It reaches this package only through a
+`dependency_overrides:` path entry; its `dependencies:` section carries no such
+entry. A path override is a monorepo convenience and is not reach.
+
+**The seven first-party consumers have NO disposition written here.** That
+serve-decision — lift, backport, or accept — belongs to the Chair and was not
+delegated to this release. G8 is therefore **red by design** for all seven, and
+that redness is the correct state, not an oversight to be waived away.
+
 reach-disposition(sngnav-app): **not migrating to 0.1.0 in this release — and
 not left behind by it either.** The app pins `condition_aggregator:
 '>=0.0.3 <0.1.0'` (measured 2026-07-31 at `aki1770-del/sngnav-app` HEAD); that
@@ -92,21 +233,33 @@ range's own upper bound excludes 0.1.0, so what it can receive is what **0.0.8**
 put in its hands — and on 2026-07-31 it took it. Commit `5afc1b5` gates every
 positive all-clear on `AdvisoryAggregateResult.canAssertNoAdvisory` and adds a
 fourth *advisory-lookup-incomplete* branch, so an outage can no longer render as
-a clear sky; commit `b664557` welds the completeness state to the advisory level
-at the only accessor that yields it, so no caller can obtain the level while
-skipping the question. Both are on `origin/main`, against a resolved
+a clear sky; commit `b664557` replaces the bare `topAdvisoryLevel` free function
+with a single accessor that **carries** the completeness state alongside the
+level, and the app **uses** it. Both are on `origin/main`, against a resolved
 condition_aggregator **0.0.8**, inside the unchanged pin — no pin lift, no
 republish. The **substance** of the 0.0.7 safety defect fix therefore reaches
 this consumer in range, today.
 
-What it does **not** receive is 0.1.0's sealed `AdvisoryLookup`. On the 0.0.8
-getter path the gate is correct but *voluntary*: it holds because a human wrote
-it and tests guard it, not because the compiler refuses the alternative. Earning
-the compile-time guarantee is a **later, deliberate migration** — lift the pin to
-`^0.1.0` and write the exhaustive `switch` branches — named here rather than
-deferred in silence. Until it lands, this consumer's all-clear rests on a gate
-that could be deleted without a build error, which is precisely the asymmetry
-0.1.0 exists to end.
+Stated precisely, because an overstatement here becomes immutable on publish:
+`b664557` is a **discipline the tests guard, not a structure the compiler
+enforces**. Callers still take `.level` on its own — `lib/main.dart:1367`,
+`:1406`, `:1421` — and read `.completenessProven` separately at `:1453`; and
+`AdvisoryAxis` has a public const constructor with two independent public fields,
+so nothing prevents a caller from pairing any level with any completeness claim.
+What holds it together is that the app's own tests assert the pairing. That is
+worth having and it is not a compile-time guarantee.
+
+**Where the migration actually leads — and where it does not.** Lifting to
+`^0.1.0` and writing the exhaustive `switch` branches buys the **failure** path:
+the compiler then refuses a caller who never handled "a source could not be
+reached". It does **not** buy the silent-coverage-gap path, which stays open on
+either side of the migration (see *"What the sealed type does NOT catch"* above)
+and which is the defect this consumer actually hit. That one is closed **today**,
+by the app's own coverage guard delegating to `prefectureCodesForPoint` — the
+adapter's own catalog — and later, by default, by the 0.2.0 contract item. So the
+sealed-type migration is a real step and it is **not arrival**; a consumer who
+takes it and skips the coverage guard is still one out-of-catalog point away from
+telling a driver the road is clear when nobody was asked.
 
 ## 0.0.8
 

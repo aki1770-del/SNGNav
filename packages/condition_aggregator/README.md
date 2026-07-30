@@ -78,13 +78,28 @@ Running the bundled example (`dart run example/quickstart.dart`) prints:
 
 ## An empty list is not always an all-clear (read this)
 
-`r.seen.isEmpty` is **true in two very different situations**:
+`r.seen.isEmpty` is **true in three very different situations**:
 
 1. every source answered and no advisory is in force — the road really is clear;
-2. every source was **down**, so nothing was read — you have no idea if it is clear.
+2. every source was **down**, so nothing was read — you have no idea if it is clear;
+3. a source answered empty **without failing**, because the point lies outside the
+   catalog it ships — it was counted as an answer and it never sent a request.
 
 They render as the same empty list. During a feed outage in a blizzard, reading
 case 2 as case 1 tells a driver the road is clear when you never looked.
+
+**Case 3 is the one the sealed type below does NOT catch**, and it is the one to
+read twice. The provider did not fail, so the lookup really is `Complete` and
+`canAssertNoAdvisory` really is `true` — on a question nobody asked.
+`condition_aggregator_jma`, for instance, ships a six-prefecture snow-zone
+catalog and returns an empty list without throwing for any point outside it. So
+**gate an all-clear on a coverage check of your own as well**, asked of the
+adapter's own catalog and never of a box you drew (`condition_aggregator_jma`
+exports `prefectureCodesForPoint` for exactly this) — or register adapters that
+implement `AdvisoryCoverage`, or construct the aggregator with
+`requireDeclaredCoverage: true`. Closing case 3 by default needs coverage in the
+`AdvisoryProvider` contract itself; that is named as a 0.2.0 contract item in the
+CHANGELOG.
 
 Since 0.1.0 the return type is sealed: an exhaustive `switch` (or `fold`,
 below) will not compile without the `Unavailable` branch — on that path the
@@ -97,7 +112,8 @@ path keep gating any all-clear on `r.canAssertNoAdvisory`.
 // oracle:placeholders r, show, showNoAdvisory, showFeedDown
 switch (r) {
   case AdvisoryLookupComplete(:final advisories) when advisories.isEmpty:
-    showNoAdvisory();                 // every source answered — real all-clear
+    showNoAdvisory();                 // every source RETURNED — see case 3 above:
+                                      // also check a source covered this point
   case AdvisoryLookupComplete(:final advisories):
     for (final a in advisories) show(a);
   case AdvisoryLookupPartial(:final advisories, :final unreachable):

@@ -2,12 +2,19 @@
 
 **Package**: `condition_aggregator`
 **Version**: 0.1.0 (early and evolving)
-**Boundary record version**: 1.1
+**Boundary record version**: 1.2
 **Boundary record template**: shared across the sibling adapter packages
 **Date**: 2026-05-03
 **Revised**: 2026-07-30 — wire description updated to the sealed
 `AdvisoryLookup` return introduced in 0.1.0. Safety posture (L0/L1
 advisory, QM, no control authority) unchanged.
+**Revised**: 2026-07-31 — the **silent-coverage gap** recorded as a named
+performance insufficiency (§3) with its integrator-boundary mitigation, and
+§8 amended to say what the sealed type does NOT protect her from. The
+sealed type closes the *failure* path; a provider that answers empty
+*without failing* is not caught by it. Safety posture unchanged; what
+changed is that the boundary record no longer implies a guarantee wider
+than the code gives.
 
 ---
 
@@ -70,10 +77,43 @@ discipline):
   the consumer's concern; the package neither de-dupes nor coalesces
   advisories silently.
 
-These five disciplines collectively form the package's SOTIF-class
+- **Coverage is declarable, and its absence is not completeness.** An
+  adapter MAY implement `AdvisoryCoverage` to state whether its own
+  catalog reaches a point. A provider declaring out-of-coverage is not
+  asked and not counted; when no provider covers the point the result is
+  `AdvisoryLookupUnavailable` with
+  `AdvisoryUnavailableReason.outOfCoverage`. For adapters that declare
+  nothing, `AdvisoryAggregator(..., requireDeclaredCoverage: true)`
+  refuses completeness rather than assuming it.
+
+These six disciplines collectively form the package's SOTIF-class
 advisory-honesty posture: the integrator (and the driver through them)
 sees what each publisher actually published, with explicit error
 surfaces for transport / parse / init failure modes.
+
+**Named performance insufficiency — the silent-coverage gap (open by
+default).** The sealed `AdvisoryLookup` closes the *failure* path only.
+A provider that returns an empty list **without failing** — because the
+point lies outside the catalog it ships — is counted as
+asked-and-answered though it never sent a request; the lookup is
+`AdvisoryLookupComplete` and `canAssertNoAdvisory` is `true` on a
+question nobody asked. No exhaustive `switch` can detect this, because
+the value genuinely is `Complete`. Concrete instance:
+`condition_aggregator_jma` returns `const <Advisory>[]` for a point
+outside its six-prefecture snow-zone catalog without throwing
+(`jma_advisory_provider.dart:169-175`).
+**Mitigation at the integrator boundary (required, today):** gate any
+positive all-clear on a coverage predicate derived from the adapter's
+**own catalog** — never a hand-drawn bounding box, which re-creates the
+defect by declaring coverage the adapter does not have. Working
+precedent: the SNGNav integrator app delegates to
+`prefectureCodesForPoint`, exported by `condition_aggregator_jma` and
+consulted by that adapter's own fetch path, so the two cannot drift.
+**Mitigation available in-package (opt-in):** `AdvisoryCoverage` and
+`requireDeclaredCoverage` above.
+**Residual:** closing it by default requires coverage to become part of
+the `AdvisoryProvider` contract — recorded as a 0.2.0 contract item, not
+claimed as present.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
@@ -170,6 +210,19 @@ compiler-UN-enforced — `seen` compiles unhandled and answers
 `const []` on `AdvisoryLookupUnavailable`, the founding silence shape —
 so a getter-path integrator must keep gating any all-clear on
 `canAssertNoAdvisory`.
+
+**What she is NOT protected from by this package alone.** Everything
+above holds when a publisher is *unreachable*. It does not hold when an
+adapter is silent because her point is outside the catalog that adapter
+ships: no request goes out, nothing fails, and the all-clear on her
+screen is fabricated. Per §3's named performance insufficiency, what
+stands between her and that screen today is the integrator's own
+coverage guard, derived from the adapter's own catalog;
+`AdvisoryCoverage` and `requireDeclaredCoverage` are the opt-in
+in-package paths; the default closure is the 0.2.0 contract item. It is
+recorded here rather than left for an integrator to discover, because
+the failure it names reaches her as a positive claim that the road is
+clear.
 
 **Sakichi reading**: the loom is *a multi-postman who carries each
 publisher's letter to the driver without rewriting it.* The loom

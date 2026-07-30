@@ -24,6 +24,26 @@ permissions:
   contents: read
 
 jobs:
+  gate-self-test:
+    name: Gate self-test (does the gate's own wiring hold?)
+    # The gate that guards every publish had a --self-test and NOTHING RAN IT.
+    # Measured 2026-07-31: `--self-test` appeared in this file exactly once, in a
+    # COMMENT (the hosted-resolve note below); the only invocation of the script
+    # anywhere in CI was `--g7`. So the one guard standing between a silently
+    # broken gate and a green publish was invitation-only — it fired when someone
+    # remembered, which is the failure mode a loom exists to replace. A rule that
+    # is written and even habitual still does not fire unless something MAKES it.
+    #
+    # It is a separate job, first, and needs no SDK: the assertions are offline by
+    # construction (stub census, stub curl, a throwaway package tree), so this
+    # lane can never go dark because the network did.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: scripts/package_update_gate.sh --self-test
+        run: bash scripts/package_update_gate.sh --self-test
+
   analyze:
     name: Analyze
     runs-on: ubuntu-24.04
@@ -239,7 +259,9 @@ jobs:
         # the package's tests against them (G7). PKG_ROOT is passed EXPLICITLY here, but it is
         # no longer a correction: the gate's default already resolves to its own checkout's
         # packages/ (it derives from the script's location, and --self-test asserts the resolved
-        # value behaviourally). The old note here — "the script's default is an absolute
-        # developer path" — described a defect that was fixed; it is kept explicit only so the
-        # workspace root is visible in the run log.
+        # value behaviourally — in the `gate-self-test` job above, which actually RUNS it; until
+        # 2026-07-31 this sentence was the only mention of --self-test in this file and no lane
+        # invoked it). The old note here — "the script's default is an absolute developer path" —
+        # described a defect that was fixed; it is kept explicit only so the workspace root is
+        # visible in the run log.
         run: PKG_ROOT="$GITHUB_WORKSPACE/packages" bash scripts/package_update_gate.sh --g7 ${{ matrix.package }}

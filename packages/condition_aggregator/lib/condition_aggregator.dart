@@ -44,6 +44,7 @@ export 'src/advisory.dart'
         AdvisoryDeserializationException;
 export 'src/advisory_provider.dart'
     show AdvisoryProvider, AdvisoryProviderInitException;
+export 'src/advisory_coverage.dart' show AdvisoryCoverage;
 export 'src/advisory_absence.dart'
     show
         AdvisoryUnavailableReason,

@@ -76,6 +76,11 @@ String _why(AdvisoryUnavailableReason r) => switch (r) {
   AdvisoryUnavailableReason.unparseable => 'the response was unreadable',
   AdvisoryUnavailableReason.incompleteAreaCoverage =>
     'part of the area could not be read — a warning may exist there',
+  AdvisoryUnavailableReason.outOfCoverage =>
+    'no source here covers this point — we could not check it',
+  AdvisoryUnavailableReason.coverageUndeclared =>
+    'the source did not say whether it covers this point, so its silence '
+        'cannot be read as an all-clear',
   AdvisoryUnavailableReason.notInitialised => 'the adapter was not started',
   AdvisoryUnavailableReason.unclassified => 'the source failed',
 };

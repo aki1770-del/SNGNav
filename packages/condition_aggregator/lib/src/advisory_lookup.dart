@@ -1,5 +1,10 @@
 import 'advisory.dart';
 import 'advisory_absence.dart';
+// Doc-reference only: the coverage-scope clauses below name AdvisoryCoverage and
+// AdvisoryProvider, and a doc link that does not resolve is a broken thread for
+// the reader who follows it.
+import 'advisory_coverage.dart';
+import 'advisory_provider.dart';
 
 /// The result of asking "what advisories are in force at this point?"
 ///
@@ -34,6 +39,44 @@ import 'advisory_absence.dart';
 /// answers `const []` on [AdvisoryLookupUnavailable], the founding silence
 /// shape, without making you say anything — so a getter-path caller must keep
 /// gating any all-clear on [canAssertNoAdvisory].
+///
+/// ## The TRUE scope of that guarantee — read this before you rely on it
+///
+/// The sealed type forces you to handle *"could not look"* when a provider
+/// **fails**. That is its whole reach, and it is narrower than it sounds.
+///
+/// **It does not catch a provider that returns empty without failing.** An
+/// adapter shipping a bounded catalog can answer `const <Advisory>[]` for a
+/// point outside that catalog, send no request, and throw nothing. The
+/// aggregator counts it as asked-and-answered; the result is
+/// [AdvisoryLookupComplete]; [canAssertNoAdvisory] is `true` — on a lookup that
+/// never looked. This is the **silent-coverage-gap** class, and no exhaustive
+/// `switch` can see it, because the type it produces is genuinely `Complete`.
+///
+/// It is not hypothetical: `condition_aggregator_jma` ships a six-prefecture
+/// snow-zone catalog and returns an empty list without throwing for any point
+/// outside it (`jma_advisory_provider.dart:169-175`).
+///
+/// **What closes it today: your own coverage guard.** Before you render an
+/// all-clear, ask whether any adapter you registered actually covers the point,
+/// using **that adapter's own catalog** — never a box you drew. The working
+/// precedent is the integrator app that hit this first: it delegates to
+/// `prefectureCodesForPoint`, which `condition_aggregator_jma` exports, so its
+/// coverage predicate and the adapter's fetch path consult the same catalog and
+/// can never drift apart. A point no registered adapter covers renders as
+/// *"no source here covers this point"* — true, and not an all-clear.
+///
+/// **What closes it in this package today, partially:** an adapter that also
+/// implements [AdvisoryCoverage] is handled precisely — declared out-of-coverage
+/// means *not asked and not counted*, and a point no provider covers yields
+/// [AdvisoryLookupUnavailable]. For adapters that declare nothing, construct the
+/// aggregator with `requireDeclaredCoverage: true` to refuse completeness rather
+/// than assume it. Both are opt-in; no adapter published today declares coverage.
+///
+/// **What closes it by default: a later contract change.** Coverage has to
+/// become part of the [AdvisoryProvider] contract so the aggregator can tell
+/// *asked-and-empty* from *never-asked* without permission. That is breaking,
+/// and it is named as a 0.2.0 contract item in the CHANGELOG.
 ///
 /// ## Coming from 0.0.8?
 ///
@@ -76,6 +119,25 @@ sealed class AdvisoryLookup {
   ///
   /// If this is `false`, tell her *what you do not know*. Do not tell her nothing,
   /// and never tell her it is clear.
+  ///
+  /// ## What it does NOT prove
+  ///
+  /// **`true` means every registered provider RETURNED. It does not mean every
+  /// provider LOOKED.** An adapter that answers an empty list without failing —
+  /// because the point is outside the catalog it ships — is counted as an
+  /// answer, and this getter is `true` on a lookup nobody performed. That is the
+  /// silent-coverage-gap class; the sealed type cannot see it, because the
+  /// provider never failed. The integrator app that hit this first wrote it
+  /// down: *"the provider lied by silence — it counted as asked-and-answered
+  /// while never asking."*
+  ///
+  /// So gate an all-clear on this AND on a coverage check of your own, asked of
+  /// **the adapter's own catalog** (`condition_aggregator_jma` exports
+  /// `prefectureCodesForPoint` for exactly this) — or register adapters that
+  /// implement [AdvisoryCoverage], or construct the aggregator with
+  /// `requireDeclaredCoverage: true`. See the class doc on [AdvisoryLookup] for
+  /// the full scope, and the CHANGELOG for the 0.2.0 contract item that closes
+  /// it by default.
   bool get canAssertNoAdvisory => this is AdvisoryLookupComplete;
 
   /// Every source we could not reach, and why — typed, never prose, so the
