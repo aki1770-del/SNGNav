@@ -236,6 +236,10 @@ jobs:
 
       - name: Reproduce `pub add ${{ matrix.package }}` for a clean consumer
         # Strips dependency_overrides, resolves the declared hosted siblings from pub.dev, and runs
-        # the package's tests against them (G7). PKG_ROOT points the gate at this checkout's
-        # packages/ (the script's default is an absolute developer path).
+        # the package's tests against them (G7). PKG_ROOT is passed EXPLICITLY here, but it is
+        # no longer a correction: the gate's default already resolves to its own checkout's
+        # packages/ (it derives from the script's location, and --self-test asserts the resolved
+        # value behaviourally). The old note here — "the script's default is an absolute
+        # developer path" — described a defect that was fixed; it is kept explicit only so the
+        # workspace root is visible in the run log.
         run: PKG_ROOT="$GITHUB_WORKSPACE/packages" bash scripts/package_update_gate.sh --g7 ${{ matrix.package }}

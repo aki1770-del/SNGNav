@@ -16,6 +16,83 @@
 #
 # Add a line whenever a real consumer is verified (downstream-pull sensor,
 # adoption ledger, or a maintainer telling us). Remove only with a ledger note.
+#
+# ---------------------------------------------------------------------------
+# 2026-07-31 — THE COHORT THAT ACTUALLY TRAVELS.
+#
+# Until now this registry knew three rows, and none of them was a PUBLISHED
+# package that carries a pin on the catalog into a stranger's resolve. The
+# first-party packages that DO travel — each published on pub.dev, each with a
+# frozen pin a `pub add` consumer inherits — were invisible to the reach gate.
+# The gate could therefore report a clean G8 while every real downstream pin
+# excluded the release under test.
+#
+# Every pin below was MEASURED from that package's own pubspec on 2026-07-31,
+# and cross-checked against the FROZEN pin in its latest published archive via
+# the pub.dev API (`latest.pubspec.dependencies`). Both agreed for all seven.
+#
+# HONEST BOUND, load-bearing: the `local:` scheme reads this WORKING TREE's
+# pubspec, not the frozen published one. They coincide today (verified above);
+# if a working-tree pin is edited ahead of a republish, G8 will read the edited
+# pin and report reach the published cohort does not actually have. The registry
+# schema has no "published archive" source to point at. Stated, not silently
+# passed.
+#
+# Measured pins vs the staged condition_aggregator 0.1.0 (published latest 0.0.8):
+#   condition_aggregator_jma           ^0.0.5   (published 0.3.1)
+#   condition_aggregator_nws           ^0.0.5   (published 0.0.7)
+#   condition_aggregator_digitraffic   ^0.0.5   (published 0.0.6)
+#   condition_aggregator_met_norway    ^0.0.5   (published 0.0.5)
+#   condition_aggregator_owm_road_risk ^0.0.5   (published 0.1.4)  <-- not in the round-6 brief; found by measuring
+#   driving_weather                    ^0.0.5   (published 0.5.0)  <-- not in the round-6 brief; found by measuring
+#   drive_situation_fusion             ^0.0.7   (published 0.1.0)
+# Dart's caret on a 0.0.x base is >=0.0.5 <0.1.0 (pub_semver nextBreaking
+# increments the MINOR while major is 0 — MEASURED against the real solver, not
+# recalled: a probe pinning ^0.0.5 resolved to 0.0.8). So all seven admit the
+# published 0.0.8 and all seven EXCLUDE a 0.1.0. The serve-decision that follows
+# is the Chair's, not this file's.
+# ---------------------------------------------------------------------------
 example-app	local:example/pubspec.yaml
 jitreq-drunkenv2	github:Jitreq/drunkenv2:pubspec.yaml
 sngnav-app	github:aki1770-del/sngnav-app:pubspec.yaml
+condition_aggregator_jma	local:packages/condition_aggregator_jma/pubspec.yaml
+condition_aggregator_nws	local:packages/condition_aggregator_nws/pubspec.yaml
+condition_aggregator_digitraffic	local:packages/condition_aggregator_digitraffic/pubspec.yaml
+condition_aggregator_met_norway	local:packages/condition_aggregator_met_norway/pubspec.yaml
+condition_aggregator_owm_road_risk	local:packages/condition_aggregator_owm_road_risk/pubspec.yaml
+driving_weather	local:packages/driving_weather/pubspec.yaml
+drive_situation_fusion	local:packages/drive_situation_fusion/pubspec.yaml
+#
+# ---------------------------------------------------------------------------
+# ROW ANNOTATIONS — history is annotated, never deleted.
+#
+# example-app  (local:example/pubspec.yaml)
+#   CONFIRMED NO-DEP on condition_aggregator, 2026-07-31. It reaches the package
+#   ONLY through `dependency_overrides:` (a path override to ../packages/
+#   condition_aggregator); its `dependencies:` section carries no such entry.
+#   reach_gate reads the `dependencies:` section only, by design, so this row
+#   correctly reports NO-DEP. A path override is a monorepo convenience — it is
+#   NOT reach, and must never be counted as a consumer receiving a release.
+#
+# jitreq-drunkenv2  (github:Jitreq/drunkenv2:pubspec.yaml)
+#   *** UNVERIFIED — the source no longer exists. NOT confirmed NO-DEP. ***
+#   Measured 2026-07-31: raw.githubusercontent.com/Jitreq/drunkenv2/HEAD/
+#   pubspec.yaml -> HTTP 404, and api.github.com/repos/Jitreq/drunkenv2 ->
+#   HTTP 404 "Not Found". The repo is deleted, renamed, or now private.
+#   The round-6 brief asked us to confirm this consumer "does NOT depend on
+#   condition_aggregator at all". That CANNOT be confirmed: the artefact needed
+#   to answer it is gone. A dead verifier renders UNVERIFIED, never *cleared*
+#   (OPS-069(A)) — so the row stays, carrying its honest state, rather than
+#   being quietly retired into a NO-DEP that was never measured.
+#   This matters beyond bookkeeping: drunkenv2 is recorded as the unit's FIRST
+#   verified external adoption (0->1, 2026-06-21, pinning ^0.3.0). Whether that
+#   adopter still exists is a REACH question for PDS/the Chair, not a registry
+#   edit. Until then G8 reports it GONE and stays red.
+#
+# sngnav-app  (github:aki1770-del/sngnav-app:pubspec.yaml)
+#   REACHABLE (HTTP 200, 2026-07-31) and it DOES depend on the catalog:
+#     condition_aggregator: '>=0.0.3 <0.1.0'   (a range, not a caret)
+#     condition_aggregator_jma: ^0.3.0
+#   The range's own upper bound excludes a 0.1.0. Recorded here so the row is
+#   read as measured fact, not inferred from the package name.
+# ---------------------------------------------------------------------------

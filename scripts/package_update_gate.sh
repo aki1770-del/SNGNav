@@ -136,7 +136,25 @@ dryrun_gate() { # dryrun_gate <pkgdir>
 # test, is a real FAIL. Pass the tested package names as args; none = strict mode.
 coherence() {
   echo ">> G5 coherence (live == committed == local; staged updates expected-ahead)"
-  bash "$HERE/catalog_census.sh" coherence >"$RUN_TMP/coh" 2>&1
+  local cstat=0
+  bash "$HERE/catalog_census.sh" coherence >"$RUN_TMP/coh" 2>&1 || cstat=$?
+  # The child's exit status used to be DISCARDED. A DEAD census (PKG_ROOT not found,
+  # census file missing, python3/curl absent, child killed) writes no drift lines, the
+  # grep below yields zero matches, and the function printed `coherence PASS` off an
+  # empty file — a clean bill vouched by a verifier that never ran. A dead verifier
+  # renders UNVERIFIED, never *cleared* (OPS-069(A)), mirroring G11 above.
+  #
+  # Liveness is judged by the census's OWN terminal verdict marker, NOT by the exit code
+  # alone: catalog_census.sh returns 1 for BOTH "drift found" (a real, parseable answer
+  # this function must go on to classify) and "could not run at all" (:29-32 vs :79-83).
+  # Treating every non-zero as UNVERIFIED would mislabel every genuine drift. Absence of
+  # a verdict marker is the signal that separates them, in either exit direction.
+  if ! grep -qE '^(OK: every publishable package is coherent|FAIL: at least one package)' "$RUN_TMP/coh"; then
+    printf '    %-14s UNVERIFIED (census child exited %s and produced no verdict — a dead verifier is never a clean bill)\n' "coherence" "$cstat"
+    sed 's/^/        /' "$RUN_TMP/coh" | tail -6
+    fail=1
+    return
+  fi
   local bad=0 staged=0
   while IFS= read -r line; do
     local pname; pname="$(echo "$line" | awk '{print $1}')"
@@ -763,52 +781,14 @@ snippet_oracle_gate() { # <pkgdir> <name>
 }
 
 
-# --self-test — guard THIS GATE'S OWN WIRING (repo convention: fabrication_sweep.sh /
-# pds_reach.py --self-test). PROVE THE LOOM: each assertion targets a wiring defect this
-# script has actually shipped — G11 run once by hand instead of standing in the battery
-# (round 4); the plural-only G4 grep mislabeling a 1-file STAGED state FAIL (round 4);
-# PKG_ROOT hardcoded to another checkout while the G11 tool resolved via BASH_SOURCE —
-# one invocation, two genbas (round 5). A gate never shown to FAIL is a green light with
-# no thread behind it.
-if [[ "${1:-}" == "--self-test" ]]; then
-  src="${BASH_SOURCE[0]}"
-  pass=0; total=3
-  echo ">> SELF-TEST: does the gate's own wiring hold?"
-
-  # (i) G11 snippet-oracle is invoked in the per-package BATTERY loop (not only --g11).
-  # The battery loop is the column-0 `for name in "$@"; do` ... column-0 `done` block.
-  battery="$(awk '/^for name in "\$@"; do/{f=1} f{print; if ($0 ~ /^done/) exit}' "$src")"
-  if grep -qF 'snippet_oracle_gate "$pkg" "$name"' <<<"$battery"; then
-    echo "   PASS  (i)   G11 snippet_oracle_gate wired in the battery loop"
-    pass=$((pass+1))
-  else
-    echo "   FAIL  (i)   G11 NOT in the battery loop — a standing gate that only runs by hand is not standing"
-  fi
-
-  # (ii) The G4 git-modified regex matches the SINGULAR pub warning form (round-4 defect),
-  # still matches the plural, and the count-extract regex reads the singular count.
-  if echo "1 checked-in file is modified in git." | grep -qiE "$G4_GITMOD_RE" \
-     && echo "3 checked-in files are modified in git." | grep -qiE "$G4_GITMOD_RE" \
-     && [[ "$(echo "1 checked-in file is modified" | grep -oE "$G4_COUNT_RE" | grep -oE '^[0-9]+')" == "1" ]]; then
-    echo "   PASS  (ii)  G4 regex matches singular '1 checked-in file is modified' (and plural)"
-    pass=$((pass+1))
-  else
-    echo "   FAIL  (ii)  G4 regex misses a checked-in-modified form — a STAGED state would mislabel FAIL"
-  fi
-
-  # (iii) PKG_ROOT default derives from the script's own location — never a hardcoded
-  # absolute (the round-5 MUST: a PASS vouched from an unread tree is fail-OPEN).
-  if grep -qF 'PKG_ROOT="${PKG_ROOT:-$(dirname "$HERE")/packages}"' "$src" \
-     && ! grep -qE '^PKG_ROOT="\$\{PKG_ROOT:-/' "$src"; then
-    echo "   PASS  (iii) PKG_ROOT default derives from the script root (env override retained)"
-    pass=$((pass+1))
-  else
-    echo "   FAIL  (iii) PKG_ROOT default is a hardcoded absolute — one invocation, two genbas"
-  fi
-
-  echo
-  echo ">> SELF-TEST: $pass/$total"
-  [[ "$pass" == "$total" ]] || exit 1
+# --child-env-probe (internal, used by --self-test assertion (iv)).
+# Reports what a CHILD PROCESS of this gate actually inherits. G5 spawns
+# catalog_census.sh as exactly this kind of child, and that child carries its OWN
+# hardcoded PKG_ROOT default (catalog_census.sh:25) — so if `export PKG_ROOT` is
+# absent, the census silently audits a DIFFERENT tree than the banner names, and no
+# amount of grepping this file's text can see it. Only a child can report this.
+if [[ "${1:-}" == "--child-env-probe" ]]; then
+  bash -c 'echo "CHILD_PKG_ROOT=${PKG_ROOT:-__NOT_EXPORTED__}"'
   exit 0
 fi
 
@@ -897,11 +877,17 @@ constraint_admits() { # <constraint> <version> -> 0 yes, 1 no, 2 unparsed
     major="${base%%.*}"
     rest="${base#*.}"; minor="${rest%%.*}"
     patch="${rest#*.}"; patch="${patch%%[-+]*}"
-    # Dart caret = leftmost-NON-ZERO component may not change (cert F2):
-    #   ^1.2.3 -> <2.0.0 ; ^0.3.0 -> <0.4.0 ; ^0.0.5 -> <0.0.6
-    if [[ "$major" == 0 && "$minor" == 0 ]]; then
-      upper="0.0.$((patch+1))"
-    elif [[ "$major" == 0 ]]; then
+    # Dart caret upper bound = pub_semver's `nextBreaking`, which increments the MINOR
+    # whenever major is 0 — it is NOT npm's "leftmost non-zero component" rule:
+    #   ^1.2.3 -> <2.0.0 ; ^0.3.0 -> <0.4.0 ; ^0.0.5 -> <0.1.0  (NOT <0.0.6)
+    # MEASURED against the real solver 2026-07-31 (not recalled): a probe package pinning
+    # `condition_aggregator: ^0.0.5` resolved to condition_aggregator **0.0.8** (published
+    # line 0.0.1..0.0.8). The prior three-branch arithmetic computed <0.0.6 and reported
+    # 0.0.8 EXCLUDED. Fail-closed, so it never waved a release through — but it manufactures
+    # phantom LEFT-BEHINDs on the whole 0.0.x catalog and trains the operator to reach for
+    # G8_ACCEPT, turning the D4 reach gate into a waiver habit. The `patch` capture above is
+    # retained: it still normalises prerelease/build suffixes off the base.
+    if [[ "$major" == 0 ]]; then
       upper="0.$((minor+1)).0"
     else
       upper="$((major+1)).0.0"
@@ -950,9 +936,17 @@ readme_pin_gate() { # <pkgdir> <name> <staged-version>
 
 reach_gate() { # <pkgdir> <name> <staged-version>
   local pkg="$1" name="$2" ver="$3"
-  local sdir; sdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  local reg="$sdir/known_consumers.list" root; root="$(dirname "$sdir")"
-  if [[ ! -f "$reg" ]]; then printf '    %-14s SKIP (no known_consumers.list)\n' "G8 reach"; return; fi
+  # Registry + consumer root derive from PKG_ROOT — the tree UNDER GATE — never from
+  # BASH_SOURCE (the script's own location). With PKG_ROOT pointed at another checkout the
+  # BASH_SOURCE derivation read THIS checkout's registry and THIS checkout's `local:`
+  # pubspecs while gating THAT checkout's package: one PKG_ROOT and one package could print
+  # `G8 reach FAIL — LEFT-BEHIND` from one checkout and `PASS — RECEIVES` from another,
+  # under an IDENTICAL banner. In the D4 reach gate that skew fails OPEN — toward "everyone
+  # receives" — which is the direction that lets a left-behind developer go unnamed. Every
+  # G8 verdict below therefore prints the registry path it actually read.
+  local root; root="$(dirname "$PKG_ROOT")"
+  local reg="$root/scripts/known_consumers.list"
+  if [[ ! -f "$reg" ]]; then printf '    %-14s SKIP (no known_consumers.list at %s)\n' "G8 reach" "$reg"; return; fi
   # Disposition search scoped to the ACTUAL top CHANGELOG entry (first `## `
   # heading to the next), not a fixed line window (cert F3: `-A30` both
   # silently renewed stale waivers from the previous entry AND cut off long
@@ -975,11 +969,23 @@ reach_gate() { # <pkgdir> <name> <staged-version>
         fi
         pubspec="$(cat "$root/${source#local:}" 2>/dev/null)" || true ;;
       github:*)
-        local rest="${source#github:}" repo path
+        local rest="${source#github:}" repo path http
         repo="${rest%%:*}"; path="${rest#*:}"
-        if ! pubspec="$(curl -fsSL --max-time 10 "https://raw.githubusercontent.com/$repo/HEAD/$path" 2>/dev/null)"; then
-          out+="        $consumer  SKIP-NET (pubspec unreachable)"$'\n'; continue
-        fi ;;
+        # A 404 is registry ROT (repo deleted, renamed or gone private) — NOT an outage.
+        # `curl -fsSL` collapsed both into SKIP-NET, so a permanently dead consumer row
+        # rode a green gate forever under a verdict that reads "try again when online".
+        # This is the github: sibling of cert F4 (missing local pubspec = loud MISSING)
+        # and Case S (bad scheme = loud UNPARSED); the remaining axis was the only one
+        # still failing silent. GONE is loud, and is fixed in the registry, not waived.
+        http="$(curl -sSL -o "$RUN_TMP/g8_pubspec" -w '%{http_code}' --max-time 10 \
+                "https://raw.githubusercontent.com/$repo/HEAD/$path" 2>/dev/null || echo 000)"
+        if [[ "$http" == "404" ]]; then
+          out+="        $consumer  GONE (HTTP 404 — $repo/$path no longer exists; fix or retire the registry row, never leave it reading as a transient outage)"$'\n'
+          left=1; continue
+        elif [[ "$http" != "200" ]]; then
+          out+="        $consumer  SKIP-NET (pubspec unreachable, HTTP $http)"$'\n'; continue
+        fi
+        pubspec="$(cat "$RUN_TMP/g8_pubspec")" ;;
       *)
         # Registry rot on the SCHEME field must not ride a green gate
         # (re-cert condition 1 / Case S — the source-axis sibling of F4/F7).
@@ -1016,15 +1022,156 @@ reach_gate() { # <pkgdir> <name> <staged-version>
       fi
     fi
   done < "$reg"
+  # Every verdict names the REGISTRY it read: a G8 line without its substrate is exactly
+  # the artifact that let two checkouts disagree under one banner.
   if [[ $left -eq 0 && $unparsed -eq 0 ]]; then
-    printf '    %-14s PASS\n' "G8 reach"
+    printf '    %-14s PASS  [registry %s]\n' "G8 reach" "$reg"
   elif [[ $left -eq 0 ]]; then
-    printf '    %-14s FAIL (an UNPARSED consumer constraint is unacknowledged — judge it, then G8_ACCEPT)\n' "G8 reach"; fail=1
+    printf '    %-14s FAIL (an UNPARSED consumer constraint is unacknowledged — judge it, then G8_ACCEPT)  [registry %s]\n' "G8 reach" "$reg"; fail=1
   else
-    printf '    %-14s FAIL (a known consumer is LEFT-BEHIND or MISSING with no recorded serve-decision)\n' "G8 reach"; fail=1
+    printf '    %-14s FAIL (a known consumer is LEFT-BEHIND, GONE or MISSING with no recorded serve-decision)  [registry %s]\n' "G8 reach" "$reg"; fail=1
   fi
   printf '%s' "$out"
 }
+
+# --self-test — guard THIS GATE'S OWN WIRING (repo convention: fabrication_sweep.sh /
+# pds_reach.py --self-test). PROVE THE LOOM: each assertion targets a wiring defect this
+# script has ACTUALLY SHIPPED — G11 run once by hand instead of standing in the battery
+# (round 4); the plural-only G4 grep mislabeling a 1-file STAGED state FAIL (round 4);
+# PKG_ROOT hardcoded to another checkout while the G11 tool resolved via BASH_SOURCE —
+# one invocation, two genbas (round 5). A gate never shown to FAIL is a green light with
+# no thread behind it.
+#
+# ROUND 6 (2026-07-31) — countermeasure under an Andon fired on OPS-066(B),
+# verification-overstatement. The round-5 (iii) assertion was a TAUTOLOGY: its positive
+# grep pattern matched its OWN source line (`grep -nF` returned :91 AND :801), so the
+# assertion vouched for itself and passed against three separate mutations of the line it
+# claimed to guard. The mutations that exposed it were SUPPLIED BY THE GATE, not chosen by
+# the author of the fix — an author-chosen break-proof tests the defect the author already
+# imagined. Accordingly: where a property is BEHAVIOURAL, the assertion now EXECUTES the
+# behaviour and reads what actually happened, instead of grepping for the shape of source
+# it hopes is there. This block is positioned after the helper definitions so it can CALL
+# them (constraint_admits) rather than describe them.
+if [[ "${1:-}" == "--self-test" ]]; then
+  src="${BASH_SOURCE[0]}"
+  pass=0; total=7
+  echo ">> SELF-TEST: does the gate's own wiring hold?"
+
+  # Wiring assertions read a COMMENT-STRIPPED view of the source. A raw-source grep
+  # passes on a commented-out call, so `# snippet_oracle_gate "$pkg" "$name"` would have
+  # vouched for a standing gate that no longer runs. (The strip is line-oriented and
+  # deliberately simple — it is used ONLY for the wiring greps below, never for parsing.)
+  nocomment="$RUN_TMP/src_nocomment"
+  sed 's/[[:space:]]*#.*$//' "$src" > "$nocomment"
+
+  # (i) G11 snippet-oracle is LIVE CODE in the per-package BATTERY loop — not only behind
+  # --g11, and not commented out. The battery is the column-0 `for name ...` / `done` block.
+  battery="$(awk '/^for name in "\$@"; do/{f=1} f{print; if ($0 ~ /^done/) exit}' "$nocomment")"
+  if grep -qF 'snippet_oracle_gate "$pkg" "$name"' <<<"$battery"; then
+    echo "   PASS  (i)   G11 snippet_oracle_gate wired LIVE (uncommented) in the battery loop"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (i)   G11 not live in the battery loop — a standing gate that only runs by hand is not standing"
+  fi
+
+  # (ii) The G4 git-modified regex matches the SINGULAR pub warning form (round-4 defect),
+  # still matches the plural, and the count-extract regex reads the singular count.
+  if echo "1 checked-in file is modified in git." | grep -qiE "$G4_GITMOD_RE" \
+     && echo "3 checked-in files are modified in git." | grep -qiE "$G4_GITMOD_RE" \
+     && [[ "$(echo "1 checked-in file is modified" | grep -oE "$G4_COUNT_RE" | grep -oE '^[0-9]+')" == "1" ]]; then
+    echo "   PASS  (ii)  G4 regex matches singular '1 checked-in file is modified' (and plural)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (ii)  G4 regex misses a checked-in-modified form — a STAGED state would mislabel FAIL"
+  fi
+
+  # (iii) BEHAVIOURAL — PKG_ROOT's default RESOLVES to THIS checkout's packages/. Asserted
+  # by EXECUTING the gate in a child with PKG_ROOT unset and reading the root it actually
+  # banners. Catches a wrong default HOWEVER SPELLED: $HOME/..., an absolute literal
+  # indented to slip a `^` anchor, or an indirected $SOMEVAR/... — none of which a
+  # source-shape grep can enumerate in advance.
+  expect_root="$(dirname "$(cd "$(dirname "$src")" && pwd)")/packages"
+  actual_root="$(env -u PKG_ROOT bash "$src" 2>/dev/null \
+                 | grep -m1 '^:: package_update_gate' | sed 's/.*PKG_ROOT=//')"
+  if [[ -n "$actual_root" && "$actual_root" == "$expect_root" ]]; then
+    echo "   PASS  (iii) PKG_ROOT resolves to this checkout: $actual_root"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (iii) PKG_ROOT resolved to '${actual_root:-<none>}', expected '$expect_root' — one invocation, two genbas"
+  fi
+
+  # (iv) BEHAVIOURAL — PKG_ROOT is EXPORTED, observed FROM A CHILD PROCESS. `export
+  # PKG_ROOT` carried no guard at all: deleting it left this self-test fully green AND the
+  # banner confidently naming the right tree, while G5's catalog_census.sh child fell back
+  # to its own hardcoded default (catalog_census.sh:25) and audited the unread main tree.
+  # A text grep cannot observe process inheritance; only a child can report it.
+  probe_root="$(env -u PKG_ROOT bash "$src" --child-env-probe 2>/dev/null \
+                | grep -m1 '^CHILD_PKG_ROOT=' | sed 's/^CHILD_PKG_ROOT=//')"
+  if [[ "$probe_root" == "$expect_root" ]]; then
+    echo "   PASS  (iv)  a child process inherits PKG_ROOT=$probe_root (the export is live)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (iv)  child inherited '${probe_root:-<none>}', expected '$expect_root' — the census child would audit a different genba than the banner names"
+  fi
+
+  # (v) The G4 gate CALL SITES still reference the named regex variables. Round 4 hoisted
+  # the regexes into variables so (ii) exercises the WIRED regex — but nothing asserted the
+  # call sites still USE them. Re-inlining a literal inside dryrun_gate passed (ii) forever
+  # while the wired behaviour drifted away from the thing (ii) proves. Scoped to the
+  # FUNCTION BODY: asserting against the whole file would match (ii)'s own lines — the
+  # round-5 tautology, one function over.
+  dryrun_fn="$(awk '/^dryrun_gate\(\) \{/{f=1} f{print; if ($0 ~ /^\}/) exit}' "$nocomment")"
+  if grep -qF 'grep -qiE "$G4_GITMOD_RE"' <<<"$dryrun_fn" \
+     && grep -qF 'grep -oE "$G4_COUNT_RE"' <<<"$dryrun_fn"; then
+    echo "   PASS  (v)   dryrun_gate references \$G4_GITMOD_RE / \$G4_COUNT_RE (no re-inlined literal)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (v)   a G4 call site re-inlined its regex — (ii) would prove a variable the gate no longer uses"
+  fi
+
+  # (vi) The five per-package SUBSTRATE STAMPS are present. Deleting them all still passed
+  # every prior assertion — a gate that stops naming WHICH tree it read can print a green
+  # PASS vouched from anywhere.
+  #
+  # The PKG_ROOT banner is deliberately NOT grepped here. A source-grep for it is a
+  # TAUTOLOGY: the search string appears in the searching line itself, so it reports
+  # "present" with the banner deleted — the exact round-5 defect, reproduced while fixing
+  # it, and caught only because the mutation harness ran the mutation instead of trusting
+  # the fix. The banner is guarded BEHAVIOURALLY by (iii)/(iv), which read the value the
+  # banner actually prints from a child process: delete the banner and both go '<none>'.
+  # This grep is safe only because the pattern's own source line spells it '@ \$pkg"'
+  # (backslash-escaped), which does not match the literal it searches for — verified by
+  # the baseline counting 5, not 6.
+  stamps="$(grep -c '@ \$pkg"' "$nocomment")"
+  if [[ "$stamps" -eq 5 ]]; then
+    echo "   PASS  (vi)  all 5 per-package substrate stamps present (banner covered behaviourally by (iii)/(iv))"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (vi)  substrate stamps: $stamps of 5 present — a PASS must always name its genba"
+  fi
+
+  # (vii) BEHAVIOURAL — the caret arithmetic agrees with the REAL pub solver, by CALLING
+  # constraint_admits rather than reading it. Measured against the live solver 2026-07-31:
+  # a probe pinning `condition_aggregator: ^0.0.5` resolved to 0.0.8, so ^0.0.5 is
+  # >=0.0.5 <0.1.0 (pub_semver nextBreaking increments the MINOR whenever major is 0) —
+  # not npm's <0.0.6. The old arithmetic called 0.0.8 EXCLUDED: fail-closed, but it
+  # manufactures phantom LEFT-BEHINDs across the 0.0.x catalog and trains the operator to
+  # reach for G8_ACCEPT, turning the D4 reach gate into a waiver habit.
+  if constraint_admits "^0.0.5" "0.0.8" && constraint_admits "^0.0.5" "0.0.5" \
+     && ! constraint_admits "^0.0.5" "0.1.0" && ! constraint_admits "^0.0.5" "0.0.4" \
+     && constraint_admits "^0.3.0" "0.3.9" && ! constraint_admits "^0.3.0" "0.4.0" \
+     && constraint_admits "^1.2.3" "1.9.0" && ! constraint_admits "^1.2.3" "2.0.0"; then
+    echo "   PASS  (vii) caret arithmetic matches the real solver (^0.0.5 admits 0.0.8, excludes 0.1.0)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (vii) caret arithmetic disagrees with the real pub solver on the 0.0.x line"
+  fi
+
+  echo
+  echo ">> SELF-TEST: $pass/$total"
+  [[ "$pass" == "$total" ]] || exit 1
+  exit 0
+fi
 
 for name in "$@"; do
   pkg="$PKG_ROOT/$name"
