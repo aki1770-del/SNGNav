@@ -42,6 +42,15 @@ rename you can make today"*:
 | `r.fold(complete:, partial:, unavailable:)` | unchanged shape; the failure lists are `List<AdvisorySourceFailure>` |
 | `r.requireCompleteLookup()` | unchanged — still throws `AdvisoryLookupIncompleteException`, whose `unreachable` still carries `AdvisoryProviderError` values (message + typed reason + cause), so existing `catch` blocks keep working |
 
+The carried getters are the compiler-UN-enforced migration path: `r.seen`
+answers an empty list on `AdvisoryLookupUnavailable` — the founding silence
+shape — without making you say anything. Only an exhaustive `switch` or `fold`
+over the sealed type is compiler-enforced. So on the getter path, gate any
+all-clear on `r.canAssertNoAdvisory`: coming from **0.0.8** that means keeping
+the gate you already have; coming from **0.0.7 or earlier** there is no gate
+to keep — `canAssertNoAdvisory` first shipped in 0.0.8 — so **add** it before
+you ever render "no advisory in force".
+
 Also in this release:
 
 * `AdvisoryUnavailableReason` gains two values: `refused` (auth / rate limit /
@@ -62,8 +71,12 @@ Also in this release:
   earns that reason.
 
 Migrating from **0.0.7 or earlier**? Read the 0.0.8 entry below first — it
-names the defect and the asymmetry. 0.1.0 changes only who asks the question
-(you → the compiler).
+names the defect and the asymmetry. 0.1.0 changes who asks the question
+(you → the compiler) **on the exhaustive `switch` / `fold` path**: there the
+compiler refuses to compile a caller who never handled "could not look". On
+the getter path the question stays yours to ask — and a 0.0.7 codebase has
+never asked it, because `canAssertNoAdvisory` did not exist before 0.0.8 — so
+add the gate, per the note under the migration table above.
 
 **The asymmetry, stated once:** a hazard *seen* is a hazard *real*, even on
 partial data — act on `seen` always. But "nothing is in force" is a claim about

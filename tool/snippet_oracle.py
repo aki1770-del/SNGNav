@@ -222,7 +222,16 @@ def analyze(pkg, blocks):
             continue
         src, line, placeholders = index[f]
         msg = (diag.get("problemMessage") or "").strip()
-        sym = re.search(r"'([^']+)'", msg)
+        if code_name == "uri_does_not_exist":
+            # The message shape is "Target of URI doesn't exist: '<uri>'." — the
+            # apostrophe in "doesn't" breaks first-quote extraction (it yielded
+            # "t exist: ", a symbol no placeholder declaration can ever match).
+            # Anchor on the ": '<uri>'" tail so the symbol IS the URI, exactly as
+            # a placeholder declaration must spell it. An undeclared missing URI
+            # still HALTs — this changes what is reported, never whether.
+            sym = re.search(r":\s*'([^']+)'", msg)
+        else:
+            sym = re.search(r"'([^']+)'", msg)
         symbol = sym.group(1) if sym else "?"
         if symbol in placeholders:
             continue  # the author declared it illustrative

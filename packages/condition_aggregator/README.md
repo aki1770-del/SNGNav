@@ -164,6 +164,7 @@ Use a real publisher feed by depending on an adapter package instead of the
 inline `MyProvider` above:
 
 ```dart
+// oracle:placeholders package:condition_aggregator_nws/condition_aggregator_nws.dart, NwsAdvisoryProvider
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_nws/condition_aggregator_nws.dart';
 
