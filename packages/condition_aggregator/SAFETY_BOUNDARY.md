@@ -16,8 +16,9 @@ advisory, QM, no control authority) unchanged.
 **Level**: L0 / L1 supportive use only.
 **Driver-task assignment**: the driver performs the dynamic driving task
 at all times. `AdvisoryAggregator.fetchActiveAdvisoriesAtPoint(lat, lon)`
-returns the sealed `AdvisoryLookup` (`Complete` / `Partial` /
-`Unavailable`); the integrator's HMI switches on it (or uses `fold` /
+returns the sealed `AdvisoryLookup` (`AdvisoryLookupComplete` /
+`AdvisoryLookupPartial` / `AdvisoryLookupUnavailable`); the
+integrator's HMI switches on it (or uses `fold` /
 `canAssertNoAdvisory`) and surfaces the relevant advisories — and any
 could-not-look state — to the driver; the driver decides response.
 **No L2+ claim.** The package is a stateless interface + fan-out
@@ -159,11 +160,16 @@ XML"; she sees the alert as her decision substrate. When two
 publishers' coverage overlaps her point and both have active alerts,
 she sees both — not a silent-coalesce that hides one source. When one
 publisher is transiently unavailable, she sees the other's advisories
-plus a staleness indicator the integrator renders from the sealed
+plus a staleness indicator the integrator can render from the sealed
 lookup's typed `unreachable` failures — not a blank screen that hides
 the partial outage. When every publisher is unreachable, the sealed
-type refuses to present the outage as a clear sky: the integrator must
-handle `AdvisoryLookupUnavailable` to compile.
+type refuses to present the outage as a clear sky on the exhaustive
+`switch` / `fold` path: there the integrator must handle
+`AdvisoryLookupUnavailable` to compile. The 0.0.8-named getter path is
+compiler-UN-enforced — `seen` compiles unhandled and answers
+`const []` on `AdvisoryLookupUnavailable`, the founding silence shape —
+so a getter-path integrator must keep gating any all-clear on
+`canAssertNoAdvisory`.
 
 **Sakichi reading**: the loom is *a multi-postman who carries each
 publisher's letter to the driver without rewriting it.* The loom

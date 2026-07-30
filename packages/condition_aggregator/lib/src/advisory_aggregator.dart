@@ -20,7 +20,8 @@
 /// precisely how this shipped. 0.0.8 added the un-skippable question
 /// (`canAssertNoAdvisory`, `fold`, `requireCompleteLookup`) without breaking
 /// the return type. Since 0.1.0 the return type is the sealed [AdvisoryLookup]
-/// and the **compiler** refuses a caller who never handled "could not look".
+/// and an exhaustive `switch` refuses a caller who never handled "could not
+/// look" — the **compiler** asks the question for you.
 library;
 
 import 'dart:async' show TimeoutException;

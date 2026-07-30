@@ -64,8 +64,11 @@ Future<void> main() async {
 You get back a sealed `AdvisoryLookup` — `Complete` / `Partial` /
 `Unavailable`: `r.seen` is the typed, normalized merge across every provider
 that answered, and `r.unreachable` names — with a typed reason — every source
-that did not (so a single failing feed never silently drops the rest, and a
-total outage can never masquerade as a clear sky).
+that did not (so a single failing feed never silently drops the rest). On an
+exhaustive `switch` or `fold` a total outage can never masquerade as a clear
+sky; on the getter path it can — `r.seen` is just an empty list when we could
+not look — so keep gating any all-clear on `r.canAssertNoAdvisory`, as the
+quickstart above does.
 
 Running the bundled example (`dart run example/quickstart.dart`) prints:
 
