@@ -8,28 +8,32 @@ class MyProvider implements AdvisoryProvider {
   @override
   Future<void> init() async {}
   @override
-  Future<List<Advisory>> fetchActiveAdvisoriesAtPoint(
-          {required double latitude, required double longitude}) async =>
-      const [
-        Advisory(
-            source: AdvisorySource.nwsUnitedStates,
-            eventClass: 'Winter Storm Warning',
-            severity: AdvisorySeverity.severe,
-            certainty: AdvisoryCertainty.likely,
-            urgency: AdvisoryUrgency.expected,
-            areaDescription: 'Erie County, NY',
-            effective: null,
-            expires: null,
-            headline: 'Heavy snow expected',
-            description: 'Travel could be very difficult to impossible.'),
-      ];
+  Future<List<Advisory>> fetchActiveAdvisoriesAtPoint({
+    required double latitude,
+    required double longitude,
+  }) async => const [
+    Advisory(
+      source: AdvisorySource.nwsUnitedStates,
+      eventClass: 'Winter Storm Warning',
+      severity: AdvisorySeverity.severe,
+      certainty: AdvisoryCertainty.likely,
+      urgency: AdvisoryUrgency.expected,
+      areaDescription: 'Erie County, NY',
+      effective: null,
+      expires: null,
+      headline: 'Heavy snow expected',
+      description: 'Travel could be very difficult to impossible.',
+    ),
+  ];
 }
 
 Future<void> main() async {
   final agg = AdvisoryAggregator(providers: [MyProvider()]);
   await agg.init(); // mandatory before fetch
   final result = await agg.fetchActiveAdvisoriesAtPoint(
-      latitude: 47.9253, longitude: -97.0329);
+    latitude: 47.9253,
+    longitude: -97.0329,
+  );
 
   // Act on what we SAW. A hazard seen is a hazard real, even if some other
   // source was unreachable — so this line is safe in every case.
@@ -66,12 +70,12 @@ Future<void> main() async {
 /// driver actually reads. She can act on "the weather service did not answer".
 /// She cannot act on a stack trace.
 String _why(AdvisoryUnavailableReason r) => switch (r) {
-      AdvisoryUnavailableReason.networkUnreachable => 'no network',
-      AdvisoryUnavailableReason.timedOut => 'the source did not answer in time',
-      AdvisoryUnavailableReason.refused => 'the source refused the request',
-      AdvisoryUnavailableReason.unparseable => 'the response was unreadable',
-      AdvisoryUnavailableReason.incompleteAreaCoverage =>
-        'part of the area could not be read — a warning may exist there',
-      AdvisoryUnavailableReason.notInitialised => 'the adapter was not started',
-      AdvisoryUnavailableReason.unclassified => 'the source failed',
-    };
+  AdvisoryUnavailableReason.networkUnreachable => 'no network',
+  AdvisoryUnavailableReason.timedOut => 'the source did not answer in time',
+  AdvisoryUnavailableReason.refused => 'the source refused the request',
+  AdvisoryUnavailableReason.unparseable => 'the response was unreadable',
+  AdvisoryUnavailableReason.incompleteAreaCoverage =>
+    'part of the area could not be read — a warning may exist there',
+  AdvisoryUnavailableReason.notInitialised => 'the adapter was not started',
+  AdvisoryUnavailableReason.unclassified => 'the source failed',
+};

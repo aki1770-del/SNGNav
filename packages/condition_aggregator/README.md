@@ -43,23 +43,89 @@ Future<void> main() async {
   await agg.init(); // mandatory before fetch
   final r = await agg.fetchActiveAdvisoriesAtPoint(
       latitude: 47.9253, longitude: -97.0329);
-  for (final a in r.advisories) {
+
+  // Act on what we SAW — a hazard seen is a hazard real, even on partial data.
+  for (final a in r.seen) {
     print('[${a.source.name}] ${a.severity.name}: ${a.headline}');
   }
-  print('${r.advisories.length} advisory, ${r.providerErrors.length} errors');
+
+  // You may ONLY say "nothing is in force" when every source answered.
+  if (r.canAssertNoAdvisory && r.seen.isEmpty) {
+    print('No advisory in force. (Every source answered.)');
+  } else if (r.seen.isEmpty) {
+    for (final f in r.failures) {
+      print('COULD NOT CHECK ${f.source.name}: ${f.reason.name}');
+    }
+  }
 }
 ```
 
-You get back an `AdvisoryAggregateResult`: `r.advisories` is the typed,
-normalized merge across every provider, and `r.providerErrors` lists which
-sources failed (so a single failing feed never silently drops the rest).
+You get back a sealed `AdvisoryLookup` — `Complete` / `Partial` /
+`Unavailable`: `r.seen` is the typed, normalized merge across every provider
+that answered, and `r.unreachable` names — with a typed reason — every source
+that did not (so a single failing feed never silently drops the rest, and a
+total outage can never masquerade as a clear sky).
 
-Running the snippet (`dart run example/quickstart.dart`) prints:
+Running the bundled example (`dart run example/quickstart.dart`) prints:
 
 ```
 [nwsUnitedStates] severe: Heavy snow expected
-1 advisory, 0 errors
 ```
+
+## An empty list is not always an all-clear (read this)
+
+`r.seen.isEmpty` is **true in two very different situations**:
+
+1. every source answered and no advisory is in force — the road really is clear;
+2. every source was **down**, so nothing was read — you have no idea if it is clear.
+
+They render as the same empty list. During a feed outage in a blizzard, reading
+case 2 as case 1 tells a driver the road is clear when you never looked.
+
+Since 0.1.0 the return type is sealed, so the compiler makes you say what you
+will do about case 2 — an exhaustive `switch` will not compile without the
+`Unavailable` branch:
+
+```dart
+// oracle:placeholders r, show, showNoAdvisory, showFeedDown
+switch (r) {
+  case AdvisoryLookupComplete(:final advisories) when advisories.isEmpty:
+    showNoAdvisory();                 // every source answered — real all-clear
+  case AdvisoryLookupComplete(:final advisories):
+    for (final a in advisories) show(a);
+  case AdvisoryLookupPartial(:final advisories, :final unreachable):
+    for (final a in advisories) show(a);  // a hazard seen is a hazard real
+    showFeedDown(unreachable);            // and say what you could not read
+  case AdvisoryLookupUnavailable(:final unreachable):
+    showFeedDown(unreachable);        // we could not look — say so, not "clear"
+}
+```
+
+Or use `r.fold(...)`, whose three callbacks are `required` so it will not let you
+forget the outage case:
+
+```dart
+// oracle:placeholders r
+final banner = r.fold(
+  complete: (advisories) => advisories.isEmpty ? '警報なし' : advisories.first.headline,
+  partial: (seen, down) => seen.isEmpty ? '一部の気象情報を取得できません' : seen.first.headline,
+  unavailable: (down) => '気象情報を取得できません',   // NOT "clear"
+);
+```
+
+Each `unreachable` entry carries a typed `reason` (`AdvisoryUnavailableReason`)
+so you can tell the driver *"the weather service did not answer"* in her language
+rather than showing her a `SocketException`. If you would rather fail than risk a
+false all-clear, `r.requireCompleteLookup()` throws
+`AdvisoryLookupIncompleteException` (with the way forward in its message).
+
+**The asymmetry:** act on what was *seen* even on partial data; only claim
+*silence* when the lookup was complete. That is honesty without crying wolf.
+
+> **Coming from 0.0.8?** Everything it shipped keeps its name here —
+> `canAssertNoAdvisory`, `seen`, `unreachable`, `isUnavailable`, `fold`,
+> `requireCompleteLookup` — and `AdvisoryAggregateResult` remains available for
+> hand-built results. The CHANGELOG's 0.1.0 entry is the migration map.
 
 ## Behaviours worth knowing
 
@@ -71,9 +137,9 @@ Running the snippet (`dart run example/quickstart.dart`) prints:
   caller depends on a broken provider.
 
 - **Per-provider failures do not abort the fan-out.** When one provider
-  raises during `fetchActiveAdvisoriesAtPoint`, its error is captured
-  in `result.providerErrors`; surviving providers' advisories appear
-  in `result.advisories`. The integrator surfaces staleness to the
+  raises during `fetchActiveAdvisoriesAtPoint`, its failure is carried —
+  typed — in the lookup's `unreachable` list; surviving providers'
+  advisories appear in `seen`. The integrator surfaces staleness to the
   driver honestly (e.g. "JMA unavailable; NWS data shown").
 
 - **`Advisory` is Equatable.** Stream de-duplication can use
@@ -122,7 +188,7 @@ aggregation. Defines the typed `Advisory` event, the `AdvisoryProvider`
 adapter contract, and the `AdvisoryAggregator` multi-source fan-out
 primitive consumed by per-source adapter packages.
 
-**Status**: published on pub.dev (v0.0.6); early and evolving — the
+**Status**: published on pub.dev; early and evolving — the
 `Advisory` interface may still change with a minor version bump.
 
 Pure Dart. No Flutter dependency. Sole runtime dependency: `equatable`.
@@ -145,13 +211,18 @@ The interface defines:
   hook for surfacing schema-version / configuration errors before any
   caller depends on a broken provider.
 - `AdvisoryAggregator` — multi-source fan-out primitive. Holds N
-  providers; init's them all; queries them all; returns merged results
-  plus per-provider error list (warn-and-continue, not abort).
+  providers; init's them all; queries them all; returns the sealed
+  `AdvisoryLookup` (warn-and-continue merge, every unreachable source
+  carried as a typed failure — never dropped).
+- `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) +
+  `AdvisorySourceFailure` — the sealed fan-out result; an exhaustive
+  `switch` cannot skip the "could not look" case.
 - `AdvisoryProviderInitException` — uniform init-failure exception
   type adapters MAY throw; subtypable for adapter-specific
   discrimination.
-- `AdvisoryAggregateResult` / `AdvisoryProviderError` — fan-out result
-  types.
+- `AdvisoryAggregateResult` / `AdvisoryProviderError` — the 0.0.8-era
+  result surface, retained for hand-built results (test fakes) and the
+  `AdvisoryLookupIncompleteException` contract.
 
 ### What this package is not
 

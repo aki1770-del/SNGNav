@@ -24,8 +24,24 @@ class _DeadProvider implements AdvisoryProvider {
   Future<List<Advisory>> fetchActiveAdvisoriesAtPoint({
     required double latitude,
     required double longitude,
-  }) async =>
-      throw Exception('Incomplete border read for prefectures [05]');
+  }) async => throw Exception('Incomplete border read for prefectures [05]');
+}
+
+/// A source that answers — with nothing in force. The one shape in which an
+/// empty list is a real all-clear.
+class _QuietProvider implements AdvisoryProvider {
+  @override
+  final AdvisorySource source;
+  _QuietProvider(this.source);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<Advisory>> fetchActiveAdvisoriesAtPoint({
+    required double latitude,
+    required double longitude,
+  }) async => const [];
 }
 
 void main() {
@@ -48,12 +64,38 @@ void main() {
       expect(r.canAssertNoAdvisory, isFalse);
 
       // And the lamp is at her hands, typed — not in a drawer as a string.
-      expect(r.failures.single.reason,
-          AdvisoryUnavailableReason.incompleteAreaCoverage);
+      expect(
+        r.failures.single.reason,
+        AdvisoryUnavailableReason.incompleteAreaCoverage,
+      );
     });
 
-    test('an empty result is only "no advisory" when every source answered',
-        () async {
+    test(
+      'an empty result is only "no advisory" when every source answered',
+      () async {
+        final agg = AdvisoryAggregator(
+          providers: [_QuietProvider(AdvisorySource.jmaJapan)],
+        );
+        await agg.init();
+        final r = await agg.fetchActiveAdvisoriesAtPoint(
+          latitude: 39.72,
+          longitude: 140.10,
+        );
+
+        // A source was asked and it answered; nothing failed. Silence here is
+        // real silence.
+        expect(r, isA<AdvisoryLookupComplete>());
+        expect(r.canAssertNoAdvisory, isTrue);
+        expect(r.seen, isEmpty);
+      },
+    );
+
+    test('zero providers => UNAVAILABLE — a lookup that consulted nothing '
+        'cannot claim completeness', () async {
+      // 0.0.8's published contract: "zero sources asked is not an all-clear
+      // either" (canAssertNoAdvisory required sourcesQueried > 0). The sealed
+      // type keeps that promise: no provider registered means we did not look,
+      // and "we did not look" is never rendered as "clear".
       final agg = AdvisoryAggregator(providers: const []);
       await agg.init();
       final r = await agg.fetchActiveAdvisoriesAtPoint(
@@ -61,10 +103,16 @@ void main() {
         longitude: 140.10,
       );
 
-      // Nothing failed, so silence here is real silence.
-      expect(r, isA<AdvisoryLookupComplete>());
-      expect(r.canAssertNoAdvisory, isTrue);
+      expect(r, isA<AdvisoryLookupUnavailable>());
+      expect(r.canAssertNoAdvisory, isFalse);
       expect(r.seen, isEmpty);
+      expect(
+        r.failures,
+        isEmpty,
+        reason:
+            'nothing was asked, so nothing individually failed — the '
+            'absence is the lookup itself',
+      );
     });
   });
 }

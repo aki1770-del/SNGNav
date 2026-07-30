@@ -2,68 +2,128 @@
 
 ## 0.1.0
 
-### Safety defect in 0.0.7 and earlier — please read
+### Breaking: the compiler now asks the question 0.0.8 put in your hands
 
-**A weather-feed outage was indistinguishable from a clear sky.**
+`AdvisoryAggregator.fetchActiveAdvisoriesAtPoint` now returns a sealed
+`AdvisoryLookup` instead of `AdvisoryAggregateResult`.
 
-`fetchActiveAdvisoriesAtPoint` returned `List<Advisory>`. When every provider
-failed, it returned an **empty list** — the exact same value it returns when the
-sky is genuinely clear and no advisory is in force.
-
-The adapter was never at fault. `condition_aggregator_jma` refuses to lie: on an
-unreachable prefecture it throws *"Incomplete border read for prefectures …"*.
-**The lamp was lit.** This package caught that, flattened it into a `String`,
-filed it in a `providerErrors` list that **nothing anywhere ever read**, and
-returned the empty list anyway. The lamp was lit and put in a drawer.
-
-**If you called this during a JMA outage in a blizzard, your app told your driver
-that no advisory was in force. It did not know that. It could not have known
-that. It had not looked.**
-
-### The fix, and why it is breaking
-
-`List<Advisory>` **cannot express "I could not look."** So the return type is now
-a sealed `AdvisoryLookup`:
+**Why.** Through 0.0.7, a total feed outage and a clear sky both reached you as
+the same empty advisory list — the failures sat in a `providerErrors` field
+nothing obliged you to read (the full story is in the 0.0.8 entry below). 0.0.8
+added the un-skippable question without breaking the return type:
+`canAssertNoAdvisory`, `fold`, `requireCompleteLookup`. But a question you must
+remember to ask can still go unasked. A sealed class cannot be ignored: Dart's
+exhaustive `switch` refuses to compile a consumer who has not written the
+"could not look" branches.
 
 * `AdvisoryLookupComplete` — every source answered. An empty list here genuinely
   means *no advisory in force*. **This is the only shape in which that sentence
   is true.**
 * `AdvisoryLookupPartial` — act on what was `seen`; you may **not** conclude
-  "nothing is in force", because the warning you are missing may be in the source
-  that did not answer.
+  "nothing is in force", because the warning you are missing may be in the
+  source that did not answer.
 * `AdvisoryLookupUnavailable` — **we did not look. We know nothing.** Not clear.
+  Also returned when the aggregator holds zero providers: a lookup that
+  consulted nothing cannot claim completeness (0.0.8's published rule — *"zero
+  sources asked is not an all-clear either"* — kept).
 
-A sealed class cannot be ignored: Dart's exhaustive `switch` refuses to compile a
-consumer who has not written the unreachable branch. A field you *can* ignore
-*will* be ignored — that is precisely how this shipped.
+### Migrating from 0.0.8 (the version on pub.dev)
 
-### Migration — it is two lines, and we owe you the map
+Everything 0.0.8 shipped survives, and almost all of it keeps its name. The
+renames below are the ones 0.0.8 itself introduced *"so the migration is a
+rename you can make today"*:
+
+| 0.0.8 (`AdvisoryAggregateResult`) | 0.1.0 (`AdvisoryLookup`) |
+|---|---|
+| `r.advisories` | `r.seen` (same list; `seen` already existed on 0.0.8) |
+| `r.providerErrors` | `r.unreachable` (or `r.failures`) — entries are now typed `AdvisorySourceFailure` (`source` / `reason` / `cause`; the string `message` is gone — read `cause`) |
+| `r.canAssertNoAdvisory` | unchanged |
+| `r.isUnavailable` | unchanged |
+| `r.fold(complete:, partial:, unavailable:)` | unchanged shape; the failure lists are `List<AdvisorySourceFailure>` |
+| `r.requireCompleteLookup()` | unchanged — still throws `AdvisoryLookupIncompleteException`, whose `unreachable` still carries `AdvisoryProviderError` values (message + typed reason + cause), so existing `catch` blocks keep working |
+
+Also in this release:
+
+* `AdvisoryUnavailableReason` gains two values: `refused` (auth / rate limit /
+  bad request) and `incompleteAreaCoverage` (the source answered for part of
+  the area — a warning may exist in the part we could not read). **Breaking for
+  exhaustive `switch`es** over the enum: add the two branches.
+* `AdvisoryAggregateResult` and `AdvisoryProviderError` are retained with their
+  full 0.0.8 surface (getters, `fold`, `requireCompleteLookup`) for hand-built
+  results — test fakes and fixtures written against 0.0.8 keep compiling. The
+  aggregator itself no longer returns them.
+* Failure classification is typed-first (a `TimeoutException` is `timedOut`
+  because of its type, not its spelling), with message-text heuristics as the
+  fallback for untyped throws. A bare `StateError` stays `unclassified` — we do
+  not guess `notInitialised` from it; only `AdvisoryProviderInitException`
+  earns that reason.
+
+Migrating from **0.0.7 or earlier**? Read the 0.0.8 entry below first — it
+names the defect and the asymmetry. 0.1.0 changes only who asks the question
+(you → the compiler).
+
+**The asymmetry, stated once:** a hazard *seen* is a hazard *real*, even on
+partial data — act on `seen` always. But "nothing is in force" is a claim about
+completeness, and you may only make it when the lookup was complete. That is
+what lets a system be honest without crying wolf.
+
+## 0.0.8
+
+### Safety defect in 0.0.7 and earlier — please read
+
+**A weather-feed outage looked exactly like a clear sky.**
+
+`fetchActiveAdvisoriesAtPoint` returns an `AdvisoryAggregateResult`. When every
+advisory source failed, `result.advisories` was an **empty list** — the same
+value it holds when the sky is genuinely clear and no advisory is in force.
+
+The truth was available: the failures were recorded in `result.providerErrors`.
+But nothing obliged you to read that list, and a field you *can* ignore *will*
+be ignored. **If you rendered `result.advisories.isEmpty` as "no advisory in
+force" — the obvious reading — then during a feed outage in a blizzard your app
+told your driver the road was clear. It had not looked.**
+
+### The fix in 0.0.8 — non-breaking, nothing you have changes meaning
+
+No type or signature changed, so your code still compiles and behaves as
+before. What is **added** is the question you can no longer skip cheaply:
+
+* `result.canAssertNoAdvisory` — `true` **only** when every source answered.
+  **An empty `advisories` list means "no advisory in force" only when this is
+  `true`.** Otherwise the emptiness means "we could not look."
+* `result.fold(complete:, partial:, unavailable:)` — handles all three cases;
+  the callbacks are `required`, so it will not let you forget the outage case.
+* `result.requireCompleteLookup()` — an opt-in loud stop that throws
+  `AdvisoryLookupIncompleteException` (with the way forward in its message)
+  rather than let you report an all-clear you did not earn.
+* Each `providerErrors` entry now carries a typed `reason`
+  (`AdvisoryUnavailableReason`) alongside its string `message`, so you can tell
+  the driver *"the weather service did not answer"* in her language instead of
+  showing her a `SocketException`.
+
+### Two-line migration
 
 ```dart
-// before
-final r = await agg.fetchActiveAdvisoriesAtPoint(...);
-for (final a in r.advisories) { ... }
+final r = await agg.fetchActiveAdvisoriesAtPoint(latitude: …, longitude: …);
+for (final a in r.advisories) show(a);            // unchanged — always safe
 
-// after — act on what was seen (a hazard seen is a hazard real, even on
-// partial data), and only claim "nothing in force" when you are allowed to
-final r = await agg.fetchActiveAdvisoriesAtPoint(...);
-for (final a in r.seen) { ... }
-
-if (r.canAssertNoAdvisory && r.seen.isEmpty) {
-  showNoAdvisory();          // every source answered; the silence is real
-} else if (r.seen.isEmpty) {
-  showFeedDown(r.failures);  // we could not look — tell her that, not "clear"
-}
+// add this before you ever say "clear":
+if (r.advisories.isEmpty && !r.canAssertNoAdvisory) showFeedDown(r.providerErrors);
 ```
 
-`r.failures` carries a **typed** `AdvisoryUnavailableReason`, not a string, so you
-can render it in the language your driver actually reads. She can act on *"the
-weather service did not answer."* She cannot act on a `SocketException`.
+### The version where the compiler enforces it
 
-**The asymmetry, stated once:** positive evidence fires on partial knowledge; a
-negative conclusion requires whole knowledge. That is what lets a system be
-honest without crying wolf.
+0.0.8 puts the question in your hands. **0.1.0** changes the return type to a
+sealed `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) so Dart's
+exhaustive `switch` *refuses to compile* a caller who never handled "could not
+look." That is a breaking change and a deliberate one — move to it when it is
+available on pub.dev and you can take the break. 0.0.8 is the patch that
+reaches you without breaking your build first.
 
+**The asymmetry, stated once:** a hazard *seen* is a hazard *real*, even on
+partial data — act on `advisories` always. But "nothing is in force" is a claim
+about completeness, and you may only make it when the lookup was complete. That
+is what lets a system be honest without crying wolf.
 
 ## 0.0.7 — 2026-06-30 — Doc honesty
 
