@@ -116,7 +116,14 @@ class ValhallaRoutingEngine implements RoutingEngine {
         throw RoutingException('Valhalla returned an unexpected JSON shape (HTTP 200)');
       }
       return _parseRouteResponse(decoded, stopwatch.elapsed);
-    } on http.ClientException catch (e) {
+    } on RoutingException {
+      rethrow;
+    } on Exception catch (e) {
+      // 0.3.4: up to 0.3.3 only http.ClientException was caught here, so a
+      // TimeoutException from routeTimeout (a slow or hung server) escaped
+      // the documented RoutingException contract and crashed the caller. Any
+      // network-layer Exception now surfaces as RoutingException;
+      // RoutingExceptions raised deliberately above pass through unchanged.
       throw RoutingException('Valhalla network error: $e');
     }
   }

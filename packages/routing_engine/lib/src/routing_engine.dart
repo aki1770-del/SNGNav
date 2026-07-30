@@ -16,6 +16,9 @@ import 'route_result.dart';
 
 abstract class RoutingEngine {
   /// Calculate a route for the given request.
+  ///
+  /// Throws [RoutingException] on any failure (HTTP error, malformed
+  /// response, or network-layer error including timeout).
   Future<RouteResult> calculateRoute(RouteRequest request);
 
   /// Check if this engine is ready to serve requests.

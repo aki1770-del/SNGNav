@@ -1,4 +1,25 @@
-## 0.3.3
+## 0.3.4
+
+**Stops a network-layer CRASH class the 0.3.3 pass did not reach. Additive/
+defensive only — no API changed, no signature changed. Includes everything in
+0.3.3 and 0.3.2 below.**
+
+Up to and including 0.3.3, `calculateRoute()` on both engines caught only
+`http.ClientException` at the network layer. A `TimeoutException` from the
+request timeout — a slow or hung routing server, the most ordinary failure a
+mobile consumer meets — escaped the documented `RoutingException` contract and
+crashed the caller. So did any other non-`ClientException` network throw.
+
+* **Both engines — `TimeoutException` (and any network-layer `Exception`)**
+  now surfaces as a `RoutingException` you already catch — never a raw crash.
+* **Deliberate `RoutingException`s are unchanged**: HTTP status errors,
+  non-JSON-body errors, and the 0.3.3 malformed-response guards pass through
+  exactly as before (`on RoutingException` rethrow precedes the wrap).
+
+Nothing here is breaking: no signature changed, and `RoutingException` is the
+error type this package already documents. Take it without touching your code.
+
+## 0.3.3 (never published — first shipped in 0.3.4)
 
 **Stops a set of malformed-response CRASHES. Additive/defensive only — no API
 changed, no signature changed. Includes everything in 0.3.2 below.**
@@ -34,7 +55,7 @@ Nothing here is breaking: `RouteManeuver.position` is still a non-nullable
 `LatLng`, no signature changed, and `RoutingException` is the error type this
 package already documents. Take it without touching your code.
 
-## 0.3.2
+## 0.3.2 (never published — first shipped in 0.3.4)
 
 **Adds an honest signal for substituted maneuver positions. Additive only —
 this is a drop-in patch, nothing you already read changes type or value.**
@@ -111,8 +132,6 @@ can take this without touching your code.
 *(The 0.5.x/0.6.x line makes `position` nullable, which is the more honest API but is
 a breaking change. This patch exists so that you do not have to accept a breaking
 change to stop receiving a fabricated coordinate.)*
-
-# Changelog
 
 ## 0.3.0
 
