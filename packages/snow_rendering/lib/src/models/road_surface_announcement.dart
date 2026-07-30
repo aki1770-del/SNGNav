@@ -38,6 +38,7 @@
 ///    display-untouched consumer could surface falsely.
 library;
 
+import 'package:driving_weather/driving_weather.dart';
 import 'package:japanese_snow_vocabulary/japanese_snow_vocabulary.dart';
 
 import 'road_surface_state.dart';
@@ -82,14 +83,21 @@ class RoadSurfaceAnnouncement {
 /// Use this ONLY when the detection path itself implies invisibility.
 /// Today that is the radiative-frost window (clear sky, ambient a few
 /// degrees above zero, dew point at/below 0 °C) — the consumer selects
-/// this variant when its own gate knows it took that path. Freezing
-/// rain is ALSO an invisible-ice phenomenon, but no classifier path
-/// currently routes it here; a consumer wiring freezing-rain detection
-/// may use this variant deliberately. On every other path — including
-/// the feed ice flag, which typically fires during visible
-/// precipitation — the general [RoadSurfaceState.blackIce] announcement
-/// applies instead: telling a driver in falling snow that the road
-/// "looks wet" is false.
+/// this variant when its own gate knows it took that path, or lets
+/// [announcementFor] select it (the window predicate is exported as
+/// [RoadSurfaceState.isInvisibleIceWindow]; re-implementing the gate
+/// at the call site is the drift seam that predicate closes). Freezing
+/// rain is ALSO an invisible-ice phenomenon — glare ice from rain looks
+/// merely wet — but no classifier path routes it here, deliberately:
+/// the rain-at-≤0 °C branch cannot distinguish a true freezing-rain
+/// event from a marginal or erroneous temperature reading during cold
+/// rain, so this variant's strong looks-wet claim is withheld on that
+/// path. A consumer with genuine freezing-rain detection (a dedicated
+/// feed signal, not the temperature heuristic) may use this variant
+/// deliberately. On every other path — including the feed ice flag,
+/// which typically fires during visible precipitation — the general
+/// [RoadSurfaceState.blackIce] announcement applies instead: telling a
+/// driver in falling snow that the road "looks wet" is false.
 final RoadSurfaceAnnouncement invisibleBlackIceAnnouncement =
     RoadSurfaceAnnouncement(
   jaSpokenText:
@@ -102,6 +110,76 @@ final RoadSurfaceAnnouncement invisibleBlackIceAnnouncement =
   termJa: 'ブラックアイスバーン',
   vocabulary: jafAuthoritativeData[JapaneseSnowSurfaceClass.blackIceBahn],
 );
+
+/// Provenance-carrying announcement lookup: classify [condition] and
+/// select the announcement variant whose claims are TRUE for the path
+/// the classification actually took.
+///
+/// [RoadSurfaceState.fromCondition] returns a bare enum value, and an
+/// enum value cannot carry HOW it was reached — so the two-step chain
+/// `fromCondition(condition).announcement` always yields the general,
+/// provenance-neutral black-ice announcement, even on the invisible
+/// radiative-frost morning where the stronger
+/// [invisibleBlackIceAnnouncement] — the looks-wet surprise clause and
+/// the verbatim JAF vocabulary entry — is the true one. Under-warning
+/// on the invisible morning is exactly the failure this package exists
+/// to prevent; prefer this function over `.announcement` on the
+/// classified value whenever the [WeatherCondition] is still in hand.
+///
+/// Selection, stated honestly:
+///
+/// - [RoadSurfaceState.isInvisibleIceWindow] true → the invisible-ice
+///   variant [invisibleBlackIceAnnouncement].
+/// - Every other classification → that state's general announcement
+///   ([RoadSurfaceStateAnnouncement.announcement]); `null` for
+///   [RoadSurfaceState.dry] (nothing to announce). In particular, the
+///   feed ice flag during visible precipitation and the cold-dry
+///   (≤ −3 °C) regime stay on the general black-ice announcement — the
+///   looks-wet claim is not established on those paths — and freezing
+///   rain stays general for a different, deliberate reason: it IS
+///   invisible-ice phenomenology, but the rain-at-≤0 °C branch cannot
+///   distinguish a true freezing-rain event from a marginal or
+///   erroneous temperature reading during cold rain, so the strong
+///   looks-wet claim is withheld (see [invisibleBlackIceAnnouncement]).
+/// - Caution-add-only: relative to the two-step chain this only ever
+///   UPGRADES a black-ice announcement to the invisible-ice variant;
+///   it never changes which surface is classified and never weakens
+///   any announcement.
+///
+/// Two bounds every consumer must hold:
+///
+/// - **`null` is NOT all-clear on this 0.2.x line.** [fromCondition]
+///   cannot say "I don't know": a [WeatherCondition] built from filler
+///   or unmeasured values classifies as [RoadSurfaceState.dry], and
+///   this function then returns `null` — a silent surface for a road
+///   nobody measured, which a driver reads as reassurance. Gate
+///   absence at your call site (never construct a condition from
+///   fields you did not measure) and surface "unknown" to your user
+///   yourself; see the 0.2.9 safety notice in the CHANGELOG. The
+///   0.3.x line fixes this in the type system.
+/// - **This is a provenance selector, NOT an alert-cadence gate.** It
+///   chooses WHICH announcement text is true for the path the
+///   classification took; it says nothing about WHEN or HOW OFTEN to
+///   alert. In particular, in the no-precipitation (−3, 0] °C band the
+///   dew-point window holds on essentially every valid-humidity
+///   reading (the dew point cannot exceed a sub-zero ambient), so
+///   announcing every non-`null` return verbatim would alarm
+///   continuously through ordinary cold mornings — cry-wolf that
+///   trains the driver to ignore the one warning that matters. Alert
+///   frequency, deduplication, and escalation policy belong to the
+///   consumer.
+RoadSurfaceAnnouncement? announcementFor(WeatherCondition condition) {
+  final state = RoadSurfaceState.fromCondition(condition);
+  // The state check is logically implied by the predicate (the tested
+  // alignment guarantee: window true ⇒ blackIce) — kept as a belt so
+  // this function can never swap a non-black-ice surface's
+  // announcement even if a future decision-tree edit breaks alignment.
+  if (state == RoadSurfaceState.blackIce &&
+      RoadSurfaceState.isInvisibleIceWindow(condition)) {
+    return invisibleBlackIceAnnouncement;
+  }
+  return state.announcement;
+}
 
 /// Announcement lookup for [RoadSurfaceState].
 extension RoadSurfaceStateAnnouncement on RoadSurfaceState {

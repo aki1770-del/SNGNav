@@ -3,6 +3,23 @@ import 'package:japanese_snow_vocabulary/japanese_snow_vocabulary.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 import 'package:test/test.dart';
 
+WeatherCondition _condition({
+  PrecipitationType precipType = PrecipitationType.none,
+  PrecipitationIntensity intensity = PrecipitationIntensity.none,
+  double temperatureCelsius = 5.0,
+  bool iceRisk = false,
+  double? humidityRH,
+}) => WeatherCondition(
+  precipType: precipType,
+  intensity: intensity,
+  temperatureCelsius: temperatureCelsius,
+  visibilityMeters: 10000,
+  windSpeedKmh: 0,
+  iceRisk: iceRisk,
+  humidityRH: humidityRH,
+  timestamp: DateTime.utc(2026, 1, 15, 6, 30),
+);
+
 void main() {
   group('RoadSurfaceState.announcement', () {
     test('dry has nothing to announce', () {
@@ -121,6 +138,144 @@ void main() {
       final surface = RoadSurfaceState.fromCondition(condition);
       expect(surface, RoadSurfaceState.blackIce);
       expect(surface.announcement!.termJa, 'ブラックアイスバーン');
+    });
+  });
+
+  group('announcementFor', () {
+    test(
+        'THE FIX — the invisible morning yields the invisible-ice variant, '
+        'where the two-step chain yields the weak one', () {
+      // +2 °C, 70% RH, clear — the bond-#3 founding scenario.
+      final condition = _condition(temperatureCelsius: 2.0, humidityRH: 70);
+
+      // The provenance-losing chain this function replaces: the general
+      // variant — no looks-wet clause, no JAF vocabulary entry. This
+      // assertion DOCUMENTS the seam; if it ever fails, the enum has
+      // gained provenance and announcementFor may be simplifiable.
+      final weak =
+          RoadSurfaceState.fromCondition(condition).announcement!;
+      expect(weak.vocabulary, isNull);
+      expect(weak.jaSpokenText, isNot(contains('濡れて見え')));
+
+      // The fix: same condition, one call, the STRONG variant.
+      final a = announcementFor(condition);
+      expect(identical(a, invisibleBlackIceAnnouncement), isTrue);
+      expect(a!.jaSpokenText, contains('濡れて見え'));
+      expect(a.jaSpokenText, contains('おそれ')); // still graded, never flat
+      expect(
+        identical(
+          a.vocabulary,
+          jafAuthoritativeData[JapaneseSnowSurfaceClass.blackIceBahn],
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+        'visible snowfall with the feed ice flag stays on the general '
+        'variant — telling a driver in falling snow the road "looks wet" '
+        'is false', () {
+      final a = announcementFor(_condition(
+        precipType: PrecipitationType.snow,
+        intensity: PrecipitationIntensity.moderate,
+        temperatureCelsius: -1.0,
+        iceRisk: true,
+        humidityRH: 90,
+      ));
+      expect(a, isNotNull);
+      expect(a!.termJa, 'ブラックアイスバーン');
+      expect(a.jaSpokenText, isNot(contains('濡れて見え')));
+      expect(a.vocabulary, isNull);
+    });
+
+    test('freezing rain stays on the general variant (deliberate stance)',
+        () {
+      final a = announcementFor(_condition(
+        precipType: PrecipitationType.rain,
+        intensity: PrecipitationIntensity.moderate,
+        temperatureCelsius: -1.0,
+        humidityRH: 90,
+      ));
+      expect(a, isNotNull);
+      expect(a!.termJa, 'ブラックアイスバーン');
+      expect(a.vocabulary, isNull);
+    });
+
+    test('cold-dry (−5 °C, no precip) stays on the general variant', () {
+      final a = announcementFor(
+        _condition(temperatureCelsius: -5.0, humidityRH: 70),
+      );
+      expect(a, isNotNull);
+      expect(a!.termJa, 'ブラックアイスバーン');
+      expect(a.jaSpokenText, isNot(contains('濡れて見え')));
+      expect(a.vocabulary, isNull);
+    });
+
+    test('non-black-ice classifications pass through unchanged', () {
+      // Dry: nothing to announce.
+      expect(announcementFor(_condition()), isNull);
+      // Wet: the wet announcement, untouched.
+      final wet = announcementFor(_condition(
+        precipType: PrecipitationType.rain,
+        intensity: PrecipitationIntensity.light,
+        temperatureCelsius: 10,
+      ));
+      expect(wet!.jaSpokenText, RoadSurfaceState.wet.announcement!.jaSpokenText);
+    });
+
+    test(
+        'absence never fabricates: above-zero, humidity missing, no precip '
+        '→ dry → null (0.2.x line: gate absence at YOUR call site)', () {
+      expect(
+        announcementFor(_condition(temperatureCelsius: 2.0)),
+        isNull,
+      );
+    });
+
+    test(
+        'UPGRADE-ONLY sweep: announcementFor never weakens the two-step '
+        'chain — it only ever lifts blackIce to the invisible-ice variant',
+        () {
+      final humidities = <double?>[null, 30, 70, 95];
+      for (var temp = -6.0; temp <= 6.0; temp += 1.0) {
+        for (final rh in humidities) {
+          for (final precip in PrecipitationType.values) {
+            for (final flag in [false, true]) {
+              final c = _condition(
+                precipType: precip,
+                intensity: precip == PrecipitationType.none
+                    ? PrecipitationIntensity.none
+                    : PrecipitationIntensity.moderate,
+                temperatureCelsius: temp,
+                humidityRH: rh,
+                iceRisk: flag,
+              );
+              final chained =
+                  RoadSurfaceState.fromCondition(c).announcement;
+              final direct = announcementFor(c);
+              if (identical(direct, invisibleBlackIceAnnouncement)) {
+                // The only divergence allowed: the general blackIce
+                // announcement upgraded to the invisible-ice variant.
+                expect(
+                  RoadSurfaceState.fromCondition(c),
+                  RoadSurfaceState.blackIce,
+                  reason: 'upgrade fired on a non-blackIce state at '
+                      '$temp °C / RH $rh / $precip / iceRisk $flag',
+                );
+              } else {
+                expect(
+                  identical(direct, chained) ||
+                      direct?.jaSpokenText == chained?.jaSpokenText,
+                  isTrue,
+                  reason: 'announcementFor diverged from the chain at '
+                      '$temp °C / RH $rh / $precip / iceRisk $flag '
+                      'without upgrading',
+                );
+              }
+            }
+          }
+        }
+      }
     });
   });
 }

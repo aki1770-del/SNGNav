@@ -535,4 +535,233 @@ void main() {
       expect(filter.add(2), 2);
     });
   });
+
+  group('RoadSurfaceState.isInvisibleIceWindow', () {
+    test('fires on the invisible morning (+2 °C, 70% RH, no precip)', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 2.0, humidityRH: 70),
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+        'measured-window independence: the iceRisk flag does not change '
+        'the predicate', () {
+      // The window describes the MEASURED condition; fromCondition
+      // short-circuits on the flag, but nothing is falling and the road
+      // still looks merely wet — the invisible-morning fact holds.
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 2.0, humidityRH: 70, iceRisk: true),
+        ),
+        isTrue,
+      );
+      // And the flag alone, outside the window, does NOT fabricate it.
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 5.0, humidityRH: 70, iceRisk: true),
+        ),
+        isFalse,
+      );
+    });
+
+    test('abstains when humidity is absent — absence is never the window',
+        () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 2.0),
+        ),
+        isFalse,
+      );
+    });
+
+    test('abstains on non-finite humidity or temperature', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 2.0, humidityRH: double.nan),
+        ),
+        isFalse,
+      );
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: double.nan, humidityRH: 70),
+        ),
+        isFalse,
+      );
+    });
+
+    test('false above the calibration ambient ceiling of +3 °C '
+        '(+3.5 °C abstains)', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 3.5, humidityRH: 70),
+        ),
+        isFalse,
+      );
+    });
+
+    test('ceiling boundary pair: +3.0 °C (the ceiling, inclusive) fires; '
+        'just above (+3.1 °C) abstains', () {
+      // radiativeFrostAmbientCeilingCelsius is 3.0 in the resolved
+      // calibration (navigation_safety_calibration 0.1.x); the gate is
+      // `ambient > ceiling → false`, so exactly +3.0 is still inside the
+      // window when the dew-point test fires (70% RH at +3 °C → dew point
+      // ≈ −1.9 °C ≤ 0).
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 3.0, humidityRH: 70),
+        ),
+        isTrue,
+      );
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 3.1, humidityRH: 70),
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+        'false on near-saturated above-zero air (+2 °C / 95% RH) — the '
+        'calibration model\'s documented honest scope', () {
+      // Dew point ≈ +1.3 °C > 0: the dew-point-depression model does not
+      // cover saturated freezing fog; the predicate must mirror the
+      // calibration, not widen it.
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: 2.0, humidityRH: 95),
+        ),
+        isFalse,
+      );
+    });
+
+    test('false when precipitation is falling (snow; freezing rain)', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(
+            precipType: PrecipitationType.snow,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: 1.0,
+            humidityRH: 90,
+          ),
+        ),
+        isFalse,
+      );
+      // Freezing rain classifies blackIce but is NOT this window —
+      // precipitation is falling; the consumer wires it deliberately.
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(
+            precipType: PrecipitationType.rain,
+            intensity: PrecipitationIntensity.moderate,
+            temperatureCelsius: -1.0,
+            humidityRH: 90,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('false in the cold-dry regime (−5 °C; boundary −3 °C exactly)', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: -5.0, humidityRH: 70),
+        ),
+        isFalse,
+      );
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: -3.0, humidityRH: 70),
+        ),
+        isFalse,
+      );
+    });
+
+    test('fires just above the cold-dry boundary (−2.9 °C, 70% RH)', () {
+      expect(
+        RoadSurfaceState.isInvisibleIceWindow(
+          _condition(temperatureCelsius: -2.9, humidityRH: 70),
+        ),
+        isTrue,
+      );
+    });
+
+    test(
+        'ALIGNMENT GUARANTEE: window true ⇒ fromCondition classifies '
+        'blackIce — the anti-drift bond, swept', () {
+      // The exported predicate exists so call sites stop re-implementing
+      // the gate; the property that makes that safe is that the predicate
+      // never claims the window on a condition the classifier would not
+      // call blackIce. Sweep the input space and assert the implication.
+      final humidities = <double?>[null, 5, 30, 50, 70, 90, 100];
+      var windowCount = 0;
+      for (var temp = -6.0; temp <= 6.0; temp += 0.5) {
+        for (final rh in humidities) {
+          for (final precip in PrecipitationType.values) {
+            for (final flag in [false, true]) {
+              final c = _condition(
+                precipType: precip,
+                intensity: precip == PrecipitationType.none
+                    ? PrecipitationIntensity.none
+                    : PrecipitationIntensity.moderate,
+                temperatureCelsius: temp,
+                humidityRH: rh,
+                iceRisk: flag,
+              );
+              if (RoadSurfaceState.isInvisibleIceWindow(c)) {
+                windowCount++;
+                expect(
+                  RoadSurfaceState.fromCondition(c),
+                  RoadSurfaceState.blackIce,
+                  reason: 'window fired at $temp °C / RH $rh / $precip / '
+                      'iceRisk $flag but the classifier disagrees — '
+                      'the predicate has drifted from the decision tree',
+                );
+              }
+            }
+          }
+        }
+      }
+      // The sweep must actually have exercised the window.
+      expect(windowCount, greaterThan(0));
+    });
+
+    test(
+        'REVERSE ALIGNMENT: a radiative-branch blackIce classification ⇒ '
+        'window true — the under-warning direction, swept', () {
+      // The forward sweep proves the predicate never over-claims. This
+      // direction proves it never UNDER-claims: if the classifier reaches
+      // blackIce via the radiative branch (no iceRisk flag, no
+      // precipitation, above the cold-dry regime) while the predicate says
+      // false, announcementFor would deliver the weak general announcement
+      // on the invisible morning — the exact under-warning this package
+      // exists to prevent. Structurally guaranteed today (the branch CALLS
+      // the predicate); this sweep catches any future decoupling.
+      final humidities = <double?>[null, 5, 30, 50, 70, 90, 100];
+      var branchCount = 0;
+      for (var temp = -2.9; temp <= 6.0; temp += 0.1) {
+        for (final rh in humidities) {
+          final c = _condition(
+            temperatureCelsius: temp,
+            humidityRH: rh,
+          );
+          if (RoadSurfaceState.fromCondition(c) ==
+              RoadSurfaceState.blackIce) {
+            branchCount++;
+            expect(
+              RoadSurfaceState.isInvisibleIceWindow(c),
+              isTrue,
+              reason: 'radiative branch classified blackIce at $temp °C / '
+                  'RH $rh but the predicate denies the window — '
+                  'announcementFor would under-warn on the invisible morning',
+            );
+          }
+        }
+      }
+      // The sweep must actually have exercised the radiative branch.
+      expect(branchCount, greaterThan(0));
+    });
+  });
 }

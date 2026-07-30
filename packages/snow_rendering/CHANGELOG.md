@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.2.10
+
+Additive only — two new public members (`RoadSurfaceState.isInvisibleIceWindow`
+and `announcementFor`); no changes to any EXISTING member's API or behavior.
+Consumers on `^0.2.x` receive this in range.
+
+### The invisible-window predicate is now public: `RoadSurfaceState.isInvisibleIceWindow(condition)`
+
+To decide between the general black-ice announcement and the invisible-ice
+variant (`invisibleBlackIceAnnouncement` — the looks-wet surprise clause plus
+the verbatim JAF vocabulary entry), a consumer previously had to re-implement
+the radiative-frost gate around `fromCondition()`: pre-check temperature and
+precipitation itself, then infer the classification path from the `blackIce`
+result. Two independently maintained copies of that window logic are a drift
+seam — if the decision tree gains a path or moves a threshold, every call-site
+copy silently disagrees with the classifier. The predicate is now exported AND
+`fromCondition()`'s radiative branch calls it — one copy of the window logic,
+so consumer and classifier cannot drift; the alignment sweeps test-catch any
+future decoupling in both directions.
+
+Semantics, stated honestly: it describes the MEASURED radiative-frost window
+(no precipitation falling, ambient in (−3, +3] °C — +3 °C is the calibration
+ambient ceiling, inclusive — and the calibration dew-point test fires),
+independent of the feed's `iceRisk` flag; cold-dry (≤ −3 °C) and freezing rain
+return `false` (expected-frozen regime / precipitation falling); absent or
+non-finite inputs abstain (`false`) — the window is never fabricated from
+unmeasured fields. Tested alignment guarantee, both directions: predicate
+`true` ⇒ `fromCondition()` classifies `blackIce` for the same condition, and a
+radiative-branch `blackIce` classification (no `iceRisk` flag, no
+precipitation, ambient > −3 °C) ⇒ predicate `true`.
+
+### New `announcementFor(condition)` — announcement selection with provenance
+
+**Why (the safety reason this release exists):** the two-step chain
+`fromCondition(condition).announcement` loses provenance — an enum value
+cannot carry HOW it was reached — so on the invisible radiative-frost morning
+it yields the general (weaker) black-ice announcement: no
+「路面は濡れて見えても」 looks-wet clause, no JAF vocabulary entry.
+Under-warning on the invisible morning is the exact failure class this
+package exists to prevent. `announcementFor(condition)` classifies and
+selects in one step: when the invisible window holds it returns
+`invisibleBlackIceAnnouncement`; every other classification returns that
+state's general announcement (`null` for `dry`). The feed ice flag during
+visible precipitation stays on the general variant — the looks-wet claim is
+not established when snow is falling on the road. Freezing rain also stays
+general, for a different, deliberate reason: freezing rain IS invisible-ice
+phenomenology (glare ice looks merely wet), but the classifier's rain-at-≤0 °C
+branch cannot distinguish a true freezing-rain event from a marginal or
+erroneous temperature reading during cold rain, so the strong looks-wet claim
+is withheld on that path.
+
+Relative to the two-step chain this only ever UPGRADES a black-ice
+announcement to the invisible-ice variant; it never changes which surface is
+classified and never weakens any announcement.
+
+Existing code keeps compiling and behaving identically; adopting the new
+function (or the predicate) is opt-in.
+
 ## 0.2.9
 
 ### Safety notice for every 0.2.x consumer — please read
