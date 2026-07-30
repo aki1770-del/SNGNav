@@ -74,23 +74,33 @@
 #   ./scripts/package_update_gate.sh --g7 <pkg> [<pkg>...]  # ONLY the G7 hosted-resolve gate
 #   ./scripts/package_update_gate.sh --hosted-resolve-sweep # G7 across all override-bearing pkgs
 #   ./scripts/package_update_gate.sh --g11 <pkg> [<pkg>...] # ONLY the G11 snippet-oracle gate
+#   ./scripts/package_update_gate.sh --self-test            # guard the gate's own wiring
 #   PKG_ROOT=/path ./scripts/package_update_gate.sh <pkg>
 #   G6_COMPARE_VERSION=0.2.3 ./scripts/package_update_gate.sh <pkg>   # pin G6's compare version
 #
 # Exit 0 only if every gate passed for every named package (and coherence is clean).
 
 set -u
-PKG_ROOT="${PKG_ROOT:-/home/komada/SNGNav/packages}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# PKG_ROOT defaults to THIS checkout's own packages/ tree — the same substrate G11's
+# snippet_oracle_gate already resolves via BASH_SOURCE — never a hardcoded other
+# checkout (round-5 MUST: one invocation, two genbas; after merge the skew flips
+# fail-OPEN — a PASS vouched from an unread tree). Env override retained. Exported so
+# G5's catalog_census.sh child (which carries its own hardcoded default at its :25)
+# reads the SAME genba as this invocation.
+PKG_ROOT="${PKG_ROOT:-$(dirname "$HERE")/packages}"
+export PKG_ROOT
+# Every future PASS/FAIL names its substrate: the banner prints the RESOLVED root.
+echo ":: package_update_gate — PKG_ROOT=$PKG_ROOT"
 
 fail=0
 gate() { # gate <label> <cmd...> ; prints PASS/FAIL, sets fail on error
   local label="$1"; shift
-  if "$@" >/tmp/_pkg_gate_out 2>&1; then
+  if "$@" >"$RUN_TMP/pkg_gate_out" 2>&1; then
     printf '    %-14s PASS\n' "$label"
   else
     printf '    %-14s FAIL\n' "$label"; fail=1
-    sed 's/^/        /' /tmp/_pkg_gate_out | tail -6
+    sed 's/^/        /' "$RUN_TMP/pkg_gate_out" | tail -6
   fi
 }
 
@@ -98,17 +108,20 @@ gate() { # gate <label> <cmd...> ; prints PASS/FAIL, sets fail on error
 # so pub's "N checked-in files are modified in git" warning is EXPECTED (not a defect).
 # PASS = 0 warnings; STAGED = the only warning is the git-modified one; FAIL = any real
 # content warning (missing example, bad pubspec, oversized, etc.).
+# files?/(is|are): pub says "1 checked-in file is modified" for a single staged file —
+# the plural-only grep mislabeled that STAGED state FAIL (measured 2026-07-31,
+# condition_aggregator round-4 re-gate, one staged dartdoc edit). Held as variables so
+# --self-test exercises the WIRED regex, never a drifting copy.
+G4_GITMOD_RE="checked-in files? (is|are) modified in git"
+G4_COUNT_RE="[0-9]+ checked-in files? (is|are) modified"
 dryrun_gate() { # dryrun_gate <pkgdir>
   local out; out="$(cd "$1" && dart pub publish --dry-run 2>&1)"
   if echo "$out" | grep -qiE "Package has 0 warnings"; then
     printf '    %-14s PASS\n' "G4 dry-run"
-  elif echo "$out" | grep -qiE "checked-in files? (is|are) modified in git"; then
-    # files?/(is|are): pub says "1 checked-in file is modified" for a single staged
-    # file — the plural-only grep mislabeled that STAGED state FAIL (measured
-    # 2026-07-31, condition_aggregator round-4 re-gate, one staged dartdoc edit).
+  elif echo "$out" | grep -qiE "$G4_GITMOD_RE"; then
     local nw; nw="$(echo "$out" | grep -oiE "Package has [0-9]+ warning" | grep -oE '[0-9]+')"
     if [[ "${nw:-1}" -le 1 ]]; then
-      local nf; nf="$(echo "$out" | grep -oE "[0-9]+ checked-in files? (is|are) modified" | grep -oE '^[0-9]+')"
+      local nf; nf="$(echo "$out" | grep -oE "$G4_COUNT_RE" | grep -oE '^[0-9]+')"
       printf '    %-14s STAGED (%s files modified; publish-ready once committed)\n' "G4 dry-run" "${nf:-?}"
     else
       printf '    %-14s FAIL (real warning beyond git-modified)\n' "G4 dry-run"; echo "$out" | grep -iE "warning|missing|error" | sed 's/^/        /' | head -5; fail=1
@@ -123,7 +136,7 @@ dryrun_gate() { # dryrun_gate <pkgdir>
 # test, is a real FAIL. Pass the tested package names as args; none = strict mode.
 coherence() {
   echo ">> G5 coherence (live == committed == local; staged updates expected-ahead)"
-  bash "$HERE/catalog_census.sh" coherence >/tmp/_coh 2>&1
+  bash "$HERE/catalog_census.sh" coherence >"$RUN_TMP/coh" 2>&1
   local bad=0 staged=0
   while IFS= read -r line; do
     local pname; pname="$(echo "$line" | awk '{print $1}')"
@@ -132,7 +145,7 @@ coherence() {
     else
       echo "    $pname  FAIL"; bad=1
     fi
-  done < <(grep -E "DRIFT|LOCAL-AHEAD" /tmp/_coh)
+  done < <(grep -E "DRIFT|LOCAL-AHEAD" "$RUN_TMP/coh")
   if [[ "$bad" -eq 1 ]]; then fail=1
   elif [[ "$staged" -eq 1 ]]; then echo "    coherence     STAGED — only expected-ahead drift on packages under test"
   else echo "    coherence     PASS — every publishable package coherent"; fi
@@ -154,7 +167,8 @@ coherence() {
 # ---------------------------------------------------------------------------
 G6_TMP="$(mktemp -d "${TMPDIR:-/tmp}/g6.XXXXXX")"
 G7_TMP="$(mktemp -d "${TMPDIR:-/tmp}/g7.XXXXXX")"   # G7 working area; cleaned by the same EXIT trap
-trap 'rm -rf "$G6_TMP" "$G7_TMP"' EXIT
+RUN_TMP="$(mktemp -d "${TMPDIR:-/tmp}/pkg_gate.XXXXXX")" # gate()/coherence()/G11 output (was fixed /tmp/_* paths — collision-unsafe)
+trap 'rm -rf "$G6_TMP" "$G7_TMP" "$RUN_TMP"' EXIT
 G6_VERPARSE="$G6_TMP/verparse.py"
 G6_CLASSIFY="$G6_TMP/classify.py"
 G7_STRIP="$G7_TMP/strip_overrides.py"       # removes ONLY the top-level dependency_overrides block
@@ -698,7 +712,7 @@ hosted_resolve_sweep() {
     [[ -f "$pkg/pubspec.yaml" ]] || continue
     grep -qE '^dependency_overrides:' "$pkg/pubspec.yaml" 2>/dev/null || continue
     any=1
-    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))  @ $pkg"
     hosted_resolve_gate "$pkg" "$name"
   done
   [[ "$any" -eq 1 ]] || echo "   (no override-bearing packages found under $PKG_ROOT)"
@@ -716,8 +730,9 @@ hosted_resolve_sweep() {
 # proven-once-then-deleted is not INSERTED (L34: a guard is not INSERTED until
 # it has been PROVEN to FAIL — and stays able to prove it). This gate makes the
 # oracle run STANDING per package; the tool's own `--self-test` keeps the probe.
-# The condition_aggregator README:167 NWS block (an `oracle:placeholders`
-# declaration carrying a reader-supplied IMPORT URI) is the standing regression
+# The condition_aggregator README NWS block (dart fence :166, its
+# `oracle:placeholders` declaration :167 carrying a reader-supplied IMPORT URI)
+# is the standing regression
 # fixture for that fix: with the fix reverted, extraction yields the
 # apostrophe-mangled symbol "t exist: " which no declaration can match -> HALT.
 #
@@ -737,16 +752,65 @@ snippet_oracle_gate() { # <pkgdir> <name>
     printf '    %-14s UNVERIFIED (snippet oracle / python3 / dart unavailable — a dead verifier is never a clean bill)\n' "$label"
     fail=1; return
   fi
-  if python3 "$oracle" "$pkg" >/tmp/_g11_out 2>&1; then
+  if python3 "$oracle" "$pkg" >"$RUN_TMP/g11_out" 2>&1; then
     printf '    %-14s PASS\n' "$label"
-    sed 's/^/        /' /tmp/_g11_out | head -3
+    sed 's/^/        /' "$RUN_TMP/g11_out" | head -3
   else
     printf '    %-14s FAIL (a published snippet names symbols the package does not have)\n' "$label"
-    sed 's/^/        /' /tmp/_g11_out | tail -12
+    sed 's/^/        /' "$RUN_TMP/g11_out" | tail -12
     fail=1
   fi
 }
 
+
+# --self-test — guard THIS GATE'S OWN WIRING (repo convention: fabrication_sweep.sh /
+# pds_reach.py --self-test). PROVE THE LOOM: each assertion targets a wiring defect this
+# script has actually shipped — G11 run once by hand instead of standing in the battery
+# (round 4); the plural-only G4 grep mislabeling a 1-file STAGED state FAIL (round 4);
+# PKG_ROOT hardcoded to another checkout while the G11 tool resolved via BASH_SOURCE —
+# one invocation, two genbas (round 5). A gate never shown to FAIL is a green light with
+# no thread behind it.
+if [[ "${1:-}" == "--self-test" ]]; then
+  src="${BASH_SOURCE[0]}"
+  pass=0; total=3
+  echo ">> SELF-TEST: does the gate's own wiring hold?"
+
+  # (i) G11 snippet-oracle is invoked in the per-package BATTERY loop (not only --g11).
+  # The battery loop is the column-0 `for name in "$@"; do` ... column-0 `done` block.
+  battery="$(awk '/^for name in "\$@"; do/{f=1} f{print; if ($0 ~ /^done/) exit}' "$src")"
+  if grep -qF 'snippet_oracle_gate "$pkg" "$name"' <<<"$battery"; then
+    echo "   PASS  (i)   G11 snippet_oracle_gate wired in the battery loop"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (i)   G11 NOT in the battery loop — a standing gate that only runs by hand is not standing"
+  fi
+
+  # (ii) The G4 git-modified regex matches the SINGULAR pub warning form (round-4 defect),
+  # still matches the plural, and the count-extract regex reads the singular count.
+  if echo "1 checked-in file is modified in git." | grep -qiE "$G4_GITMOD_RE" \
+     && echo "3 checked-in files are modified in git." | grep -qiE "$G4_GITMOD_RE" \
+     && [[ "$(echo "1 checked-in file is modified" | grep -oE "$G4_COUNT_RE" | grep -oE '^[0-9]+')" == "1" ]]; then
+    echo "   PASS  (ii)  G4 regex matches singular '1 checked-in file is modified' (and plural)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (ii)  G4 regex misses a checked-in-modified form — a STAGED state would mislabel FAIL"
+  fi
+
+  # (iii) PKG_ROOT default derives from the script's own location — never a hardcoded
+  # absolute (the round-5 MUST: a PASS vouched from an unread tree is fail-OPEN).
+  if grep -qF 'PKG_ROOT="${PKG_ROOT:-$(dirname "$HERE")/packages}"' "$src" \
+     && ! grep -qE '^PKG_ROOT="\$\{PKG_ROOT:-/' "$src"; then
+    echo "   PASS  (iii) PKG_ROOT default derives from the script root (env override retained)"
+    pass=$((pass+1))
+  else
+    echo "   FAIL  (iii) PKG_ROOT default is a hardcoded absolute — one invocation, two genbas"
+  fi
+
+  echo
+  echo ">> SELF-TEST: $pass/$total"
+  [[ "$pass" == "$total" ]] || exit 1
+  exit 0
+fi
 
 if [[ "${1:-}" == "--hosted-resolve-sweep" ]]; then hosted_resolve_sweep; exit $?; fi
 if [[ "${1:-}" == "--g7" ]]; then            # run ONLY the G7 hosted-resolve gate per named package
@@ -755,7 +819,7 @@ if [[ "${1:-}" == "--g7" ]]; then            # run ONLY the G7 hosted-resolve ga
   for name in "$@"; do
     pkg="$PKG_ROOT/$name"
     if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
-    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))  @ $pkg"
     hosted_resolve_gate "$pkg" "$name"
   done
   exit "$fail"
@@ -767,7 +831,7 @@ if [[ "${1:-}" == "--g11" ]]; then           # run ONLY the G11 snippet-oracle g
   for name in "$@"; do
     pkg="$PKG_ROOT/$name"
     if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
-    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))  @ $pkg"
     snippet_oracle_gate "$pkg" "$name"
   done
   exit "$fail"
@@ -780,13 +844,13 @@ if [[ "${1:-}" == "--g6" ]]; then            # run ONLY the G6 provenance gate p
   for name in "$@"; do
     pkg="$PKG_ROOT/$name"
     if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
-    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))  @ $pkg"
     provenance_gate "$pkg" "$name"
   done
   exit "$fail"
 fi
 if [[ "${1:-}" == "--coherence-only" ]]; then coherence; exit "$fail"; fi
-if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  |  --provenance-sweep  |  --g6 <pkg>  |  --g11 <pkg>" >&2; exit 2; fi
+if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  |  --provenance-sweep  |  --g6 <pkg>  |  --g11 <pkg>  |  --self-test" >&2; exit 2; fi
 
 # ---------------------------------------------------------------------------
 # G8 reachability — which KNOWN consumers actually receive this release?
@@ -966,7 +1030,7 @@ for name in "$@"; do
   pkg="$PKG_ROOT/$name"
   if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE ($pkg/pubspec.yaml missing)"; fail=1; continue; fi
   ver="$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}')"
-  echo ">> $name  (v$ver)"
+  echo ">> $name  (v$ver)  @ $pkg"
   # gates run in the PARENT shell (cd is inside the command) so fail propagates.
   gate "G1 pub-get"   bash -c "cd '$pkg' && dart pub get"
   gate "G2 analyze"   bash -c "cd '$pkg' && dart analyze"
