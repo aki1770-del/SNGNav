@@ -1,4 +1,11 @@
+import 'dart:async' show TimeoutException;
+
 import 'package:condition_aggregator/condition_aggregator.dart';
+// Not on the barrel: the classifier is package-internal surface; the ordering
+// pin below reaches it directly so a regression cannot hide behind the
+// aggregator.
+import 'package:condition_aggregator/src/advisory_aggregator.dart'
+    show classifyAdvisoryFailure;
 import 'package:test/test.dart';
 
 /// The defect this file exists to keep dead.
@@ -25,6 +32,26 @@ class _DeadProvider implements AdvisoryProvider {
     required double latitude,
     required double longitude,
   }) async => throw Exception('Incomplete border read for prefectures [05]');
+}
+
+/// A provider whose FETCH throws the typed init exception. Classification of
+/// this failure must come from the TYPE — never guessed from message text.
+class _InitExceptionOnFetchProvider implements AdvisoryProvider {
+  @override
+  final AdvisorySource source;
+  _InitExceptionOnFetchProvider(this.source);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<Advisory>> fetchActiveAdvisoriesAtPoint({
+    required double latitude,
+    required double longitude,
+  }) async => throw AdvisoryProviderInitException(
+    source: source,
+    message: 'adapter was never brought into service',
+  );
 }
 
 /// A source that answers — with nothing in force. The one shape in which an
@@ -112,6 +139,39 @@ void main() {
         reason:
             'nothing was asked, so nothing individually failed — the '
             'absence is the lookup itself',
+      );
+    });
+  });
+
+  group('failure classification is typed-first (the documented contract)', () {
+    test('a TimeoutException whose message says "incomplete" is timedOut — '
+        'a type is a contract, a message is prose', () {
+      // Pins the classifier ordering: if the incomplete/coverage TEXT check
+      // ever moves back above the typed checks, this fails.
+      expect(
+        classifyAdvisoryFailure(TimeoutException('incomplete tile read')),
+        AdvisoryUnavailableReason.timedOut,
+      );
+    });
+
+    test('AdvisoryProviderInitException thrown from fetch => notInitialised, '
+        'from the TYPE — deleting the typed arm cannot stay green', () async {
+      final agg = AdvisoryAggregator(
+        providers: [_InitExceptionOnFetchProvider(AdvisorySource.jmaJapan)],
+      );
+      await agg.init();
+      final r = await agg.fetchActiveAdvisoriesAtPoint(
+        latitude: 39.72,
+        longitude: 140.10,
+      );
+
+      expect(r, isA<AdvisoryLookupUnavailable>());
+      expect(r.canAssertNoAdvisory, isFalse);
+      // The message ('adapter was never brought into service') matches no
+      // text heuristic, so only the typed arm can produce this reason.
+      expect(
+        r.failures.single.reason,
+        AdvisoryUnavailableReason.notInitialised,
       );
     });
   });

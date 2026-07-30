@@ -311,13 +311,6 @@ class AdvisoryAggregator {
 /// Adapters SHOULD throw a typed exception carrying their own reason; this
 /// exists so that an adapter which does not is still not silently swallowed.
 AdvisoryUnavailableReason classifyAdvisoryFailure(Object error) {
-  final text = error.toString().toLowerCase();
-  // Most specific first: a source that answered for part of the area. The
-  // founding case ("Incomplete border read for prefectures …") arrives as an
-  // untyped exception, so this is a text check and it precedes the typed ones.
-  if (text.contains('incomplete') || text.contains('coverage')) {
-    return AdvisoryUnavailableReason.incompleteAreaCoverage;
-  }
   // Typed contracts beat prose.
   if (error is TimeoutException) return AdvisoryUnavailableReason.timedOut;
   if (error is FormatException) return AdvisoryUnavailableReason.unparseable;
@@ -333,7 +326,14 @@ AdvisoryUnavailableReason classifyAdvisoryFailure(Object error) {
       typeName.contains('HttpException')) {
     return AdvisoryUnavailableReason.networkUnreachable;
   }
-  // Message-text heuristics for untyped throws.
+  // Message-text heuristics for untyped throws — most specific first: a source
+  // that answered for part of the area. The founding case ("Incomplete border
+  // read for prefectures …") arrives as an untyped Exception, falls through
+  // every typed check above, and is classified here.
+  final text = error.toString().toLowerCase();
+  if (text.contains('incomplete') || text.contains('coverage')) {
+    return AdvisoryUnavailableReason.incompleteAreaCoverage;
+  }
   if (text.contains('timeout') || text.contains('timed out')) {
     return AdvisoryUnavailableReason.timedOut;
   }

@@ -1,6 +1,7 @@
 // A feed outage is not a clear sky.
 //
-// These tests shipped with 0.0.8 and pin the surface it published: the getters,
+// These tests shipped with 0.0.8 — plus two added containment proofs — and
+// pin the surface it published: the getters,
 // `fold`, `requireCompleteLookup`, the typed failure reason, and the
 // hand-built-result compatibility. They run here, in the 0.1.0 tree, as the
 // proof that 0.1.0 CONTAINS what 0.0.8 shipped.

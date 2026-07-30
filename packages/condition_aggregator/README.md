@@ -1,8 +1,9 @@
 # condition_aggregator
 
 A pure-Dart primitive that fans one lat/lon query out across N weather-advisory
-sources and returns a typed, normalized `Advisory` list (warn-and-continue: one
-source failing never drops the others).
+sources and returns the sealed `AdvisoryLookup` — typed, normalized advisories
+plus every source that could not be read (warn-and-continue: one source failing
+never drops the others).
 
 ```
 dart pub add condition_aggregator
@@ -82,9 +83,12 @@ Running the bundled example (`dart run example/quickstart.dart`) prints:
 They render as the same empty list. During a feed outage in a blizzard, reading
 case 2 as case 1 tells a driver the road is clear when you never looked.
 
-Since 0.1.0 the return type is sealed, so the compiler makes you say what you
-will do about case 2 — an exhaustive `switch` will not compile without the
-`Unavailable` branch:
+Since 0.1.0 the return type is sealed: an exhaustive `switch` (or `fold`,
+below) will not compile without the `Unavailable` branch — on that path the
+compiler makes you say what you will do about case 2. The 0.0.8-named getters
+(`r.seen` and friends) remain as a migration path the compiler does **not**
+enforce: `r.seen` is an empty list when we could not look, so on the getter
+path keep gating any all-clear on `r.canAssertNoAdvisory`.
 
 ```dart
 // oracle:placeholders r, show, showNoAdvisory, showFeedDown
@@ -167,6 +171,10 @@ final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[
   // additional adapters added here as further sources graduate
 ]);
 ```
+
+> **Note**: the adapter versions on pub.dev today pin `condition_aggregator`
+> `^0.0.5`; adapter releases supporting 0.1.0 follow this release, and the
+> composition above resolves once they land.
 
 ## Dependency posture
 

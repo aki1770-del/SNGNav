@@ -1,10 +1,13 @@
 # condition_aggregator — Safety-Class Boundary Record
 
 **Package**: `condition_aggregator`
-**Version**: 0.0.5 (published; early and evolving)
-**Boundary record version**: 1.0
+**Version**: 0.1.0 (early and evolving)
+**Boundary record version**: 1.1
 **Boundary record template**: shared across the sibling adapter packages
 **Date**: 2026-05-03
+**Revised**: 2026-07-30 — wire description updated to the sealed
+`AdvisoryLookup` return introduced in 0.1.0. Safety posture (L0/L1
+advisory, QM, no control authority) unchanged.
 
 ---
 
@@ -13,9 +16,10 @@
 **Level**: L0 / L1 supportive use only.
 **Driver-task assignment**: the driver performs the dynamic driving task
 at all times. `AdvisoryAggregator.fetchActiveAdvisoriesAtPoint(lat, lon)`
-returns a typed `AdvisoryAggregateResult` whose `advisories` list is
-consumed by the integrator's HMI; the integrator surfaces relevant
-advisories to the driver; the driver decides response.
+returns the sealed `AdvisoryLookup` (`Complete` / `Partial` /
+`Unavailable`); the integrator's HMI switches on it (or uses `fold` /
+`canAssertNoAdvisory`) and surfaces the relevant advisories — and any
+could-not-look state — to the driver; the driver decides response.
 **No L2+ claim.** The package is a stateless interface + fan-out
 primitive; no automation, no handover, no control authority anywhere
 in the dependency chain ending at this package.
@@ -52,9 +56,10 @@ discipline):
   is the canonical surface for surfacing publisher schema-drift /
   configuration errors before any caller depends on a broken provider.
   Per-provider fetch failures (transport timeout, transient parse
-  error) are captured into `result.providerErrors` so the integrator
-  can render staleness honestly without losing surviving providers'
-  data.
+  error) are carried as typed failures in the returned sealed
+  `AdvisoryLookup` (`unreachable`, each with a typed
+  `AdvisoryUnavailableReason`) so the integrator can render staleness
+  honestly without losing surviving providers' data.
 - **No retry inside the aggregator.** Each adapter declares its own
   retry posture; the aggregator does not double-retry. Caller decides
   backoff cadence.
@@ -154,9 +159,11 @@ XML"; she sees the alert as her decision substrate. When two
 publishers' coverage overlaps her point and both have active alerts,
 she sees both — not a silent-coalesce that hides one source. When one
 publisher is transiently unavailable, she sees the other's advisories
-plus a staleness indicator the integrator chose to render from
-`result.providerErrors` — not a blank screen that hides the partial
-outage.
+plus a staleness indicator the integrator renders from the sealed
+lookup's typed `unreachable` failures — not a blank screen that hides
+the partial outage. When every publisher is unreachable, the sealed
+type refuses to present the outage as a clear sky: the integrator must
+handle `AdvisoryLookupUnavailable` to compile.
 
 **Sakichi reading**: the loom is *a multi-postman who carries each
 publisher's letter to the driver without rewriting it.* The loom
@@ -170,13 +177,14 @@ for and the publishers did not author.
 **Audible-to-edge-developer**: integrators reading the package API
 today see explicit `init()` lifecycle + explicit `StateError` on
 fetch-before-init + explicit `AdvisoryProviderInitException` for
-init-failure surfacing + explicit `AdvisoryProviderError` capture for
-fetch-failure surfacing + explicit `Equatable` value semantics. The
+init-failure surfacing + explicit typed fetch-failure capture
+(`AdvisorySourceFailure` entries inside the sealed `AdvisoryLookup`) +
+explicit `Equatable` value semantics. The
 README's "Behaviours worth knowing" section enumerates the
 disciplines so the integrator knows what the aggregator does AND what
 it deliberately does not do. Nothing patronizes the developer.
 
 **Driver-facing declaration**: this section is the canonical
-driver-experience declaration for `condition_aggregator` (v0.0.5). It
+driver-experience declaration for `condition_aggregator` (v0.1.0). It
 is re-audited on material changes to the driver-experience surface in
 subsequent versions.

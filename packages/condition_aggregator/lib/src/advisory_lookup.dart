@@ -26,17 +26,23 @@ import 'advisory_absence.dart';
 /// > exactly how that defect shipped. A sealed class cannot be ignored: Dart's
 /// > exhaustive `switch` refuses a consumer who has not written the branches."*
 ///
-/// So this is sealed. You cannot reach the advisories without first saying what
-/// you will do when we could not look. The compiler stops you, at your desk,
-/// before your users are on the road.
+/// So this is sealed. Switch on it — or use [fold] — and the compiler refuses
+/// a caller who has not written the "could not look" branches: it stops you,
+/// at your desk, before your users are on the road. That guarantee belongs to
+/// the switch/fold path. The 0.0.8-named getters ([seen], [unreachable],
+/// [isUnavailable]) are the compiler-UN-enforced migration path — [seen]
+/// answers `const []` on [AdvisoryLookupUnavailable], the founding silence
+/// shape, without making you say anything — so a getter-path caller must keep
+/// gating any all-clear on [canAssertNoAdvisory].
 ///
 /// ## Coming from 0.0.8?
 ///
 /// Everything 0.0.8 gave you keeps its name here: [canAssertNoAdvisory],
 /// [seen], [unreachable], [isUnavailable], [fold], and [requireCompleteLookup]
 /// all exist on this type with the same semantics. What changed is the
-/// guarantee: 0.0.8 let you ask the question; the sealed type will not let you
-/// skip it.
+/// guarantee: 0.0.8 let you ask the question; an exhaustive `switch` or [fold]
+/// over the sealed type cannot skip it. On the carried getter names the
+/// question stays yours to ask — keep the [canAssertNoAdvisory] gate.
 ///
 /// ## The asymmetry (caution-add-only)
 ///

@@ -47,7 +47,10 @@ Also in this release:
 * `AdvisoryUnavailableReason` gains two values: `refused` (auth / rate limit /
   bad request) and `incompleteAreaCoverage` (the source answered for part of
   the area — a warning may exist in the part we could not read). **Breaking for
-  exhaustive `switch`es** over the enum: add the two branches.
+  exhaustive `switch`es** over the enum: add the two branches. The union with
+  0.0.8 is name-level only: both values are inserted mid-enum, so the `.index`
+  of `unparseable` / `notInitialised` / `unclassified` shifts — do not persist
+  or compare this enum by `.index`.
 * `AdvisoryAggregateResult` and `AdvisoryProviderError` are retained with their
   full 0.0.8 surface (getters, `fold`, `requireCompleteLookup`) for hand-built
   results — test fakes and fixtures written against 0.0.8 keep compiling. The
