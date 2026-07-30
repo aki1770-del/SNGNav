@@ -83,6 +83,31 @@ partial data — act on `seen` always. But "nothing is in force" is a claim abou
 completeness, and you may only make it when the lookup was complete. That is
 what lets a system be honest without crying wolf.
 
+### Who receives this release
+
+reach-disposition(sngnav-app): **not migrating to 0.1.0 in this release — and
+not left behind by it either.** The app pins `condition_aggregator:
+'>=0.0.3 <0.1.0'` (measured 2026-07-31 at `aki1770-del/sngnav-app` HEAD); that
+range's own upper bound excludes 0.1.0, so what it can receive is what **0.0.8**
+put in its hands — and on 2026-07-31 it took it. Commit `5afc1b5` gates every
+positive all-clear on `AdvisoryAggregateResult.canAssertNoAdvisory` and adds a
+fourth *advisory-lookup-incomplete* branch, so an outage can no longer render as
+a clear sky; commit `b664557` welds the completeness state to the advisory level
+at the only accessor that yields it, so no caller can obtain the level while
+skipping the question. Both are on `origin/main`, against a resolved
+condition_aggregator **0.0.8**, inside the unchanged pin — no pin lift, no
+republish. The **substance** of the 0.0.7 safety defect fix therefore reaches
+this consumer in range, today.
+
+What it does **not** receive is 0.1.0's sealed `AdvisoryLookup`. On the 0.0.8
+getter path the gate is correct but *voluntary*: it holds because a human wrote
+it and tests guard it, not because the compiler refuses the alternative. Earning
+the compile-time guarantee is a **later, deliberate migration** — lift the pin to
+`^0.1.0` and write the exhaustive `switch` branches — named here rather than
+deferred in silence. Until it lands, this consumer's all-clear rests on a gate
+that could be deleted without a build error, which is precisely the asymmetry
+0.1.0 exists to end.
+
 ## 0.0.8
 
 ### Safety defect in 0.0.7 and earlier — please read
