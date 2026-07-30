@@ -3,11 +3,14 @@ import 'package:condition_aggregator_nws/condition_aggregator_nws.dart';
 
 Future<void> main() async {
   // NWS requires a User-Agent identifying your app + a contact.
-  final nws = NwsAdvisoryProvider(userAgent: '(myapp.example, you@example.com)');
+  final nws = NwsAdvisoryProvider(
+    userAgent: '(myapp.example, you@example.com)',
+  );
 
   // Grand Forks, ND — swap in any U.S. lat/lon (e.g. the driver's point).
   final advisories = await nws.fetchActiveAdvisoriesAtPoint(
-    latitude: 47.9253, longitude: -97.0329,
+    latitude: 47.9253,
+    longitude: -97.0329,
   );
 
   print('Active winter advisories: ${advisories.length}');

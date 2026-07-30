@@ -788,7 +788,8 @@ void main() {
         expect(
           kJmaWarningCodes[entry.key],
           equals(entry.value),
-          reason: 'snow code ${entry.key} must be in the parse filter '
+          reason:
+              'snow code ${entry.key} must be in the parse filter '
               'with the identical verbatim name',
         );
       }
@@ -1129,9 +1130,9 @@ void main() {
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(
-                _akitaWarningJsonDryOnly,
-                200,
-              ), // no surfaced class (code 21 乾燥注意報; 雷注意報 surfaces from 0.4.0)
+            _akitaWarningJsonDryOnly,
+            200,
+          ), // no surfaced class (code 21 乾燥注意報; 雷注意報 surfaces from 0.4.0)
           '060000': () => http.Response('Service Unavailable', 503), // fails
         }),
       );

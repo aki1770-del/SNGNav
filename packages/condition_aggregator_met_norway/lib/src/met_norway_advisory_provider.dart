@@ -387,8 +387,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
 /// only the BENIGN verdict requires complete data) an unknown must not be
 /// quietly filed as the milder "Subzero forecast".
 const String _freezingPrecipitation = 'Freezing precipitation';
-const String _freezingPrecipUnmeasured =
-    'Freezing, precipitation not measured';
+const String _freezingPrecipUnmeasured = 'Freezing, precipitation not measured';
 const String _heavyPrecipitation = 'Heavy precipitation';
 const String _subzeroForecast = 'Subzero forecast';
 
