@@ -73,6 +73,7 @@
 #   ./scripts/package_update_gate.sh --provenance-sweep    # G6 across the WHOLE catalog
 #   ./scripts/package_update_gate.sh --g7 <pkg> [<pkg>...]  # ONLY the G7 hosted-resolve gate
 #   ./scripts/package_update_gate.sh --hosted-resolve-sweep # G7 across all override-bearing pkgs
+#   ./scripts/package_update_gate.sh --g11 <pkg> [<pkg>...] # ONLY the G11 snippet-oracle gate
 #   PKG_ROOT=/path ./scripts/package_update_gate.sh <pkg>
 #   G6_COMPARE_VERSION=0.2.3 ./scripts/package_update_gate.sh <pkg>   # pin G6's compare version
 #
@@ -101,10 +102,13 @@ dryrun_gate() { # dryrun_gate <pkgdir>
   local out; out="$(cd "$1" && dart pub publish --dry-run 2>&1)"
   if echo "$out" | grep -qiE "Package has 0 warnings"; then
     printf '    %-14s PASS\n' "G4 dry-run"
-  elif echo "$out" | grep -qiE "checked-in files are modified in git"; then
+  elif echo "$out" | grep -qiE "checked-in files? (is|are) modified in git"; then
+    # files?/(is|are): pub says "1 checked-in file is modified" for a single staged
+    # file — the plural-only grep mislabeled that STAGED state FAIL (measured
+    # 2026-07-31, condition_aggregator round-4 re-gate, one staged dartdoc edit).
     local nw; nw="$(echo "$out" | grep -oiE "Package has [0-9]+ warning" | grep -oE '[0-9]+')"
     if [[ "${nw:-1}" -le 1 ]]; then
-      local nf; nf="$(echo "$out" | grep -oE "[0-9]+ checked-in files are modified" | grep -oE '^[0-9]+')"
+      local nf; nf="$(echo "$out" | grep -oE "[0-9]+ checked-in files? (is|are) modified" | grep -oE '^[0-9]+')"
       printf '    %-14s STAGED (%s files modified; publish-ready once committed)\n' "G4 dry-run" "${nf:-?}"
     else
       printf '    %-14s FAIL (real warning beyond git-modified)\n' "G4 dry-run"; echo "$out" | grep -iE "warning|missing|error" | sed 's/^/        /' | head -5; fail=1
@@ -701,6 +705,49 @@ hosted_resolve_sweep() {
   return "$fail"
 }
 
+# ---------------------------------------------------------------------------
+# G11 snippet-oracle — Loom L35 wired as a STANDING gate (re-gate round 4, 2026-07-31).
+#
+# tool/snippet_oracle.py compiles every ```dart block a stranger is invited to
+# copy (README.md + dartdoc) against the package's own real API; a snippet that
+# names a symbol the package does not have HALTs — a lie told to an edge
+# developer. Round 3 (condition_aggregator 0.1.0) proved the oracle's
+# uri_does_not_exist exact-URI fix with a hand probe and then DELETED the probe;
+# proven-once-then-deleted is not INSERTED (L34: a guard is not INSERTED until
+# it has been PROVEN to FAIL — and stays able to prove it). This gate makes the
+# oracle run STANDING per package; the tool's own `--self-test` keeps the probe.
+# The condition_aggregator README:167 NWS block (an `oracle:placeholders`
+# declaration carrying a reader-supplied IMPORT URI) is the standing regression
+# fixture for that fix: with the fix reverted, extraction yields the
+# apostrophe-mangled symbol "t exist: " which no declaration can match -> HALT.
+#
+# Numbering: G8 (reach) + G9 (readme-pin) live in this file; G10 (git-provenance)
+# is taken on keep/patch/publish-provenance-gate + guideline_verified_delivery
+# L63. G11 is the next free number (the round-4 brief said "G8"; measured false).
+#
+# A dead verifier renders UNVERIFIED, never *cleared* (OPS-069(A)): a missing
+# oracle tool / python3 / dart here is a FAIL, not a SKIP — the founding defect
+# of this very gate was the verifier existing only as a deleted one-shot.
+# ---------------------------------------------------------------------------
+snippet_oracle_gate() { # <pkgdir> <name>
+  local pkg="$1" label="G11 snippets"
+  local sdir; sdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local oracle; oracle="$(dirname "$sdir")/tool/snippet_oracle.py"
+  if [[ ! -f "$oracle" ]] || ! command -v python3 >/dev/null 2>&1 || ! command -v dart >/dev/null 2>&1; then
+    printf '    %-14s UNVERIFIED (snippet oracle / python3 / dart unavailable — a dead verifier is never a clean bill)\n' "$label"
+    fail=1; return
+  fi
+  if python3 "$oracle" "$pkg" >/tmp/_g11_out 2>&1; then
+    printf '    %-14s PASS\n' "$label"
+    sed 's/^/        /' /tmp/_g11_out | head -3
+  else
+    printf '    %-14s FAIL (a published snippet names symbols the package does not have)\n' "$label"
+    sed 's/^/        /' /tmp/_g11_out | tail -12
+    fail=1
+  fi
+}
+
+
 if [[ "${1:-}" == "--hosted-resolve-sweep" ]]; then hosted_resolve_sweep; exit $?; fi
 if [[ "${1:-}" == "--g7" ]]; then            # run ONLY the G7 hosted-resolve gate per named package
   shift
@@ -710,6 +757,18 @@ if [[ "${1:-}" == "--g7" ]]; then            # run ONLY the G7 hosted-resolve ga
     if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
     echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
     hosted_resolve_gate "$pkg" "$name"
+  done
+  exit "$fail"
+fi
+
+if [[ "${1:-}" == "--g11" ]]; then           # run ONLY the G11 snippet-oracle gate per named package
+  shift
+  [[ $# -ge 1 ]] || { echo "usage: $0 --g11 <pkg> [<pkg> ...]" >&2; exit 2; }
+  for name in "$@"; do
+    pkg="$PKG_ROOT/$name"
+    if [[ ! -f "$pkg/pubspec.yaml" ]]; then echo ">> $name  — NOT A PACKAGE"; fail=1; continue; fi
+    echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))"
+    snippet_oracle_gate "$pkg" "$name"
   done
   exit "$fail"
 fi
@@ -727,7 +786,7 @@ if [[ "${1:-}" == "--g6" ]]; then            # run ONLY the G6 provenance gate p
   exit "$fail"
 fi
 if [[ "${1:-}" == "--coherence-only" ]]; then coherence; exit "$fail"; fi
-if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  |  --provenance-sweep  |  --g6 <pkg>" >&2; exit 2; fi
+if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  |  --provenance-sweep  |  --g6 <pkg>  |  --g11 <pkg>" >&2; exit 2; fi
 
 # ---------------------------------------------------------------------------
 # G8 reachability — which KNOWN consumers actually receive this release?
@@ -927,6 +986,7 @@ for name in "$@"; do
   hosted_resolve_gate "$pkg" "$name"
   readme_pin_gate "$pkg" "$name" "$ver"
   reach_gate "$pkg" "$name" "$ver"
+  snippet_oracle_gate "$pkg" "$name"
 done
 
 echo

@@ -39,7 +39,17 @@ Declaring a placeholder is cheap and auditable. The point is that you cannot
 existed.
 
 Usage:  python3 tool/snippet_oracle.py <package-dir> [...]
+        python3 tool/snippet_oracle.py --self-test
 Exit 0 = every snippet compiles (or its unknowns are declared). Non-zero = HALT.
+
+--self-test is the PERMANENT restoration of the 2026-07-30 broken-snippet probe
+(it was run once by hand to prove the uri_does_not_exist fix non-weakening, then
+deleted — a guard proven once and deleted is not INSERTED, per L34). It builds a
+throwaway fixture package and asserts (i) HALT on an undeclared bogus import URI
+and an undeclared bogus function, (ii) exact-URI reporting — never the
+apostrophe-mangled "t exist: " the pre-fix extraction produced — and (iii) that
+a twin block DECLARING both symbols is clean, which is only possible when (ii)
+holds, because placeholder matching is exact-string after strip().
 """
 
 import json
@@ -48,6 +58,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ORACLE_DIR = ".oracle_snippets"
 
@@ -248,10 +259,95 @@ def analyze(pkg, blocks):
     return violations, [], skipped
 
 
+def self_test():
+    """Standing self-probe: HALT on broken snippets + exact-URI reporting.
+
+    Fixture is generated in a tempdir and removed afterward — the same
+    scratch-and-clean convention as ORACLE_DIR. It never touches a real package.
+    """
+    d = tempfile.mkdtemp(prefix="oracle_selftest_")
+    try:
+        name = "oracle_selftest_fixture"
+        os.makedirs(os.path.join(d, "lib"))
+        with open(os.path.join(d, "pubspec.yaml"), "w", encoding="utf-8") as f:
+            f.write("name: %s\nenvironment:\n  sdk: ^3.0.0\n" % name)
+        with open(os.path.join(d, "lib", name + ".dart"), "w", encoding="utf-8") as f:
+            f.write("int oracleAnswer() => 42;\n")
+        bogus_uri = "package:oracle_selftest_bogus/oracle_selftest_bogus.dart"
+        bogus_fn = "oracleSelfTestBogusFunction"
+        snippet_body = (
+            "import '%s';\n\nvoid main() {\n  %s();\n}\n" % (bogus_uri, bogus_fn)
+        )
+        with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
+            f.write(
+                "# fixture\n\n"
+                "Undeclared broken block — the oracle MUST halt on both symbols:\n\n"
+                "```dart\n" + snippet_body + "```\n\n"
+                "Declared twin — clean ONLY because URI extraction is exact:\n\n"
+                "```dart\n// oracle:placeholders %s, %s\n%s```\n"
+                % (bogus_uri, bogus_fn, snippet_body)
+            )
+        # Resolve the fixture's own package so the wrapper's self-import is not
+        # itself a diagnostic. No dependencies, so --offline suffices normally.
+        for args in (["dart", "pub", "get", "--offline"], ["dart", "pub", "get"]):
+            if subprocess.run(args, cwd=d, capture_output=True).returncode == 0:
+                break
+        else:
+            print("L35 SELF-TEST: UNVERIFIED — `dart pub get` failed in the fixture;")
+            print("the verifier could not run. A dead verifier is never a clean bill.")
+            return 1
+
+        blocks = extract_readme_blocks(d)
+        violations, errs, _skipped = analyze(d, blocks)
+        for e in errs:
+            print("  !! %s" % e)
+        if errs:
+            print("L35 SELF-TEST: UNVERIFIED — analyzer did not vouch.")
+            return 1
+
+        pairs = sorted((v["code"], v["symbol"]) for v in violations)
+        failures = []
+        if ("uri_does_not_exist", bogus_uri) not in pairs:
+            failures.append(
+                "(i)/(ii) missing exact-URI uri_does_not_exist violation for %r" % bogus_uri
+            )
+        if ("undefined_function", bogus_fn) not in pairs:
+            failures.append(
+                "(i) missing undefined_function violation for %r" % bogus_fn
+            )
+        mangled = [s for _c, s in pairs if s.strip().startswith("t exist")]
+        if mangled:
+            failures.append(
+                "(ii) apostrophe-mangled symbol resurfaced: %r" % mangled
+            )
+        if len(violations) != 2:
+            failures.append(
+                "(iii) expected exactly 2 violations (declared twin must be clean), "
+                "got %d: %r" % (len(violations), pairs)
+            )
+        if failures:
+            print("L35 SELF-TEST: FAIL —")
+            for f_ in failures:
+                print("   %s" % f_)
+            return 1
+        print("L35 SELF-TEST: PASS —")
+        print("   (i)   HALT on undeclared broken snippet: "
+              "uri_does_not_exist('%s') + undefined_function('%s')" % (bogus_uri, bogus_fn))
+        print("   (ii)  exact-URI reporting: symbol == the URI itself "
+              "(no apostrophe-mangled 't exist: ')")
+        print("   (iii) declared twin block: 0 violations "
+              "(the placeholder mechanism works on URIs end-to-end)")
+        return 0
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
+    if sys.argv[1:] == ["--self-test"]:
+        return self_test()
     pkgs = sys.argv[1:]
     if not pkgs:
-        print("usage: snippet_oracle.py <package-dir> [...]", file=sys.stderr)
+        print("usage: snippet_oracle.py <package-dir> [...] | --self-test", file=sys.stderr)
         return 2
 
     total, bad_pkgs = 0, 0

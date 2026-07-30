@@ -17,11 +17,12 @@
 ///
 /// Up to 0.0.7, the only way to tell them apart was to remember to read
 /// `providerErrors` — and a field you *can* ignore *will* be ignored. That is
-/// precisely how this shipped. 0.0.8 added the un-skippable question
-/// (`canAssertNoAdvisory`, `fold`, `requireCompleteLookup`) without breaking
-/// the return type. Since 0.1.0 the return type is the sealed [AdvisoryLookup]
-/// and an exhaustive `switch` refuses a caller who never handled "could not
-/// look" — the **compiler** asks the question for you.
+/// precisely how this shipped. 0.0.8 added the question you can no longer
+/// skip cheaply (`canAssertNoAdvisory`, `fold`, `requireCompleteLookup`)
+/// without breaking the return type. Since 0.1.0 the return type is the
+/// sealed [AdvisoryLookup] and an exhaustive `switch` refuses a caller who
+/// never handled "could not look" — the **compiler** asks the question for
+/// you.
 library;
 
 import 'dart:async' show TimeoutException;
