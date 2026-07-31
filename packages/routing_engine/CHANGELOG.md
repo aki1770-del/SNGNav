@@ -16,6 +16,15 @@ crashed the caller. So did any other non-`ClientException` network throw.
   non-JSON-body errors, and the 0.3.3 malformed-response guards pass through
   exactly as before (`on RoutingException` rethrow precedes the wrap).
 
+**Known residue — stated, not implied.** This is a strong contract, not an
+absolute one. A programming-level `Error` (as opposed to an `Exception`) can
+still reach you. One measured case: on OSRM, an HTTP-200 body whose `code`
+field is not a string (e.g. `{"code": 5}`) is read *before* the parser's crash
+backstop is entered, and still throws a raw `TypeError`. That hole is already
+in 0.3.1 — 0.3.4 neither introduces it nor closes it. If your OSRM URL can be
+intercepted by a proxy or captive portal, keep a defensive `catch` around
+`calculateRoute()` until a later 0.3.x closes it.
+
 Nothing here is breaking: no signature changed, and `RoutingException` is the
 error type this package already documents. Take it without touching your code.
 
@@ -45,11 +54,13 @@ never a raw crash, never a fabricated place.
 * **Both engines — a non-JSON body returned with HTTP 200** (a proxy or captive
   portal serving an HTML error page) previously threw a raw `FormatException`.
   It is now a `RoutingException('… non-JSON body (HTTP 200)')`.
-* **Both engines — a crash backstop** now wraps response parsing: any remaining
-  malformed-response throw (a non-object leg/step, a text field sent as a
-  number, an undecodable shape) surfaces as a `RoutingException` instead of a
-  raw crash. The targeted fixes above still return a usable, flagged route for
-  the common cases; this only catches what they do not.
+* **Both engines — a crash backstop** now wraps the response *parser*: any
+  malformed-response throw raised inside it (a non-object leg/step, a text
+  field sent as a number, an undecodable shape) surfaces as a
+  `RoutingException` instead of a raw crash. The targeted fixes above still
+  return a usable, flagged route for the common cases; this only catches what
+  they do not. It does **not** cover the few checks that run before the parser
+  is entered — see the known residue under 0.3.4.
 
 Nothing here is breaking: `RouteManeuver.position` is still a non-nullable
 `LatLng`, no signature changed, and `RoutingException` is the error type this
