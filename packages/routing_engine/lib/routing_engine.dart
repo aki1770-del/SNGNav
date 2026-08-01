@@ -7,6 +7,7 @@
 /// - [ValhallaRoutingEngine]: Multi-modal routing, isochrones, Japanese support
 ///
 /// ```dart
+/// import 'package:latlong2/latlong.dart';
 /// import 'package:routing_engine/routing_engine.dart';
 ///
 /// final engine = OsrmRoutingEngine(

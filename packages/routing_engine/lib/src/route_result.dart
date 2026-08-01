@@ -51,6 +51,7 @@ class RouteManeuver extends Equatable {
   ///
   /// Migration for a `^0.3.0` consumer (no signature changed — additive):
   /// ```dart
+  /// // oracle:placeholders m
   /// if (m.hasPosition) {
   ///   // safe: announce the place, draw the marker, measure distance
   /// } else {

@@ -1,8 +1,10 @@
 ## 0.3.4
 
-**Stops a network-layer CRASH class the 0.3.3 pass did not reach. Additive/
-defensive only — no API changed, no signature changed. Includes everything in
-0.3.3 and 0.3.2 below.**
+**Stops a network-layer CRASH class the 0.3.3 pass did not reach, and — first
+published here — exposes the resolved-vs-substituted position signal. NOT a
+breaking change: existing signatures, call sites, and equality are unchanged;
+the new API is additive and optional. Includes everything in 0.3.3 and 0.3.2
+below.**
 
 Up to and including 0.3.3, `calculateRoute()` on both engines caught only
 `http.ClientException` at the network layer. A `TimeoutException` from the
@@ -15,6 +17,19 @@ crashed the caller. So did any other non-`ClientException` network throw.
 * **Deliberate `RoutingException`s are unchanged**: HTTP status errors,
   non-JSON-body errors, and the 0.3.3 malformed-response guards pass through
   exactly as before (`on RoutingException` rethrow precedes the wrap).
+
+### Added (additive, non-breaking — first published in 0.3.4)
+
+* **`RouteManeuver.positionResolved`** (field) and **`RouteManeuver.hasPosition`**
+  (getter) — let you tell a maneuver's own resolved coordinate apart from a
+  substituted/clamped one, so you can guard a narration, a marker, or a
+  distance read before trusting the place.
+* **`RouteManeuver({..., bool positionResolved = true})`** — a new *optional*
+  constructor parameter, defaulting `true`. Every existing direct construction
+  compiles and behaves exactly as it did in 0.3.1.
+* `positionResolved` is deliberately **NOT** in Equatable `props`: equality on
+  0.3.x stays byte-identical to 0.3.1, so this changes no observable equality
+  behavior. The signal is exposed via `hasPosition` and `toString()` only.
 
 **Known residue — stated, not implied.** This is a strong contract, not an
 absolute one. A programming-level `Error` (as opposed to an `Exception`) can

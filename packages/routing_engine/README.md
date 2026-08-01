@@ -19,12 +19,13 @@ Valhalla, or a custom backend without rewriting app logic.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.1.2
+  routing_engine: ^0.3.0
 ```
 
 ## Quick Start
 
 ```dart
+import 'package:latlong2/latlong.dart';
 import 'package:routing_engine/routing_engine.dart';
 
 // Create an engine
@@ -50,6 +51,9 @@ await engine.dispose();
 ### Local Valhalla (canonical Machine E path)
 
 ```dart
+import 'package:latlong2/latlong.dart';
+import 'package:routing_engine/routing_engine.dart';
+
 final engine = ValhallaRoutingEngine.local();
 
 if (await engine.isAvailable()) {
