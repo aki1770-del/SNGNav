@@ -1,3 +1,41 @@
+## 0.7.4
+
+Removes build artifacts that 0.7.3 published by mistake. No API or behaviour
+change: every file under `lib/` is byte-identical to 0.7.3.
+
+**What 0.7.3 contained, and what you already have.** The 0.7.3 archive was
+16,023,777 bytes, of which about 99.9% was a `build/` directory that should
+never have been in a published package. It held nine files, the largest a
+Flutter kernel cache (`build/test_cache/build/*.cache.dill.track.dill`,
+49,014,912 bytes uncompressed) that embedded 1,323 absolute filesystem paths
+from the machine that published it, of the form
+`/home/<user>/.pub-cache/hosted/pub.dev/<package>-<version>/...`, plus 24
+references to the temporary directory the release was staged in.
+
+If you pulled 0.7.3, those bytes are in your pub cache. They disclose the
+publishing machine's account name, its pub-cache and staging-directory
+locations, and the exact set and versions of the 45 packages resolved there at
+build time. We checked for credentials and found none — no private keys, SSH
+keys, or API tokens; the payload is a compiler cache and dependency source, not
+configuration. Nothing about *consumers* of this package was included, and the
+files were inert: no code under `lib/` reads anything in `build/`, so nothing
+you ran was affected.
+
+Upgrading to 0.7.4 (in range for any `^0.7.x` constraint) replaces the archive.
+Removing `.pub-cache/hosted/pub.dev/voice_guidance-0.7.3/` clears the old copy.
+**0.7.3 remains downloadable from pub.dev — published versions are immutable and
+cannot be withdrawn**; this release supersedes it, it does not recall it.
+
+**Cause, and why it should not recur.** `build/` has been ignored by the
+repository's root `.gitignore` since 2026-03-04, and `pub publish` honours that
+when run from inside the work tree. 0.7.3 was published from a staging copy
+*outside* the work tree, where a repo-root `.gitignore` does not apply; pub then
+included every file on disk and reported "0 warnings". This release adds a
+`.pubignore` to the package itself, so the exclusion travels with the package
+directory wherever it is copied or staged. Verified by reproducing the fault:
+with `build/` present on disk, the publish dry-run produced 15 MB without the
+`.pubignore` and 40 KB with it.
+
 ## 0.7.3
 
 Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
