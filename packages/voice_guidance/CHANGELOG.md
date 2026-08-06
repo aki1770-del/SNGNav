@@ -1,24 +1,21 @@
-# Changelog
-
 ## 0.7.3
 
-- Widen the `routing_engine` constraint to `>=0.4.0 <0.7.0` so this package can
-  resolve alongside `routing_engine` 0.6.0 and `route_condition_forecast` 0.2.0.
+Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
 
-  `routing_engine` 0.6.0 fixes a safety defect: `RouteManeuver.position` was
-  silently returning `const LatLng(0, 0)` — Null Island, a real coordinate in
-  the Gulf of Guinea — for a maneuver whose location failed to parse. It is now
-  nullable. **This package's `lib/` reads no maneuver position**, so 0.6.0 is
-  source-compatible and this is a PATCH release, not a breaking one.
+The previous `^0.10.0` constraint excluded core 0.11.x, so a project that asked
+for the current core could not also take this package at its current version.
+The resolver silently selected an older release of this package instead, with no
+error and no warning. Core 0.11.0 and 0.11.1 are additive (a re-export, and a
+percent-to-fraction humidity factory); this package compiles and its full test
+suite passes against 0.11.1.
 
-  The widen is not cosmetic: for a 0.x package a caret does not admit the next
-  minor, so without it `route_condition_forecast` 0.2.0 (which pins
-  `>=0.6.0`) and this package had an EMPTY intersection — a consumer combining
-  voice guidance with route condition forecasting would have hit a hard
-  `version solving failed`.
+Also removes a `dependency_overrides` block that referenced sibling packages by
+relative path. It was inert for consumers, but it prevented this package from
+resolving standalone from its published archive.
 
-- The example app now guards the nullable position: a maneuver with no location
-  is not given a substitute coordinate.
+No API or behaviour change.
+
+# Changelog
 
 ## 0.7.2
 
