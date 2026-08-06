@@ -1,3 +1,38 @@
+## 0.5.6
+
+Removes build artifacts that 0.5.5 published by mistake. No API or behaviour
+change: every file under `lib/` is byte-identical to 0.5.5.
+
+**What 0.5.5 contained, and what you already have.** The 0.5.5 archive was
+2,133,126 bytes, of which about 99% was a `build/` directory that should never
+have been in a published package. It held eight files, the largest a Flutter
+kernel cache (`build/test_cache/build/*.cache.dill.track.dill`, 5.7 MB
+uncompressed) that embedded 465 absolute filesystem paths from the machine that
+published it, all of the form
+`/home/<user>/.pub-cache/hosted/pub.dev/<package>-<version>/...`.
+
+If you pulled 0.5.5, those bytes are in your pub cache. They disclose the
+publishing machine's account name and pub-cache location, and the exact set and
+versions of the 37 packages resolved there at build time. We checked for
+credentials and found none — no private keys, SSH keys, or API tokens; the
+payload is a compiler cache and dependency source, not configuration. Nothing
+about *consumers* of this package was included, and the files were inert: no
+code under `lib/` reads anything in `build/`, so nothing you ran was affected.
+
+Upgrading to 0.5.6 (in range for any `^0.5.x` constraint) replaces the archive.
+Removing `.pub-cache/hosted/pub.dev/driving_conditions-0.5.5/` clears the old
+copy.
+
+**Cause, and why it should not recur.** `build/` has been ignored by the
+repository's root `.gitignore` since 2026-03-04, and `dart pub publish` honours
+that when run from inside the work tree. 0.5.5 was published from a staging copy
+*outside* the work tree, where a repo-root `.gitignore` does not apply; pub then
+included every file on disk and reported "0 warnings". This release adds a
+`.pubignore` to the package itself, so the exclusion travels with the package
+directory wherever it is copied or staged. Verified by reproducing the fault:
+with `build/` present on disk, the publish dry-run produced 2 MB without the
+`.pubignore` and 24 KB with it.
+
 ## 0.5.5
 
 Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
