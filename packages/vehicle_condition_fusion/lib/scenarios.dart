@@ -190,10 +190,22 @@ const akitaWhiteoutDrive = <VehicleConditionSignals>[
 ///
 /// Complements [akitaWhiteoutDrive]: that one triggers ice via low friction;
 /// this one triggers it via `(tcsEngaged && airTempC <= kColdSlipCelsius)`, the
-/// other published ice-risk path. Progression: **dry → black ice → dry**.
+/// other published ice-risk path.
+///
+/// **This vehicle has no hygrometer** — it publishes friction, temperature,
+/// wipers and a rain sensor, but not `Vehicle.Exterior.Humidity`. Both ends of
+/// the drive sit inside the radiative-frost window (−1 °C and −2 °C, no
+/// precipitation), where the surface determination rests on humidity, so the
+/// classifier abstains and the surface is honestly **unknown** at each end.
+/// Progression: **unknown → black ice → unknown**. The ice still fires: the
+/// cold-slip TCS rule is POSITIVE evidence and needs no humidity.
+///
+/// See [blackIcePatchMeasured] for the same drive on a vehicle that publishes
+/// the humidity leaf.
 /// Drive through [VehicleConditionFusion.fromPartialFrames].
 const blackIcePatch = <VehicleConditionSignals>[
-  // Dry, fast, good grip — a clear cold road.
+  // Cold road, good measured grip, but no hygrometer — so whether this surface
+  // is clear or glazed is precisely what has NOT been determined.
   VehicleConditionSignals(
     roadFriction: 0.90,
     tcsEngaged: false,
@@ -211,6 +223,50 @@ const blackIcePatch = <VehicleConditionSignals>[
   VehicleConditionSignals(speedKmh: 35),
   // Past the patch: traction restored, TCS releases, road is dry again.
   VehicleConditionSignals(tcsEngaged: false, airTempC: -2.0, speedKmh: 45),
+  VehicleConditionSignals(speedKmh: 50),
+];
+
+/// SYNTHETIC — [blackIcePatch] frame-for-frame, on a vehicle that DOES publish
+/// `Vehicle.Exterior.Humidity`. ILLUSTRATIVE hand-authored values, **not**
+/// recorded sensor data.
+///
+/// The pair exists because both vehicles are real. `Vehicle.Exterior.Humidity`
+/// is in COVESA VSS and in our subscribed leaf set
+/// (`VehicleConditionSignals.recognizedVssPaths`), but the subscription is
+/// intersected against each broker's metadata, and on the one real broker this
+/// unit has measured, the leaf was absent. So [blackIcePatch] is the degraded
+/// vehicle and this is the normal one.
+///
+/// **This fixture is a WITNESS, not an endorsement.** Measured progression is
+/// **black ice at EVERY frame**, including the departure frame — a road the
+/// vehicle's own ESC friction estimate reads at 0.90 (excellent grip). At any
+/// ambient at or below 0 °C the frost check fires at EVERY humidity from 10 %
+/// to 100 %, because the effective surface estimate never exceeds ambient and
+/// the threshold is 0 °C. Below freezing, humidity is therefore a PRESENCE
+/// gate, not a VALUE gate: publishing the leaf at all flips the verdict.
+///
+/// That is the cry-wolf exposure recorded in `snow_rendering`
+/// KNOWN_LIMITATIONS.md §2, whose wind/time-of-day gate was deliberately
+/// deferred on 2026-07-07 pending real field evidence. This fixture makes the
+/// exposure executable so it cannot be forgotten: if that gate ever lands, this
+/// test fails and forces a look.
+const blackIcePatchMeasured = <VehicleConditionSignals>[
+  VehicleConditionSignals(
+    roadFriction: 0.90,
+    tcsEngaged: false,
+    absEngaged: false,
+    wiperIntensity: 0,
+    rainIntensity: 0,
+    airTempC: -1.0,
+    humidityRH: 85.0,
+    speedKmh: 60,
+  ),
+  VehicleConditionSignals(speedKmh: 58),
+  VehicleConditionSignals(
+      tcsEngaged: true, airTempC: -4.0, humidityRH: 88.0, speedKmh: 40),
+  VehicleConditionSignals(speedKmh: 35),
+  VehicleConditionSignals(
+      tcsEngaged: false, airTempC: -2.0, humidityRH: 86.0, speedKmh: 45),
   VehicleConditionSignals(speedKmh: 50),
 ];
 

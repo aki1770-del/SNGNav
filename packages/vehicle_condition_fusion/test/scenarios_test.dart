@@ -91,9 +91,17 @@ void main() {
         () async {
       final a = await runScenario(akitaWhiteoutDrive);
 
-      // Starts on a clear (dry) road and ends on a cleared (wet) road.
-      expect(a.first.surfaceState, RoadSurfaceState.dry,
-          reason: 'drive must start clear');
+      // Starts UNCLASSIFIED and ends on a cleared (wet) road.
+      //
+      // This vehicle has no hygrometer, and it departs at -1 °C with no
+      // precipitation — inside the radiative-frost window, where the surface
+      // determination rests on humidity. The frost check abstains, so there is
+      // no verdict. It used to read `dry`, and the fixture comment still called
+      // that "a dry road just below 0 °C is still dry" — but nothing had
+      // measured it; `dry` is gripFactor 1.0, a positive claim.
+      expect(a.first.surfaceState, isNull,
+          reason: 'a hygrometer-less departure at -1 °C is UNMEASURED, and an '
+              'unmeasured road is not a clear one');
       expect(a.last.surfaceState, RoadSurfaceState.wet,
           reason: 'drive must clear (no longer black ice) by the end');
 
@@ -109,8 +117,8 @@ void main() {
           reason: 'the whiteout must read as a heavy-fog / low-visibility cue');
 
       // The exact phase progression (escalate, then de-escalate and clear).
-      expect(_phases(a), <RoadSurfaceState>[
-        RoadSurfaceState.dry,
+      expect(_phases(a), <RoadSurfaceState?>[
+        null, // departure: inside the frost window, no hygrometer
         RoadSurfaceState.compactedSnow,
         RoadSurfaceState.blackIce,
         RoadSurfaceState.slush,
@@ -147,15 +155,47 @@ void main() {
   group('blackIcePatch — cold-slip TCS ice path', () {
     test('progression is dry → black ice → dry', () async {
       final a = await runScenario(blackIcePatch);
-      expect(_phases(a), <RoadSurfaceState>[
-        RoadSurfaceState.dry,
+      // DEGRADED vehicle: friction, temperature and a rain sensor, but no
+      // hygrometer. Both ends of this drive sit inside the frost window
+      // (-1 °C and -2 °C, no precipitation), so the frost determination cannot
+      // be made and the surface is honestly unknown at each end. The ice in the
+      // middle still fires: it comes from the TCS cold-slip rule, which is
+      // POSITIVE evidence and needs no humidity.
+      expect(_phases(a), <RoadSurfaceState?>[
+        null,
         RoadSurfaceState.blackIce,
-        RoadSurfaceState.dry,
+        null,
       ]);
       // The ice here is from the TCS cold-slip rule, not from low friction.
       final ice =
           a.firstWhere((e) => e.surfaceState == RoadSurfaceState.blackIce);
       expect(ice.advisoryMessage.toLowerCase(), contains('ice'));
+    });
+
+    test('the SAME drive on a hygrometer-equipped vehicle classifies every '
+        'frame — and is a WITNESS to the sub-zero presence gate', () async {
+      final degraded = await runScenario(blackIcePatch);
+      final measured = await runScenario(blackIcePatchMeasured);
+
+      // The DURABLE property, and the reason the pair exists: publishing the
+      // humidity leaf removes the abstention. Every frame the degraded vehicle
+      // could not classify, the measured vehicle can. This assertion stays
+      // correct however the exposure below is eventually resolved.
+      expect(degraded.map((e) => e.surfaceState), contains(null),
+          reason: 'the degraded vehicle must have something it cannot judge');
+      expect(measured.map((e) => e.surfaceState), everyElement(isNotNull),
+          reason: 'with the humidity leaf published, nothing is left unjudged');
+
+      // The WITNESS. Not an endorsement — see the fixture docstring and
+      // snow_rendering KNOWN_LIMITATIONS.md §2 (cry-wolf exposure, wind/time
+      // gate deferred 2026-07-07). At or below 0 °C the frost check fires at
+      // EVERY humidity, so the departure frame — a road the vehicle's own ESC
+      // friction estimate reads at 0.90 — is classified black ice.
+      expect(measured.first.surfaceState, RoadSurfaceState.blackIce,
+          reason: 'WITNESS: at -1 °C ANY humidity value fires the frost check, '
+              'so merely publishing the leaf turns a 0.90-friction road into '
+              'black ice at departure. If a wind/time gate lands, this fails '
+              'ON PURPOSE — come and read the report that filed it.');
     });
   });
 

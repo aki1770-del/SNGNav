@@ -185,12 +185,25 @@ void main() {
       );
     });
 
-    test('no precip at -2°C → dry (above blackIce threshold)', () {
+    test('no precip at -2°C → null (past the deep-cold threshold, and the '
+        'frost check abstained)', () {
+      // This package is a re-export FACADE over snow_rendering — it holds no
+      // classifier of its own. This assertion is therefore a second, separately
+      // maintained copy of a snow_rendering pin, and it went on asserting `dry`
+      // after the classifier stopped returning it. That is precisely the
+      // "two independently-maintained copies drift apart" hazard the shared
+      // calibration function exists to prevent, reproduced in the test layer.
+      //
+      // -2 °C clears the -3 °C residual-ice rule, so the surface turns on the
+      // radiative-frost determination — which rests on humidity this condition
+      // does not carry. The check ABSTAINED; there is no verdict to report, and
+      // `dry` (gripFactor 1.0) would be a positive claim about a sub-zero road
+      // nobody measured.
       expect(
         RoadSurfaceState.fromCondition(
           _condition(temperatureCelsius: -2),
         ),
-        RoadSurfaceState.dry,
+        isNull,
       );
     });
 
