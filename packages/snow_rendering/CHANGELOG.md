@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### An abstained frost check is no longer reported as a clear road
+
+0.3.0 closed the path where a `WeatherCondition` carrying NOTHING classified as
+`dry`. It did not close the path where the road IS measured and the one field
+the classifier needs is the field that is missing — the residual disclosed in
+0.3.0 under "What this release does NOT fix", below. This closes it.
+
+On the `precip == none` branch the classifier consults
+`isRadiativeFrostBlackIce(temp, humidityRH)`. That function returns `false` when
+`humidityRH` is `null` or non-finite — an **abstention**, not a measurement —
+and the branch then fell through to `return dry`: `gripFactor: 1.0`,
+`RecommendedResponse.proceed`, "Conditions normal". So a hygrometer-less feed at
+−2.9 °C was told the road was normal, while the SAME feed WITH a humidity
+reading was told "Black ice risk". A declining check was being reported as an
+affirmative all-clear.
+
+- `RoadSurfaceState.fromCondition()` now returns **`null`** — "cannot classify" —
+  when `precipType == none`, the temperature is at or below the frost check's
+  ambient ceiling (`radiativeFrostAmbientCeilingCelsius`, +3 °C), and
+  `humidityRH` is absent or non-finite. This is the SAME abstention the
+  `precip == null` branch has always answered with `null`; the two branches now
+  read as one discipline.
+
+**This is not a breaking change and needs no major bump.** The return type has
+been `RoadSurfaceState?` since 0.3.0, so `null` is a value callers already
+handle. It is also not an alarm: `null` cannot cry wolf. `DrivingConditionAssessment`
+renders it as `conditionsUnknown` / *"Road surface not measured here — drive to
+what you can see"*.
+
+**Deliberately bounded — `dry` still stands where it was earned.** Above the
++3 °C ceiling the frost check declines on the TEMPERATURE, which WAS measured;
+so does a humidity reading whose dew-point maths comes back warm. Both remain
+`dry`. Turning every warm dry road into "unknown" would be the cry-wolf inverse
+and a defect of its own (`SAFETY_BOUNDARY.md` §3).
+
+**Still open (see `KNOWN_LIMITATIONS.md` §4).** Two other inputs make the frost
+check abstain and still resolve to `dry`: a **non-finite temperature**, and a
+humidity value the calibration rejects as implausible (`< 5 %` or `> 105 %`).
+Both are corrupt-input classes rather than the absent-input class fixed here,
+and both are untouched by this change.
+
 ## 0.3.0
 
 ### Safety defect in 0.2.7 and earlier — please read
@@ -104,7 +147,9 @@ Honesty about the boundary of a fix is part of the fix, and the heading above
 ("absence of data can no longer be mistaken for good conditions") is an absolute
 statement that one path still escapes:
 
-- **An absent HUMIDITY reading still falls through to `dry`.** On the
+- **An absent HUMIDITY reading still falls through to `dry`.** *(Still true of
+  0.3.0 as published — this is the recall note for the version you may be
+  holding. **CLOSED in Unreleased**, at the top of this file.)* On the
   radiative-frost path (`road_surface_state.dart`: `precip == none`, `temp >
   -3 °C`, humidity absent), `isRadiativeFrostBlackIce` abstains and the
   classifier reaches `return dry` — so on a humidity-blind feed, an unjudged

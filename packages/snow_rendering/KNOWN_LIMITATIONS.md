@@ -93,13 +93,36 @@ domain sign-off on the threshold.
   caution-add; whether a higher moisture floor better matches real dry mornings
   is open.
 
-### 4. Humidity-absent is presented as "Conditions normal"
+### 4. Humidity-absent — CLOSED for the absent case; corrupt values remain
 
-When humidity is absent the no-precip branch returns `dry`, which
-`DrivingConditionAssessment` maps to "Conditions normal" — byte-identical to a
-genuinely verified-safe road. There is no "frost risk unknown — no humidity
-data" state. On a humidity-blind feed, an unjudged frost morning therefore reads
-as confident safety. A low-confidence / unknown state is a candidate improvement.
+**Closed (unreleased, see CHANGELOG).** When humidity is `null` or non-finite
+and the temperature is at or below the frost check's ambient ceiling (+3 °C),
+the no-precip branch now returns `null` — "cannot classify" — instead of `dry`.
+`DrivingConditionAssessment` renders that as `conditionsUnknown` /
+*"Road surface not measured here — drive to what you can see"*, so the unjudged
+frost morning is no longer byte-identical to a genuinely verified-safe road.
+
+Previously it returned `dry` → "Conditions normal", and on a humidity-blind feed
+an unjudged frost morning read as confident safety.
+
+**Still open — the corrupt-input classes.** Absence is now handled; *implausible*
+input is not. `isRadiativeFrostBlackIce` also abstains (returns `false`) when:
+
+- **the temperature is non-finite** (`NaN` / `±inf`) — the deep-cold rule and the
+  ceiling comparison both fail on `NaN`, so the branch reaches `return dry`; and
+- **the humidity is outside `[5, 105] %`** — rejected as implausible or as a
+  mis-wired FRACTION (see `navigation_safety_calibration`), after which the
+  branch likewise reaches `return dry`.
+
+Both are abstentions dressed as `dry`, i.e. the same defect class as the one
+above, on inputs that are corrupt rather than missing. Neither is fixed. They are
+narrower than the absent case (they need a feed emitting bad values, not merely
+an incomplete one), but they are real and are recorded here rather than left
+unstated.
+
+**Not a defect: `dry` where it was earned.** Above +3 °C, and at any humidity
+whose dew-point maths comes back warm, the check declines on data it actually
+had. Those roads stay `dry` deliberately — an "unknown" there would cry wolf.
 
 ### 5. Freezing rain still under-classified (pre-existing, outside this change)
 

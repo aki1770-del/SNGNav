@@ -45,14 +45,22 @@ void main() {
       expect(a.recommendedResponse, RecommendedResponse.reduceSpeed);
     });
 
-    test('same conditions without humidity → still "Conditions normal" (honest abstention)', () {
+    test('same conditions without humidity → "not measured", NOT "Conditions '
+        'normal" (an abstention is not an all-clear)', () {
       // Without the humidity feed the classifier cannot see the frost and must
-      // not pretend to — absence is never a fabricated warning.
+      // not pretend to — absence is never a fabricated warning. It is not a
+      // fabricated CLEARANCE either: this used to read "Conditions normal", so
+      // the same road at the same temperature said "Black ice risk" to a feed
+      // with a hygrometer and "Conditions normal" to a feed without one. The
+      // driver is told what is actually true — that nobody measured it.
       final a = DrivingConditionAssessment.fromCondition(
         _condition(temperatureCelsius: 2.0),
       );
-      expect(a.surfaceState, RoadSurfaceState.dry);
-      expect(a.advisoryMessage, 'Conditions normal');
+      expect(a.surfaceState, isNull);
+      expect(a.gripFactor, isNull);
+      expect(a.recommendedResponse, RecommendedResponse.conditionsUnknown);
+      expect(a.advisoryMessage,
+          'Road surface not measured here — drive to what you can see');
     });
 
     test('gripFactor matches surfaceState.gripFactor', () {

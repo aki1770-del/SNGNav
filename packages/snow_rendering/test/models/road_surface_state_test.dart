@@ -205,10 +205,16 @@ void main() {
       );
     });
 
-    test('no precip at -2°C → dry (above blackIce threshold)', () {
+    test('no precip at -2°C → null (past the deep-cold threshold, and the '
+        'frost check abstained)', () {
+      // -2 °C clears the -3 °C residual-ice rule, so the surface now turns on
+      // the radiative-frost determination — which rests on humidity this
+      // condition does not carry. The check ABSTAINED, so there is no verdict
+      // to report. It is emphatically not `dry`: `dry` is gripFactor 1.0, a
+      // positive claim about a sub-zero road nobody measured.
       expect(
         RoadSurfaceState.fromCondition(_condition(temperatureCelsius: -2)),
-        RoadSurfaceState.dry,
+        isNull,
       );
     });
 
@@ -328,14 +334,18 @@ void main() {
       );
     });
 
-    test('no precip, +2C, humidity ABSENT -> dry (humidity-gated, no fabrication)', () {
+    test('no precip, +2C, humidity ABSENT -> null (abstention is not a clear)', () {
       // Without humidity the classifier abstains rather than guessing — absence
       // is never hazard, and never suppresses a colder classification either.
+      // But an abstention is not an all-clear either: inside the frost window
+      // `dry` would be a POSITIVE claim (gripFactor 1.0 -> "Conditions normal")
+      // resting on a determination that was never made. Not blackIce, not dry:
+      // unknown, which is a thing the driver is told.
       expect(
         RoadSurfaceState.fromCondition(
           _condition(temperatureCelsius: 2.0),
         ),
-        RoadSurfaceState.dry,
+        isNull,
       );
     });
 
@@ -372,15 +382,22 @@ void main() {
       );
     });
 
-    test('no precip, -2C, humidity ABSENT -> dry (unchanged; the companion)', () {
-      // Same -2C with no humidity feed still returns dry (pre-existing), so the
-      // dry->blackIce expansion is strictly humidity-gated.
-      expect(
-        RoadSurfaceState.fromCondition(
-          _condition(temperatureCelsius: -2.0),
-        ),
-        RoadSurfaceState.dry,
+    test('no precip, -2C, humidity ABSENT -> null (the companion: still '
+        'strictly humidity-gated, but no longer a fabricated clear)', () {
+      // The companion to the pin above, and it still proves what it was
+      // written to prove: WITHOUT humidity the classifier does not reach
+      // blackIce, so the dry->blackIce expansion remains strictly
+      // humidity-gated and fabricates nothing. What changed is the other
+      // direction — the abstention no longer resolves to `dry`, because
+      // "the frost check declined to answer" was being reported to the driver
+      // as "the road is fine".
+      final state = RoadSurfaceState.fromCondition(
+        _condition(temperatureCelsius: -2.0),
       );
+      expect(state, isNot(RoadSurfaceState.blackIce),
+          reason: 'the expansion must stay humidity-gated — no fabrication');
+      expect(state, isNull,
+          reason: 'and the abstention must not be dressed up as dry');
     });
 
     test('no precip, +2C, 30% RH -> blackIce (INTENDED: dry air fires deeper)', () {

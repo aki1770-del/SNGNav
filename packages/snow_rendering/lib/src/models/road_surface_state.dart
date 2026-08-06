@@ -11,7 +11,7 @@ library;
 
 import 'package:driving_weather/driving_weather.dart';
 import 'package:navigation_safety_calibration/navigation_safety_calibration.dart'
-    show isRadiativeFrostBlackIce;
+    show isRadiativeFrostBlackIce, radiativeFrostAmbientCeilingCelsius;
 
 /// Road surface classification.
 enum RoadSurfaceState {
@@ -58,8 +58,10 @@ enum RoadSurfaceState {
   /// [SafetyVerdict]: POSITIVE evidence of a hazard classifies even on partial
   /// data (an asserted `iceRisk`, or deep cold), while any benign
   /// classification — above all [dry] — requires knowing BOTH the temperature
-  /// and the precipitation type. Being offline does not mean "ice"; it means
-  /// "unknown", and unknown is a thing the driver is TOLD.
+  /// and the precipitation type, AND, inside the radiative-frost window, the
+  /// humidity that determination rests on: a check that ABSTAINED never
+  /// counts as a check that cleared the road. Being offline does not mean
+  /// "ice"; it means "unknown", and unknown is a thing the driver is TOLD.
   ///
   /// Decision tree follows the position paper specification.
   /// For debounced classification, wrap with [HysteresisFilter].
@@ -114,16 +116,48 @@ enum RoadSurfaceState {
       // function the pre-trip advisor uses — so, GIVEN THE SAME temperature +
       // humidity, the in-drive classifier and the pre-trip briefing cannot
       // disagree about this black-ice determination. Scope, stated honestly:
-      // this reconciles only the radiative-frost window; a feed that omits
-      // humidity abstains here (see KNOWN_LIMITATIONS.md), and there is no
-      // wind/time-of-day gate yet (all-hours). Humidity-gated and
-      // caution-add-only: absent humidity returns dry, never fabricating the
-      // hazard and never downgrading a colder classification.
+      // this reconciles only the radiative-frost window, and there is no
+      // wind/time-of-day gate yet (all-hours). Caution-add-only: it can only
+      // ADD the above-zero-ambient window, and absent humidity never
+      // FABRICATES the hazard (see KNOWN_LIMITATIONS.md).
       if (isRadiativeFrostBlackIce(
         ambientCelsius: temp,
         humidityRHPercent: condition.humidityRH,
       )) {
         return blackIce;
+      }
+
+      // The frost check declined — and WHY it declined decides what we are
+      // entitled to say next. It declines for two different reasons, and they
+      // are not the same answer:
+      //
+      //   * it JUDGED — the temperature alone put us above the check's ambient
+      //     ceiling, or the dew-point maths came back warm enough. Something
+      //     was measured, and `dry` is earned.
+      //   * it ABSTAINED — inside the frost window the determination rests on
+      //     the humidity, and the feed carried none. Nothing was measured.
+      //
+      // Reporting an abstention as `dry` is the fabricated-clear: `dry` carries
+      // `gripFactor: 1.0` (MAXIMUM GRIP), which becomes
+      // `RecommendedResponse.proceed` and the advisory "Conditions normal" — a
+      // POSITIVE claim about a road whose deciding field nobody read. It is why
+      // a hygrometer-less feed at −2.9 °C was told the road was normal while
+      // the SAME feed WITH a humidity reading was told "Black ice risk".
+      //
+      // So this is the `precip == null` branch's discipline (above) applied at
+      // the one-field-absent seam: same abstention, same answer, `null`. `null`
+      // is not an alarm and cannot cry wolf — it says "not measured", and the
+      // assessment layer renders it "Road surface not measured here — drive to
+      // what you can see" instead of an all-clear.
+      //
+      // Bounded deliberately at the ceiling. ABOVE it the check declines on the
+      // TEMPERATURE, which WAS measured, so `dry` stays honest there; turning
+      // every warm dry road into "unknown" would be the cry-wolf inverse and a
+      // defect of its own (SAFETY_BOUNDARY.md §3).
+      final humidity = condition.humidityRH;
+      if (temp <= radiativeFrostAmbientCeilingCelsius &&
+          (humidity == null || !humidity.isFinite)) {
+        return null;
       }
       return dry;
     }
