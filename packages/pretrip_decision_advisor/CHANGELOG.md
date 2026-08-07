@@ -1,5 +1,95 @@
 # Changelog
 
+## 0.5.3
+
+Two defects in the destination-area warning line. Both are in 0.5.2 and every
+earlier 0.5.x. **Your build will not break — but what your users read WILL
+change.** Please read; the second change is deliberate and takes a sentence away.
+
+### 1. A warning you already held could be replaced by a shrug (safety fix)
+
+`areaConditionChips` tested `warningCheckAvailable` **before** it tested whether
+a warning was actually in hand:
+
+```dart
+if (!r.warningCheckAvailable) {        // ← ran first
+  chips.add(m.areaWarningCheckUnavailable());
+} else if (r.officialWarningVerbatim != null) {   // ← unreachable when the
+  chips.add(m.areaOfficialWarning(...));          //   check was incomplete
+}
+```
+
+So a caller who reached one publisher, got a real `大雪警報` (heavy-snow
+warning), failed to reach a second publisher, and **honestly reported the check
+as incomplete** — `warningEventVerbatim: '大雪警報', warningCheckAvailable:
+false` — had the heavy-snow warning **dropped** and replaced by
+「警報・注意報の確認ができませんでした」 / "Official-warning check unavailable".
+Admitting the gap cost the driver the warning she had.
+
+**0.5.3 renders a warning in hand first, whatever the check's completeness.** A
+hazard seen is a hazard real, even on partial data. Only the *negative* claim
+needs a complete check.
+
+*If you relied on the old order to suppress a warning while a check was
+incomplete, that warning now renders.* We believe that is what you wanted.
+
+### 2. `warningCheckAvailable` now defaults to `false` (behaviour change)
+
+`summarizeAreaConditions({... bool warningCheckAvailable = true})` defaulted to
+the reassuring value. The zero-effort call — no warning passed, no flag passed —
+rendered:
+
+> No active snow warning or advisory for this area.
+> この地域に発表中の雪の警報・注意報はありません。
+
+**from a check that was never performed.** "No advisory is in force" is a claim
+about *completeness*: you may only make it when you actually asked and the
+publisher actually answered. Silence from a publisher you did not ask is not an
+all-clear — it is a gap. We were making that claim for free, by default, on
+behalf of callers who had never reached a publisher at all.
+
+The default is now `false`, so an un-asserted check renders
+「警報・注意報の確認ができませんでした — 実際には発表されている可能性があります。」
+/ "Official-warning check unavailable — a warning may be in effect that is not
+shown here."
+
+**What to do:** if you *do* reach the publisher and it has nothing in force,
+pass `warningCheckAvailable: true`. That case still renders exactly as before —
+it is the one call that earns the sentence, and it is a one-word diff:
+
+```dart
+summarizeAreaConditions(
+  forecast: f, now: n, areaLabel: 'Akita',
+  warningEventVerbatim: publisherWarningOrNull,
+  warningCheckAvailable: true,   // ← you reached the publisher; it answered
+);
+```
+
+If you pass a warning verbatim, you need change nothing: change 1 makes it
+render regardless of this flag.
+
+### Compatibility
+
+Compiler-additive: no signature, type, or member changed — nothing to migrate,
+and this is why it ships as a patch inside `^0.5.0`. **Behaviourally it is not
+additive**, and we are not going to hide that in a version number: a caller who
+never passed the flag will see one *fewer* affirmative sentence, and a caller who
+passed a warning alongside an incomplete check will see one *more* warning. Both
+directions are deliberate.
+
+### Still present in 0.5.3 — not fixed here
+
+`SnowAwarePretripAdvisor.hazardOf` returns `HourHazard.clear` for a slot that
+carries a temperature and nothing else: every hazard test is guarded
+`x != null && ...`, so **absent visibility, precipitation and road data fall
+through to "clear"** and render 「危険の兆候なし」 / "no winter hazard signal".
+The per-slot half of the 0.5.2 fabricated-clear fix is still open. Reporting it
+rather than half-fixing it: an honest repair needs a "could not assess" sentence,
+and adding a member to `PretripMessages` is a compile break for anyone who
+`implements` it (it is a plain `abstract class` — we published that permission).
+It cannot ship inside `^0.5.0`. Tracked for the 0.6.x line, where
+`HourHazard.unknown` makes absence a first-class value.
+
 ## 0.5.2
 
 ### Safety defect in 0.5.1 and earlier — please read
