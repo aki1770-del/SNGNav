@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.0.9
+
+**The compiler-enforced version of the 0.0.8 honesty fix — shipped as a patch,
+because a patch is the only thing that reaches you.**
+
+`0.0.8` gave you `canAssertNoAdvisory`, `fold` and `requireCompleteLookup` so a
+feed outage would stop rendering as a clear sky. They work. They also have to be
+**remembered**, and a surface you can forget is one you will forget — that is
+exactly how the original defect shipped.
+
+This release adds the version the compiler checks.
+
+- **NEW `AdvisoryLookup`** — a `sealed` result with `AdvisoryLookupComplete` /
+  `AdvisoryLookupPartial` / `AdvisoryLookupUnavailable`. A `switch` over it is
+  exhaustive, so omitting the "we could not look" branch is a **compile error**,
+  not a silent all-clear.
+- **NEW `AdvisoryAggregator.lookupAtPoint()`** returns it. Prefer it in new code.
+- **NEW `AdvisoryAggregateResult.toLookup()`** converts an existing result, so
+  you can adopt this without changing your call site.
+- **NEW `AdvisorySourceFailure`** — the typed per-source failure it carries.
+
+**Nothing was changed or removed.** `fetchActiveAdvisoriesAtPoint` still returns
+`AdvisoryAggregateResult`; every 0.0.8 member is present and behaves identically.
+**Verified rather than asserted:** the published `condition_aggregator_jma 0.3.1`
+— which pins `^0.0.5` — was resolved against this version and analysed clean,
+0 issues.
+
+**Why a patch and not 0.1.0.** Measured with `pub_semver`, not by eye: every
+consumer of this package pins a range whose upper bound is `<0.1.0` — the five
+adapters and `driving_weather` at `^0.0.5`, `drive_situation_fusion` at `^0.0.7`,
+and the integrator app at `>=0.0.3 <0.1.0`. **`0.1.0` reaches 0 of those 8.
+`0.0.9` reaches 8 of 8.** Shipping this as a major bump would have delivered the
+safety substance to nobody who already depends on us.
+
+**Forward compatible on purpose.** These names and shapes are identical to the
+ones in the unpublished `0.1.0`, where `fetchActiveAdvisoriesAtPoint` returns
+`AdvisoryLookup` directly. Code written against `lookupAtPoint` compiles there
+unchanged.
+
+**What this does NOT do.** `AdvisoryUnavailableReason` is untouched at its five
+members. `0.1.0` grows it to seven, which is breaking for an exhaustive `switch`
+and therefore cannot ride a patch. If you switch exhaustively on it, that change
+is still ahead of you.
+
 ## 0.0.8
 
 ### Safety defect in 0.0.7 and earlier — please read
