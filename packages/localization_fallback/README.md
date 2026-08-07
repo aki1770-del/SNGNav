@@ -184,10 +184,35 @@ lie.
 
 ## Computing the trust signal
 
-This package does **not** compute trust, and — correcting an earlier version of
-this README — **no published package in this catalog does either.** The
-`position_integrity` package these docs used to link to is not on pub.dev. If you
-followed that link and found nothing, that was our error, not yours.
+This package does **not** compute trust. You can either compute it yourself from
+the worked assessment below, or take it from
+[`position_integrity`](https://pub.dev/packages/position_integrity), which is on
+pub.dev and does exactly this job.
+
+Its `PositionIntegrityMonitor.update(fix)` returns an `IntegrityVerdict` whose
+`.status` is an `IntegrityStatus` — `trusted` / `suspect` / `failed` — the same
+three cases, by the same names, as our [`TrustSignal`]:
+
+```dart
+final verdict = monitor.update(fix);
+final trust = switch (verdict.status) {
+  IntegrityStatus.trusted => TrustSignal.trusted,
+  IntegrityStatus.suspect => TrustSignal.suspect,
+  IntegrityStatus.failed  => TrustSignal.failed,
+};
+controller.onFix(rawFix, trust: trust);
+```
+
+**Read its `KNOWN_LIMITATIONS.md` before you rely on it.** It is honest about a
+real bound that matters here: a moderate multipath offset can still read
+`trusted`. `trusted` means *no gate fired*, not *this position is correct*.
+
+> **Corrected in 0.1.4.** Up to and including 0.1.3 this section told you no such
+> published package existed. That was **true when 0.1.3 was published on
+> 2026-07-14** and stopped being true on **2026-07-23**, when `position_integrity`
+> was published — and we left the stale sentence standing for sixteen days. If you
+> read 0.1.3 and wrote your own trust computation because we told you there was
+> nothing to use, that cost was ours.
 
 `onFix` therefore defaults to `TrustSignal.trusted`: **it believes the fix.** That
 default is usable (a controller that trusted nothing could never anchor) but it is

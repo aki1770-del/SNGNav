@@ -40,7 +40,7 @@ class LocalizationConfig {
     this.driftRateMetersPerSecond = 2.0,
     this.maxTrustworthyRadiusMeters = 500.0,
     this.maxDeadReckoningSeconds = 120.0,
-  })  : assert(driftRateMetersPerSecond >= 0),
-        assert(maxTrustworthyRadiusMeters > 0),
-        assert(maxDeadReckoningSeconds > 0);
+  }) : assert(driftRateMetersPerSecond >= 0),
+       assert(maxTrustworthyRadiusMeters > 0),
+       assert(maxDeadReckoningSeconds > 0);
 }

@@ -1,3 +1,43 @@
+## 0.1.4
+
+**We told you a package did not exist. It does, and it has since 2026-07-23.**
+
+`0.1.2` and `0.1.3` corrected an earlier link by stating plainly that the
+`position_integrity` package **was not published**. That was **true when we wrote
+it.** `position_integrity 0.1.0` went live on **2026-07-23T23:59:41Z**, and the
+sentence stayed in this package — in the README, in this changelog, and in two
+dartdoc comments that render on our pub.dev API pages — for **sixteen days**
+after it stopped being true.
+
+**What that cost you.** If you read those docs and wrote your own trust
+computation because we told you nothing existed to use, you did work you did not
+have to do. That is on us, not on you.
+
+**What is true now.** `position_integrity` is on pub.dev. Its
+`PositionIntegrityMonitor.update(fix)` returns an `IntegrityVerdict` whose
+`.status` is `trusted` / `suspect` / `failed` — the same three cases as
+[`TrustSignal`], under the same names, so the mapping is one line per case.
+The README shows it. You may still compute trust yourself; nothing is deprecated.
+
+**Read its `KNOWN_LIMITATIONS.md` first.** That package is honest that `trusted`
+means *no plausibility gate fired*, not *this position is correct* — a moderate
+multipath offset can read `trusted`. We are pointing you at a real tool, not a
+guarantee.
+
+**No code changed in this release.** Documentation only: `README.md`,
+`lib/src/trust_signal.dart`, `lib/src/localization_controller.dart`. No API was
+added, removed, or altered; `0.1.4` is a drop-in replacement for `0.1.3`.
+
+**Why a patch and not a minor.** Every consumer we can see pins `^0.1.1`, which
+admits `0.1.4`. A minor or major bump would leave that false sentence as the
+answer anyone on the caret range keeps receiving. **The in-range patch is the
+only vehicle that reaches a consumer who already has us.**
+
+*The 0.1.3 entry below stands as written. It was accurate on its date and we are
+not editing history to make ourselves look better.*
+
+---
+
 ## 0.1.3
 
 **The code we told you to copy did not compile. We are sorry.**

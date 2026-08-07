@@ -50,6 +50,7 @@ class RawFix {
       accuracyMeters >= 0;
 
   @override
-  String toString() => 'RawFix(lat: $latitude, lon: $longitude, '
+  String toString() =>
+      'RawFix(lat: $latitude, lon: $longitude, '
       'acc: ${accuracyMeters}m, t: $timestamp)';
 }

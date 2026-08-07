@@ -3,11 +3,18 @@ library;
 
 /// Whether a raw fix can be believed.
 ///
-/// **You must compute this yourself.** This package never computes trust — it
-/// only orchestrates the honest handoff once trust is known. There is no
-/// published package in this catalog that produces the verdict for you; earlier
-/// docs pointed at a `position_integrity` package that is **not on pub.dev**,
-/// and that reference was wrong.
+/// **This package never computes trust** — it only orchestrates the honest
+/// handoff once trust is known. You can compute the verdict yourself (a worked
+/// assessment is below and in the README), or take it from
+/// [`position_integrity`](https://pub.dev/packages/position_integrity), whose
+/// `IntegrityVerdict.status` carries the same three cases under the same names.
+///
+/// Note the bound that package states about itself: `trusted` means no
+/// plausibility gate fired, not that the position is correct — a moderate
+/// multipath offset can still read `trusted`.
+///
+/// Docs up to 0.1.3 said no such published package existed. That was true when
+/// 0.1.3 shipped and became false on 2026-07-23; corrected in 0.1.4.
 ///
 /// A workable verdict from the fields a platform locator already gives you.
 /// The full, copy-pasteable version — including the distance helper — is in the

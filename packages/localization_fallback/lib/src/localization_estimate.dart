@@ -62,7 +62,8 @@ class LocalizationEstimate {
   bool get hasPosition => latitude.isFinite && longitude.isFinite;
 
   @override
-  String toString() => 'LocalizationEstimate(${mode.name}, '
+  String toString() =>
+      'LocalizationEstimate(${mode.name}, '
       'lat: ${latitude.toStringAsFixed(5)}, '
       'lon: ${longitude.toStringAsFixed(5)}, '
       'radius: ${confidenceRadiusMeters.toStringAsFixed(0)}m, '

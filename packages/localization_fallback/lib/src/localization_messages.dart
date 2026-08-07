@@ -254,6 +254,7 @@ class _JaLocalizationMessages extends LocalizationMessages {
   String noTrustedFixFor(int seconds) => '約$seconds秒間、信頼できるGPS測位がありません。';
 
   @override
-  String noPositionAtAll() => '現在地を取得できていません。'
+  String noPositionAtAll() =>
+      '現在地を取得できていません。'
       '確かな情報がないため、現在地は表示していません。';
 }
