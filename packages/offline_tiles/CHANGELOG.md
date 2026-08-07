@@ -1,11 +1,81 @@
 # Changelog
 
+## 0.5.6
+
+Makes the published example resolve. No API or behaviour change: every file
+under `lib/` is byte-identical to 0.5.5.
+
+`example/pubspec.yaml` in 0.5.5 and every earlier release carried a
+`dependency_overrides:` block naming 28 sibling packages by local filesystem
+path (`../../adaptive_reroute`, `../../condition_aggregator`, ...). Those paths
+exist only inside our development monorepo. In a published archive they resolve
+to nothing, so `dart pub get` in `example/` failed before it could start:
+
+    Because offline_tiles_example depends on voice_guidance from path
+    which doesn't exist (could not find package voice_guidance at
+    "../../voice_guidance"), version solving failed.
+
+The example never used any of those 28 packages. Its only imports are
+`flutter`, `flutter_map`, `latlong2` and this package. The block was
+development scaffolding that should never have shipped.
+
+The overrides now live in `example/pubspec_overrides.yaml`, which
+`example/.pubignore` keeps out of the published archive. Monorepo development
+resolves siblings locally exactly as before; the published example now resolves
+against pub.dev.
+
 ## Unreleased (rides the next republish — the core ^0.11 wave)
 - docs: Android SQLite native-library trap section — `sqlite3_flutter_libs`
   0.6.0+eol is a no-op; pin 0.5.x until a hooks-delivered `.so` is
   device-verified; the failure mode is a silent blank offline map with green
   host tests (production-found 2026-07-10). Verification recipe: airplane
   mode BEFORE launch, SEE the bundled region paint.
+
+## 0.5.5
+
+Removes build artifacts that 0.5.4 published by mistake. No API or behaviour
+change: every file under `lib/` is byte-identical to 0.5.4.
+
+**What 0.5.4 contained, and what you already have.** The 0.5.4 archive was
+17,460,090 bytes, of which about 99.9% was a `build/` directory that should
+never have been in a published package. It held eleven files, the largest a
+Flutter kernel cache (`build/test_cache/build/*.cache.dill.track.dill`,
+50,460,280 bytes uncompressed) that embedded 1,440 absolute filesystem paths
+from the machine that published it, of the form
+`/home/<user>/.pub-cache/hosted/pub.dev/<package>-<version>/...`, plus 17
+references to the temporary directory the release was staged in.
+
+It also carried `build/native_assets/linux/libsqlite3.so` (1,801,600 bytes) —
+host-built ELF x86-64 output from the Flutter native-assets step, referenced by
+an absolute path inside that same temporary staging directory. **Removing it
+breaks nothing**: nothing under `lib/` references any `.so`, and your platform's
+sqlite3 native library comes from the declared `sqlite3` dependency, not from
+this archive. A Linux-x64 binary was never usable by an Android or arm64
+consumer in any case.
+
+If you pulled 0.5.4, those bytes are in your pub cache. They disclose the
+publishing machine's account name, its pub-cache and staging-directory
+locations, and the exact set and versions of the 47 packages resolved there at
+build time. We checked for credentials and found none — no private keys, SSH
+keys, or API tokens; the payload is a compiler cache, a stock sqlite3 build, and
+dependency source, not configuration. Nothing about *consumers* of this package
+was included, and the files were inert: no code under `lib/` reads anything in
+`build/`, so nothing you ran was affected.
+
+Upgrading to 0.5.5 (in range for any `^0.5.x` constraint) replaces the archive.
+Removing `.pub-cache/hosted/pub.dev/offline_tiles-0.5.4/` clears the old copy.
+**0.5.4 remains downloadable from pub.dev — published versions are immutable and
+cannot be withdrawn**; this release supersedes it, it does not recall it.
+
+**Cause, and why it should not recur.** `build/` has been ignored by the
+repository's root `.gitignore` since 2026-03-04, and `pub publish` honours that
+when run from inside the work tree. 0.5.4 was published from a staging copy
+*outside* the work tree, where a repo-root `.gitignore` does not apply; pub then
+included every file on disk and reported "0 warnings". This release adds a
+`.pubignore` to the package itself, so the exclusion travels with the package
+directory wherever it is copied or staged. Verified by reproducing the fault:
+with `build/` present on disk, the publish dry-run produced 16 MB without the
+`.pubignore` and 25 KB with it.
 
 ## 0.5.4
 

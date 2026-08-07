@@ -353,7 +353,7 @@ packages:
       path: "../../map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.4.6"
   matcher:
     dependency: transitive
     description:
@@ -473,7 +473,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.5.4"
+    version: "0.5.6"
   path:
     dependency: transitive
     description:
