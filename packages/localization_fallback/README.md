@@ -64,11 +64,13 @@ A small, synchronous state machine. You give it:
 
 - a stream of **raw fixes** (`RawFix`: lat, lon, accuracyMeters, timestamp,
   optional speed/heading), and
-- per fix, a **trust signal** (`TrustSignal.trusted/suspect/failed`) that
-  **you compute** — see [Computing the trust signal](#computing-the-trust-signal)
-  below; no package in this catalog computes it for you, and
+- per fix, a **trust signal** (`TrustSignal.trusted/suspect/failed`) that you
+  either compute — see [Computing the trust signal](#computing-the-trust-signal)
+  below — or take from
+  [`position_integrity`](https://pub.dev/packages/position_integrity), and
 - optionally a **dead-reckoning seam** (`DeadReckoningSeam`) that you back with a
-  dead-reckoning engine such as [`kalman_dr`](../kalman_dr), and
+  dead-reckoning engine such as
+  [`kalman_dr`](https://pub.dev/packages/kalman_dr), and
 - optionally vehicle speed/heading on the fix.
 
 It hands back exactly one `LocalizationEstimate` per input:
