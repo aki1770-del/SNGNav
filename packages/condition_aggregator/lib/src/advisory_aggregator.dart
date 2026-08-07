@@ -37,6 +37,7 @@ import 'dart:async' show TimeoutException;
 
 import 'advisory.dart';
 import 'advisory_absence.dart';
+import 'advisory_lookup.dart';
 import 'advisory_provider.dart';
 
 /// Result of one aggregator query — the merged advisory list, the per-provider
@@ -173,6 +174,31 @@ class AdvisoryAggregateResult {
     if (canAssertNoAdvisory) return complete(advisories);
     if (isUnavailable) return unavailable(providerErrors);
     return partial(advisories, providerErrors);
+  }
+
+  /// This same result as the **sealed** [AdvisoryLookup], which the compiler
+  /// will not let you read without handling the case where we could not look.
+  ///
+  /// `fold` and [canAssertNoAdvisory] work, and they must be *remembered*. This
+  /// does not: a `switch` over [AdvisoryLookup] is exhaustive, so omitting the
+  /// "feed was down" branch is a compile error rather than a silent all-clear.
+  ///
+  /// Identical in name and shape to the type 0.1.0 returns directly, so code
+  /// written against it migrates with no change.
+  AdvisoryLookup toLookup() {
+    final failures = providerErrors
+        .map(
+          (e) => AdvisorySourceFailure(
+            source: e.source,
+            reason: e.reason,
+            cause: e.cause,
+          ),
+        )
+        .toList(growable: false);
+
+    if (canAssertNoAdvisory) return AdvisoryLookupComplete(advisories);
+    if (isUnavailable) return AdvisoryLookupUnavailable(failures);
+    return AdvisoryLookupPartial(advisories: advisories, unreachable: failures);
   }
 
   /// The loud stop, opt-in: throws [AdvisoryLookupIncompleteException] unless
@@ -363,6 +389,26 @@ class AdvisoryAggregator {
       providerErrors: errors,
       sourcesQueried: _providers.length,
     );
+  }
+
+  /// The same fan-out as [fetchActiveAdvisoriesAtPoint], returned as the
+  /// **sealed** [AdvisoryLookup] so the "we could not look" case cannot be
+  /// skipped.
+  ///
+  /// Prefer this in new code. [fetchActiveAdvisoriesAtPoint] is unchanged and
+  /// still supported; this is additive.
+  ///
+  /// In 0.1.0 `fetchActiveAdvisoriesAtPoint` returns this type directly — code
+  /// written against this method compiles there unchanged.
+  Future<AdvisoryLookup> lookupAtPoint({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final r = await fetchActiveAdvisoriesAtPoint(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    return r.toLookup();
   }
 
   /// Best-effort classification of an adapter failure. Returns
