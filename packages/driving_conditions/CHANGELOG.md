@@ -1,3 +1,72 @@
+## 0.5.7
+
+Fixes a fleet report whose own confidence is NaN or infinite being reported as
+`1.0` — "fleet reports consistently safe conditions". Behaviour change on that
+one path only. Every finite path is byte-for-byte the same answer as 0.5.6.
+
+**What you already have, if you pulled any release from 0.5.0 to 0.5.6.**
+`FleetHazardConfidenceAdapter.confidence` ended with
+`(total / totalWeight).clamp(0.0, 1.0)`. Dart's `num.clamp` maps NaN to the
+*upper* bound: measured on the Dart VM, `double.nan.clamp(0.0, 1.0)` is `1.0`,
+and that result's `.isFinite` is `true`. `FleetReport.confidence` is a plain
+`double` with no finiteness constraint, so a single report carrying NaN or
+`Infinity` — from a division by zero upstream, a bad parse, an uninitialised
+sensor — poisons the weighted average, and the adapter answered `1.0`.
+
+Measured, on the published 0.5.6 archive:
+
+| Recent reports | 0.5.6 answered | 0.5.7 answers |
+|---|---|---|
+| one ICY report, `confidence: NaN` | `1.0` | `NaN` |
+| one ICY report, `confidence: Infinity` | `1.0` | `NaN` |
+| one ICY report, `confidence: -Infinity` | `1.0` | `NaN` |
+| four honest ICY reports plus one NaN | `1.0` | `NaN` |
+| anything finite | unchanged | unchanged |
+
+The last row of that table is the one worth pausing on: four vehicles reporting
+ice, and one malformed report, produced maximum confidence that the road was
+safe.
+
+**Why it also mattered downstream.** `navigation_safety_core` deliberately maps
+a non-finite score to `0` — the worst case — so that an uncertain score
+*alerts* rather than passing silently (`safety_score.dart`, the
+conservative-on-uncertain invariant). That guard can only fire on a value that
+is still non-finite when it arrives. By clamping first, this package converted
+the non-finite value into a finite, maximal one and the guard never ran. A
+sanitiser here was disarming a safety guard there. Verified end to end: with
+the 0.5.6 adapter, a NaN-confidence ICY report yields
+`SafetyScore.fleetConfidenceScore == 1.0`; with 0.5.7 the same input yields
+`0.0`, and a 50-run `CpuSafetyScoreSimulationEngine` simulation goes from 0
+incidents and an overall of 0.877 to 50 incidents and an overall of 0.0.
+
+**What changed in the code.** One branch, before the clamp:
+
+```dart
+final average = total / totalWeight;
+if (!average.isFinite) return average; // do not clamp; see below
+return average.clamp(0.0, 1.0);
+```
+
+A non-finite return asserts nothing in either direction — every comparison
+against NaN is false — so a consumer that does not handle it makes no claim
+about the road either way. Only a consumer that has opted into
+conservative-on-uncertain turns it into an alert. That decision belongs to the
+consumer, not to this adapter.
+
+**What did NOT change.** The `0.8` neutral baseline for absent, stale or
+zero-weight fleet data is untouched, and so is every condition factor. No
+public API signature changed. If your fleet data has always been finite, this
+release is a no-op for you.
+
+**What to check if you display the value directly.** `confidence` may now be
+`NaN` where 0.5.6 gave you `1.0`. `NaN.toStringAsFixed(2)` renders `"NaN"`, and
+every `<` or `>` comparison against it is false. If you format or threshold
+this value for a driver, handle `!value.isFinite` explicitly and decide what it
+should mean in your UI — it means "we could not read the fleet evidence", not
+"safe" and not "dangerous". Guarding it is a two-line change; leaving it
+unguarded is safer than 0.5.6 was, because a naive comparison now makes no
+claim instead of the wrong one.
+
 ## 0.5.6
 
 Removes build artifacts that 0.5.5 published by mistake. No API or behaviour
