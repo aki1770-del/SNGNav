@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.11.4
+
+An absent ambient temperature is no longer answered with a temperature.
+
+**What you already have, and what it does.** In 0.11.3 and every release
+before it, `NavigationSafetyConfig.forProfileWithContext` read an absent
+`context.ambientTempCelsius` as `5.0` on one path — the residual-moisture
+visibility margin taken when `context.timeSincePrecipitation` is set:
+
+```dart
+final ambient = context.ambientTempCelsius ?? 5.0; // 0.11.3
+```
+
+Seventeen lines below, the black-ice branch of the same function refused to
+proceed at all without that field (`context.ambientTempCelsius != null`). One
+function, two opposite treatments of one missing input, and the substituted
+`5.0` was indistinguishable inside the calculation from a reading actually
+taken. It was also the only place in that factory where an absent field was
+filled in rather than skipped — `DrivingContext` documents that every absent
+field falls back to the per-profile baseline.
+
+**Your numbers do not change.** `computeSurfaceMoistureFraction` accepts
+`ambientCelsius` "for forward-compatible API shape" and does not read it, so
+the substituted `5.0` never reached a threshold. If you are on 0.11.3 today,
+nothing you are seeing is wrong and there is nothing to undo. A test in this
+release pins that parity: every profile, elapsed time, and ambient value —
+present or absent — produces exactly the 0.11.3 result while the calibration
+stays temperature-independent.
+
+**What changes is what happens if that stops being true.** The calibration's
+own documentation says a future revision "may modulate the half-life by
+temperature *without an API break*", and this package depends on it through
+`^0.1.2`. Such a release could arrive on your next `pub upgrade` with no
+change here and no action by you — and the inert `5.0` would quietly become
+load-bearing, deriving a driver-facing visibility floor from a temperature
+nobody measured. Measured against a calibration mutated to do exactly that:
+an `ageingRural` driver's warning-visibility floor came out at **598 m**
+instead of the honest **300 m** baseline.
+
+From 0.11.4 the branch passes no invented temperature. When ambient is
+absent it asks the calibration the same question at −40 °C, 0 °C and 40 °C
+and uses the answer only if all three agree — agreement meaning the answer
+does not depend on the missing measurement, so the absence costs nothing.
+If they ever disagree, the margin is withheld and the per-profile baseline
+stands, which is what every other absent field of `DrivingContext` already
+does. The floor is never lowered; only an add-on is withheld.
+
+- No API changes. No behaviour change on any calibration published to date.
+- Honest bounds: agreement across three probes is evidence of independence,
+  not proof of it. The durable fix is a calibration signature that can
+  express "not measured" — widening `ambientCelsius` to `double?` would be
+  source-compatible for every existing caller — and that is a change in
+  `navigation_safety_calibration`, which this package does not own.
+
 ## 0.11.3
 
 One Japanese explainer string corrected — a caution the driver could not hear.
