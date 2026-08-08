@@ -109,15 +109,15 @@ class AreaConditionRead {
 
   @override
   int get hashCode => Object.hash(
-        _areaHazard,
-        forecastCovered,
-        officialWarningVerbatim,
-        warningCheckAvailable,
-        measuredVisibilityMeters,
-        visibilityStationName,
-        visibilityDistanceKm,
-        areaLabel,
-      );
+    _areaHazard,
+    forecastCovered,
+    officialWarningVerbatim,
+    warningCheckAvailable,
+    measuredVisibilityMeters,
+    visibilityStationName,
+    visibilityDistanceKm,
+    areaLabel,
+  );
 }
 
 /// Summarises the conditions in a destination AREA over [lookAhead] starting at
@@ -201,18 +201,22 @@ List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
   }
 
   // 2. Forecast hazard band (or honest "not covered").
-  chips.add(r.forecastCovered
-      ? m.areaHazardChip(r.areaHazard)
-      : m.areaForecastNotCovered());
+  chips.add(
+    r.forecastCovered
+        ? m.areaHazardChip(r.areaHazard)
+        : m.areaForecastNotCovered(),
+  );
 
   // 3. Measured visibility (real sensor or honest "none").
-  chips.add(r.measuredVisibilityMeters != null
-      ? m.areaMeasuredVisibility(
-          r.measuredVisibilityMeters!,
-          r.visibilityStationName ?? '',
-          r.visibilityDistanceKm ?? 0,
-        )
-      : m.areaNoMeasuredVisibility());
+  chips.add(
+    r.measuredVisibilityMeters != null
+        ? m.areaMeasuredVisibility(
+            r.measuredVisibilityMeters!,
+            r.visibilityStationName ?? '',
+            r.visibilityDistanceKm ?? 0,
+          )
+        : m.areaNoMeasuredVisibility(),
+  );
 
   return chips;
 }

@@ -31,44 +31,48 @@ const _forbidden = <String>[
 
 /// Every output an area-* method can produce, for one locale table.
 List<String> _allAreaOutputs(PretripMessages m) => [
-      m.areaOfficialWarning('大雪警報'),
-      m.areaOfficialWarning('Heavy snow warning'),
-      m.areaNoOfficialWarning(),
-      m.areaWarningCheckUnavailable(),
-      for (final b in HourHazard.values) m.areaHazardChip(b),
-      for (final b in HourHazard.values) m.areaHazardBand(b),
-      m.areaForecastNotCovered(),
-      m.areaMeasuredVisibility(80, '秋田', 5),
-      m.areaNoMeasuredVisibility(),
-    ];
+  m.areaOfficialWarning('大雪警報'),
+  m.areaOfficialWarning('Heavy snow warning'),
+  m.areaNoOfficialWarning(),
+  m.areaWarningCheckUnavailable(),
+  for (final b in HourHazard.values) m.areaHazardChip(b),
+  for (final b in HourHazard.values) m.areaHazardBand(b),
+  m.areaForecastNotCovered(),
+  m.areaMeasuredVisibility(80, '秋田', 5),
+  m.areaNoMeasuredVisibility(),
+];
 
 void main() {
   group('vocabulary gate — no person/road-status token in any area chip', () {
-    for (final entry in {'en': PretripMessages.en, 'ja': PretripMessages.ja}
-        .entries) {
+    for (final entry in {
+      'en': PretripMessages.en,
+      'ja': PretripMessages.ja,
+    }.entries) {
       test('locale ${entry.key}', () {
         for (final out in _allAreaOutputs(entry.value)) {
           for (final bad in _forbidden) {
-            expect(out.contains(bad), isFalse,
-                reason: 'area chip "$out" must not contain forbidden "$bad"');
+            expect(
+              out.contains(bad),
+              isFalse,
+              reason: 'area chip "$out" must not contain forbidden "$bad"',
+            );
           }
         }
       });
     }
   });
 
-  test('structural no-person: AreaConditionRead exposes ONLY the 8 place fields',
-      () {
-    final cm = reflectClass(AreaConditionRead);
-    final fields = <String>{
-      for (final d in cm.declarations.values)
-        if (d is VariableMirror && !d.isStatic)
-          MirrorSystem.getName(d.simpleName),
-    };
+  test(
+    'structural no-person: AreaConditionRead exposes ONLY the 8 place fields',
+    () {
+      final cm = reflectClass(AreaConditionRead);
+      final fields = <String>{
+        for (final d in cm.declarations.values)
+          if (d is VariableMirror && !d.isStatic)
+            MirrorSystem.getName(d.simpleName),
+      };
 
-    expect(
-      fields,
-      {
+      expect(fields, {
         // Backing field for the `areaHazard` getter as of 0.5.2 (the getter
         // throws AreaForecastNotCoveredException when the window is uncovered,
         // rather than returning a fabricated HourHazard.clear placeholder).
@@ -80,26 +84,28 @@ void main() {
         'visibilityStationName',
         'visibilityDistanceKm',
         'areaLabel',
-      },
-    );
+      });
 
-    // No person/presence/arrival/location/device field, and no
-    // suggestion/strength/recommendation/verdict field.
-    for (final banned in const [
-      'person',
-      'presence',
-      'arrival',
-      'arrived',
-      'location',
-      'device',
-      'suggestedDelay',
-      'strength',
-      'recommendation',
-      'verdict',
-    ]) {
-      expect(fields.any((f) => f.toLowerCase().contains(banned.toLowerCase())),
+      // No person/presence/arrival/location/device field, and no
+      // suggestion/strength/recommendation/verdict field.
+      for (final banned in const [
+        'person',
+        'presence',
+        'arrival',
+        'arrived',
+        'location',
+        'device',
+        'suggestedDelay',
+        'strength',
+        'recommendation',
+        'verdict',
+      ]) {
+        expect(
+          fields.any((f) => f.toLowerCase().contains(banned.toLowerCase())),
           isFalse,
-          reason: 'AreaConditionRead must not carry a "$banned" field');
-    }
-  });
+          reason: 'AreaConditionRead must not carry a "$banned" field',
+        );
+      }
+    },
+  );
 }
