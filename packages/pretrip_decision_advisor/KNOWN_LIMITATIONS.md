@@ -29,6 +29,19 @@ outside this package, so the package itself stays pure Dart.
   alternative `PretripAdvisor` implementation must justify its own numbers.
 - **No taxonomy claims.** `CommuteFlexibility` and the road-condition
   enum are working substrate, not declared-final taxonomies.
+- **`VisibilityObservation` does not validate its own numbers.** `meters` and
+  `distanceKm` are plain `double`s with no finiteness constraint, so the type
+  accepts `NaN` and `±Infinity` — values the domain has no meaning for. This
+  matters because the source adapters build the observation from publisher JSON:
+  `double.tryParse` returns `Infinity` for the string `"Infinity"` and for an
+  overflowing literal such as `"1e400"`. As of 0.5.3 the consuming seams treat a
+  non-finite reading as ABSENT rather than crash on it (see CHANGELOG 0.5.3 §1d,
+  §1e, and §2c), which upholds the rule stated below — *one dirty slot must never
+  crash a briefing* — but each seam has to remember, and that is the same shape
+  as the defect. **Check `meters.isFinite` before you construct one.** A type
+  that cannot hold a non-number is the real fix and belongs on the 0.6.x line: a
+  validating constructor here would break a consumer whose debug build passes
+  such a value through today.
 - **No driver-profile coupling.** `DriverProfileSpec` is intentionally
   small and decoupled from any other package. A concrete advisor
   needing a richer profile model should adapt at its boundary, not

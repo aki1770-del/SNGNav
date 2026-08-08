@@ -2,23 +2,33 @@
 
 ## 0.5.3
 
-**Two independent safety fixes. Your build will not break — and that is the
-problem this note exists to solve.** No signature, type, or member changed, so
-nothing will stop you upgrading. But **sentences your users read will change in
-both directions**, and one recommendation that actively sent drivers somewhere
-has been withdrawn. If you skim one section of this changelog, skim this table.
+**Safety fixes at two seams, plus a crash. Your build will not break — and that
+is the problem this note exists to solve.** No signature, type, or member
+changed, so nothing will stop you upgrading. But **sentences your users read will
+change in both directions**, one recommendation that actively sent drivers
+somewhere has been withdrawn, and **one path that took the whole app down no
+longer does**. If you skim one section of this changelog, skim this table.
 
 | where | up to 0.5.2 your users saw | on 0.5.3 they see |
 |---|---|---|
 | **destination-area warning line**, when you never passed `warningCheckAvailable` | "No active snow warning or advisory for this area."<br>「この地域に発表中の雪の警報・注意報はありません。」 | "Official-warning check unavailable — a warning may be in effect that is not shown here."<br>「警報・注意報の確認ができませんでした — 実際には発表されている可能性があります。」 |
 | **destination-area warning line**, when you held a warning *and* honestly reported the check incomplete | "Official-warning check unavailable…" — **the 大雪警報 you held was dropped** | "Official winter warning or advisory in effect for this area: 大雪警報." |
+| **destination-area read**, when a sensor reading arrived non-finite | **your app went down** — an untyped `UnsupportedError` your `catch` clause did not hold | the reading is reported absent; the hazard band is unchanged |
+| **destination-area visibility line**, when the distance to the station was missing | "…(秋田, **~0 km away**)." — the station placed where she is standing | "No measured visibility available for this area." |
 | **trip-window briefing**, when the forecast carried a temperature and nothing else | "No winter hazard signals in your trip window."<br>「出発時間帯に冬季の危険を示す兆候はありません。」 | `brief(...)` throws `PretripAssessmentIncompleteException`; `briefOrNull(...)` returns `null` |
 | **suggested departure delay**, when the later hours were unmeasured | "Conditions improve by about 08:15." — **it sent her into the hour it knew least about** | that hour is skipped; a later, fully-measured hour can still win |
 
-Both fixes are one rule, applied at two seams:
+The two evidence fixes are one rule, applied at two seams:
 
 > **Positive evidence fires on partial knowledge. Negative conclusions require
 > whole knowledge.**
+
+The crash fixes (1d, 1e) are a second rule, and it is the same one the type
+system was already trying to tell us:
+
+> **A value that is not a number is not a measurement.** `NaN` and `±Infinity`
+> are absence wearing a number's clothes, and `0` is absence wearing a
+> confident number's clothes. Neither may be reported as a reading.
 
 A hazard you *saw* still reports from whatever you measured. Only the
 affirmative claims — "no warning is in force", "no winter hazard in your
@@ -103,6 +113,100 @@ green; the code in fact throws `AreaForecastNotCoveredException`. Corrected.
 This is a defect, not housekeeping: the doc ships in the archive, and it is what
 a consumer reads before they read the code.
 
+#### 1d. A non-finite sensor reading took the app down (safety fix)
+
+This is the **same defect** as the non-finite crash listed under Fix 2c, on the
+sibling path. Fix 2 closed it for the trip-window briefing and left the area read
+open, so one release fixed half a defect. Both halves ship here.
+
+`VisibilityObservation` is **public, exported and unvalidated** — `double meters`
+and `double distanceKm`, no finiteness constraint — and `summarizeAreaConditions`
+called `.round()` on both:
+
+```dart
+measuredVisibilityMeters: observed?.meters.round(),
+visibilityDistanceKm:     observed?.distanceKm.round(),
+```
+
+Reproduce it yourself — this was run against the **published 0.5.2 archive**
+(`dependencies: pretrip_decision_advisor: 0.5.2`), not a working tree, and the
+output below is verbatim:
+
+```dart
+summarizeAreaConditions(
+  forecast: f, now: n, areaLabel: 'Akita',
+  observed: VisibilityObservation(
+    meters: double.nan,           // or distanceKm: double.infinity
+    stationId: 1, stationName: '秋田', measuredAt: n, distanceKm: 4.2,
+  ),
+);
+// THREW: Unsupported operation: Infinity or NaN toInt
+// is PretripDataAbsentException -> false
+// #1  double.round (dart:core-patch/double.dart:196:34)
+// #2  summarizeAreaConditions
+//       (package:pretrip_decision_advisor/src/area_condition_read.dart:176:48)
+```
+
+`false` is the whole problem. It is an **untyped** error out of a pure, offline
+function, so the `on PretripDataAbsentException` clause 0.5.2 asked you to write
+did not catch it and the app went down — on the screen a driver reads *before she
+leaves the house*.
+
+**It is reachable from the network, not only by hand.** The source adapters build
+`VisibilityObservation` straight from publisher JSON, and `pretrip_source_jma`
+parses numbers with `double.tryParse`, which returns `Infinity` for the string
+`"Infinity"` and for an overflowing literal such as `"1e400"`.
+
+**0.5.3 treats a non-finite reading as ABSENT** — the same equivalence
+`evidenceGaps` already makes (`vis == null || !vis.isFinite` is one condition,
+not two). Absence on this read has one spelling, already published and already
+documented on those fields: `null`, and the chip says so. **No new member, no new
+type, no new vocabulary** — which is also why it fits inside `^0.5.0`.
+
+- **non-finite `meters`** ⇒ all three visibility fields are `null` (they are one
+  composite claim, and their own docs already said "Null when there is no
+  measurement").
+- **non-finite `distanceKm`** ⇒ only the distance is withdrawn. The measurement
+  is a real number and survives: positive evidence fires on partial knowledge.
+
+**The hazard band is untouched.** `mergeObservedVisibility` still carries your
+reading into the departure slot and `hazardOf` still judges it. A measured 80 m
+whiteout whose station distance is missing still reports `severe` — you lose the
+distance, never the hazard. This release does not delete bands.
+
+#### 1e. A missing station distance was rendered as `~0 km away` (safety fix)
+
+`areaConditionChips` filled a missing distance with `?? 0`:
+
+```dart
+m.areaMeasuredVisibility(
+  r.measuredVisibilityMeters!,
+  r.visibilityStationName ?? '',
+  r.visibilityDistanceKm ?? 0,   // ← absence arriving as a value
+)
+```
+
+`0` is not a neutral filler. It is the **nearest possible** station — maximum
+relevance — in the one clause a driver reads to judge how much a reading is about
+*her*. A reading from a station whose distance we never knew was presented as a
+reading from her own position. Run against the **published 0.5.2 archive**, with
+`visibilityDistanceKm: null`, verbatim:
+
+```
+Nearest measured visibility ~80 m (秋田, ~0 km away).
+最寄りの計測視程: 約80m(秋田、約0km先)。
+```
+
+The measured-visibility chip is a composite of two numbers, so **it now renders
+only when it holds both**; otherwise it degrades to the line that needs no
+number, exactly as `_describe` degrades to its no-number fallback. The guard sits
+in `areaConditionChips`, not only in `summarizeAreaConditions`, because
+`AreaConditionRead`'s constructor is public and a directly-constructed read
+reached the same `?? 0`.
+
+*If you were reading `~0 km` as "distance unknown", it now reads as the honest
+"none" line instead.*
+
 ### Fix 2 — the trip-window affirmative all-clear must be EARNED
 
 #### 2a. What you already have, in the version you are running now
@@ -186,7 +290,9 @@ search is not muted — only made honest.
   temperature or visibility reached `.round()` in `_describe` and threw
   `UnsupportedError: Infinity or NaN toInt` — an **untyped** error, so the
   `on PretripDataAbsentException` clause did NOT catch it and the app went down.
-  Such a slot now falls through to the generic chip.
+  Such a slot now falls through to the generic chip. **The identical crash on the
+  destination-area path is fixed in 1d above** — it is one defect with two doors,
+  and shipping only this one would have been shipping half a fix.
 - **`hazardOf` is unchanged in logic** — token-for-token identical to 0.5.2
   (183 tokens, verified). Its only textual difference is one line-wrap applied
   by `dart format` under SDK 3.11, which reformatted this whole package; the
@@ -217,8 +323,14 @@ the gate being noisy, it is the honest state of that data.
 ### Compatibility
 
 **Compiler-additive.** No signature, type, or member changed, and this is why
-both fixes ship as a patch inside `^0.5.0` where a `0.6.0` could not reach a
-caret-pinned consumer. One bound stated plainly: new methods were added to the
+every fix here ships as a patch inside `^0.5.0` where a `0.6.0` could not reach a
+caret-pinned consumer. This is not a guess about who is out there: the three
+published packages that depend on this one — `pretrip_source_jma`,
+`pretrip_source_met_norway`, `pretrip_source_digitraffic` — each pin
+`pretrip_decision_advisor: '>=0.5.0 <0.7.0'` in their own published pubspecs, and
+0.5.3 lands inside that. A consumer who wrote the ordinary `^0.5.0` gets
+`>=0.5.0 <0.6.0` and receives 0.5.3 too; a `0.6.0` would have reached neither
+them nor anyone else pinned that way. One bound stated plainly: new methods were added to the
 concrete `SnowAwarePretripAdvisor`; subclassing and instantiation are
 unaffected, and only a class that `implements SnowAwarePretripAdvisor` (rather
 than the `PretripAdvisor` contract it exists for) would need the new members.
@@ -273,6 +385,61 @@ deliberate. The table at the top of this entry is the whole surface.
   safety. It is left alone deliberately: this release never suppresses a band
   the ladder produced, because a gate that can delete a hazard is worse than the
   defect it fixes. Flagged for the safety owner, not silently changed.
+
+  **The same applies on the area path, and 1d does not change it.** A
+  `-Infinity` *visibility* satisfies `vis < 50`, so it lights `severe`:
+
+  ```dart
+  final r = summarizeAreaConditions(
+    forecast: f, now: n, areaLabel: 'Akita',
+    observed: VisibilityObservation(
+      meters: double.negativeInfinity,
+      stationId: 1, stationName: '秋田', measuredAt: n, distanceKm: 4.2,
+    ),
+  );
+  r.areaHazard;                 // HourHazard.severe   ← from a non-value
+  r.measuredVisibilityMeters;   // null                ← 1d, correctly absent
+  ```
+
+  The two lines disagree on purpose: 1d governs the chip's arithmetic, never the
+  ladder's judgement. Pinned by an executable test so it cannot drift —
+  `test/area_non_finite_observation_test.dart`, group *"the ladder is untouched —
+  the guard cannot delete a hazard"*.
+
+- **`VisibilityObservation` itself is still unvalidated, and that is where this
+  defect actually lives.** `meters` and `distanceKm` are plain `double`s with no
+  finiteness constraint, so the type permits a value the domain does not:
+
+  ```dart
+  VisibilityObservation(         // analyzer: "No issues found!"
+    meters: double.nan, stationId: 1, stationName: 's',
+    measuredAt: DateTime(2026), distanceKm: double.infinity,
+  );
+  // meters.isFinite -> false   distanceKm.isFinite -> false
+  ```
+
+  1d and 1e stop that value being *reported* as a measurement. They do not stop
+  it being *constructed*, and they cannot: a validating constructor is an
+  `assert` or a throw at a call site that compiles today, which is a break for a
+  consumer whose debug build currently passes such a value through. Every guard
+  we can reach is a guard each consuming seam has to remember — which is the same
+  shape as the defect. **The real fix is a type that cannot hold a non-number**,
+  and it belongs on the 0.6.x line beside `HourHazard.unknown`. Named here rather
+  than quietly guarded seam by seam.
+
+  What you can do today, inside `^0.5.0`: check `meters.isFinite` before you
+  construct one. `pretrip_source_jma` parses with `double.tryParse`, which
+  returns `Infinity` for `"Infinity"` and for `"1e400"`, so a publisher can hand
+  you one without malice.
+
+- **The measured-visibility chip is now all-or-nothing.** When the distance is
+  missing, 1e withholds the whole line rather than render "~80 m (秋田)" without
+  it — because saying so needs a **new `PretripMessages` member**, and
+  `PretripMessages` is a published `abstract class`, so adding one is a compile
+  break for anyone who `implements` it. It cannot ship inside `^0.5.0`. The
+  reading is not lost: it is still on `AreaConditionRead.measuredVisibilityMeters`
+  and still in the hazard band. Only the sentence is withheld. Same bound, same
+  cause, and same 0.6.x home as the two entries above.
 
 ## 0.5.2
 

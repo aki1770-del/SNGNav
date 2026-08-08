@@ -13,7 +13,10 @@
 ///   * Honest claim ceiling — output is "conditions / official advisory for the
 ///     AREA" only. NEVER a road-passability, per-road, or route-segment claim.
 ///   * Real-sensor-or-nothing — a measured visibility is set ONLY from a real
-///     [VisibilityObservation]; absent ⇒ null and the chip says so.
+///     [VisibilityObservation]; absent ⇒ null and the chip says so. As of 0.5.3
+///     a NON-FINITE reading (`NaN`, `±Infinity`) counts as absent: it is not a
+///     number, so it cannot be a measurement. [VisibilityObservation] is public
+///     and unvalidated, so this is the seam that enforces it.
 ///   * Offline-deterministic — [summarizeAreaConditions] takes no clock and no
 ///     network; live reads degrade to null (the section is omitted upstream),
 ///     never to a fabricated value.
@@ -81,13 +84,21 @@ class AreaConditionRead {
   final bool warningCheckAvailable;
 
   /// Nearest measured visibility in metres — from a REAL sensor only. Null when
-  /// there is no measured value.
+  /// there is no measured value, which as of 0.5.3 includes a NON-FINITE
+  /// reading: `NaN` and `±Infinity` are not numbers, so they are not
+  /// measurements. Up to 0.5.2 such a reading reached `.round()` and threw an
+  /// untyped `UnsupportedError` out of [summarizeAreaConditions].
   final int? measuredVisibilityMeters;
 
-  /// The measuring station's published name. Null when there is no measurement.
+  /// The measuring station's published name. Null when there is no measurement —
+  /// including when the reading was non-finite, since the three visibility
+  /// fields are one composite claim and are withdrawn together.
   final String? visibilityStationName;
 
-  /// Great-circle distance to the measuring station, km. Null when none.
+  /// Great-circle distance to the measuring station, km. Null when none, and
+  /// also when the distance itself was non-finite while the reading was good —
+  /// the measurement survives, the distance does not. A null here is never
+  /// rendered as `0`; [areaConditionChips] withholds the whole numeric chip.
   final int? visibilityDistanceKm;
 
   /// A PLACE label (e.g. a prefecture or town name) — NEVER a person.
@@ -143,6 +154,14 @@ class AreaConditionRead {
 /// into the slot covering [now] (the measured value is valid for the hour she
 /// would be leaving in), exactly as the in-window briefing merges it.
 ///
+/// (Corrected in 0.5.3: a non-finite `meters` or `distanceKm` on [observed] used
+/// to reach `.round()` here and throw an untyped `UnsupportedError`, which the
+/// `on PretripDataAbsentException` clause 0.5.2 asked you to write did NOT
+/// catch. A non-finite reading is now treated as absent — the same equivalence
+/// `SnowAwarePretripAdvisor.evidenceGaps` already makes — so the measured-
+/// visibility fields are `null` and the chip says so. The hazard band is
+/// unchanged: the merge and the ladder both still see whatever you passed.)
+///
 /// [warningEventVerbatim] is the publisher's official warning text passed
 /// through verbatim.
 ///
@@ -190,15 +209,53 @@ AreaConditionRead summarizeAreaConditions({
       // Non-asserted placeholder: the chip layer shows "not covered", not a band.
       : HourHazard.clear;
 
+  // 0.5.3 — a field that states a MEASURED NUMBER may only be built from a
+  // finite one. This is the SAME rule the in-window advisor applies in
+  // `SnowAwarePretripAdvisor._describe`, applied at the sibling seam it was not
+  // applied to. `VisibilityObservation` is public, exported and unvalidated
+  // (`double meters` / `double distanceKm`), and the source adapters build it
+  // from network JSON — `_readNum` in `pretrip_source_jma` is `double.tryParse`,
+  // which returns `Infinity` for the string `"Infinity"` and for an overflowing
+  // literal such as `"1e400"`. A non-finite field reached `.round()` here and
+  // threw an untyped `UnsupportedError: Infinity or NaN toInt` out of a pure,
+  // offline function — and NOT one of this package's typed absence stops, so the
+  // `on PretripDataAbsentException` clause 0.5.2 asked integrators to write did
+  // not catch it.
+  //
+  // Non-finite is treated exactly as ABSENT — the same equivalence
+  // `SnowAwarePretripAdvisor.evidenceGaps` already makes (`vis == null ||
+  // !vis.isFinite` is one condition, not two). Absence here has one and only one
+  // spelling, already published and already documented on these three fields:
+  // `null`, and the chip says so. No new member, no new type, no new vocabulary.
+  //
+  // These three fields are ONE composite claim — "visibility M, measured at
+  // station S, D km away" — so a non-finite `meters` withdraws all three, which
+  // is what their own field docs already require ("Null when there is no
+  // measurement" / "Null when none"). A non-finite `distanceKm` withdraws only
+  // the distance: the measurement itself is still a real number and positive
+  // evidence fires on partial knowledge.
+  //
+  // The hazard BAND is untouched. `mergeObservedVisibility` still carries
+  // `observed.meters` into the departure slot and `hazardOf` still judges it;
+  // this is the chip's arithmetic, not the ladder's judgement. Nothing here can
+  // delete a band the ladder produced.
+  final double? metersRaw = observed?.meters;
+  final bool haveMeasurement = metersRaw != null && metersRaw.isFinite;
+  final double? distanceRaw = observed?.distanceKm;
+
   return AreaConditionRead(
     areaHazard: areaHazard,
     forecastCovered: forecastCovered,
     officialWarningVerbatim: warningEventVerbatim,
     warningCheckAvailable: warningCheckAvailable,
-    // Real-sensor-or-nothing: only ever from the passed observation.
-    measuredVisibilityMeters: observed?.meters.round(),
-    visibilityStationName: observed?.stationName,
-    visibilityDistanceKm: observed?.distanceKm.round(),
+    // Real-sensor-or-nothing: only ever from the passed observation, and only
+    // ever from a finite reading.
+    measuredVisibilityMeters: haveMeasurement ? metersRaw.round() : null,
+    visibilityStationName: haveMeasurement ? observed!.stationName : null,
+    visibilityDistanceKm:
+        haveMeasurement && distanceRaw != null && distanceRaw.isFinite
+        ? distanceRaw.round()
+        : null,
     areaLabel: areaLabel,
   );
 }
@@ -211,7 +268,9 @@ HourHazard _worse(HourHazard a, HourHazard b) => a.index >= b.index ? a : b;
 ///      if the check was not complete; else "none in force", which only an
 ///      asserted-complete check earns,
 ///   2. the forecast hazard band (or "forecast not covered"),
-///   3. the nearest MEASURED visibility (or "none").
+///   3. the nearest MEASURED visibility (or "none") — a composite of two
+///      numbers, so it renders only when BOTH are in hand. A missing distance is
+///      never filled with `0`.
 ///
 /// Pure — no clock, no network. Every line is about the weather at a PLACE.
 List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
@@ -250,13 +309,23 @@ List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
   );
 
   // 3. Measured visibility (real sensor or honest "none").
+  //
+  // 0.5.3 — this chip is a COMPOSITE claim built from two numbers ("~M m … ~D km
+  // away"), so it renders only when it holds both. Up to 0.5.2 a null distance
+  // was filled by `?? 0`, which put the reading at the NEAREST POSSIBLE station —
+  // absence arriving as a maximally-confident value, in the one clause a driver
+  // reads to judge how much the reading is about HER. A missing number is not a
+  // zero. Where a number is absent the chip degrades to the branch that needs no
+  // number, exactly as `SnowAwarePretripAdvisor._describe` degrades to its
+  // no-number fallback. (Reachable from `summarizeAreaConditions` only for a
+  // non-finite `distanceKm`; reachable for any directly-constructed
+  // `AreaConditionRead`, which is why the guard lives here and not only there.)
+  final meters = r.measuredVisibilityMeters;
+  final km = r.visibilityDistanceKm;
+  final station = r.visibilityStationName;
   chips.add(
-    r.measuredVisibilityMeters != null
-        ? m.areaMeasuredVisibility(
-            r.measuredVisibilityMeters!,
-            r.visibilityStationName ?? '',
-            r.visibilityDistanceKm ?? 0,
-          )
+    (meters != null && km != null && station != null)
+        ? m.areaMeasuredVisibility(meters, station, km)
         : m.areaNoMeasuredVisibility(),
   );
 
