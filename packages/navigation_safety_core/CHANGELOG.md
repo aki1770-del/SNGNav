@@ -84,7 +84,8 @@ probe instead of withholding** — absence assumes the worse road. It was
 implemented and measured, not argued: it lands within about 20 m of the
 honest answer in every cell above and never below it (`ageingRural`, 30 min:
 574 m against an honest 560 m), and it is bit-identical to this release on
-every calibration published to date. It is also the shape the sibling
+both calibrations in the `^0.1.2` range (0.1.2 and 0.1.3), with the full
+319-test suite green. It is also the shape the sibling
 package ratified the same day — *positive evidence fires on partial
 knowledge; negative conclusions require whole knowledge* — and withholding a
 hazard margin because a field is absent is a negative conclusion drawn from
@@ -104,7 +105,8 @@ that is an API change. It is recorded, and it is not settled here.
 
 - No API changes. No behaviour change on any calibration published to date —
   every number in the table above is identical between 0.11.3 and 0.11.4 on
-  `navigation_safety_calibration` 0.1.3, and the full suite passes on both.
+  both calibrations in this package's `^0.1.2` range (0.1.2 and 0.1.3), and
+  this package's full 319-test suite passes.
 - **The tripwire, and its window.** The guard is not a runtime check, it is a
   test: `absent_ambient_not_invented_test.dart` asserts
   *"computeSurfaceMoistureFraction ignores ambientCelsius — if this fails,
