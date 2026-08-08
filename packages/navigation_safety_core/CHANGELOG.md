@@ -85,9 +85,9 @@ implemented and measured, not argued: it lands within about 20 m of the
 honest answer in every cell above and never below it (`ageingRural`, 30 min:
 574 m against an honest 560 m), and it is bit-identical to this release on
 both calibrations in the `^0.1.2` range (0.1.2 and 0.1.3), with the full
-319-test suite green. It is also the shape the sibling
-package ratified the same day — *positive evidence fires on partial
-knowledge; negative conclusions require whole knowledge* — and withholding a
+319-test suite green. It is also the shape the sibling package ratified the
+same day — *positive evidence fires on partial knowledge; negative
+conclusions require whole knowledge* — and withholding a
 hazard margin because a field is absent is a negative conclusion drawn from
 absence. That inversion is sharper here than the general rule, because the
 caller has *positively reported the hazard*: `timeSincePrecipitation` is
