@@ -137,8 +137,24 @@ void main() {
           final independent = _fractionIfAmbientIndependent(elapsed);
 
           if (independent == null) {
-            // The calibration reads ambient and we have none. The only
-            // honest answer is the per-profile baseline.
+            // The calibration reads ambient and we have none, so this
+            // release answers with the per-profile baseline.
+            //
+            // The baseline is the honest INPUT, not the honest ANSWER, and
+            // this assertion must not be read as claiming otherwise.
+            // Measured against a calibration whose half-life lengthens in
+            // the cold: 30 minutes after rain, ageingRural's honest floor
+            // at a true −5 °C is 560 m; 0.11.3's invented 5.0 reached
+            // 554 m; the baseline asserted here is 300 m. Withholding is
+            // 260 m short — further from the truth than the fabrication it
+            // replaced. That cost is deliberate and it is documented in
+            // the 0.11.4 CHANGELOG, together with the alternative that was
+            // considered (take the most adverse probe) and why it is an
+            // open API question rather than a silent behaviour change.
+            //
+            // What this test locks is the narrow, defensible property: no
+            // driver-facing threshold is derived from a temperature nobody
+            // measured. It does NOT lock that the baseline is correct.
             expect(
               config.warningVisibilityMeters,
               base.warningVisibilityMeters,

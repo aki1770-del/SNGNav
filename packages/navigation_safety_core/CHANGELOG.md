@@ -35,9 +35,16 @@ temperature *without an API break*", and this package depends on it through
 `^0.1.2`. Such a release could arrive on your next `pub upgrade` with no
 change here and no action by you — and the inert `5.0` would quietly become
 load-bearing, deriving a driver-facing visibility floor from a temperature
-nobody measured. Measured against a calibration mutated to do exactly that:
-an `ageingRural` driver's warning-visibility floor came out at **598 m**
-instead of the honest **300 m** baseline.
+nobody measured. To see what that would cost, the calibration was mutated to
+lengthen the evaporation half-life in the cold — `90 min × (1 + (20 − T)/40)`,
+a shape its own docs permit — and this package was run against it with
+ambient absent, 30 minutes after precipitation ended:
+
+| profile | baseline | 0.11.3 | 0.11.4 | honest, ambient −5 °C |
+|---|---|---|---|---|
+| `ageingRural` | 300 m | 554 m | **300 m** | **560 m** |
+| `noviceUrban` | 320 m | 591 m | **320 m** | **598 m** |
+| `foreignTouristSnowZone` | 400 m | 738 m | **400 m** | **747 m** |
 
 From 0.11.4 the branch passes no invented temperature. When ambient is
 absent it asks the calibration the same question at −40 °C, 0 °C and 40 °C
@@ -45,9 +52,69 @@ and uses the answer only if all three agree — agreement meaning the answer
 does not depend on the missing measurement, so the absence costs nothing.
 If they ever disagree, the margin is withheld and the per-profile baseline
 stands, which is what every other absent field of `DrivingContext` already
-does. The floor is never lowered; only an add-on is withheld.
+does.
 
-- No API changes. No behaviour change on any calibration published to date.
+**Read the last two columns before you upgrade, because they do not say what
+a release note usually says.** On a cold road — this package's entire
+subject — withholding is *further* from the truth than the fabricated value
+it replaces. For `ageingRural` at −5 °C the honest floor is 560 m; 0.11.3's
+invented `5.0` reached 554 m, six metres short, and 0.11.4 returns the
+300 m baseline, **260 m short**. Closer to the rain it is worse, not better:
+one minute after precipitation ends the honest floor is 599 m and 0.11.4
+still returns 300 m. Nor is this an artifact of one formula — under a
+steeper Q10 mutation (half-life doubling per 10 °C of cooling) the same cell
+reads honest 576 m, 0.11.3 555 m, 0.11.4 300 m. The arithmetic is exact and
+shape-independent: **withholding is short by the whole margin, while
+inventing was short only by the difference between the temperature it
+invented and the one that was real.** 0.11.4 buys an honest *input* at the
+price of a less accurate *answer*, and on a cold road much less accurate.
+The per-profile floor is never lowered below baseline — but that is a
+smaller promise than it sounds, because on the day this branch diverges the
+baseline is not the honest answer.
+
+**None of this reaches you if you pass an ambient reading.** The divergence
+lives only on the path where `timeSincePrecipitation` is set and
+`ambientTempCelsius` is not. Set it and the margin is computed from your
+measurement, unchanged. If you cannot measure it, commit `pubspec.lock` —
+the pin this package's pubspec already asks for is what stops a calibration
+revision arriving unannounced.
+
+**The alternative that was considered and not taken: take the most adverse
+probe instead of withholding** — absence assumes the worse road. It was
+implemented and measured, not argued: it lands within about 20 m of the
+honest answer in every cell above and never below it (`ageingRural`, 30 min:
+574 m against an honest 560 m), and it is bit-identical to this release on
+every calibration published to date. It is also the shape the sibling
+package ratified the same day — *positive evidence fires on partial
+knowledge; negative conclusions require whole knowledge* — and withholding a
+hazard margin because a field is absent is a negative conclusion drawn from
+absence. That inversion is sharper here than the general rule, because the
+caller has *positively reported the hazard*: `timeSincePrecipitation` is
+set, so we have been told the road is wet, and what is missing is only a
+modifier of how fast it dried.
+
+Two reasons it is not in 0.11.4, both stated so you can disagree with them.
+It moves a driver-facing threshold, which is a decision for this family's
+safety owner and not for the package author. And it costs the return type
+its ability to say *"I could not look"*: a worst-case bound handed back as a
+plain `double` is indistinguishable from a reading — the very defect this
+release exists to remove, one level up. So the open question is not
+withhold-or-not; it is whether the bound can be returned **as a bound**, and
+that is an API change. It is recorded, and it is not settled here.
+
+- No API changes. No behaviour change on any calibration published to date —
+  every number in the table above is identical between 0.11.3 and 0.11.4 on
+  `navigation_safety_calibration` 0.1.3, and the full suite passes on both.
+- **The tripwire, and its window.** The guard is not a runtime check, it is a
+  test: `absent_ambient_not_invented_test.dart` asserts
+  *"computeSurfaceMoistureFraction ignores ambientCelsius — if this fails,
+  the residual-moisture branch must be rewritten"*. Run against the mutated
+  calibration it goes red, printing the eight per-temperature fractions it
+  expected to be one. The alarm therefore rings in **our** CI, where the
+  author can act, and not in yours, where you could not. The exposure you
+  are carrying is the gap between a calibration release and this package's
+  next CI run: in that window your `pub upgrade` can pick the new
+  calibration up and nobody is watching.
 - Honest bounds: agreement across three probes is evidence of independence,
   not proof of it. The durable fix is a calibration signature that can
   express "not measured" — widening `ambientCelsius` to `double?` would be
