@@ -43,41 +43,76 @@ outside this package, so the package itself stays pure Dart.
   belongs on the 0.6.x line: a validating constructor here would break a consumer
   whose debug build passes such a value through today.
 
-  **The rule is not yet upheld package-wide.** See the next entry: a non-finite
-  `TripGeo` still crashes the whole briefing.
+  **The rule is not yet upheld package-wide.** See the next entry: an
+  out-of-range `TripGeo` still crashes the whole briefing.
 
-- **`TripGeo` does not validate its own numbers either, and a non-finite one
-  CRASHES THE WHOLE BRIEFING. This is open in 0.5.3.** `latitude` and
-  `longitude` are plain `double`s on a public, exported class — no `assert`, no
-  guard — so a `NaN` or `±Infinity` reaches the offline daylight clock and
+- **`TripGeo` does not validate its own numbers either. An OUT-OF-RANGE one
+  CRASHES THE WHOLE BRIEFING — and below the crash it returns a confident WRONG
+  clock. This is open in 0.5.3.** `latitude` and `longitude` are plain `double`s
+  on a public, exported class — no `assert`, no guard — so a value that names no
+  point on Earth reaches the offline daylight clock and
   `Duration(minutes: minutesUTC.round())` throws
   `UnsupportedError: Unsupported operation: Infinity or NaN toInt`. Reproduced
   against the **published 0.5.2 archive** and against the 0.5.3 tree, identically.
 
-  Three things make this the sharpest constraint in this file:
+  **CORRECTION, and read it before anything else in this entry: this file used
+  to tell you to check `geo.latitude.isFinite && geo.longitude.isFinite`. That
+  guard passes and the briefing still crashes.** At latitude 39.72, a
+  `longitude` of `1e90` is finite, is not `NaN`, is not `Infinity` — `isFinite`
+  returns `true` on both fields — and `brief()` throws. If you wrote that check
+  on our advice, it does not protect you. **Check the RANGE instead:**
+
+  ```dart
+  bool isRealPlace(TripGeo g) =>
+      g.latitude  >= -90  && g.latitude  <= 90 &&
+      g.longitude >= -180 && g.longitude <= 180;
+  // NaN fails both comparisons, so this subsumes the old isFinite check.
+  ```
+
+  Or pass `geo: null` — the daylight feature is optional and a null `geo` is
+  fully supported. Unlike `VisibilityObservation`, no source adapter in this
+  family constructs a `TripGeo`: the value comes from *your* location source,
+  which is where the check belongs today.
+
+  Four things make this the sharpest constraint in this file:
 
   1. **It is untyped.** It is NOT a `PretripDataAbsentException`, so the
      `on PretripDataAbsentException` clause this package asks integrators to
      write does not catch it.
-  2. **It is not a chip — it is the briefing.** `brief()`, `briefOrNull()` and
-     `advise()` all throw. It is reached from `_selectDaylight` whenever
-     `CommuteShape.geo` is non-null, so it is on the path of any caller who
-     adopted the daylight feature. (`allClearEarned()` returns normally; it never
-     consults the clock.)
-  3. **It violates the rule stated in this file — *one dirty slot must never
+  2. **It is not a chip — it is the briefing, through four doors.** `brief()`,
+     `briefOrNull()` and `advise()` all throw, reached from `_selectDaylight`
+     whenever `CommuteShape.geo` is non-null — and so does
+     **`evaluateDaylight(instant, geo)` called directly**, which is a public
+     top-level function exported from the barrel and needs no `CommuteShape` at
+     all. (`allClearEarned()` returns normally; it never consults the clock.)
+  3. **Most of the door is silent.** Out of range does not mean it throws. A
+     `longitude` of `1e20` returns `preDawn` with sunrise `08:59` and sunset
+     `08:59`; a `latitude` of `180` returns `daylight`, sunrise `05:52`, sunset
+     `17:45`; a `latitude` of `1e300` returns `polarDay`. **Latitude never
+     crashed at any magnitude tested** — it only corrupts the answer. Longitude
+     crashes only past an overflow point that *moves with latitude*
+     (`1.067e+87` at the equator, `5.000038e+89` at 39.72, `1.000e+90` at
+     78.2°N) and differs by sign — so there is no threshold worth guarding
+     against, only the range. Note too that an absurd latitude **masks** an
+     absurd longitude (`lat: 95, lon: 1e300` returns `polarDay`), so vary one
+     field at a time when you test this.
+  4. **It violates the rule stated in this file — *one dirty slot must never
      crash a briefing* — more directly than the defect 0.5.3 fixed**, because
      there is no slot involved and nothing degrades: the briefing simply stops.
 
-  **Check `geo.latitude.isFinite && geo.longitude.isFinite` before you build a
-  `CommuteShape`**, or pass `geo: null` — the daylight feature is optional and a
-  null `geo` is fully supported. Unlike `VisibilityObservation`, no source
-  adapter in this family constructs a `TripGeo`: the value comes from *your*
-  location source, which is where the check belongs today.
+  **One bound on the range check, so this entry does not repeat its own
+  mistake:** passing it does not mean the call cannot throw. `TripGeo.utcOffset`
+  is an unconstrained public `Duration` and `instant` an unconstrained public
+  `DateTime`; neither can be non-finite, so no finiteness or range check looks
+  at them, yet an extreme *legal* value of either throws a different untyped
+  error — `RangeError (millisecondsSinceEpoch)` — out of the same function
+  (measured boundary: `Duration(days: 99979531)` returns, `99979532` throws).
+  Not reachable from any real device, and stated anyway.
 
-  A `TripGeo` that cannot hold a non-number is the real fix and is the same
-  0.6.x question as `VisibilityObservation` above. What the advisor should *do*
-  when the location is not a location is a safety question and is not settled
-  here. Tracked in CHANGELOG 0.5.3 *Honest bounds*, first entry.
+  A `TripGeo` that cannot hold a value which is not a place is the real fix and
+  is the same 0.6.x question as `VisibilityObservation` above. What the advisor
+  should *do* when the location is not a location is a safety question and is
+  not settled here. Tracked in CHANGELOG 0.5.3 *Honest bounds*, first entry.
 - **No driver-profile coupling.** `DriverProfileSpec` is intentionally
   small and decoupled from any other package. A concrete advisor
   needing a richer profile model should adapt at its boundary, not

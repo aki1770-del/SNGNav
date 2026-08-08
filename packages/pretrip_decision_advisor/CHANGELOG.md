@@ -295,9 +295,12 @@ search is not muted — only made honest.
 - **`advise(...)` is unchanged**: still returns `null`, and still never throws on
   any *absence* path — including every one this release adds. One honest
   qualification, measured rather than assumed: it is not throw-proof in general.
-  A non-finite `TripGeo` makes `advise()` throw the untyped
-  `UnsupportedError`, in this version and in 0.5.2 alike. That door is open and
-  is the first entry under *Honest bounds* below.
+  An out-of-range `TripGeo` — not merely a non-finite one — makes `advise()`
+  throw the untyped `UnsupportedError`, in this version and in 0.5.2 alike.
+  That door is open, it is wider and less symmetric than "non-finite" suggests,
+  and it is the first entry under *Honest bounds* below. Read that entry before
+  writing a guard: the `isFinite` check this release originally recommended is
+  **not** sufficient.
 - **`evidenceGaps(slot)`** (new) returns the `HazardEvidenceGap`s a slot left
   undecided. Public on purpose: the advisor stops asserting what it did not
   measure, but it does not decide for you what an acceptable gap is. Read them
@@ -362,14 +365,67 @@ deliberate. The table at the top of this entry is the whole surface.
 
 ### Honest bounds — what 0.5.3 does NOT fix
 
-- **A non-finite `TripGeo` still takes the WHOLE briefing down. This release
-  does not close it.** Read this bound first. 1d and 2c closed the non-finite
-  crash on the two paths we knew about; there is a **third**, it is on the same
+- **An OUT-OF-RANGE `TripGeo` still takes the WHOLE briefing down — and below
+  the crash it answers with a confident WRONG clock. This release closes
+  neither half.** Read this bound first. 1d and 2c closed the non-finite crash
+  on the two paths we knew about; there is a **third**, it is on the same
   `.round()`, it throws the **same untyped** `UnsupportedError`, and it is worse
   than either — because it is not a chip that fails, it is `brief()`.
 
+  **This entry's headline said *non-finite* until now, and that was too narrow
+  in both directions.** Measured at latitude 39.72 against the published
+  archive: a `longitude` of `1e90` is **finite**, is **not** `NaN`, is **not**
+  `Infinity` — and throws. A `latitude` of `1e300` is finite *and* absurd and
+  does **not** throw; it returns `polarDay` with a straight face. The door is
+  wider than non-finite, it is **not symmetric between the two fields**, and
+  most of it is quiet.
+
+  **What actually happens, by input** — measured this session against the
+  published 0.5.2 archive (`dependencies: pretrip_decision_advisor: 0.5.2`,
+  resolved from pub.dev, `sha256 3cba50ab…`), then reproduced against this
+  0.5.3 tree:
+
+  | input | `isFinite` guard | what you get |
+  |---|---|---|
+  | `lat`/`lon` in range | passes | correct |
+  | `lat` or `lon` **non-finite** (`NaN`, `±Infinity`) | **fails** | throws |
+  | `lon` out of range, below the overflow point (e.g. `400`, `1e10`, `1e20`) | **passes** | **no throw — a plausible, wrong clock** (`lon: 1e20` → `preDawn`, sunrise `08:59`, sunset `08:59`) |
+  | `lon` out of range, above it (e.g. `1e90`, `1e300`) | **passes** | throws |
+  | `lat` out of range, **any** magnitude tested up to `1e300` | **passes** | **never throws — a fabricated phase** (`lat: 180` → `daylight`, sunrise `05:52`, sunset `17:45`; `lat: 1e300` → `polarDay`) |
+
+  **The quiet rows are the wider defect.** A wrong sunrise printed with two
+  digits of confidence is not obviously wrong to anyone downstream; the crash at
+  least announces itself. And the fabrication starts at the **first degree**
+  outside the legal domain, not at `1e87`.
+
+  **One trap for anyone writing a test from this:** an absurd *latitude*
+  **masks** an absurd *longitude*. `lat: 1e300, lon: 1e300` returns `polarDay`
+  and does not throw, and so does `lat: 95, lon: 1e300` — the polar test returns
+  before the sunrise/sunset math ever runs. Vary one field at a time or the
+  crash hides.
+
+  **Why longitude and not latitude** — this is structural, not incidental.
+  Longitude enters the *result*: the minutes-from-UTC-midnight of the event are
+  `720 − 4·(lon ± HA) − eqTime`. That result then seeds a **second refinement
+  pass**, evaluated at a Julian day of `jd0 + first/1440` — a date driven by the
+  longitude itself. At `lon: 1e90` that is a Julian century of ≈ `−7.6e82`, and
+  the obliquity and equation-of-time polynomials in it overflow to `±Infinity`
+  (traced: `eqTime = -Infinity`); by `lon: 1e300` they are `NaN`. The non-finite
+  value then reaches `.round()`. **Latitude never seeds that refinement day** —
+  it enters only bounded `sin`/`cos` and the polar test — which is exactly why
+  it corrupts the answer without ever crashing.
+
+  **Do not guard on a threshold; there is no usable one.** Bisected, the first
+  longitude that throws is `5.000038e+89` at latitude 39.72 — but it **moves
+  with latitude** (`1.067e+87` at the equator, `6.684e+89` at 65°N, `1.000e+90`
+  at 78.2°N) and it is **sign-asymmetric** (`−1.564e+88` on the negative side at
+  the same latitude). It is stable across the month, and that is the only thing
+  stable about it. The number is wherever an intermediate happens to overflow,
+  not where the input becomes absurd. **Only the range check below is
+  dependable.**
+
   `TripGeo.latitude` and `TripGeo.longitude` are plain `double`s on a public,
-  exported class with no `assert` and no guard. A non-finite one reaches the
+  exported class with no `assert` and no guard. An out-of-domain one reaches the
   daylight clock, and `Duration(minutes: minutesUTC.round())` throws. Reproduced
   on **both** trees — first against the **published 0.5.2 archive**
   (`dependencies: pretrip_decision_advisor: 0.5.2`, resolved from pub.dev), then
@@ -386,13 +442,20 @@ deliberate. The table at the top of this entry is the whole surface.
   catch it, and the app goes down on the screen a driver reads before she leaves
   the house.
 
-  **It is not confined to `brief()`.** Measured on both trees, with a `NaN`
-  latitude: `brief()` throws, `briefOrNull()` throws, and **`advise()` throws** —
-  so the "still never throws" in §2c above is true of every absence path in this
-  release and **not** true of this one. `allClearEarned()` (0.5.3, new) returns
-  normally, because it never consults the clock. Reached from
-  `_selectDaylight` whenever `commute.geo` is non-null, so any caller who
-  adopted the daylight feature is on this path.
+  **It is not confined to `brief()` — there are FOUR doors, and one of them
+  needs no `CommuteShape` at all.** Measured on both trees: `brief()` throws,
+  `briefOrNull()` throws, **`advise()` throws**, and — the one this entry did not
+  name until now — **`evaluateDaylight(instant, geo)` throws when called
+  directly.** It is a public top-level function, it is `export`ed from
+  `pretrip_decision_advisor.dart`, and it takes a `TripGeo` as its second
+  positional argument, so a caller reaches the crash without ever building a
+  `CommuteShape` or touching the advisor. Describing this bound only through
+  `_selectDaylight`/`brief()` — as this entry did — understates the surface: the
+  first three doors are reached from `_selectDaylight` whenever `commute.geo` is
+  non-null, and the fourth is the barrel's own front door. So the "still never
+  throws" in §2c above is true of every absence path in this release and **not**
+  true of this one. `allClearEarned()` (0.5.3, new) returns normally, because it
+  never consults the clock.
 
   The frame, cited into the tree it belongs to — a precise citation into the
   wrong tree is the defect this package keeps writing about:
@@ -405,7 +468,7 @@ deliberate. The table at the top of this entry is the whole surface.
   Published `daylight.dart:271` is a **comment line**. Quote 266 when you are
   talking about 0.5.2.
 
-  **Why it is not fixed here.** A non-finite *location* is not an absent
+  **Why it is not fixed here.** An out-of-domain *location* is not an absent
   *visibility*, and it has no answer yet that this release has earned. 1d could
   treat non-finite as ABSENT because absence already had a published spelling on
   those fields (`null`) and a chip that says so; `CommuteShape.geo` has no such
@@ -415,7 +478,8 @@ deliberate. The table at the top of this entry is the whole surface.
   disclosure commit is how a verified release stops being verified.
 
   **Who holds it.** The *type* — whether `TripGeo` should be able to hold a
-  non-number at all — is this package's (FDD): a validating constructor is the
+  non-number, or a number that names no point on Earth, at all — is this
+  package's (FDD): a validating constructor is the
   real fix and it is a break for a consumer whose debug build passes such a value
   today, which is the same argument, and the same 0.6.x home, as
   `VisibilityObservation` below. What the advisor must *do* when the location is
@@ -424,11 +488,81 @@ deliberate. The table at the top of this entry is the whole surface.
   and whether it can reach a caret-pinned consumer is **not** this package's call
   (PDS reach, WDA dignity, Chair).
 
-  **What you can do today, inside `^0.5.0`:** check
-  `geo.latitude.isFinite && geo.longitude.isFinite` before you build a
-  `CommuteShape`, or pass `geo: null` — the daylight feature is optional and a
-  null `geo` is a supported, fully backward-compatible input (measured:
+  **Correction — the guard this entry told you to write does NOT hold, and
+  `isFinite` alone is not sufficient.** Earlier text here and in
+  `KNOWN_LIMITATIONS.md` said to check
+  `geo.latitude.isFinite && geo.longitude.isFinite`. **That check passes and the
+  briefing still crashes.** One line of proof, measured against the published
+  0.5.2 archive:
+
+  ```dart
+  // latitude 39.72, longitude 1e90 — finite, not NaN, not Infinity:
+  TripGeo(latitude: 39.72, longitude: 1e90, utcOffset: Duration(hours: 9))
+  // geo.latitude.isFinite && geo.longitude.isFinite  ==  true
+  // brief() / advise() / briefOrNull() / evaluateDaylight()
+  //   -> UnsupportedError: Unsupported operation: Infinity or NaN toInt
+  ```
+
+  If you wrote that guard on our advice, it does not protect you. That is the
+  whole reason this correction is stated here on the `^0.5.0` line instead of
+  waiting for 0.6.x: a bound that tells you a wrong guard is worse than a bound
+  that tells you nothing, because you stop looking.
+
+  **What you can do today, inside `^0.5.0` — check the RANGE, not finiteness:**
+
+  ```dart
+  bool isRealPlace(TripGeo g) =>
+      g.latitude  >= -90  && g.latitude  <= 90 &&
+      g.longitude >= -180 && g.longitude <= 180;
+  // NaN fails both comparisons, so this subsumes the isFinite check.
+  ```
+
+  Or pass `geo: null` — the daylight feature is optional and a null `geo` is a
+  supported, fully backward-compatible input (measured:
   `brief_no_geo|BRIEFING OK`).
+
+  The range check is **verified sufficient for `latitude`/`longitude`**: an
+  independent verifier ran 158,556 legal grid cases × 12 months plus 200,000
+  random legal doubles with **0 failures**, and this session re-ran it on
+  different inputs — 261,364 legal grid cases (lat −90…90 step 0.5 × lon
+  −180…180 step 2 × 4 months) and 200,000 random legal doubles over dates
+  1900–2199 with offsets ±12 h — also **0 failures**, including the exact
+  corners `±90`, `±180` and `-0.0`.
+
+  **And one honest bound on that guard, so this entry does not repeat its own
+  mistake: passing the range check does NOT mean the call cannot throw.**
+  `TripGeo.utcOffset` is an unconstrained public `Duration`, and `instant` an
+  unconstrained public `DateTime`. Neither can be non-finite, so neither the old
+  guard nor the new one looks at them — but an extreme *legal* value of either
+  still throws out of the same function, with a **different** untyped error:
+
+  ```
+  utcOffset: Duration(days: 99979531)  -> returns          (measured boundary)
+  utcOffset: Duration(days: 99979532)  -> RangeError (millisecondsSinceEpoch)
+  evaluateDaylight(DateTime.utc(-271821, 4, 20), <legal geo>)
+                                       -> RangeError (millisecondsSinceEpoch)
+  ```
+
+  The range check is necessary and sufficient for the two `double`s. It is not
+  a promise that this call is total. Nothing in this family constructs those
+  values either (see the severity note below), but you are owed the boundary
+  rather than a guarantee that stops one field short of the truth.
+
+  **How much this matters in the field: LOW — and we are stating that plainly
+  rather than letting the emphasis above imply otherwise.** No adapter in this
+  family constructs a `TripGeo`. It comes from *your* location source, and a GPS
+  fix does not produce `1e300`, any more than a real deployment produces a
+  273,735-year UTC offset. If your coordinates come from a device, you were
+  probably never going to meet this.
+
+  **What is NOT low is the correctness of the disclosure itself.** This is the
+  release whose entire purpose was honest bounds, and this bound told you to
+  write a guard that does not work, scoped the door to `non-finite` when it is
+  wider and asymmetric, and named three entry points when there are four. That
+  is the same family as the citation error corrected further up this entry —
+  *precisely stated, precisely wrong at the edge* — and it is the failure mode a
+  document like this one exists to not have. Recorded here at full length for
+  that reason, not because the crash is likely.
 
 - **The destination-AREA hazard chip still reports an unearned all-clear.**
   This is the sharpest of the *affirmative-claim* bounds (the crash above is on a
