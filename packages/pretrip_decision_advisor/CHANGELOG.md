@@ -6,8 +6,10 @@
 is the problem this note exists to solve.** No signature, type, or member
 changed, so nothing will stop you upgrading. But **sentences your users read will
 change in both directions**, one recommendation that actively sent drivers
-somewhere has been withdrawn, and **one path that took the whole app down no
-longer does**. If you skim one section of this changelog, skim this table.
+somewhere has been withdrawn, and **two paths that took the whole app down no
+longer do**. If you skim one section of this changelog, skim this table — and
+then the first entry under *Honest bounds*, because **a third such path is still
+open and this release does not close it**.
 
 | where | up to 0.5.2 your users saw | on 0.5.3 they see |
 |---|---|---|
@@ -160,14 +162,18 @@ parses numbers with `double.tryParse`, which returns `Infinity` for the string
 **0.5.3 treats a non-finite reading as ABSENT** — the same equivalence
 `evidenceGaps` already makes (`vis == null || !vis.isFinite` is one condition,
 not two). Absence on this read has one spelling, already published and already
-documented on those fields: `null`, and the chip says so. **No new member, no new
-type, no new vocabulary** — which is also why it fits inside `^0.5.0`.
+documented on those fields: `null`. **No new member, no new type, no new
+vocabulary** — which is also why it fits inside `^0.5.0`.
 
 - **non-finite `meters`** ⇒ all three visibility fields are `null` (they are one
   composite claim, and their own docs already said "Null when there is no
-  measurement").
-- **non-finite `distanceKm`** ⇒ only the distance is withdrawn. The measurement
-  is a real number and survives: positive evidence fires on partial knowledge.
+  measurement"), and the chip's "none" line is then true.
+- **non-finite `distanceKm`** ⇒ only the distance is withdrawn *on the read*.
+  `measuredVisibilityMeters` is still `80`, `visibilityStationName` is still
+  `秋田`, and the band is still `severe`: positive evidence fires on partial
+  knowledge. **The chip is where this stops being true** — it then denies the
+  measurement outright. 1e below is the mechanism; the honest bound at the end
+  of this entry states the consequence plainly.
 
 **The hazard band is untouched.** `mergeObservedVisibility` still carries your
 reading into the departure slot and `hazardOf` still judges it. A measured 80 m
@@ -198,14 +204,21 @@ Nearest measured visibility ~80 m (秋田, ~0 km away).
 ```
 
 The measured-visibility chip is a composite of two numbers, so **it now renders
-only when it holds both**; otherwise it degrades to the line that needs no
-number, exactly as `_describe` degrades to its no-number fallback. The guard sits
-in `areaConditionChips`, not only in `summarizeAreaConditions`, because
-`AreaConditionRead`'s constructor is public and a directly-constructed read
-reached the same `?? 0`.
+only when it holds both**; otherwise it falls back to
+`areaNoMeasuredVisibility()`. The guard sits in `areaConditionChips`, not only in
+`summarizeAreaConditions`, because `AreaConditionRead`'s constructor is public and
+a directly-constructed read reached the same `?? 0`.
 
-*If you were reading `~0 km` as "distance unknown", it now reads as the honest
-"none" line instead.*
+**Read that fallback carefully, because it is not a neutral no-number line.** It
+says "No measured visibility available for this area." /
+「この地域の計測視程データはありません。」 — and when it is the *distance* that
+went missing, that sentence is false: the measurement exists, on the read and in
+the band. We are trading a fabricated `~0 km` for an over-stated "none". That is
+safer and it is still not right, so it is carried as an honest bound at the end
+of this entry rather than presented as a clean fix.
+
+*If you were reading `~0 km` as "distance unknown", you now get the "none" line
+instead — with the bound above.*
 
 ### Fix 2 — the trip-window affirmative all-clear must be EARNED
 
@@ -279,7 +292,12 @@ search is not muted — only made honest.
 - **`briefOrNull(...)` returns `null`** in that case. Its published contract is
   unchanged — `null` has always meant "we do not know" — it now covers one more
   way of not knowing.
-- **`advise(...)` is unchanged**: still returns `null`, still never throws.
+- **`advise(...)` is unchanged**: still returns `null`, and still never throws on
+  any *absence* path — including every one this release adds. One honest
+  qualification, measured rather than assumed: it is not throw-proof in general.
+  A non-finite `TripGeo` makes `advise()` throw the untyped
+  `UnsupportedError`, in this version and in 0.5.2 alike. That door is open and
+  is the first entry under *Honest bounds* below.
 - **`evidenceGaps(slot)`** (new) returns the `HazardEvidenceGap`s a slot left
   undecided. Public on purpose: the advisor stops asserting what it did not
   measure, but it does not decide for you what an acceptable gap is. Read them
@@ -344,8 +362,77 @@ deliberate. The table at the top of this entry is the whole surface.
 
 ### Honest bounds — what 0.5.3 does NOT fix
 
+- **A non-finite `TripGeo` still takes the WHOLE briefing down. This release
+  does not close it.** Read this bound first. 1d and 2c closed the non-finite
+  crash on the two paths we knew about; there is a **third**, it is on the same
+  `.round()`, it throws the **same untyped** `UnsupportedError`, and it is worse
+  than either — because it is not a chip that fails, it is `brief()`.
+
+  `TripGeo.latitude` and `TripGeo.longitude` are plain `double`s on a public,
+  exported class with no `assert` and no guard. A non-finite one reaches the
+  daylight clock, and `Duration(minutes: minutesUTC.round())` throws. Reproduced
+  on **both** trees — first against the **published 0.5.2 archive**
+  (`dependencies: pretrip_decision_advisor: 0.5.2`, resolved from pub.dev), then
+  against this 0.5.3 tree. Identical output, verbatim:
+
+  ```
+  brief_NaN_lat|BRIEFING THREW: Unsupported operation: Infinity or NaN toInt (isPretripDataAbsentException=false)
+  brief_Inf_lon|BRIEFING THREW: Unsupported operation: Infinity or NaN toInt (isPretripDataAbsentException=false)
+  brief_control|BRIEFING OK
+  ```
+
+  `false` is the whole problem, exactly as in 1d: an **untyped** error, so the
+  `on PretripDataAbsentException` clause this package asks you to write does not
+  catch it, and the app goes down on the screen a driver reads before she leaves
+  the house.
+
+  **It is not confined to `brief()`.** Measured on both trees, with a `NaN`
+  latitude: `brief()` throws, `briefOrNull()` throws, and **`advise()` throws** —
+  so the "still never throws" in §2c above is true of every absence path in this
+  release and **not** true of this one. `allClearEarned()` (0.5.3, new) returns
+  normally, because it never consults the clock. Reached from
+  `_selectDaylight` whenever `commute.geo` is non-null, so any caller who
+  adopted the daylight feature is on this path.
+
+  The frame, cited into the tree it belongs to — a precise citation into the
+  wrong tree is the defect this package keeps writing about:
+
+  | tree | frame |
+  |---|---|
+  | **published 0.5.2** (what a consumer holds) | `lib/src/daylight.dart:266:47` — `: base.add(Duration(minutes: minutesUTC.round()));`, the only `.round()`/`.toInt()` in that file |
+  | this 0.5.3 tree | the same statement, at `daylight.dart:271:47` |
+
+  Published `daylight.dart:271` is a **comment line**. Quote 266 when you are
+  talking about 0.5.2.
+
+  **Why it is not fixed here.** A non-finite *location* is not an absent
+  *visibility*, and it has no answer yet that this release has earned. 1d could
+  treat non-finite as ABSENT because absence already had a published spelling on
+  those fields (`null`) and a chip that says so; `CommuteShape.geo` has no such
+  spelling — silently dropping the daylight note would hide a broken location
+  from a caller who asked for it, and throwing a typed absence out of `advise()`
+  would change a contract §2c says is unchanged. Deciding that inside a
+  disclosure commit is how a verified release stops being verified.
+
+  **Who holds it.** The *type* — whether `TripGeo` should be able to hold a
+  non-number at all — is this package's (FDD): a validating constructor is the
+  real fix and it is a break for a consumer whose debug build passes such a value
+  today, which is the same argument, and the same 0.6.x home, as
+  `VisibilityObservation` below. What the advisor must *do* when the location is
+  not a location is a **safety** question and belongs to the safety owner (FSE),
+  as `-Infinity`-reads-as-`caution` above already does. Whether any of it ships
+  and whether it can reach a caret-pinned consumer is **not** this package's call
+  (PDS reach, WDA dignity, Chair).
+
+  **What you can do today, inside `^0.5.0`:** check
+  `geo.latitude.isFinite && geo.longitude.isFinite` before you build a
+  `CommuteShape`, or pass `geo: null` — the daylight feature is optional and a
+  null `geo` is a supported, fully backward-compatible input (measured:
+  `brief_no_geo|BRIEFING OK`).
+
 - **The destination-AREA hazard chip still reports an unearned all-clear.**
-  This is the sharpest bound in the release, because the two fixes above now
+  This is the sharpest of the *affirmative-claim* bounds (the crash above is on a
+  different axis), because the two fixes above now
   answer the SAME input differently. Given a forecast whose slots carry a
   temperature and nothing else:
 
@@ -406,8 +493,10 @@ deliberate. The table at the top of this entry is the whole surface.
   `test/area_non_finite_observation_test.dart`, group *"the ladder is untouched —
   the guard cannot delete a hazard"*.
 
-- **`VisibilityObservation` itself is still unvalidated, and that is where this
-  defect actually lives.** `meters` and `distanceKm` are plain `double`s with no
+- **`VisibilityObservation` is still unvalidated, and it is NOT the only
+  unvalidated public type on this surface.** This is where the 1d/1e defect
+  lives; `TripGeo` (first bound above) is the same shape on the briefing path,
+  and it is still open. `meters` and `distanceKm` are plain `double`s with no
   finiteness constraint, so the type permits a value the domain does not:
 
   ```dart
@@ -432,14 +521,36 @@ deliberate. The table at the top of this entry is the whole surface.
   returns `Infinity` for `"Infinity"` and for `"1e400"`, so a publisher can hand
   you one without malice.
 
-- **The measured-visibility chip is now all-or-nothing.** When the distance is
-  missing, 1e withholds the whole line rather than render "~80 m (秋田)" without
-  it — because saying so needs a **new `PretripMessages` member**, and
-  `PretripMessages` is a published `abstract class`, so adding one is a compile
-  break for anyone who `implements` it. It cannot ship inside `^0.5.0`. The
-  reading is not lost: it is still on `AreaConditionRead.measuredVisibilityMeters`
-  and still in the hazard band. Only the sentence is withheld. Same bound, same
-  cause, and same 0.6.x home as the two entries above.
+- **The measured-visibility chip is now all-or-nothing, and its fallback line
+  asserts an absence that is false.** When the distance is missing, 1e drops the
+  whole numeric line rather than render "~80 m (秋田)" without it — because
+  saying *"~80 m, station distance unknown"* needs a **new `PretripMessages`
+  member**, and `PretripMessages` is a published `abstract class`, so adding one
+  is a compile break for anyone who `implements` it. It cannot ship inside
+  `^0.5.0`.
+
+  **The sentence is not withheld — it is replaced**, by
+  `areaNoMeasuredVisibility()`. Measured on this tree, with a good 80 m reading
+  and `distanceKm: double.infinity`:
+
+  ```
+  measuredVisibilityMeters = 80
+  visibilityStationName    = 秋田
+  visibilityDistanceKm     = null
+  areaHazard               = HourHazard.severe
+  chip[2] = No measured visibility available for this area.
+  chip[2] = この地域の計測視程データはありません。
+  ```
+
+  So in the release whose headline rule is that an unearned negative claim may
+  not be made for free, this chip makes one: it tells the driver there is no
+  measurement while the package holds one, from a named station, in a `severe`
+  band. It is strictly safer than the 0.5.2 `~0 km` fabrication — an over-stated
+  "none" beats a station placed where she is standing — and the band is
+  untouched, so it ships. It is named here rather than described as a clean fix.
+  The reading survives for a caller who reads the *fields*; it does not survive
+  for the driver who reads the *sentence*. Same cause, and same 0.6.x home, as
+  the two entries above.
 
 ## 0.5.2
 

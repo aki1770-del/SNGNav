@@ -97,8 +97,18 @@ class AreaConditionRead {
 
   /// Great-circle distance to the measuring station, km. Null when none, and
   /// also when the distance itself was non-finite while the reading was good —
-  /// the measurement survives, the distance does not. A null here is never
-  /// rendered as `0`; [areaConditionChips] withholds the whole numeric chip.
+  /// the measurement survives on THIS field, the distance does not. A null here
+  /// is never rendered as `0`.
+  ///
+  /// Know what the chip does with it: [areaConditionChips] does not merely omit
+  /// the numeric line, it REPLACES it with
+  /// [PretripMessages.areaNoMeasuredVisibility] — "No measured visibility
+  /// available for this area." So when only the distance is missing, the driver
+  /// is told there is no measurement while [measuredVisibilityMeters] still
+  /// holds one and the band still reports it. That over-statement is deliberate
+  /// and bounded (the honest alternative needs a new [PretripMessages] member,
+  /// which cannot ship inside `^0.5.0`); it is recorded in CHANGELOG 0.5.3
+  /// *Honest bounds*. Read this field, not the chip, if you need the truth.
   final int? visibilityDistanceKm;
 
   /// A PLACE label (e.g. a prefecture or town name) — NEVER a person.
