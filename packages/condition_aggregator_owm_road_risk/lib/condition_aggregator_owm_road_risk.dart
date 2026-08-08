@@ -26,6 +26,16 @@
 /// `AdvisorySource.other`. Consumers consuming via the
 /// `AdvisoryAggregator` type handle it like any other advisory.
 ///
+/// When the publisher is silent, this adapter keeps the reasons apart. An
+/// empty result means the publisher answered and reported nothing; a read it
+/// could not complete throws rather than returning an empty list; a partially
+/// unreadable answer comes back with an in-band incomplete-read notice; and a
+/// field the publisher did not state maps to `AdvisorySeverity.unknown` rather
+/// than to the bottom of the severity scale. The one silence this adapter
+/// cannot represent is a declared coverage gap — the publisher's response shape
+/// has no way to say "not covered here" — and the README states that bound
+/// rather than simulating the signal.
+///
 /// Surface published in this package:
 /// - [OwmRoadRiskClient] — lower-level HTTP client around the
 ///   publisher's `/data/2.5/roadrisk` endpoint; returns raw alerts.
@@ -33,7 +43,12 @@
 ///   one-shot point query mapped to source-neutral [Advisory]s.
 /// - [OwmRoadRiskWaypoint] — request waypoint type.
 /// - [OwmRoadRiskAlert] — response alert type.
+/// - [OwmRoadRiskRead] — one read's alerts together with what could not be
+///   read, so a partial read is never mistaken for an empty one.
 /// - [OwmRoadRiskMapper] — alert → Advisory mapping primitives.
+/// - [kOwmRoadRiskIncompleteReadEventClass] — `Advisory.eventClass` identity
+///   of the incomplete-read notice, for consumers that filter or render it
+///   differently from a hazard.
 /// - [OwmRoadRiskHttpException] / [OwmRoadRiskParseException] —
 ///   error types for caller-side discrimination.
 library;
