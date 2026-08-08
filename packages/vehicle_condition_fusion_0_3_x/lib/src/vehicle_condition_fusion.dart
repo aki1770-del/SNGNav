@@ -164,10 +164,31 @@ class VehicleConditionFusion {
     if (!signals.hasAnySignal) return;
 
     _available = true;
-    final weather = vehicleSignalsToWeatherCondition(
+    final weather = vehicleSignalsToWeatherConditionOrNull(
       signals,
       timestamp: _clock(),
     );
+
+    // The signals are real and flowing, but they cannot support a verdict: no
+    // hazard is asserted and the ambient temperature — which every remaining
+    // branch of the classifier reads — was never measured. Emit the honest
+    // abstention rather than "Conditions normal" at full grip. It carries the
+    // signals (so the caller can still show what the vehicle DID publish) and
+    // the reason, and it is deliberately NOT an alarm: it cannot cry wolf.
+    if (weather == null) {
+      if (!_controller.isClosed) {
+        _controller.add(
+          VehicleConditionUpdate(
+            assessment: null,
+            signals: signals,
+            live: false,
+            unavailableReason: kUnmeasuredTemperatureReason,
+          ),
+        );
+      }
+      return;
+    }
+
     final candidate = DrivingConditionAssessment.fromCondition(weather);
 
     // Debounce the road-surface picture with the existing HysteresisFilter:

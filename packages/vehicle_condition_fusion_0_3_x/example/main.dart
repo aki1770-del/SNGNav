@@ -84,11 +84,19 @@ Future<void> main() async {
       // mutates the fusion) to detect a debounce-held step: when the freshly
       // computed surface differs from the displayed (held) surface, the
       // HysteresisFilter is holding the verdict.
-      final weather = vehicleSignalsToWeatherCondition(s);
-      final candidate = DrivingConditionAssessment.fromCondition(weather);
-      final held = candidate.surfaceState != a.surfaceState;
-      if (!held) committedVisMeters = weather.visibilityMeters;
-      final visMeters = committedVisMeters ?? weather.visibilityMeters;
+      // `OrNull` is the honest entry point: it abstains when no hazard is
+      // asserted and the ambient temperature was never measured. It cannot be
+      // null here — the fusion only emitted an assessment because it was not.
+      final weather = vehicleSignalsToWeatherConditionOrNull(s);
+      final candidate = weather == null
+          ? null
+          : DrivingConditionAssessment.fromCondition(weather);
+      final held =
+          candidate != null && candidate.surfaceState != a.surfaceState;
+      if (!held && weather != null) {
+        committedVisMeters = weather.visibilityMeters;
+      }
+      final visMeters = committedVisMeters ?? weather?.visibilityMeters ?? 0.0;
 
       stdout.writeln(_describe(step, update, held: held, visMeters: visMeters));
     } else {

@@ -27,25 +27,30 @@ const double kColdSlipCelsius = 2.0;
 /// ice concern when the temperature is unknown (absence never downgrades a
 /// hazard); the friction path was always temperature-independent.
 ///
-/// The value (5.0) is retained for source compatibility and is still used ONLY
-/// to disambiguate precipitation *type* (rain vs snow) when no ice hazard is at
-/// stake. To model an unknown temperature as a first-class value rather than a
-/// fabricated one, move to the `x.y` line where `airTempC` absence is carried
-/// through the pipeline instead of being back-filled.
+/// The value (5.0) is retained for source compatibility. Since **0.3.4** it no
+/// longer reaches a driver at all: [vehicleSignalsToWeatherConditionOrNull]
+/// abstains — returns `null` — when no hazard is asserted and the temperature
+/// was not measured, instead of substituting this number and letting the
+/// downstream classifier read it as a thermometer reading.
 @Deprecated(
   'An absent temperature is unknown, not above-freezing. Assuming +5 °C '
-  'downgraded ice hazards. A present traction-loss event now keeps the ice '
-  'concern when temperature is unknown; move to the nullable-temperature x.y '
-  'line to model absence as a first-class value.',
+  'downgraded ice hazards. A present traction-loss event keeps the ice concern '
+  'when temperature is unmeasured (0.3.2), and since 0.3.4 '
+  'vehicleSignalsToWeatherConditionOrNull abstains rather than substituting '
+  'this value at all.',
 )
 const double kAssumedAboveFreezingCelsius = 5.0;
 
-/// Internal fallback used ONLY to disambiguate precipitation *type* (rain vs
-/// snow) and to fill the non-nullable `WeatherCondition.temperatureCelsius`
-/// field when the vehicle publishes no ambient temperature. It never decides
-/// ice risk: ice is asserted from a direct friction measurement, or from a
-/// present traction-loss event (which now stands on its own when the
-/// temperature is unknown — see [vehicleSignalsToWeatherCondition]).
+/// Internal filler for the non-nullable `WeatherCondition.temperatureCelsius`
+/// field when the vehicle publishes no usable ambient temperature.
+///
+/// It never decides ice risk: ice is asserted from a direct friction
+/// measurement, or from a present traction-loss event (which stands on its own
+/// when the temperature is unmeasured — 0.3.2). Since **0.3.4** it also decides
+/// nothing else that reaches a driver, because the honest entry point
+/// [vehicleSignalsToWeatherConditionOrNull] abstains before this value can be
+/// read. It survives only behind the deprecated
+/// [vehicleSignalsToWeatherCondition].
 const double _kAbsentTempPrecipFallbackCelsius = 5.0;
 
 // ---------------------------------------------------------------------------
@@ -104,46 +109,127 @@ double _visibilityMetersForLevel(int level) => switch (level) {
   _ => 300.0, // heavy — short draw distance
 };
 
-/// Pure, total, deterministic mapping: decoded vehicle signals → the existing
-/// [WeatherCondition] the `driving_conditions` pipeline already consumes.
+/// The ambient temperature [s] actually MEASURED, or `null` when it did not.
 ///
-/// The rules:
+/// `null` and a non-finite reading (`NaN` / `Infinity`, what a broken sensor or
+/// a mis-decoded CAN frame produces) are the SAME answer: nobody read the
+/// outside air. Up to 0.3.3 they were two different answers — `null` kept the
+/// ice concern (0.3.2) while `NaN` silently did not, because `NaN <= 2.0` is
+/// `false` and that is indistinguishable from "measured, and warm".
+double? measuredAmbientCelsius(VehicleConditionSignals s) {
+  final t = s.airTempC;
+  if (t == null || !t.isFinite) return null;
+  return t;
+}
+
+/// Why [vehicleSignalsToWeatherConditionOrNull] abstained, carried on the
+/// emitted [VehicleConditionUpdate.unavailableReason] so an integrator can see
+/// what to publish rather than guess.
+const String kUnmeasuredTemperatureReason =
+    'ambient temperature not measured (Vehicle.Exterior.AirTemperature): no '
+    'hazard signal is present, and every remaining road-surface verdict would '
+    'rest on a temperature nobody read';
+
+/// Pure, deterministic mapping: decoded vehicle signals → the
+/// [WeatherCondition] the `driving_conditions` pipeline consumes — **or `null`
+/// when the snapshot cannot support the verdict it would otherwise produce.**
+///
+/// ## Why this returns `null` (added 0.3.4)
+///
+/// `WeatherCondition.temperatureCelsius` is a non-nullable `double` on the
+/// `driving_weather` `0.4.x` line, so an *unknown* temperature has nowhere to
+/// go: 0.3.3 filled it with `+5.0 °C` and every downstream branch then read
+/// that number as if a thermometer had produced it.
+///
+/// Look at what the shared classifier actually does. `RoadSurfaceState`'s first
+/// line is `if (condition.iceRisk) return blackIce` — decided WITHOUT the
+/// temperature. **Every single branch after it reads the temperature**: the
+/// residual-ice `temp <= -3`, the radiative-frost check, the freezing-rain
+/// `temp <= 0`, the `standingWater` `temp > 3`, the snow `temp > 2` / `temp <
+/// -2` splits. So when no hazard is asserted and the temperature was never
+/// measured, there is no verdict left that is not a claim about an unread
+/// number — including, above all, `dry` at `gripFactor: 1.0` with the advisory
+/// "Conditions normal".
+///
+/// The rule, therefore, is the one this package already applies elsewhere:
+/// **positive evidence of a hazard classifies on partial data; a benign verdict
+/// must be earned.** `null` is not an alarm and cannot cry wolf — it says "not
+/// measured", and the caller tells its driver so.
+///
+/// Returns `null` **iff** `iceRisk` is false AND
+/// [measuredAmbientCelsius] is `null`. Whenever a temperature WAS measured,
+/// the result and its classification are byte-for-byte what 0.3.3 produced.
+///
+/// The rules for the non-`null` result:
 ///  * **precipitation** present iff wiper/rain-sensor say so; type is `snow`
 ///    when temperature ≤ 0 °C else `rain` (temperature disambiguates what the
-///    wiper cannot); intensity from [_intensityForLevel]. When temperature is
-///    absent, a non-hazard fallback is used ONLY for this rain/snow split (see
-///    residual note below).
+///    wiper cannot); intensity from [_intensityForLevel].
 ///  * **ice risk** iff a *direct* road measurement says so — friction below
 ///    [kIcyFrictionThreshold], OR a present traction-loss event (TCS/ABS/ESC
-///    engaged) whose temperature is at/below [kColdSlipCelsius] **or unknown**.
-///    Absence of temperature never *downgrades* this: a car losing grip on a
-///    road whose temperature it did not publish keeps the ice concern rather
-///    than being dismissed as aquaplaning (caution-add-only).
-///  * **temperature** = ambient air temp, or a non-hazard fallback when absent
-///    (fills the non-nullable field; never decides ice — see below).
+///    engaged) whose temperature is at/below [kColdSlipCelsius] **or not
+///    measured**. Absence of temperature never *downgrades* this: a car losing
+///    grip on a road whose temperature it did not publish keeps the ice concern
+///    rather than being dismissed as aquaplaning (caution-add-only).
+///  * **temperature** = the measured ambient air temp.
 ///  * **visibility** = the documented [_visibilityMetersForLevel] proxy.
-///
-/// **Residual (fixed only on the nullable-temperature x.y line).** The
-/// `WeatherCondition` this hands to the downstream classifier cannot express an
-/// *unknown* temperature (`temperatureCelsius` is a non-nullable `double`), so
-/// when `airTempC` is absent a fallback value still fills it and still drives
-/// the rain-vs-snow split. That means a *freezing-rain* road with a dead
-/// temperature sensor (no friction signal, no traction-loss event) can still be
-/// classified `wet` rather than icy. The lethal path — a present traction-loss
-/// event masked by an assumed-warm temperature — is closed here; the residual
-/// requires modelling temperature-absence as a first-class value, which is a
-/// breaking type change.
 ///
 /// The result is handed to `DrivingConditionAssessment.fromCondition` — the
 /// existing classifier — so road-surface classification logic is reused, not
 /// duplicated.
-WeatherCondition vehicleSignalsToWeatherCondition(
+WeatherCondition? vehicleSignalsToWeatherConditionOrNull(
   VehicleConditionSignals s, {
   DateTime? timestamp,
 }) {
-  final airTemp = s.airTempC;
-  // Non-hazard fallback: fills the non-nullable temperature field and the
-  // rain/snow disambiguation ONLY. It never decides ice — see below.
+  final condition = _fuse(s, timestamp: timestamp);
+
+  // POSITIVE evidence: a friction reading or an attributable traction-loss
+  // event asserts the hazard on its own. It never needed the temperature, and
+  // withholding it here would be the under-warn 0.3.2 closed.
+  if (condition.iceRisk) return condition;
+
+  // No hazard asserted. Everything else the classifier could say from here
+  // reads a temperature that was never measured — so we say nothing.
+  if (measuredAmbientCelsius(s) == null) return null;
+
+  return condition;
+}
+
+/// The 0.3.3 mapping, preserved verbatim for source compatibility.
+///
+/// **It fabricates.** When the vehicle publishes no usable ambient temperature
+/// this substitutes `+5.0 °C` and hands it downstream as if measured, which:
+///
+///  * types falling precipitation `rain` (never `snow`), so a −5 °C snowfall
+///    classifies `wet` (grip 0.70) instead of `slush`/`compactedSnow`, and a
+///    freezing-rain road classifies `wet` instead of `blackIce`;
+///  * carries a no-precipitation frame past the residual-ice `temp <= -3`
+///    branch out to `dry` — gripFactor **1.0**, "Conditions normal" — which is
+///    an affirmative all-clear manufactured out of absence;
+///  * publishes `temperatureCelsius: 5.0` and `isFreezing: false` to any caller
+///    that displays or gates on them.
+///
+/// Use [vehicleSignalsToWeatherConditionOrNull], which answers `null` in
+/// exactly those cases. This function is retained, not removed: deleting it
+/// would break every `^0.3.x` build on the next `pub get`, and a broken build
+/// is not a way to tell someone their code is wrong.
+@Deprecated(
+  'Fabricates +5.0 °C when the vehicle publishes no ambient temperature — '
+  'typing snow as rain and turning a no-precipitation frame into "Conditions '
+  'normal" at full grip. Use vehicleSignalsToWeatherConditionOrNull, which '
+  'returns null when no hazard is asserted and the temperature was not '
+  'measured.',
+)
+WeatherCondition vehicleSignalsToWeatherCondition(
+  VehicleConditionSignals s, {
+  DateTime? timestamp,
+}) => _fuse(s, timestamp: timestamp);
+
+/// The shared body. Total; never throws.
+WeatherCondition _fuse(VehicleConditionSignals s, {DateTime? timestamp}) {
+  final airTemp = measuredAmbientCelsius(s);
+  // Non-hazard filler for the non-nullable field. Callers reach this value only
+  // through the deprecated entry point above; the honest entry point abstains
+  // before it can decide anything.
   final temp = airTemp ?? _kAbsentTempPrecipFallbackCelsius;
   final level = _precipitationLevel(s);
 
@@ -154,11 +240,13 @@ WeatherCondition vehicleSignalsToWeatherCondition(
   // A present traction-loss event (TCS/ABS/ESC engaged) is a direct indicator
   // of grip loss. On a cold road it is ice; historically it was dismissed as
   // aquaplaning only when the ambient temperature read *above* freezing. But an
-  // ABSENT temperature is unknown, not warm — assuming +5 °C once returned
+  // UNMEASURED temperature is unknown, not warm — assuming +5 °C once returned
   // `iceRisk: false` for a car that was actively skidding. Caution-add-only:
-  // absence must never downgrade a hazard, so an unknown temperature keeps the
-  // ice concern here (it does not clear it). The friction path below is
-  // temperature-independent and unaffected.
+  // absence must never downgrade a hazard, so an unmeasured temperature keeps
+  // the ice concern here (it does not clear it). Since 0.3.4 a non-finite
+  // reading counts as unmeasured too — `NaN <= kColdSlipCelsius` is `false`,
+  // which had made a corrupt sensor behave exactly like a warm one. The
+  // friction path below is temperature-independent and unaffected.
   final tractionLoss =
       s.tcsEngaged == true || s.absEngaged == true || s.escEngaged == true;
   final coldOrUnknownTemp = airTemp == null || airTemp <= kColdSlipCelsius;

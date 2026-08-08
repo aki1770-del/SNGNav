@@ -1,5 +1,127 @@
 # Changelog
 
+## 0.3.4
+
+**Safety fix — an unmeasured ambient temperature no longer buys a benign
+verdict. If you are holding 0.3.0 – 0.3.3, read this: it describes what your
+copy is doing right now.**
+
+### What the version you already have does
+
+When the vehicle publishes no ambient temperature
+(`Vehicle.Exterior.AirTemperature` absent, `airTempC == null`), every version
+from **0.3.0 through 0.3.3** substitutes **+5.0 °C** and hands that number
+downstream as though a thermometer had produced it. 0.3.2 removed the constant
+from the *ice* rule and recorded the rest as a "known residual". This release is
+that residual, closed. What the residual actually cost, measured against the
+shipped code:
+
+1. **Falling snow was reported as rain.** `precipType` is
+   `temp <= 0 ? snow : rain`, so with the filler it is *always* `rain`.
+   Downstream that is `RoadSurfaceState.wet` — gripFactor **0.70**, "Wet road —
+   increased stopping distance" — or, at heavy intensity, `standingWater` and
+   **"Standing water — risk of aquaplaning at speed"**. On a −5 °C road the
+   truth was `slush` (0.50) or `compactedSnow` (0.30). On a freezing-rain road
+   the truth was `blackIce` (**0.15**). A driver in falling snow was told about
+   aquaplaning.
+
+2. **A road nobody measured was reported normal.** With no precipitation
+   reported, the filler carries the condition past the residual-ice
+   `temp <= -3` branch and out to `dry` — gripFactor **1.00**,
+   `RecommendedResponse.proceed`, advisory **"Conditions normal"**. That fires
+   on an entirely ordinary frame: a vehicle that publishes `TCS.IsEngaged:
+   false` and no temperature at all. At −10 °C the same classifier, given the
+   real number, returns `blackIce`.
+
+3. **The public field lied.** `WeatherCondition.temperatureCelsius` read `5.0`
+   and `isFreezing` read `false` for any caller that displayed or gated on
+   them.
+
+4. **A corrupt temperature was worse than an absent one.** `NaN <= 2.0` is
+   `false`, indistinguishable from "measured, and warm" — so a broken sensor
+   dismissed a live TCS/ABS/ESC skid as aquaplaning, the exact downgrade 0.3.2
+   closed for `null`.
+
+### What changes
+
+The rule this package already applies elsewhere now covers this seam:
+**positive evidence of a hazard classifies on partial data; a benign verdict
+must be earned.**
+
+- **New `vehicleSignalsToWeatherConditionOrNull(...)`** — returns `null`
+  **iff** no ice hazard is asserted **and** the ambient temperature was not
+  measured. Why that is the right boundary, and not a judgement call: the
+  shared classifier's first line is `if (condition.iceRisk) return blackIce`,
+  decided *without* the temperature — and every branch after it reads the
+  temperature (`temp <= -3`, the radiative-frost check, `temp <= 0`,
+  `temp > 3`, `temp > 2`, `temp < -2`). With no hazard and no measurement there
+  is no verdict left that is not a claim about an unread number.
+- **`VehicleConditionFusion` now emits that abstention** instead of an
+  affirmative all-clear: `assessment: null`, `live: false`, `signals` retained
+  so you can still show what the vehicle *did* publish, and
+  `unavailableReason: kUnmeasuredTemperatureReason` naming the missing leaf.
+  **A caller that already branches on `isAvailable` — as the package example
+  and README do — needs no change and cannot crash:** `assessment` has been
+  nullable since 0.1.0. The abstention is **not an alarm**; it asserts no
+  hazard and cannot cry wolf.
+- **A non-finite temperature now counts as unmeasured**, in the ice rule too.
+  A `NaN`/`Infinity` reading with a live traction-loss event now keeps the ice
+  concern (finding 4 above). This is caution-adding only.
+- **`vehicleSignalsToWeatherCondition(...)` is now `@Deprecated`** — and
+  **retained, not removed**. Deleting it would break every `^0.3.x` build on
+  the next `pub get`, and a broken build is not a way to tell someone their
+  code is wrong. Its behaviour is unchanged apart from the non-finite rule
+  above, so nothing silently shifts under you; the deprecation notice in your
+  editor is the only channel this package has to reach you, because a
+  caret-pinned consumer cannot be pushed to.
+
+### What does NOT change
+
+Everything that rests on a **measured** temperature is byte-for-byte what
+0.3.3 produced — pinned by a test that compares the two entry points across
+four measured snapshots. Every existing hazard path is intact: low friction
+still asserts black ice with no temperature at all; TCS/ABS/ESC still keep the
+ice concern when the temperature is unknown (0.3.2); a genuine warm-road
+traction loss at +12 °C is still not ice. The carry-forward rail still holds a
+once-seen hazard across partial frames.
+
+### Honest bound — what this release does not fix
+
+`WeatherCondition.temperatureCelsius` is still a non-nullable `double` on the
+`driving_weather` `0.4.x` line this package depends on, so "unknown" still has
+nowhere to live *inside* the type; the abstention happens at the boundary
+instead. The consequence is real: **when a hazard IS asserted and the
+temperature is unmeasured, the emitted condition still carries `5.0` in that
+field** (the verdict is `blackIce` and does not depend on it, but a caller that
+prints the number will print 5.0). Modelling temperature-absence as a
+first-class value is the `0.5.x` line, where `temperatureCelsius`,
+`precipType`, `intensity` and `iceRisk` are all nullable — a breaking type
+change that cannot reach a `^0.3.x` consumer.
+
+The trade this release makes, stated plainly: a vehicle that never publishes
+`Vehicle.Exterior.AirTemperature` now receives **fewer** verdicts than it did
+before — hazards, and nothing else. That is the intended effect. The verdicts
+it stops receiving were manufactured from a number nobody read.
+
+### Compatibility
+
+No signature changed and nothing was removed; `^0.3.x` consumers receive this
+on the next `pub get`. It is the only vehicle that can reach them —
+`0.4.0`/`0.5.0` are outside `^0.3.x` and arrive nowhere.
+
+### The guard
+
+`test/absence_is_not_benign_guard_test.dart` was written first and run against
+the published 0.3.3 source, where it failed 5/5 printing the real verdicts
+(`dry grip=1.0 "Conditions normal"`; `standingWater "Standing water — risk of
+aquaplaning at speed"`; `WeatherCondition(none none, 5.0°C, …)`). It is green
+here, and dies again the moment the abstention is removed.
+
+One existing test asserted the old conclusion and is **corrected, not
+deleted**: its stated intent ("a retracted signal does not stale-over-warn")
+survives — what changed is that retracting the deciding signal now buys no
+verdict rather than a different one.
+
 ## 0.3.3
 
 **Safety fix — a broken friction sensor no longer reports PERFECT GRIP.**

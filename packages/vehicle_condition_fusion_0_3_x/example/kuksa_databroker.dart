@@ -221,10 +221,15 @@ String _describe(int step, VehicleConditionUpdate update) {
   // The hold LAGS onset by one frame by design (documented anti-flicker) and
   // fails safe on CLEARING — so a held step is NOT an under-warn; the marker
   // makes that legible rather than mistakable for the fusion under-warning.
-  final candidate = DrivingConditionAssessment.fromCondition(
-    vehicleSignalsToWeatherCondition(s),
-  );
-  final held = candidate.surfaceState != a.surfaceState;
+  // `OrNull` is the honest entry point: it abstains when no hazard is asserted
+  // and the ambient temperature was never measured. It cannot be null here —
+  // the fusion only emitted an assessment because it was not — so the fallback
+  // is the displayed verdict itself (i.e. "no fresh disagreement").
+  final fresh = vehicleSignalsToWeatherConditionOrNull(s);
+  final candidate = fresh == null
+      ? null
+      : DrivingConditionAssessment.fromCondition(fresh);
+  final held = candidate != null && candidate.surfaceState != a.surfaceState;
   final marker = held ? ' (held)' : '';
 
   final fric = s.roadFriction == null

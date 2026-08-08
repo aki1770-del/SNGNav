@@ -5,9 +5,23 @@ import 'vehicle_condition_signals.dart';
 /// One emission from [VehicleConditionFusion].
 ///
 /// Either a live condition ([isAvailable] == true, [assessment] non-null), or
-/// an honest unavailability marker ([VehicleConditionUpdate.unavailable])
-/// telling the caller there are no live vehicle signals — never a fabricated
-/// scene. SDK-neutral: nothing here references any databroker transport.
+/// an honest no-verdict marker — never a fabricated scene. SDK-neutral: nothing
+/// here references any databroker transport.
+///
+/// There are two shapes of no-verdict, and [signals] tells them apart:
+///
+///  * **no live signals** — [VehicleConditionUpdate.unavailable]. The source
+///    errored or ended. [signals] is `null`.
+///  * **signals, but no verdict** (since 0.3.4). The vehicle IS publishing, and
+///    what it publishes cannot support a classification: no hazard is asserted
+///    and the ambient temperature every remaining branch of the classifier
+///    reads was never measured. [signals] is retained so the caller can still
+///    show what the vehicle did publish, and [unavailableReason] says what is
+///    missing.
+///
+/// In both cases [live] is `false` and [assessment] is `null`, so a caller that
+/// already branches on [isAvailable] — as the package example does — needs no
+/// change. An abstention is not an alarm: it never asserts a hazard.
 class VehicleConditionUpdate {
   const VehicleConditionUpdate({
     required this.assessment,

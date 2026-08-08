@@ -145,10 +145,14 @@ final fusion = VehicleConditionFusion.fromPartialFrames(
   signals (`roadFriction`, `tcsEngaged`, `absEngaged`, `escEngaged`,
   `wiperIntensity`, `rainIntensity`, `airTempC`, `speedKmh`). A signal the
   vehicle has not published is `null`, never a fabricated default.
-- `vehicleSignalsToWeatherCondition(...)` — a pure, total, deterministic mapping
+- `vehicleSignalsToWeatherConditionOrNull(...)` — a pure, deterministic mapping
   to a `WeatherCondition` (no LLM, no prose, no ad-hoc heuristic), with named
   calibration thresholds: `kIcyFrictionThreshold` (0.3), `kColdSlipCelsius`
-  (2.0), `kAssumedAboveFreezingCelsius` (5.0).
+  (2.0). It returns **`null`** when no ice hazard is asserted *and* the ambient
+  temperature was not measured — see "Calibration rules" below.
+  (`vehicleSignalsToWeatherCondition(...)`, the non-nullable original, is
+  `@Deprecated` since 0.3.4: it substitutes +5.0 °C for an unmeasured
+  temperature. It is kept so `^0.3.x` builds do not break.)
 - `VehicleConditionFusion` — a stream processor:
   `Stream<VehicleConditionSignals>` → `Stream<VehicleConditionUpdate>`. It fuses
   via `DrivingConditionAssessment.fromCondition`, debounces road-surface flicker
@@ -179,16 +183,45 @@ fusion.conditions.listen((u) {
 source.add(const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5));
 ```
 
-## Calibration rules (preserved verbatim from the source pipeline)
+## Calibration rules
 
-- **temperature** = ambient air temp, or `kAssumedAboveFreezingCelsius` (5 °C)
-  when absent — a *missing* temperature never fabricates ice.
+- **ice risk** iff a *direct* road measurement says so — friction below
+  `kIcyFrictionThreshold`, **or** TCS/ABS/ESC engaged at/below
+  `kColdSlipCelsius` **or with the temperature unmeasured**. A car losing grip
+  on a road whose temperature it did not publish keeps the ice concern rather
+  than being dismissed as aquaplaning (0.3.2; extended to non-finite readings
+  in 0.3.4).
 - **precipitation** present iff wiper/rain-sensor say so; type is `snow` when
   temperature ≤ 0 °C else `rain` (temperature disambiguates what the wiper
   cannot).
-- **ice risk** iff a *direct* road measurement says so — friction below
-  `kIcyFrictionThreshold`, **or** TCS/ABS/ESC engaged at/below
-  `kColdSlipCelsius`.
+- **temperature** = the measured ambient air temp. When it is **not** measured
+  (`null`, or a non-finite reading from a broken sensor) and no ice hazard is
+  asserted, `vehicleSignalsToWeatherConditionOrNull` returns **`null`** and the
+  fusion emits an abstention rather than a verdict — see below.
+
+### Absence never buys a benign verdict (0.3.4)
+
+The classifier's first line is `if (condition.iceRisk) return blackIce`, decided
+without the temperature. **Every branch after it reads the temperature**:
+residual ice (`temp <= -3`), the radiative-frost check, freezing rain
+(`temp <= 0`), standing water (`temp > 3`), the snow splits (`temp > 2`,
+`temp < -2`). So with no hazard asserted and no measurement there is no verdict
+left that is not a claim about an unread number — including `dry` at
+`gripFactor: 1.0` with the advisory "Conditions normal".
+
+Through 0.3.3 this package substituted **+5.0 °C** there. Falling snow was typed
+`rain` (a −5 °C snowfall classified `wet`, grip 0.70, instead of
+`slush`/`compactedSnow`; heavy precipitation reached "Standing water — risk of
+aquaplaning at speed"), and an ordinary no-precipitation frame from a vehicle
+with no temperature sensor reported **"Conditions normal"** at full grip.
+
+Since 0.3.4 the fusion emits an **abstention** in that case:
+`assessment: null`, `live: false`, `signals` retained, and
+`unavailableReason: kUnmeasuredTemperatureReason` naming the missing VSS leaf.
+A caller that already branches on `isAvailable` — as the snippet above does —
+needs no change. The abstention is not an alarm: it asserts no hazard and
+cannot cry wolf. **Positive evidence of a hazard still classifies on partial
+data; only the benign verdict has to be earned.**
 
 ## Honest bounds — read this
 
@@ -207,7 +240,17 @@ source.add(const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5));
   signals you feed it.
 - **No fabrication.** A snapshot with no real signal is *not emitted*; a source
   error or end-of-stream surfaces a `VehicleConditionUpdate.unavailable` marker
-  so the caller can keep its offline default and stop claiming "live".
+  so the caller can keep its offline default and stop claiming "live". Since
+  0.3.4 the same honesty covers the *partially*-signalled snapshot: real signals
+  that cannot support a verdict (no hazard, no measured temperature) produce an
+  abstention, not an all-clear.
+- **`temperatureCelsius` is still filled on a HAZARD emission.** The
+  `driving_weather` `0.4.x` `WeatherCondition` this line depends on has a
+  non-nullable `double` there, so when a hazard *is* asserted and the
+  temperature is unmeasured the emitted condition still carries `5.0` in that
+  field. The verdict (`blackIce`) does not depend on it, but do not print that
+  number as a reading. Modelling temperature-absence inside the type is the
+  `0.5.x` line, and it is a breaking change.
 
 ## The input seam — bring any source
 

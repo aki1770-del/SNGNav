@@ -39,6 +39,35 @@ the *ice verdict* is unchanged by 0.3.3. What is fixed is the fabricated public
 `roadFriction` field. The tri-state that models "we did not measure the road" is the
 breaking change on the `0.5.x` line.
 
+## What 0.3.4 fixed
+
+The residual 0.3.2 wrote down and left open: an **unmeasured** ambient
+temperature was substituted with `+5.0 °C` and read downstream as a measurement.
+It typed falling snow as `rain` (a −5 °C snowfall → `wet`, grip 0.70, or at
+heavy intensity "Standing water — risk of aquaplaning at speed"), and it carried
+a no-precipitation frame past the residual-ice `temp <= -3` branch out to `dry`
+at gripFactor **1.00**, "Conditions normal" — an affirmative all-clear about a
+road whose deciding field nobody read, reachable from a frame as ordinary as
+`TCS.IsEngaged: false` with no temperature leaf.
+
+Closed by abstaining instead: `vehicleSignalsToWeatherConditionOrNull` returns
+`null` iff no ice hazard is asserted AND the temperature was not measured, and
+the fusion emits that through the nullable-`assessment` channel it has carried
+since 0.1.0. A non-finite reading now counts as unmeasured in the ice rule too
+(`NaN <= 2.0` is `false`, so a corrupt sensor had been behaving exactly like a
+warm one — worse than the `null` case 0.3.2 fixed).
+
+**Honest bound:** `WeatherCondition.temperatureCelsius` is still non-nullable on
+`driving_weather 0.4.x`, so on a HAZARD emission with no measured temperature
+the field still carries `5.0`. The verdict does not depend on it; a caller that
+prints it will print a number nobody measured. The type-level fix is `0.5.x`.
+
+**Seed provenance for this patch:** the worktree was branched from `e682a66`
+(this directory) and proven byte-identical to
+`pub.dev/api/archives/vehicle_condition_fusion-0.3.3.tar.gz` — 18/18 files, only
+this `MAINTENANCE.md` extra — before a line was changed. It is now `.pubignore`d
+so the published archive stays exactly the package.
+
 ## To patch the line again
 
 Work in this directory, bump the patch version, `dart test`, `dart pub publish`.

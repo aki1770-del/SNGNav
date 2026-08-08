@@ -320,46 +320,52 @@ void main() {
       },
     );
 
-    test(
-      'default constructor: the SAME two as COMPLETE snapshots — a null in '
-      'the second is "unknown now", so it does NOT stale-over-warn',
-      () async {
-        final source = StreamController<VehicleConditionSignals>();
-        final fusion = VehicleConditionFusion(
-          signals: source.stream,
-          surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
-        );
-        final updates = <VehicleConditionUpdate>[];
-        final sub = fusion.conditions.listen(updates.add);
+    test('default constructor: the SAME two as COMPLETE snapshots — a null in '
+        'the second is "unknown now", so it does NOT stale-over-warn', () async {
+      final source = StreamController<VehicleConditionSignals>();
+      final fusion = VehicleConditionFusion(
+        signals: source.stream,
+        surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+      );
+      final updates = <VehicleConditionUpdate>[];
+      final sub = fusion.conditions.listen(updates.add);
 
-        // frame1: complete snapshot asserting black ice (same as above).
-        source.add(
-          const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
-        );
-        await pumpEventQueue();
-        expect(
-          updates.last.assessment!.surfaceState,
-          RoadSurfaceState.blackIce,
-        );
+      // frame1: complete snapshot asserting black ice (same as above).
+      source.add(
+        const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
+      );
+      await pumpEventQueue();
+      expect(updates.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
 
-        // frame2: a COMPLETE snapshot where roadFriction (and airTempC) are
-        // GENUINELY null — the source is stating the ice signal is no longer
-        // valid, not merely "not re-sent".
-        source.add(const VehicleConditionSignals(wiperIntensity: 5));
-        await pumpEventQueue();
+      // frame2: a COMPLETE snapshot where roadFriction (and airTempC) are
+      // GENUINELY null — the source is stating the ice signal is no longer
+      // valid, not merely "not re-sent".
+      source.add(const VehicleConditionSignals(wiperIntensity: 5));
+      await pumpEventQueue();
 
-        // The complete-snapshot rail correctly treats null as "unknown now" and
-        // does NOT carry the ice forward: the second yields NOT black ice.
-        expect(
-          updates.last.assessment!.surfaceState,
-          isNot(RoadSurfaceState.blackIce),
-        );
+      // The complete-snapshot rail correctly treats null as "unknown now" and
+      // does NOT carry the ice forward: the second does not re-assert black ice.
+      expect(
+        updates.last.assessment?.surfaceState,
+        isNot(RoadSurfaceState.blackIce),
+      );
 
-        await sub.cancel();
-        await fusion.dispose();
-        await source.close();
-      },
-    );
+      // CORRECTED IN 0.3.4 — the intent above ("does not stale-over-warn") is
+      // unchanged; what it produces instead is. Through 0.3.3 this frame
+      // yielded `standingWater` ("risk of aquaplaning at speed"), classified
+      // from a temperature the source had just RETRACTED and the fusion had
+      // silently replaced with +5.0 °C. Retracting the deciding signal cannot
+      // buy a different verdict — it buys no verdict.
+      expect(updates.last.isAvailable, isFalse);
+      expect(updates.last.assessment, isNull);
+      expect(updates.last.unavailableReason, kUnmeasuredTemperatureReason);
+      // Still not an alarm: absence never fabricates the hazard either.
+      expect(updates.last.signals, isNotNull);
+
+      await sub.cancel();
+      await fusion.dispose();
+      await source.close();
+    });
 
     test(
       'fromPartialFrames honest degradation: stream ERROR → unavailable',
