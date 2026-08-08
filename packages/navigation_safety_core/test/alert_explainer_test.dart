@@ -334,18 +334,20 @@ void main() {
   });
 
   group('AlertExplainer spoken-form safety (0.11.3)', () {
-    test('professional WET names the hazard aloud — 濡路 is spoken as silence',
-        () {
-      // Regression: the string was 「濡路、注意」. Through open_jtalk 濡路
-      // renders as SILENCE, so the driver hears 「（無音）、注意」 — a caution
-      // naming no hazard. A warning she cannot hear is not a warning.
-      final e = AlertExplainer.forConditionAndProfile(
-        RoadSurfaceCondition.wet,
-        DriverProfile.professional,
-      );
-      expect(e.action, isNot(contains('濡路')));
-      expect(e.action, contains('濡れた路面'));
-    });
+    test(
+      'professional WET names the hazard aloud — 濡路 is spoken as silence',
+      () {
+        // Regression: the string was 「濡路、注意」. Through open_jtalk 濡路
+        // renders as SILENCE, so the driver hears 「（無音）、注意」 — a caution
+        // naming no hazard. A warning she cannot hear is not a warning.
+        final e = AlertExplainer.forConditionAndProfile(
+          RoadSurfaceCondition.wet,
+          DriverProfile.professional,
+        );
+        expect(e.action, isNot(contains('濡路')));
+        expect(e.action, contains('濡れた路面'));
+      },
+    );
 
     test('no profile uses 濡路 in any WET explainer', () {
       // The outlier existed because one profile drifted from the shared term.
