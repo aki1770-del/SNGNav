@@ -90,24 +90,31 @@ outside this package, so the package itself stays pure Dart.
      `08:59`; a `latitude` of `180` returns `daylight`, sunrise `05:52`, sunset
      `17:45`; a `latitude` of `1e300` returns `polarDay`. **Latitude never
      crashed at any magnitude tested** — it only corrupts the answer. Longitude
-     crashes only past an overflow point that *moves with latitude*
-     (`1.067e+87` at the equator, `5.000038e+89` at 39.72, `1.000e+90` at
-     78.2°N) and differs by sign — so there is no threshold worth guarding
-     against, only the range. Note too that an absurd latitude **masks** an
-     absurd longitude (`lat: 95, lon: 1e300` returns `polarDay`), so vary one
-     field at a time when you test this.
+     crashes on an **interleaved** set, not past a threshold: at latitude 39.72,
+     `1e87` returns, `2.696687e+87` throws, `3e87` returns, `7e87` throws, and
+     one decade of mantissa holds 23 throw/return transitions. Whichever "first
+     bad value" a bisection reports is an artifact of its search path, so there
+     is no threshold to guard against — only the range. It is date-dependent as
+     well: `1e90` at 78.2°N throws in 12 of 36 date samples across 2026 and
+     never in January or June. Note too that an out-of-range latitude **masks**
+     an absurd longitude (`lat: 95, lon: 1e300` returns `polarDay`) — and so
+     does a **legal** high latitude, since the polar branch returns first, so
+     vary one field at a time when you test this.
   4. **It violates the rule stated in this file — *one dirty slot must never
      crash a briefing* — more directly than the defect 0.5.3 fixed**, because
      there is no slot involved and nothing degrades: the briefing simply stops.
 
   **One bound on the range check, so this entry does not repeat its own
-  mistake:** passing it does not mean the call cannot throw. `TripGeo.utcOffset`
-  is an unconstrained public `Duration` and `instant` an unconstrained public
-  `DateTime`; neither can be non-finite, so no finiteness or range check looks
-  at them, yet an extreme *legal* value of either throws a different untyped
-  error — `RangeError (millisecondsSinceEpoch)` — out of the same function
-  (measured boundary: `Duration(days: 99979531)` returns, `99979532` throws).
-  Not reachable from any real device, and stated anyway.
+  mistake:** passing it does not mean the call cannot throw. **Four** public
+  fields are unconstrained in this way, not two — `TripGeo.utcOffset`,
+  `CommuteShape.plannedDuration`, `instant`, and
+  `summarizeAreaConditions(lookAhead:)`. None can be non-finite, so no
+  finiteness or range check looks at any of them, yet an extreme *legal* value
+  of any throws a different untyped error — `RangeError
+  (millisecondsSinceEpoch)` (measured boundary: `Duration(days: 99979531)`
+  returns, `99979532` throws). **Two of the four are reachable with `geo:
+  null`**, the fallback recommended above, where a lat/lon range check has
+  nothing to look at. Not reachable from any real device, and stated anyway.
 
   A `TripGeo` that cannot hold a value which is not a place is the real fix and
   is the same 0.6.x question as `VisibilityObservation` above. What the advisor

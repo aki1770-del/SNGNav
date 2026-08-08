@@ -389,9 +389,15 @@ deliberate. The table at the top of this entry is the whole surface.
   |---|---|---|
   | `lat`/`lon` in range | passes | correct |
   | `lat` or `lon` **non-finite** (`NaN`, `±Infinity`) | **fails** | throws |
-  | `lon` out of range, below the overflow point (e.g. `400`, `1e10`, `1e20`) | **passes** | **no throw — a plausible, wrong clock** (`lon: 1e20` → `preDawn`, sunrise `08:59`, sunset `08:59`) |
-  | `lon` out of range, above it (e.g. `1e90`, `1e300`) | **passes** | throws |
-  | `lat` out of range, **any** magnitude tested up to `1e300` | **passes** | **never throws — a fabricated phase** (`lat: 180` → `daylight`, sunrise `05:52`, sunset `17:45`; `lat: 1e300` → `polarDay`) |
+  | `lon` out of range, in the returning part of the set (e.g. `400`, `1e10`, `1e20`) | **passes** | **no throw — a plausible, wrong clock** (`lon: 1e20` → sunrise `08:59`, sunset `08:59`; phase `preDawn` at `00:00Z`) |
+  | `lon` out of range, in the throwing part (e.g. `1e90`, `1e300`) | **passes** | throws |
+  | `lat` out of range, **any** magnitude tested up to `1e300` | **passes** | **never throws — a fabricated phase** (`lat: 180` → sunrise `05:52`, sunset `17:45`, phase `daylight` at `12:00Z`; `lat: 1e300` → `polarDay`) |
+
+  **Reproducing the phase column requires the stated instant.** The sunrise and
+  sunset figures are stable at any instant; the *phase labels* are not, and no
+  single instant produces both of the ones above — at `00:00Z` the `lat: 180`
+  row reads `preDawn`, at `12:00Z` the `lon: 1e20` row reads `postDusk`. The
+  wrongness is the same either way; the label is not the finding.
 
   **The quiet rows are the wider defect.** A wrong sunrise printed with two
   digits of confidence is not obviously wrong to anyone downstream; the crash at
@@ -415,13 +421,17 @@ deliberate. The table at the top of this entry is the whole surface.
   it enters only bounded `sin`/`cos` and the polar test — which is exactly why
   it corrupts the answer without ever crashing.
 
-  **Do not guard on a threshold; there is no usable one.** Bisected, the first
-  longitude that throws is `5.000038e+89` at latitude 39.72 — but it **moves
-  with latitude** (`1.067e+87` at the equator, `6.684e+89` at 65°N, `1.000e+90`
-  at 78.2°N) and it is **sign-asymmetric** (`−1.564e+88` on the negative side at
-  the same latitude). It is stable across the month, and that is the only thing
-  stable about it. The number is wherever an intermediate happens to overflow,
-  not where the input becomes absurd. **Only the range check below is
+  **Do not guard on a threshold — there is no such quantity, and we will not
+  quote you one.** "The first longitude that throws" is not well defined. The
+  throwing set is **interleaved**, not a range: at latitude 39.72, `1e87`
+  returns, `2.696687e+87` throws, `3e87` returns, `5e87` returns, `7e87` throws.
+  Sweeping the mantissa `1.0`→`9.9` inside the single decade `1e87` crosses
+  **23 throw/return transitions**, so a bisection reports whichever transition
+  its search path happened to land on — every "first bad value" anyone quotes,
+  including the ones an earlier draft of this entry quoted, is an artifact of
+  the search. It is date-dependent too: at 78.2°N, `1e90` throws in only 12 of
+  36 date samples across 2026, and **never in January or June**, where the polar
+  branch returns before the sunrise math runs. **Only the range check below is
   dependable.**
 
   `TripGeo.latitude` and `TripGeo.longitude` are plain `double`s on a public,
@@ -531,22 +541,31 @@ deliberate. The table at the top of this entry is the whole surface.
 
   **And one honest bound on that guard, so this entry does not repeat its own
   mistake: passing the range check does NOT mean the call cannot throw.**
-  `TripGeo.utcOffset` is an unconstrained public `Duration`, and `instant` an
-  unconstrained public `DateTime`. Neither can be non-finite, so neither the old
-  guard nor the new one looks at them — but an extreme *legal* value of either
-  still throws out of the same function, with a **different** untyped error:
+  There are **four** such fields, not two. `TripGeo.utcOffset` and
+  `CommuteShape.plannedDuration` are unconstrained public `Duration`s;
+  `instant` and `summarizeAreaConditions(lookAhead:)` take unconstrained public
+  `DateTime`/`Duration`. None can be non-finite, so neither the old guard nor
+  the new one looks at any of them — but an extreme *legal* value of any of the
+  four throws, with a **different** untyped error:
 
   ```
-  utcOffset: Duration(days: 99979531)  -> returns          (measured boundary)
-  utcOffset: Duration(days: 99979532)  -> RangeError (millisecondsSinceEpoch)
+  utcOffset:        Duration(days: 99979531)  -> returns     (measured boundary)
+  utcOffset:        Duration(days: 99979532)  -> RangeError (millisecondsSinceEpoch)
+  plannedDuration:  Duration(days: 99979532)  -> RangeError (millisecondsSinceEpoch)
+  summarizeAreaConditions(lookAhead: Duration(days: 99979532))
+                                              -> RangeError (millisecondsSinceEpoch)
   evaluateDaylight(DateTime.utc(-271821, 4, 20), <legal geo>)
-                                       -> RangeError (millisecondsSinceEpoch)
+                                              -> RangeError (millisecondsSinceEpoch)
   ```
 
-  The range check is necessary and sufficient for the two `double`s. It is not
-  a promise that this call is total. Nothing in this family constructs those
-  values either (see the severity note below), but you are owed the boundary
-  rather than a guarantee that stops one field short of the truth.
+  **Two of the four are reachable with `geo: null`** — the fallback recommended
+  above as the way to avoid door 4 entirely — where a lat/lon range check has
+  nothing to look at. The range check is necessary and sufficient for the two
+  `double`s and is **not** a promise that this call is total. Nothing in this
+  family constructs those values either (see the severity note below), but you
+  are owed the boundary rather than a guarantee that stops two fields short of
+  the truth. *An earlier draft of this paragraph named two doors when there were
+  four — the same defect it was written to correct, one level in.*
 
   **How much this matters in the field: LOW — and we are stating that plainly
   rather than letting the emphasis above imply otherwise.** No adapter in this
