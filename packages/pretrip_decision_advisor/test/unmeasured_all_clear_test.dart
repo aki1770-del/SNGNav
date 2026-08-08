@@ -1,6 +1,6 @@
-/// 0.5.4 — the affirmative all-clear must be EARNED.
+/// 0.5.3 — the affirmative all-clear must be EARNED.
 ///
-/// Up to and including 0.5.3, `SnowAwarePretripAdvisor.hazardOf` returned
+/// Up to and including 0.5.2, `SnowAwarePretripAdvisor.hazardOf` returned
 /// [HourHazard.clear] for a slot carrying a temperature and nothing else:
 /// every hazard test is guarded `field != null && ...`, so absent visibility,
 /// absent precipitation and absent road-surface state each fell THROUGH to
@@ -128,7 +128,7 @@ void main() {
           _briefOrNull(_forecast([slot(RoadConditionEstimate.unknown)])),
           isNull,
           reason:
-              'up to 0.5.3 these two callers received the identical '
+              'up to 0.5.2 these two callers received the identical '
               'briefing: "No winter hazard signals in your trip window"',
         );
 
@@ -203,7 +203,7 @@ void main() {
 
         // -Infinity is DIFFERENT and the difference is deliberate:
         // `-Infinity <= frostTempCelsius` is true, so the ladder fires caution
-        // and this gate does not touch it. 0.5.4 never suppresses a band the
+        // and this gate does not touch it. 0.5.3 never suppresses a band the
         // ladder produced — a gate that could delete a hazard would be a worse
         // defect than the one it fixes.
         //
@@ -442,9 +442,9 @@ void main() {
     });
 
     test(
-      'hazardOf is UNCHANGED by 0.5.4 — a gap never raises or lowers a band',
+      'hazardOf is UNCHANGED by 0.5.3 — a gap never raises or lowers a band',
       () {
-        // Drive the ladder across the whole input space that 0.5.4 touches and
+        // Drive the ladder across the whole input space that 0.5.3 touches and
         // assert the band is decided only by measured values. If the gate had
         // leaked into `hazardOf`, one of these would move.
         for (final t in [
@@ -498,7 +498,7 @@ void main() {
       },
     );
 
-    test('a fully measured benign window is byte-identical to 0.5.3', () {
+    test('a fully measured benign window is byte-identical to 0.5.2', () {
       final b = _briefOrNull(_forecast([_measuredClear(_departure)]))!;
       expect(b.verdict, PretripVerdict.clear);
       expect(b.peakHazard, HourHazard.clear);

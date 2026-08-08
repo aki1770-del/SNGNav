@@ -60,7 +60,7 @@ enum HourHazard {
 /// A hazard family the ladder could NOT decide for a forecast slot, because
 /// the field it reads was absent (`null`) or unusable (non-finite).
 ///
-/// Added in 0.5.4. This enum is deliberately NOT a member of [HourHazard]:
+/// Added in 0.5.3. This enum is deliberately NOT a member of [HourHazard]:
 /// [HourHazard] is the MEASUREMENT scale, and "we could not look" does not
 /// belong anywhere on a measurement scale — placed at the benign end it
 /// invents safety, placed at the adverse end it invents danger. Both are
@@ -89,7 +89,7 @@ enum HazardEvidenceGap {
   /// it could not look. Ice, packed snow and slush each produce a hazard at
   /// ANY temperature, so an unknown road surface is always undecided.
   ///
-  /// The explicit-`unknown` case is the one that matters most: up to 0.5.3 a
+  /// The explicit-`unknown` case is the one that matters most: up to 0.5.2 a
   /// caller who honestly declared the road unknown got the SAME answer as one
   /// who reported a dry road.
   roadSurface,
@@ -202,9 +202,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// lowest temperature band in which a precipitation figure can produce any
   /// hazard at all.
   ///
-  /// Added in 0.5.4 to name the literal the ladder already used, so
+  /// Added in 0.5.3 to name the literal the ladder already used, so
   /// [evidenceGaps] can ask "could an absent precipitation figure have
-  /// mattered here?" without guessing. `hazardOf` is UNCHANGED in 0.5.4 and
+  /// mattered here?" without guessing. `hazardOf` is UNCHANGED in 0.5.3 and
   /// still carries the literal; `coldRainTempCelsius` is proven equal to it by
   /// a driven sweep in `unmeasured_all_clear_test.dart`, so the two cannot
   /// drift apart silently.
@@ -250,9 +250,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   ///    planned trip window. Before 0.5.2 this returned a briefing whose
   ///    `peakHazard` was [HourHazard.clear] — a morning nobody forecast, handed
   ///    to the driver as a clear morning.
-  ///  * [PretripAssessmentIncompleteException] (new in 0.5.4) when a forecast
+  ///  * [PretripAssessmentIncompleteException] (new in 0.5.3) when a forecast
   ///    DOES cover the window but the fields deciding the ladder were never
-  ///    measured, so the affirmative all-clear was not earned. Up to 0.5.3 a
+  ///    measured, so the affirmative all-clear was not earned. Up to 0.5.2 a
   ///    slot carrying a temperature and nothing else reported
   ///    "No winter hazard signals in your trip window".
   ///
@@ -297,7 +297,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// stop. Added in 0.5.2 as the branch-don't-catch way forward; a `null` here
   /// means "we do not know", never "clear".
   ///
-  /// As of 0.5.4 that covers one more way of not knowing: a window the
+  /// As of 0.5.3 that covers one more way of not knowing: a window the
   /// forecast reaches but did not measure (see
   /// [PretripAssessmentIncompleteException]). The published contract of this
   /// method is unchanged — `null` still means exactly "we do not know" — but
@@ -319,7 +319,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
     final peak = window.map(hazardOf).reduce(_worse);
 
-    // 0.5.4 — the affirmative all-clear must be EARNED. A `clear` peak means
+    // 0.5.3 — the affirmative all-clear must be EARNED. A `clear` peak means
     // "nothing fired", which is not the same as "nothing is there": every
     // hazard test in `hazardOf` is guarded `field != null && ...`, so a slot
     // carrying a temperature and nothing else lands here having decided
@@ -508,7 +508,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// that could still have fired at this slot's temperature was measured — and
   /// only then is the affirmative "no winter hazard" claim earned.
   ///
-  /// Added in 0.5.4. This is deliberately public and deliberately per-slot:
+  /// Added in 0.5.3. This is deliberately public and deliberately per-slot:
   /// the advisor stops asserting what it did not measure, but it does not
   /// decide FOR you what an acceptable gap is. A caller who knows its own
   /// region — one whose roads are salted and monitored, or who has a road
@@ -561,7 +561,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// claim is EARNED for this trip — i.e. every hour of the window has a
   /// forecast slot, and every one of those slots left no [evidenceGaps].
   ///
-  /// Added in 0.5.4 so a caller can branch BEFORE calling [brief] rather than
+  /// Added in 0.5.3 so a caller can branch BEFORE calling [brief] rather than
   /// catch afterwards. Note this answers only whether the all-clear could be
   /// earned; a window full of measured hazard is not "earned" territory at all
   /// and reports its hazard normally.
@@ -643,9 +643,9 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       if (!_coversWhole(slots, dep, c.plannedDuration)) return null;
       final peak = slots.map(hazardOf).reduce(_worse);
       if (peak.index <= HourHazard.caution.index) {
-        // 0.5.4 — "conditions improve by 08:00" is an AFFIRMATIVE claim about
+        // 0.5.3 — "conditions improve by 08:00" is an AFFIRMATIVE claim about
         // an hour she is not in yet, and acting on it PUTS her there. Up to
-        // 0.5.3 an hour with no visibility and no road data scored `clear` and
+        // 0.5.2 an hour with no visibility and no road data scored `clear` and
         // was offered as the better window: the advisor sent her into the one
         // hour it knew least about. An unassessable hour is skipped, not
         // offered — a later, fully-measured hour can still win.
@@ -693,8 +693,8 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
   String _describe(HourlyForecast slot) {
     final at = _hhmm(slot.hour);
-    // 0.5.4 — a chip that states a MEASURED NUMBER may only be built from a
-    // finite one. Up to 0.5.3 a `-Infinity` visibility or temperature reached
+    // 0.5.3 — a chip that states a MEASURED NUMBER may only be built from a
+    // finite one. Up to 0.5.2 a `-Infinity` visibility or temperature reached
     // `.round()` here and threw an untyped `UnsupportedError` out of a pure,
     // offline advisor — and NOT one of this package's typed absence stops, so
     // the `on PretripDataAbsentException` clause 0.5.2 asked integrators to
@@ -741,7 +741,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
     // Defensive fallback: reached when a slot is caution+ but no branch above
     // can describe it with a number it actually has — which is exactly the
-    // non-finite case 0.5.4 stopped crashing on. Also kept so a future
+    // non-finite case 0.5.3 stopped crashing on. Also kept so a future
     // threshold change cannot return an empty reason chip.
     return messages.winterConditionsPossible(at);
   }

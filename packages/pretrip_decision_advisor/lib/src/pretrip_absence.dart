@@ -94,7 +94,7 @@ class PretripForecastCoverageException extends PretripDataAbsentException {
 ///
 /// This is the per-slot half of the fabricated-clear defect 0.5.2 fixed at the
 /// per-window level. 0.5.2 stopped the advisor reporting a clear morning when
-/// NO forecast covered the trip. Up to and including 0.5.3 it still reported
+/// NO forecast covered the trip. Up to and including 0.5.2 it still reported
 /// one when a forecast covered the trip but carried a temperature and nothing
 /// else: every hazard test in the ladder is guarded `field != null && ...`, so
 /// absent visibility, absent precipitation and absent road-surface state each

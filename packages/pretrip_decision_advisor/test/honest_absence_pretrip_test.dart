@@ -124,9 +124,9 @@ void main() {
     });
 
     test('returns a real briefing when the window IS covered AND measured', () {
-      // FIXTURE CORRECTED IN 0.5.4, and the correction is the point.
+      // FIXTURE CORRECTED IN 0.5.3, and the correction is the point.
       //
-      // Up to 0.5.3 this fixture was `HourlyForecast(hour: departure,
+      // Up to 0.5.2 this fixture was `HourlyForecast(hour: departure,
       // tempCelsius: 4.0)` — a temperature and NOTHING else — and the
       // assertion below carried the comment "the band is derived from a real
       // slot — safe to colour from". It was derived from a real slot in which
@@ -161,7 +161,7 @@ void main() {
       expect(b!.peakHazard, HourHazard.clear);
     });
 
-    test('covered but UNMEASURED returns null — the 0.5.4 per-slot half '
+    test('covered but UNMEASURED returns null — the 0.5.3 per-slot half '
         '(this is the fixture the 0.5.2 test used to assert as clear)', () {
       final coveredButBlind = WeatherForecast(
         issuedAt: departure,

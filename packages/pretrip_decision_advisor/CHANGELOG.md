@@ -1,14 +1,111 @@
 # Changelog
 
-## 0.5.4
+## 0.5.3
 
-The affirmative all-clear must now be EARNED. **Your build will not break** — no
-signature, type or member changed — **but what your users read WILL change, and
-in some cases a briefing you used to get is now a typed stop.** Please read: the
-second half of this note is about a recommendation that actively sent drivers
-somewhere.
+**Two independent safety fixes. Your build will not break — and that is the
+problem this note exists to solve.** No signature, type, or member changed, so
+nothing will stop you upgrading. But **sentences your users read will change in
+both directions**, and one recommendation that actively sent drivers somewhere
+has been withdrawn. If you skim one section of this changelog, skim this table.
 
-### What you already have, in the version you are running now
+| where | up to 0.5.2 your users saw | on 0.5.3 they see |
+|---|---|---|
+| **destination-area warning line**, when you never passed `warningCheckAvailable` | "No active snow warning or advisory for this area."<br>「この地域に発表中の雪の警報・注意報はありません。」 | "Official-warning check unavailable — a warning may be in effect that is not shown here."<br>「警報・注意報の確認ができませんでした — 実際には発表されている可能性があります。」 |
+| **destination-area warning line**, when you held a warning *and* honestly reported the check incomplete | "Official-warning check unavailable…" — **the 大雪警報 you held was dropped** | "Official winter warning or advisory in effect for this area: 大雪警報." |
+| **trip-window briefing**, when the forecast carried a temperature and nothing else | "No winter hazard signals in your trip window."<br>「出発時間帯に冬季の危険を示す兆候はありません。」 | `brief(...)` throws `PretripAssessmentIncompleteException`; `briefOrNull(...)` returns `null` |
+| **suggested departure delay**, when the later hours were unmeasured | "Conditions improve by about 08:15." — **it sent her into the hour it knew least about** | that hour is skipped; a later, fully-measured hour can still win |
+
+Both fixes are one rule, applied at two seams:
+
+> **Positive evidence fires on partial knowledge. Negative conclusions require
+> whole knowledge.**
+
+A hazard you *saw* still reports from whatever you measured. Only the
+affirmative claims — "no warning is in force", "no winter hazard in your
+window", "conditions improve at 08:15" — need the whole picture, because each
+is a claim about *completeness*, and each is a claim a driver acts on.
+
+*There is no 0.5.4.* These two fixes were built on separate branches, were
+reconciled into this single release, and neither is lost. Nothing was published
+between 0.5.2 and this version.
+
+### Fix 1 — the destination-AREA warning line
+
+#### 1a. A warning you already held could be replaced by a shrug (safety fix)
+
+`areaConditionChips` tested `warningCheckAvailable` **before** it tested whether
+a warning was actually in hand:
+
+```dart
+if (!r.warningCheckAvailable) {        // ← ran first
+  chips.add(m.areaWarningCheckUnavailable());
+} else if (r.officialWarningVerbatim != null) {   // ← unreachable when the
+  chips.add(m.areaOfficialWarning(...));          //   check was incomplete
+}
+```
+
+So a caller who reached one publisher, got a real `大雪警報` (heavy-snow
+warning), failed to reach a second publisher, and **honestly reported the check
+as incomplete** — `warningEventVerbatim: '大雪警報', warningCheckAvailable:
+false` — had the heavy-snow warning **dropped** and replaced by
+「警報・注意報の確認ができませんでした」 / "Official-warning check unavailable".
+Admitting the gap cost the driver the warning she had.
+
+**0.5.3 renders a warning in hand first, whatever the check's completeness.** A
+hazard seen is a hazard real, even on partial data. Only the *negative* claim
+needs a complete check.
+
+*If you relied on the old order to suppress a warning while a check was
+incomplete, that warning now renders.* We believe that is what you wanted.
+
+#### 1b. `warningCheckAvailable` now defaults to `false` (behaviour change)
+
+`summarizeAreaConditions({... bool warningCheckAvailable = true})` defaulted to
+the reassuring value. The zero-effort call — no warning passed, no flag passed —
+rendered:
+
+> No active snow warning or advisory for this area.
+> この地域に発表中の雪の警報・注意報はありません。
+
+**from a check that was never performed.** "No advisory is in force" is a claim
+about *completeness*: you may only make it when you actually asked and the
+publisher actually answered. Silence from a publisher you did not ask is not an
+all-clear — it is a gap. We were making that claim for free, by default, on
+behalf of callers who had never reached a publisher at all.
+
+The default is now `false`, so an un-asserted check renders
+「警報・注意報の確認ができませんでした — 実際には発表されている可能性があります。」
+/ "Official-warning check unavailable — a warning may be in effect that is not
+shown here."
+
+**What to do:** if you *do* reach the publisher and it has nothing in force,
+pass `warningCheckAvailable: true`. That case still renders exactly as before —
+it is the one call that earns the sentence, and it is a one-word diff:
+
+```dart
+summarizeAreaConditions(
+  forecast: f, now: n, areaLabel: 'Akita',
+  warningEventVerbatim: publisherWarningOrNull,
+  warningCheckAvailable: true,   // ← you reached the publisher; it answered
+);
+```
+
+If you pass a warning verbatim, you need change nothing: 1a makes it render
+regardless of this flag.
+
+#### 1c. A doc that was still teaching a removed behaviour
+
+`summarizeAreaConditions`' own doc comment said the band "is left non-asserted
+([HourHazard.clear])" when no forecast covered the window — describing the
+pre-0.5.2 placeholder that 0.5.2 had already removed. An integrator who read it
+and coloured a card from `areaHazard` was told the no-forecast case paints
+green; the code in fact throws `AreaForecastNotCoveredException`. Corrected.
+This is a defect, not housekeeping: the doc ships in the archive, and it is what
+a consumer reads before they read the code.
+
+### Fix 2 — the trip-window affirmative all-clear must be EARNED
+
+#### 2a. What you already have, in the version you are running now
 
 Every hazard test in `SnowAwarePretripAdvisor.hazardOf` is guarded
 `field != null && ...`. So a forecast slot carrying a temperature and nothing
@@ -22,8 +119,7 @@ That sentence is a claim about the WINDOW. It was being made from data in which
 visibility, precipitation and the road surface had never been looked at.
 
 0.5.2 fixed exactly this fabrication one level up — a window with NO forecast at
-all — and said so plainly. This is the per-slot half it named and left open, and
-0.5.3's own changelog listed it under "Still present — not fixed here".
+all — and said so plainly. This is the per-slot half it named and left open.
 
 **This is not a corner case; it is the normal shape of real data.**
 `pretrip_source_met_norway` emits `visibilityMeters: null` and
@@ -42,39 +138,34 @@ Four ways an all-clear was reported over data nobody measured:
 | a 3-hour trip with only the first hour forecast | "No winter hazard signals in your trip window." |
 | `tempCelsius` is `NaN` (every `<=` is false, so nothing decides) | "No winter hazard signals in your trip window." |
 
-### The one that put her on the road
+#### 2b. The one that put her on the road
 
 `_findBetterWindow` accepted any later hour scoring at worst `caution` — and an
 hour nobody measured scores `clear`. So the advisor offered, as the safer
 window, the hour it knew least about.
 
-Run `example/main.dart` on 0.5.2. A **measured 80 m whiteout** at 07:00, later
-hours carrying temperature only:
+`example/main.dart` builds a **measured 80 m whiteout** at 07:00 with later
+hours carrying temperature only. Both outputs below were run, not recalled — the
+first on the 0.5.2 tree, the second on this one:
 
 ```
-Verdict : waitAdvised
-Strength: advisoryStrong          ← the strongest this package can say
-Delay   : 1:00:00
-  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
-  - Conditions improve by about 08:15.
+0.5.2                                  0.5.3
+Verdict : waitAdvised                  Verdict : hazardPersists
+Strength: advisoryStrong               Strength: advisoryWeak
+Delay   : 1:00:00                      Delay   : 0:00:00
+  - Visibility may drop to ~80 m         - Visibility may drop to ~80 m
+    around 07:00 — whiteout.               around 07:00 — whiteout.
+  - Conditions improve by about        - No clearly better departure window
+    08:15.                                 within the next 6 h — consider
+                                           whether this trip is needed today.
 ```
 
 It told her to wait out a whiteout and leave at 08:15 — into an hour whose
-visibility and road surface were never reported. On 0.5.4 the same example
-reads:
+visibility and road surface were never reported. An unassessable hour is now
+SKIPPED, not offered. A later hour that IS fully measured still wins, so the
+search is not muted — only made honest.
 
-```
-Verdict : hazardPersists
-Delay   : 0:00:00
-  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
-  - No clearly better departure window within the next 6 h — consider whether
-    this trip is needed today.
-```
-
-An unassessable hour is now SKIPPED, not offered. A later hour that IS fully
-measured still wins, so the search is not muted — only made honest.
-
-### What changed
+#### 2c. What changed
 
 - **`brief(...)` throws the new `PretripAssessmentIncompleteException`** when a
   forecast covers the window but the fields deciding the ladder were never
@@ -98,27 +189,16 @@ measured still wins, so the search is not muted — only made honest.
   Such a slot now falls through to the generic chip.
 - **`hazardOf` is unchanged in logic** — token-for-token identical to 0.5.2
   (183 tokens, verified). Its only textual difference is one line-wrap applied
-  by `dart format` under SDK 3.11, which reformatted this whole package;
-  the published 0.5.2 archive is itself format-dirty under that SDK, so the
-  reformat is pre-existing debt and lands in its own commit. Absence is
-  reported BESIDE the ladder, never on it: a gap never raises a band and never
-  lowers one.
-
-### The rule, so the behaviour is predictable
-
-> Positive evidence fires on partial knowledge. Negative conclusions require
-> whole knowledge.
-
-A measured hazard still reports from whatever data you have — a whiteout with
-everything else absent is still `severe`. Only the affirmative all-clear, and
-the affirmative "conditions improve at 08:15", need the whole picture. That is
-the same asymmetry 0.5.3 applied to the official-warning line.
+  by `dart format` under SDK 3.11, which reformatted this whole package; the
+  published 0.5.2 archive is itself format-dirty under that SDK, so the reformat
+  is pre-existing debt and lands in its own commit. Absence is reported BESIDE
+  the ladder, never on it: a gap never raises a band and never lowers one.
 
 `HourHazard` gains **no** `unknown` member. Absence does not belong anywhere on
 a measurement scale: at the benign end it invents safety, at the adverse end it
 invents danger, and both are fabrications. It is reported in a separate type.
 
-### If you now get a stop where you used to get a briefing
+#### 2d. If you now get a stop where you used to get a briefing
 
 You are being told something true that you were not told before. Three ways
 forward:
@@ -134,26 +214,65 @@ We would rather hand you a stop you must handle than a green card we did not
 earn. Expect the stop to be common with a compact forecast product: that is not
 the gate being noisy, it is the honest state of that data.
 
-### Honest bounds — what 0.5.4 does NOT fix
+### Compatibility
+
+**Compiler-additive.** No signature, type, or member changed, and this is why
+both fixes ship as a patch inside `^0.5.0` where a `0.6.0` could not reach a
+caret-pinned consumer. One bound stated plainly: new methods were added to the
+concrete `SnowAwarePretripAdvisor`; subclassing and instantiation are
+unaffected, and only a class that `implements SnowAwarePretripAdvisor` (rather
+than the `PretripAdvisor` contract it exists for) would need the new members.
+
+**Behaviourally it is NOT additive, and we are not going to hide that in a
+version number.** A caller who never passed `warningCheckAvailable` sees one
+*fewer* affirmative sentence; a caller who passed a warning alongside an
+incomplete check sees one *more* warning; a caller feeding a compact forecast
+product gets a typed stop where a briefing used to be. All three directions are
+deliberate. The table at the top of this entry is the whole surface.
+
+### Honest bounds — what 0.5.3 does NOT fix
+
+- **The destination-AREA hazard chip still reports an unearned all-clear.**
+  This is the sharpest bound in the release, because the two fixes above now
+  answer the SAME input differently. Given a forecast whose slots carry a
+  temperature and nothing else:
+
+  ```dart
+  advisor.brief(forecast: tempOnly, ...)         // throws PretripAssessmentIncompleteException
+  areaConditionChips(summarizeAreaConditions(forecast: tempOnly, ...), m)[1]
+  // -> "Forecast hazard for this area: no winter hazard signal."
+  //    「この地域の予報ハザード: 危険の兆候なし。」
+  ```
+
+  The area read runs the same per-slot ladder and has the same gap. Fix 2 was
+  not applied to it, and the reason is a hard one rather than a choice: closing
+  it honestly needs a "could not assess" line, which is a **new
+  `PretripMessages` member** — and `PretripMessages` is a published
+  `abstract class`, so adding a member is a compile break for anyone who
+  `implements` it. It cannot ship inside `^0.5.0`. Making `areaHazard` throw
+  instead would make `areaConditionChips` throw out of a pure function, which is
+  worse than the defect.
+
+  **What you can do today, inside `^0.5.0`:** `evidenceGaps(slot)` is public, so
+  an area-read consumer can ask the same question the briefing now asks —
+  `forecast.hourly.any((s) => advisor.evidenceGaps(s).isNotEmpty)` — and render
+  their own "could not assess" state beside the chips.
+
+  Tracked for the 0.6.x line, where `HourHazard.unknown` makes absence a
+  first-class value. Pinned by an executable test so it cannot go quiet:
+  `test/reconciliation_test.dart`, group *"the gap this release does NOT close"*.
 
 - **`hazardPersists` still says "no clearly better window within 6 h"** after
   skipping hours it could not assess. That is a negative claim on partial
-  knowledge, and saying it properly needs a new `PretripMessages` member —
-  which is a compile break for anyone who `implements` that class, so it cannot
-  ship inside `^0.5.0`. The direction is conservative (it never suggests a
-  delay), so it ships as-is and is named rather than hidden.
-- **`summarizeAreaConditions` / `AreaConditionRead` are untouched here.** The
-  area read runs the same per-slot ladder and has the same gap; it is being
-  worked on a separate line and is not changed by this patch.
+  knowledge, and saying it properly needs the same new `PretripMessages` member.
+  The direction is conservative (it never suggests a delay), so it ships as-is
+  and is named rather than hidden.
+
 - **A `-Infinity` temperature still reads as `caution`** (`-Infinity <= 0.0` is
   true). That is inventing a hazard from a non-value — the mirror of inventing
-  safety. It is left alone deliberately: this patch never suppresses a band the
-  ladder produced, because a gate that can delete a hazard is worse than the
+  safety. It is left alone deliberately: this release never suppresses a band
+  the ladder produced, because a gate that can delete a hazard is worse than the
   defect it fixes. Flagged for the safety owner, not silently changed.
-- **Compiler-additive, with one bound stated plainly:** new methods were added
-  to the concrete `SnowAwarePretripAdvisor`. Subclassing and instantiation are
-  unaffected; only a class that `implements SnowAwarePretripAdvisor` (rather
-  than the `PretripAdvisor` contract it exists for) would need the new members.
 
 ## 0.5.2
 
