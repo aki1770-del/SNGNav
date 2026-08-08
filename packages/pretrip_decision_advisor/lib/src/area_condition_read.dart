@@ -122,8 +122,18 @@ class AreaConditionRead {
 
 /// Summarises the conditions in a destination AREA over [lookAhead] starting at
 /// [now]. PURE: no clock read, no network — every input is handed in. Degrades
-/// honestly: when no forecast slot covers the window, [AreaConditionRead.areaHazard]
-/// is left non-asserted ([HourHazard.clear]) and `forecastCovered` is false.
+/// honestly: when no forecast slot covers the window, `forecastCovered` is false
+/// and [AreaConditionRead.areaHazard] THROWS [AreaForecastNotCoveredException]
+/// rather than hand back a band nothing was measured for. Guard with
+/// [AreaConditionRead.forecastCovered] (as [areaConditionChips] does), or read
+/// [AreaConditionRead.areaHazardOrNull] for a `null` instead.
+///
+/// (Corrected in 0.5.3: up to 0.5.2 this paragraph still said the band "is left
+/// non-asserted ([HourHazard.clear])" — describing the pre-0.5.2 placeholder
+/// that 0.5.2 had already removed. The code stopped fabricating a clear morning
+/// and the doc went on teaching it, which is the defect, not housekeeping: an
+/// integrator who reads this and colours a card from `areaHazard` was told the
+/// no-forecast case paints green.)
 ///
 /// The hazard band uses the SAME overlap rule + per-slot hazard ladder as the
 /// in-window advisor (a slot at hour H covers [H, H+1h)), so the area read and
@@ -134,14 +144,27 @@ class AreaConditionRead {
 /// would be leaving in), exactly as the in-window briefing merges it.
 ///
 /// [warningEventVerbatim] is the publisher's official warning text passed
-/// through verbatim; [warningCheckAvailable] is false when that check failed.
+/// through verbatim.
+///
+/// [warningCheckAvailable] states whether you actually reached the publisher.
+/// It DEFAULTS TO FALSE as of 0.5.3, and the default is the point: up to 0.5.2
+/// it defaulted to `true`, so the zero-effort call — one that passed neither a
+/// warning nor the flag — rendered "No active snow warning or advisory for this
+/// area." / 「この地域に発表中の雪の警報・注意報はありません。」 out of a check
+/// that had never been performed. That sentence is a claim about COMPLETENESS,
+/// and we were making it for free. Silence from a publisher you did not ask is
+/// not an all-clear; it is a gap.
+///
+/// Pass `warningCheckAvailable: true` when — and only when — you reached the
+/// publisher and it had nothing in force. That is the one case that earns the
+/// negative claim, and it still renders exactly as before.
 AreaConditionRead summarizeAreaConditions({
   required WeatherForecast forecast,
   required DateTime now,
   required String areaLabel,
   Duration lookAhead = const Duration(hours: 6),
   String? warningEventVerbatim,
-  bool warningCheckAvailable = true,
+  bool warningCheckAvailable = false,
   VisibilityObservation? observed,
   SnowAwarePretripAdvisor advisor = const SnowAwarePretripAdvisor(),
 }) {
@@ -183,7 +206,10 @@ AreaConditionRead summarizeAreaConditions({
 HourHazard _worse(HourHazard a, HourHazard b) => a.index >= b.index ? a : b;
 
 /// The declarative area chips, in fixed order:
-///   1. the official-warning line (verbatim, or "none", or "check unavailable"),
+///   1. the official-warning line — the publisher's verbatim warning if one is
+///      in hand (whatever the check's completeness); else "check unavailable"
+///      if the check was not complete; else "none in force", which only an
+///      asserted-complete check earns,
 ///   2. the forecast hazard band (or "forecast not covered"),
 ///   3. the nearest MEASURED visibility (or "none").
 ///
@@ -192,10 +218,26 @@ List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
   final chips = <String>[];
 
   // 1. Official warning.
-  if (!r.warningCheckAvailable) {
-    chips.add(m.areaWarningCheckUnavailable());
-  } else if (r.officialWarningVerbatim != null) {
+  //
+  // ORDER IS LOAD-BEARING (0.5.3). A warning IN HAND renders FIRST, whatever
+  // the check's completeness — a hazard seen is a hazard real, even on partial
+  // data. Only the NEGATIVE claim ("none in force") requires the check to have
+  // been complete, because a negative conclusion requires whole knowledge.
+  // That asymmetry is `condition_aggregator`'s AdvisoryLookup doctrine
+  // ("Positive evidence fires on partial knowledge. Negative conclusions
+  // require whole knowledge.") applied at this seam.
+  //
+  // Up to 0.5.2 the `!warningCheckAvailable` branch came FIRST and
+  // short-circuited the verbatim render: a caller who fetched a real 大雪警報
+  // from one publisher while a second publisher failed — and who therefore
+  // honestly reported the check as incomplete — had that heavy-snow warning
+  // REPLACED by "check unavailable". The one branch that had a hazard to show
+  // was unreachable whenever the caller admitted a gap. Honesty about the gap
+  // cost her the warning.
+  if (r.officialWarningVerbatim != null) {
     chips.add(m.areaOfficialWarning(r.officialWarningVerbatim!));
+  } else if (!r.warningCheckAvailable) {
+    chips.add(m.areaWarningCheckUnavailable());
   } else {
     chips.add(m.areaNoOfficialWarning());
   }
