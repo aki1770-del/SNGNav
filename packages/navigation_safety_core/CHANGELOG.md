@@ -61,9 +61,12 @@ it replaces. For `ageingRural` at −5 °C the honest floor is 560 m; 0.11.3's
 invented `5.0` reached 554 m, six metres short, and 0.11.4 returns the
 300 m baseline, **260 m short**. Closer to the rain it is worse, not better:
 one minute after precipitation ends the honest floor is 599 m and 0.11.4
-still returns 300 m. Nor is this an artifact of one formula — under a
-steeper Q10 mutation (half-life doubling per 10 °C of cooling) the same cell
-reads honest 576 m, 0.11.3 555 m, 0.11.4 300 m. The arithmetic is exact and
+still returns 300 m. Nor is this an artifact of one formula: under a steeper
+Q10 mutation — half-life doubling per 10 °C of cooling,
+`90 min × 2^((T_ref − T)/10)` — the same cell reads honest 576 m, 0.11.3
+555 m, 0.11.4 300 m at **T_ref = 10 °C**, and honest 588 m, 0.11.3 576 m,
+0.11.4 300 m at the 20 °C reference the linear shape above is written
+around; the ranking is the same either way. The arithmetic is exact and
 shape-independent: **withholding is short by the whole margin, while
 inventing was short only by the difference between the temperature it
 invented and the one that was real.** 0.11.4 buys an honest *input* at the
@@ -103,10 +106,15 @@ release exists to remove, one level up. So the open question is not
 withhold-or-not; it is whether the bound can be returned **as a bound**, and
 that is an API change. It is recorded, and it is not settled here.
 
-- No API changes. No behaviour change on any calibration published to date —
-  every number in the table above is identical between 0.11.3 and 0.11.4 on
-  both calibrations in this package's `^0.1.2` range (0.1.2 and 0.1.3), and
-  this package's full 319-test suite passes.
+- No API changes. No behaviour change on any calibration published to date.
+  The divergent cells in the table above are produced by a **mutated**
+  calibration that has not been published. Run those same scenarios — each
+  profile, ambient absent, 30 minutes after precipitation — against the two
+  calibrations actually inside this package's `^0.1.2` range (0.1.2 and
+  0.1.3, whose decay module is byte-identical), and 0.11.3 and 0.11.4 return
+  the same warning-visibility floor in every one: 538 m, 574 m and 717 m for
+  the three profiles, under both releases alike. This package's full
+  319-test suite passes.
 - **The tripwire, and its window.** The guard is not a runtime check, it is a
   test: `absent_ambient_not_invented_test.dart` asserts
   *"computeSurfaceMoistureFraction ignores ambientCelsius — if this fails,
