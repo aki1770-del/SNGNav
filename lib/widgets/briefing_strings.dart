@@ -125,6 +125,17 @@ abstract class BriefingStrings {
   /// unavailable, so the card never implies live data it does not have.
   String get liveFetchUnavailableSuffix;
 
+  /// The map screen's companion to [simulatedForecastCaption]: the fleet
+  /// vehicle markers and the red hazard rings around them come from a
+  /// seeded, deterministic demo generator, not from vehicles on the road.
+  ///
+  /// The pre-trip screen disclosed its simulated forecast from the first
+  /// commit; the live-drive map disclosed nothing, because the disclosure was
+  /// authored per-screen and the map screen inherited none of it. A red ring
+  /// that reads as a real road report, and is not one, is the failure this
+  /// caption exists to stop.
+  String get simulatedFleetCaption;
+
   // --- Destination-AREA section ---------------------------------------------
   // The companion to the daylight clock: a PLACE's public conditions so SHE
   // decides whether/when to drive there. Watches no person; claims no road.
@@ -285,6 +296,10 @@ class _EnBriefingStrings extends BriefingStrings {
       'Simulated forecast (demo) — offline, deterministic';
   @override
   String get liveFetchUnavailableSuffix => ' (live fetch unavailable)';
+
+  @override
+  String get simulatedFleetCaption =>
+      'Simulated fleet (demo) — seeded, deterministic';
 
   @override
   String get destinationAreaTitle => 'Conditions in the destination area';
@@ -469,6 +484,9 @@ class _JaBriefingStrings extends BriefingStrings {
   String get simulatedForecastCaption => 'シミュレーション予報(デモ)— オフライン・確定的';
   @override
   String get liveFetchUnavailableSuffix => ' (ライブ取得不可)';
+
+  @override
+  String get simulatedFleetCaption => 'シミュレーション車両(デモ)— シード固定・確定的';
 
   @override
   String get destinationAreaTitle => '目的地周辺の状況';

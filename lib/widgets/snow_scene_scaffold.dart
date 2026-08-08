@@ -35,15 +35,26 @@ import '../bloc/location_state.dart';
 import 'consent_gate.dart';
 import 'map_layer.dart';
 import 'scenario_phase_indicator.dart';
+import 'simulated_fleet_caption.dart';
 import 'speed_display.dart';
 import 'weather_status_bar.dart';
 
 class SnowSceneScaffold extends StatefulWidget {
-  const SnowSceneScaffold({super.key, this.tileProvider});
+  const SnowSceneScaffold({
+    super.key,
+    this.tileProvider,
+    this.fleetIsSimulated = true,
+  });
 
   /// Optional tile provider (e.g., MBTiles for offline).
   /// When null, MapLayer uses the default online OSM tiles.
   final TileProvider? tileProvider;
+
+  /// Whether the [FleetProvider] behind this screen's markers and hazard rings
+  /// is a simulator. Drives [SimulatedFleetCaption]; see that widget for why
+  /// the default is `true`. Set where the provider is chosen, so a future swap
+  /// to real telemetry and the claim about it stay on the same screen.
+  final bool fleetIsSimulated;
 
   @override
   State<SnowSceneScaffold> createState() => _SnowSceneScaffoldState();
@@ -276,8 +287,31 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
                   // Speed display
                   const SizedBox(width: 80, child: SpeedDisplay()),
                   const Spacer(),
-                  // Consent gate
-                  const ConsentGate(),
+                  // Demo-data disclosure sits directly above the fleet gate
+                  // that turns those markers on — the label and the switch for
+                  // the thing it labels, in the same corner, clear of the
+                  // markers and rings out on the map.
+                  //
+                  // Deliberately NOT wrapped in Flexible/Expanded: a flex child
+                  // would split the leftover row space with the Spacer and drag
+                  // the consent chip off the right edge into the middle of the
+                  // screen. This column shrink-wraps, so the chip stays exactly
+                  // where it has always been and the caption stacks above it.
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: SimulatedFleetCaption(
+                          isSimulated: widget.fleetIsSimulated,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Consent gate
+                      const ConsentGate(),
+                    ],
+                  ),
                 ],
               ),
             ),

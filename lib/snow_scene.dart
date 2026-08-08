@@ -300,11 +300,18 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
           BlocProvider(
             lazy: true,
             create: (_) => FleetBloc(
+              // SIMULATED. Fixed-seed Random(42) over five invented vehicles
+              // along Route 153 — not road data. The `fleetIsSimulated: true`
+              // below is the on-screen claim about THIS line; swap this
+              // provider for real telemetry and that flag must move with it.
               provider: SimulatedFleetProvider(),
             ),
           ),
         ],
-        child: SnowSceneShell(tileProvider: widget.tileProvider),
+        child: SnowSceneShell(
+          tileProvider: widget.tileProvider,
+          fleetIsSimulated: true,
+        ),
       ),
     );
   }
@@ -344,9 +351,17 @@ enum _Destination { pretrip, drive }
 /// with mocked BLoCs without spinning up [SnowSceneApp]'s real Open-Meteo feed.
 @visibleForTesting
 class SnowSceneShell extends StatefulWidget {
-  const SnowSceneShell({super.key, this.tileProvider});
+  const SnowSceneShell({
+    super.key,
+    this.tileProvider,
+    this.fleetIsSimulated = true,
+  });
 
   final TileProvider? tileProvider;
+
+  /// Forwarded to [SnowSceneScaffold] — whether the fleet markers and hazard
+  /// rings on the live-drive map come from a simulator.
+  final bool fleetIsSimulated;
 
   @override
   State<SnowSceneShell> createState() => _SnowSceneShellState();
@@ -393,7 +408,10 @@ class _SnowSceneShellState extends State<SnowSceneShell> {
           ),
         );
       case _Destination.drive:
-        return SnowSceneScaffold(tileProvider: widget.tileProvider);
+        return SnowSceneScaffold(
+          tileProvider: widget.tileProvider,
+          fleetIsSimulated: widget.fleetIsSimulated,
+        );
     }
   }
 }
