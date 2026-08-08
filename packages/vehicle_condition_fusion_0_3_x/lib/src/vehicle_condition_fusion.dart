@@ -78,11 +78,11 @@ class VehicleConditionFusion {
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
     DateTime Function()? clock,
   }) : this._(
-          frames: signals,
-          mergePartialFrames: false,
-          surfaceFilter: surfaceFilter,
-          clock: clock,
-        );
+         frames: signals,
+         mergePartialFrames: false,
+         surfaceFilter: surfaceFilter,
+         clock: clock,
+       );
 
   /// Constructor for a **partial-frame** transport (e.g. KUKSA `subscribe`,
   /// which re-sends only the signals that changed after the first cycle).
@@ -99,20 +99,20 @@ class VehicleConditionFusion {
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
     DateTime Function()? clock,
   }) : this._(
-          frames: partialFrames,
-          mergePartialFrames: true,
-          surfaceFilter: surfaceFilter,
-          clock: clock,
-        );
+         frames: partialFrames,
+         mergePartialFrames: true,
+         surfaceFilter: surfaceFilter,
+         clock: clock,
+       );
 
   VehicleConditionFusion._({
     required Stream<VehicleConditionSignals> frames,
     required bool mergePartialFrames,
     HysteresisFilter<RoadSurfaceState>? surfaceFilter,
     DateTime Function()? clock,
-  })  : _mergePartialFrames = mergePartialFrames,
-        _surfaceFilter = surfaceFilter ?? HysteresisFilter<RoadSurfaceState>(),
-        _clock = clock ?? DateTime.now {
+  }) : _mergePartialFrames = mergePartialFrames,
+       _surfaceFilter = surfaceFilter ?? HysteresisFilter<RoadSurfaceState>(),
+       _clock = clock ?? DateTime.now {
     _sub = frames.listen(
       _onFrame,
       onError: _onSourceError,
@@ -164,8 +164,10 @@ class VehicleConditionFusion {
     if (!signals.hasAnySignal) return;
 
     _available = true;
-    final weather =
-        vehicleSignalsToWeatherCondition(signals, timestamp: _clock());
+    final weather = vehicleSignalsToWeatherCondition(
+      signals,
+      timestamp: _clock(),
+    );
     final candidate = DrivingConditionAssessment.fromCondition(weather);
 
     // Debounce the road-surface picture with the existing HysteresisFilter:
@@ -177,11 +179,13 @@ class VehicleConditionFusion {
     }
 
     if (!_controller.isClosed) {
-      _controller.add(VehicleConditionUpdate(
-        assessment: _lastAssessment,
-        signals: signals,
-        live: true,
-      ));
+      _controller.add(
+        VehicleConditionUpdate(
+          assessment: _lastAssessment,
+          signals: signals,
+          live: true,
+        ),
+      );
     }
   }
 
@@ -191,17 +195,20 @@ class VehicleConditionFusion {
     // default. Holds on both rails.
     _available = false;
     if (!_controller.isClosed) {
-      _controller
-          .add(VehicleConditionUpdate.unavailable(reason: error.toString()));
+      _controller.add(
+        VehicleConditionUpdate.unavailable(reason: error.toString()),
+      );
     }
   }
 
   void _onSourceDone() {
     _available = false;
     if (!_controller.isClosed) {
-      _controller.add(const VehicleConditionUpdate.unavailable(
-        reason: 'vehicle signal stream ended',
-      ));
+      _controller.add(
+        const VehicleConditionUpdate.unavailable(
+          reason: 'vehicle signal stream ended',
+        ),
+      );
     }
   }
 

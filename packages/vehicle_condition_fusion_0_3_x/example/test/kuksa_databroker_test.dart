@@ -70,7 +70,10 @@ void main() {
     final out = await _run(icyWhiteout);
     final assessments = out.where((u) => u.isAvailable).toList();
     expect(assessments, isNotEmpty);
-    expect(assessments.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+    expect(
+      assessments.last.assessment!.surfaceState,
+      RoadSurfaceState.blackIce,
+    );
     expect(
       assessments.last.assessment!.advisoryMessage.toLowerCase(),
       contains('ice'),
@@ -109,30 +112,42 @@ void main() {
     expect(live.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
   });
 
-  test('a partial (speed-only) frame carries a once-seen ice signal forward',
-      () async {
-    final out = await _run([
-      {_kFriction: 95.0, _kTcs: false, _kTemp: -1.0, _kSpeed: 50.0},
-      {_kFriction: 18.0, _kTcs: true, _kTemp: -6.0, _kSpeed: 25.0}, // black ice
-      {_kSpeed: 20.0}, // ONLY speed re-sent — ice leaves NOT re-sent
-    ]);
-    final live = out.where((u) => u.isAvailable).toList();
-    // The final, speed-only frame still reports black ice (friction/TCS held).
-    expect(live.last.signals!.roadFriction, closeTo(0.18, 1e-9));
-    expect(live.last.signals!.tcsEngaged, isTrue);
-    expect(live.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
-  });
+  test(
+    'a partial (speed-only) frame carries a once-seen ice signal forward',
+    () async {
+      final out = await _run([
+        {_kFriction: 95.0, _kTcs: false, _kTemp: -1.0, _kSpeed: 50.0},
+        {
+          _kFriction: 18.0,
+          _kTcs: true,
+          _kTemp: -6.0,
+          _kSpeed: 25.0,
+        }, // black ice
+        {_kSpeed: 20.0}, // ONLY speed re-sent — ice leaves NOT re-sent
+      ]);
+      final live = out.where((u) => u.isAvailable).toList();
+      // The final, speed-only frame still reports black ice (friction/TCS held).
+      expect(live.last.signals!.roadFriction, closeTo(0.18, 1e-9));
+      expect(live.last.signals!.tcsEngaged, isTrue);
+      expect(live.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+    },
+  );
 
-  test('a disconnect yields an honest UNKNOWN, never the stale ice verdict',
-      () async {
-    final out = await _run(icyWhiteout, errorAfter: true);
-    // The last live emission was black ice…
-    final live = out.where((u) => u.isAvailable).toList();
-    expect(live.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
-    // …but the FINAL emission after the drop is an explicit unavailable marker,
-    // carrying no assessment (the caller must not keep showing stale ice).
-    expect(out.last.isAvailable, isFalse);
-    expect(out.last.assessment, isNull);
-    expect(out.last.unavailableReason, contains('databroker connection lost'));
-  });
+  test(
+    'a disconnect yields an honest UNKNOWN, never the stale ice verdict',
+    () async {
+      final out = await _run(icyWhiteout, errorAfter: true);
+      // The last live emission was black ice…
+      final live = out.where((u) => u.isAvailable).toList();
+      expect(live.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+      // …but the FINAL emission after the drop is an explicit unavailable marker,
+      // carrying no assessment (the caller must not keep showing stale ice).
+      expect(out.last.isAvailable, isFalse);
+      expect(out.last.assessment, isNull);
+      expect(
+        out.last.unavailableReason,
+        contains('databroker connection lost'),
+      );
+    },
+  );
 }

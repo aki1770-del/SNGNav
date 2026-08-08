@@ -217,7 +217,8 @@ class VehicleConditionSignals extends Equatable {
 
   static int? _clampInt(int? v, int lo, int hi) => v?.clamp(lo, hi);
 
-  static int? _clampMinInt(int? v, int lo) => v == null ? null : (v < lo ? lo : v);
+  static int? _clampMinInt(int? v, int lo) =>
+      v == null ? null : (v < lo ? lo : v);
 
   /// Whether at least one classification-relevant signal has a real value.
   bool get hasAnySignal =>
@@ -268,13 +269,13 @@ class VehicleConditionSignals extends Equatable {
 
   @override
   List<Object?> get props => [
-        roadFriction,
-        tcsEngaged,
-        absEngaged,
-        escEngaged,
-        wiperIntensity,
-        rainIntensity,
-        airTempC,
-        speedKmh,
-      ];
+    roadFriction,
+    tcsEngaged,
+    absEngaged,
+    escEngaged,
+    wiperIntensity,
+    rainIntensity,
+    airTempC,
+    speedKmh,
+  ];
 }

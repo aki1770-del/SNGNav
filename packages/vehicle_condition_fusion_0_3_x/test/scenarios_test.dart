@@ -65,11 +65,14 @@ void main() {
       expect(emitted, frames);
     });
 
-    test('emits all frames of a named scenario (step zero = instant)', () async {
-      final emitted = await replayWinterDrive(akitaWhiteoutDrive).toList();
-      expect(emitted, hasLength(akitaWhiteoutDrive.length));
-      expect(emitted, akitaWhiteoutDrive);
-    });
+    test(
+      'emits all frames of a named scenario (step zero = instant)',
+      () async {
+        final emitted = await replayWinterDrive(akitaWhiteoutDrive).toList();
+        expect(emitted, hasLength(akitaWhiteoutDrive.length));
+        expect(emitted, akitaWhiteoutDrive);
+      },
+    );
 
     test('a non-zero step still emits every frame', () async {
       final emitted = await replayWinterDrive(
@@ -80,68 +83,94 @@ void main() {
     });
 
     test('an empty trace emits nothing and completes', () async {
-      final emitted =
-          await replayWinterDrive(const <VehicleConditionSignals>[]).toList();
+      final emitted = await replayWinterDrive(
+        const <VehicleConditionSignals>[],
+      ).toList();
       expect(emitted, isEmpty);
     });
   });
 
   group('akitaWhiteoutDrive — the trace yields the hazard it claims', () {
-    test('progression is clear → compacted snow → black ice → slush → wet',
-        () async {
-      final a = await runScenario(akitaWhiteoutDrive);
+    test(
+      'progression is clear → compacted snow → black ice → slush → wet',
+      () async {
+        final a = await runScenario(akitaWhiteoutDrive);
 
-      // Starts on a clear (dry) road and ends on a cleared (wet) road.
-      expect(a.first.surfaceState, RoadSurfaceState.dry,
-          reason: 'drive must start clear');
-      expect(a.last.surfaceState, RoadSurfaceState.wet,
-          reason: 'drive must clear (no longer black ice) by the end');
+        // Starts on a clear (dry) road and ends on a cleared (wet) road.
+        expect(
+          a.first.surfaceState,
+          RoadSurfaceState.dry,
+          reason: 'drive must start clear',
+        );
+        expect(
+          a.last.surfaceState,
+          RoadSurfaceState.wet,
+          reason: 'drive must clear (no longer black ice) by the end',
+        );
 
-      // The whiteout black-ice phase is actually reached, with an ice advisory.
-      expect(a.map((e) => e.surfaceState), contains(RoadSurfaceState.blackIce),
-          reason: 'the whiteout phase must produce black ice');
-      final ice = a.firstWhere(
-          (e) => e.surfaceState == RoadSurfaceState.blackIce);
-      expect(ice.advisoryMessage.toLowerCase(), contains('ice'));
-      // Black ice = lowest grip; the whiteout visibility proxy is heavy fog.
-      expect(ice.gripFactor, RoadSurfaceState.blackIce.gripFactor);
-      expect(ice.visibility.opacity, greaterThan(0.5),
-          reason: 'the whiteout must read as a heavy-fog / low-visibility cue');
+        // The whiteout black-ice phase is actually reached, with an ice advisory.
+        expect(
+          a.map((e) => e.surfaceState),
+          contains(RoadSurfaceState.blackIce),
+          reason: 'the whiteout phase must produce black ice',
+        );
+        final ice = a.firstWhere(
+          (e) => e.surfaceState == RoadSurfaceState.blackIce,
+        );
+        expect(ice.advisoryMessage.toLowerCase(), contains('ice'));
+        // Black ice = lowest grip; the whiteout visibility proxy is heavy fog.
+        expect(ice.gripFactor, RoadSurfaceState.blackIce.gripFactor);
+        expect(
+          ice.visibility.opacity,
+          greaterThan(0.5),
+          reason: 'the whiteout must read as a heavy-fog / low-visibility cue',
+        );
 
-      // The exact phase progression (escalate, then de-escalate and clear).
-      expect(_phases(a), <RoadSurfaceState>[
-        RoadSurfaceState.dry,
-        RoadSurfaceState.compactedSnow,
-        RoadSurfaceState.blackIce,
-        RoadSurfaceState.slush,
-        RoadSurfaceState.wet,
-      ]);
+        // The exact phase progression (escalate, then de-escalate and clear).
+        expect(_phases(a), <RoadSurfaceState>[
+          RoadSurfaceState.dry,
+          RoadSurfaceState.compactedSnow,
+          RoadSurfaceState.blackIce,
+          RoadSurfaceState.slush,
+          RoadSurfaceState.wet,
+        ]);
 
-      // Ordering: ice escalates after the clear start and clears before the end.
-      final iceIndex =
-          a.indexWhere((e) => e.surfaceState == RoadSurfaceState.blackIce);
-      expect(iceIndex, greaterThan(0), reason: 'ice must escalate, not start');
-      expect(
-        a.sublist(iceIndex + 1).map((e) => e.surfaceState),
-        contains(RoadSurfaceState.wet),
-        reason: 'the road must clear AFTER the whiteout',
-      );
-    });
+        // Ordering: ice escalates after the clear start and clears before the end.
+        final iceIndex = a.indexWhere(
+          (e) => e.surfaceState == RoadSurfaceState.blackIce,
+        );
+        expect(
+          iceIndex,
+          greaterThan(0),
+          reason: 'ice must escalate, not start',
+        );
+        expect(
+          a.sublist(iceIndex + 1).map((e) => e.surfaceState),
+          contains(RoadSurfaceState.wet),
+          reason: 'the road must clear AFTER the whiteout',
+        );
+      },
+    );
 
-    test('carry-forward HOLDS the whiteout across a speed-only partial frame',
-        () async {
-      // The safety property made visible: the whiteout phase has a frame that
-      // re-sends ONLY speed; black ice must persist (≥2 consecutive black-ice
-      // emissions), never silently drop because the ice signals were not
-      // re-sent that cycle.
-      final a = await runScenario(akitaWhiteoutDrive);
-      final iceRun = a
-          .map((e) => e.surfaceState)
-          .where((s) => s == RoadSurfaceState.blackIce)
-          .length;
-      expect(iceRun, greaterThanOrEqualTo(2),
-          reason: 'black ice must hold across the speed-only partial frame');
-    });
+    test(
+      'carry-forward HOLDS the whiteout across a speed-only partial frame',
+      () async {
+        // The safety property made visible: the whiteout phase has a frame that
+        // re-sends ONLY speed; black ice must persist (≥2 consecutive black-ice
+        // emissions), never silently drop because the ice signals were not
+        // re-sent that cycle.
+        final a = await runScenario(akitaWhiteoutDrive);
+        final iceRun = a
+            .map((e) => e.surfaceState)
+            .where((s) => s == RoadSurfaceState.blackIce)
+            .length;
+        expect(
+          iceRun,
+          greaterThanOrEqualTo(2),
+          reason: 'black ice must hold across the speed-only partial frame',
+        );
+      },
+    );
   });
 
   group('blackIcePatch — cold-slip TCS ice path', () {
@@ -153,8 +182,9 @@ void main() {
         RoadSurfaceState.dry,
       ]);
       // The ice here is from the TCS cold-slip rule, not from low friction.
-      final ice =
-          a.firstWhere((e) => e.surfaceState == RoadSurfaceState.blackIce);
+      final ice = a.firstWhere(
+        (e) => e.surfaceState == RoadSurfaceState.blackIce,
+      );
       expect(ice.advisoryMessage.toLowerCase(), contains('ice'));
     });
   });
@@ -167,8 +197,10 @@ void main() {
         RoadSurfaceState.wet,
         RoadSurfaceState.dry,
       ]);
-      expect(a.map((e) => e.surfaceState),
-          isNot(contains(RoadSurfaceState.blackIce)));
+      expect(
+        a.map((e) => e.surfaceState),
+        isNot(contains(RoadSurfaceState.blackIce)),
+      );
     });
   });
 }

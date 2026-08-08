@@ -18,10 +18,10 @@ class VehicleConditionUpdate {
 
   /// An honest "no live vehicle signals" marker — carries no assessment.
   const VehicleConditionUpdate.unavailable({String? reason})
-      : assessment = null,
-        signals = null,
-        live = false,
-        unavailableReason = reason ?? 'no live vehicle signals';
+    : assessment = null,
+      signals = null,
+      live = false,
+      unavailableReason = reason ?? 'no live vehicle signals';
 
   /// The fused driving-condition picture, or `null` when unavailable.
   final DrivingConditionAssessment? assessment;

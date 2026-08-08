@@ -49,22 +49,24 @@ void main() {
       expect(s.hasAnySignal, isFalse);
     });
 
-    test('partial map → only provided fields set, rest null (no fabrication)',
-        () {
-      final s = VehicleConditionSignals.fromVss(const {
-        'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 18.0,
-        'Vehicle.Exterior.AirTemperature': -6.0,
-      });
-      expect(s.roadFriction, closeTo(0.18, 1e-9));
-      expect(s.airTempC, -6.0);
-      // not provided → must stay null, never a default
-      expect(s.tcsEngaged, isNull);
-      expect(s.absEngaged, isNull);
-      expect(s.escEngaged, isNull);
-      expect(s.speedKmh, isNull);
-      expect(s.wiperIntensity, isNull);
-      expect(s.rainIntensity, isNull);
-    });
+    test(
+      'partial map → only provided fields set, rest null (no fabrication)',
+      () {
+        final s = VehicleConditionSignals.fromVss(const {
+          'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 18.0,
+          'Vehicle.Exterior.AirTemperature': -6.0,
+        });
+        expect(s.roadFriction, closeTo(0.18, 1e-9));
+        expect(s.airTempC, -6.0);
+        // not provided → must stay null, never a default
+        expect(s.tcsEngaged, isNull);
+        expect(s.absEngaged, isNull);
+        expect(s.escEngaged, isNull);
+        expect(s.speedKmh, isNull);
+        expect(s.wiperIntensity, isNull);
+        expect(s.rainIntensity, isNull);
+      },
+    );
 
     test('explicit null value → field stays null (not fabricated)', () {
       final s = VehicleConditionSignals.fromVss(const {
@@ -75,65 +77,71 @@ void main() {
       expect(s.tcsEngaged, isNull);
     });
 
-    test('out-of-spec friction → null (absent), NEVER clamped into a measurement',
-        () {
-      // This test used to assert the opposite — `150% → 1.0, -5% → 0.0` — and it
-      // passed, which is how the defect stayed green. Clamping an out-of-range
-      // reading to the maximum asserts PERFECT GRIP: a broken ESC's classic 255
-      // "no reading" sentinel became (255/100).clamp(0,1) == 1.0, a
-      // positively-measured clear road manufactured out of a dead sensor and
-      // handed to every caller that reads `roadFriction`.
-      //
-      // It is the same harm the NaN case below already refused, on the same
-      // clamp. The producer is broken; say so — return absent.
-      for (final outOfSpec in const [255.0, 150.0, 100.5, -5.0, -0.1]) {
+    test(
+      'out-of-spec friction → null (absent), NEVER clamped into a measurement',
+      () {
+        // This test used to assert the opposite — `150% → 1.0, -5% → 0.0` — and it
+        // passed, which is how the defect stayed green. Clamping an out-of-range
+        // reading to the maximum asserts PERFECT GRIP: a broken ESC's classic 255
+        // "no reading" sentinel became (255/100).clamp(0,1) == 1.0, a
+        // positively-measured clear road manufactured out of a dead sensor and
+        // handed to every caller that reads `roadFriction`.
+        //
+        // It is the same harm the NaN case below already refused, on the same
+        // clamp. The producer is broken; say so — return absent.
+        for (final outOfSpec in const [255.0, 150.0, 100.5, -5.0, -0.1]) {
+          expect(
+            VehicleConditionSignals.fromVss({
+              'Vehicle.ADAS.ESC.RoadFriction.MostProbable': outOfSpec,
+            }).roadFriction,
+            isNull,
+            reason:
+                '$outOfSpec is outside the VSS 0..100 percent spec. It must '
+                'read as ABSENT, not be clamped into a fabricated measurement.',
+          );
+        }
+
+        // The spec boundaries themselves remain valid measurements.
         expect(
-          VehicleConditionSignals.fromVss(
-            {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': outOfSpec},
-          ).roadFriction,
-          isNull,
-          reason: '$outOfSpec is outside the VSS 0..100 percent spec. It must '
-              'read as ABSENT, not be clamped into a fabricated measurement.',
+          VehicleConditionSignals.fromVss(const {
+            'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 0.0,
+          }).roadFriction,
+          0.0,
         );
-      }
+        expect(
+          VehicleConditionSignals.fromVss(const {
+            'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 100.0,
+          }).roadFriction,
+          1.0,
+        );
+      },
+    );
 
-      // The spec boundaries themselves remain valid measurements.
-      expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 0.0},
-        ).roadFriction,
-        0.0,
-      );
-      expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': 100.0},
-        ).roadFriction,
-        1.0,
-      );
-    });
-
-    test('non-finite friction (NaN / ±Infinity) → null, NOT a fabricated 1.0',
-        () {
-      // The dangerous case: (NaN/100).clamp(0,1) == 1.0 would assert MAX grip.
-      expect(
-        VehicleConditionSignals.fromVss(
-          {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': double.nan},
-        ).roadFriction,
-        isNull,
-      );
-      expect(
-        VehicleConditionSignals.fromVss(
-          {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': double.infinity},
-        ).roadFriction,
-        isNull,
-      );
-      expect(
-        VehicleConditionSignals.fromVss(
-          {'Vehicle.ADAS.ESC.RoadFriction.MostProbable': double.negativeInfinity},
-        ).roadFriction,
-        isNull,
-      );
-    });
+    test(
+      'non-finite friction (NaN / ±Infinity) → null, NOT a fabricated 1.0',
+      () {
+        // The dangerous case: (NaN/100).clamp(0,1) == 1.0 would assert MAX grip.
+        expect(
+          VehicleConditionSignals.fromVss({
+            'Vehicle.ADAS.ESC.RoadFriction.MostProbable': double.nan,
+          }).roadFriction,
+          isNull,
+        );
+        expect(
+          VehicleConditionSignals.fromVss({
+            'Vehicle.ADAS.ESC.RoadFriction.MostProbable': double.infinity,
+          }).roadFriction,
+          isNull,
+        );
+        expect(
+          VehicleConditionSignals.fromVss({
+            'Vehicle.ADAS.ESC.RoadFriction.MostProbable':
+                double.negativeInfinity,
+          }).roadFriction,
+          isNull,
+        );
+      },
+    );
 
     test('garbage types → null, NEVER throws', () {
       late VehicleConditionSignals s;
@@ -227,36 +235,36 @@ void main() {
 
     test('rainIntensity 100.0 (double) → 100 (int); 120 → clamp 100', () {
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Raindetection.Intensity': 100.0},
-        ).rainIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Raindetection.Intensity': 100.0,
+        }).rainIntensity,
         100,
       );
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Raindetection.Intensity': 120},
-        ).rainIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Raindetection.Intensity': 120,
+        }).rainIntensity,
         100,
       );
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Raindetection.Intensity': -10},
-        ).rainIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Raindetection.Intensity': -10,
+        }).rainIntensity,
         0,
       );
     });
 
     test('wiperIntensity has NO upper clamp, only >= 0', () {
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Windshield.Front.Wiping.Intensity': 9},
-        ).wiperIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Windshield.Front.Wiping.Intensity': 9,
+        }).wiperIntensity,
         9, // not clamped down to any max
       );
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Windshield.Front.Wiping.Intensity': -2},
-        ).wiperIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Windshield.Front.Wiping.Intensity': -2,
+        }).wiperIntensity,
         0, // clamped up to the floor
       );
     });
@@ -279,9 +287,9 @@ void main() {
       );
       // The Front path drives the field; the old spelling is now ignored.
       expect(
-        VehicleConditionSignals.fromVss(
-          const {'Vehicle.Body.Windshield.Front.Wiping.Intensity': 3},
-        ).wiperIntensity,
+        VehicleConditionSignals.fromVss(const {
+          'Vehicle.Body.Windshield.Front.Wiping.Intensity': 3,
+        }).wiperIntensity,
         3,
       );
       expect(
@@ -308,55 +316,58 @@ void main() {
 
     test('recognizedVssPaths has exactly the 8 paths', () {
       expect(VehicleConditionSignals.recognizedVssPaths, hasLength(8));
-      expect(
-        VehicleConditionSignals.recognizedVssPaths.toSet(),
-        {
-          'Vehicle.ADAS.ESC.RoadFriction.MostProbable',
-          'Vehicle.ADAS.TCS.IsEngaged',
-          'Vehicle.ADAS.ABS.IsEngaged',
-          'Vehicle.ADAS.ESC.IsEngaged',
-          'Vehicle.Exterior.AirTemperature',
-          'Vehicle.Speed',
-          'Vehicle.Body.Windshield.Front.Wiping.Intensity',
-          'Vehicle.Body.Raindetection.Intensity',
-        },
-      );
+      expect(VehicleConditionSignals.recognizedVssPaths.toSet(), {
+        'Vehicle.ADAS.ESC.RoadFriction.MostProbable',
+        'Vehicle.ADAS.TCS.IsEngaged',
+        'Vehicle.ADAS.ABS.IsEngaged',
+        'Vehicle.ADAS.ESC.IsEngaged',
+        'Vehicle.Exterior.AirTemperature',
+        'Vehicle.Speed',
+        'Vehicle.Body.Windshield.Front.Wiping.Intensity',
+        'Vehicle.Body.Raindetection.Intensity',
+      });
     });
 
-    test('each recognized path drives EXACTLY its own field (no cross-wiring)',
-        () {
-      // path → the field it must set; used to assert that path sets THAT field
-      // and leaves every OTHER field null.
-      final fieldOf = <String, Object? Function(VehicleConditionSignals)>{
-        VehicleConditionSignals.vssRoadFriction: (s) => s.roadFriction,
-        VehicleConditionSignals.vssTcsEngaged: (s) => s.tcsEngaged,
-        VehicleConditionSignals.vssAbsEngaged: (s) => s.absEngaged,
-        VehicleConditionSignals.vssEscEngaged: (s) => s.escEngaged,
-        VehicleConditionSignals.vssAirTemperature: (s) => s.airTempC,
-        VehicleConditionSignals.vssSpeed: (s) => s.speedKmh,
-        VehicleConditionSignals.vssWiperIntensity: (s) => s.wiperIntensity,
-        VehicleConditionSignals.vssRainIntensity: (s) => s.rainIntensity,
-      };
+    test(
+      'each recognized path drives EXACTLY its own field (no cross-wiring)',
+      () {
+        // path → the field it must set; used to assert that path sets THAT field
+        // and leaves every OTHER field null.
+        final fieldOf = <String, Object? Function(VehicleConditionSignals)>{
+          VehicleConditionSignals.vssRoadFriction: (s) => s.roadFriction,
+          VehicleConditionSignals.vssTcsEngaged: (s) => s.tcsEngaged,
+          VehicleConditionSignals.vssAbsEngaged: (s) => s.absEngaged,
+          VehicleConditionSignals.vssEscEngaged: (s) => s.escEngaged,
+          VehicleConditionSignals.vssAirTemperature: (s) => s.airTempC,
+          VehicleConditionSignals.vssSpeed: (s) => s.speedKmh,
+          VehicleConditionSignals.vssWiperIntensity: (s) => s.wiperIntensity,
+          VehicleConditionSignals.vssRainIntensity: (s) => s.rainIntensity,
+        };
 
-      // every recognized path is wired
-      expect(
-        fieldOf.keys.toSet(),
-        VehicleConditionSignals.recognizedVssPaths.toSet(),
-      );
-
-      for (final path in VehicleConditionSignals.recognizedVssPaths) {
-        final s = VehicleConditionSignals.fromVss(
-          <String, Object?>{path: _probeValueFor(path)},
+        // every recognized path is wired
+        expect(
+          fieldOf.keys.toSet(),
+          VehicleConditionSignals.recognizedVssPaths.toSet(),
         );
-        fieldOf.forEach((p, read) {
-          if (p == path) {
-            expect(read(s), isNotNull, reason: '$path should set its own field');
-          } else {
-            expect(read(s), isNull, reason: '$path must not set $p');
-          }
-        });
-      }
-    });
+
+        for (final path in VehicleConditionSignals.recognizedVssPaths) {
+          final s = VehicleConditionSignals.fromVss(<String, Object?>{
+            path: _probeValueFor(path),
+          });
+          fieldOf.forEach((p, read) {
+            if (p == path) {
+              expect(
+                read(s),
+                isNotNull,
+                reason: '$path should set its own field',
+              );
+            } else {
+              expect(read(s), isNull, reason: '$path must not set $p');
+            }
+          });
+        }
+      },
+    );
 
     test('round-trip: a known-icy VSS frame → classifier yields iceRisk', () {
       final s = VehicleConditionSignals.fromVss(const {

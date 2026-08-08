@@ -87,22 +87,22 @@ int _precipitationLevel(VehicleConditionSignals s) {
 }
 
 PrecipitationIntensity _intensityForLevel(int level) => switch (level) {
-      0 => PrecipitationIntensity.none,
-      1 => PrecipitationIntensity.light,
-      2 => PrecipitationIntensity.moderate,
-      _ => PrecipitationIntensity.heavy,
-    };
+  0 => PrecipitationIntensity.none,
+  1 => PrecipitationIntensity.light,
+  2 => PrecipitationIntensity.moderate,
+  _ => PrecipitationIntensity.heavy,
+};
 
 /// Explicit typed *proxy* for visibility (metres) from precipitation level.
 /// A vehicle has no meteorological visibility sensor — this is a documented
 /// cue, not a measurement. Only moderate+ precipitation reduces visibility
 /// enough to raise the Snow Scene's fog wall.
 double _visibilityMetersForLevel(int level) => switch (level) {
-      0 => 10000.0, // clear
-      1 => 5000.0, // light — still clear of the fog threshold
-      2 => 800.0, // moderate — fog wall begins
-      _ => 300.0, // heavy — short draw distance
-    };
+  0 => 10000.0, // clear
+  1 => 5000.0, // light — still clear of the fog threshold
+  2 => 800.0, // moderate — fog wall begins
+  _ => 300.0, // heavy — short draw distance
+};
 
 /// Pure, total, deterministic mapping: decoded vehicle signals → the existing
 /// [WeatherCondition] the `driving_conditions` pipeline already consumes.
@@ -163,8 +163,8 @@ WeatherCondition vehicleSignalsToWeatherCondition(
       s.tcsEngaged == true || s.absEngaged == true || s.escEngaged == true;
   final coldOrUnknownTemp = airTemp == null || airTemp <= kColdSlipCelsius;
 
-  final iceRisk = (s.roadFriction != null &&
-          s.roadFriction! < kIcyFrictionThreshold) ||
+  final iceRisk =
+      (s.roadFriction != null && s.roadFriction! < kIcyFrictionThreshold) ||
       (tractionLoss && coldOrUnknownTemp);
 
   return WeatherCondition(

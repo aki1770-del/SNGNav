@@ -22,17 +22,37 @@ import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
 Future<void> main() async {
   stdout
     ..writeln('=' * 78)
-    ..writeln('vehicle_condition_fusion — ILLUSTRATIVE SYNTHETIC Akita heavy-snow drive')
-    ..writeln('(hand-authored plausible signals replayed through the published fusion —')
-    ..writeln(' NOT recorded sensor data, NOT a real vehicle, NOT a real storm)')
+    ..writeln(
+      'vehicle_condition_fusion — ILLUSTRATIVE SYNTHETIC Akita heavy-snow drive',
+    )
+    ..writeln(
+      '(hand-authored plausible signals replayed through the published fusion —',
+    )
+    ..writeln(
+      ' NOT recorded sensor data, NOT a real vehicle, NOT a real storm)',
+    )
     ..writeln('=' * 78)
-    ..writeln('The WHOLE assessment is hysteresis-debounced (anti-flicker): the surface')
-    ..writeln('verdict, grip AND the visibility cue are HELD at the last stable reading')
-    ..writeln('until a NEW surface state persists (HysteresisFilter window 3 / threshold')
-    ..writeln('2 — a hold can span several steps, not just one noisy frame). Held steps')
-    ..writeln('are marked "(held)": fresh inputs sit beside a stale verdict by design.')
-    ..writeln('The hold is fail-safe on CLEARING (it keeps the hazard up until the')
-    ..writeln('easing persists) but LAGS onset by design. Watch it escalate, then clear:')
+    ..writeln(
+      'The WHOLE assessment is hysteresis-debounced (anti-flicker): the surface',
+    )
+    ..writeln(
+      'verdict, grip AND the visibility cue are HELD at the last stable reading',
+    )
+    ..writeln(
+      'until a NEW surface state persists (HysteresisFilter window 3 / threshold',
+    )
+    ..writeln(
+      '2 — a hold can span several steps, not just one noisy frame). Held steps',
+    )
+    ..writeln(
+      'are marked "(held)": fresh inputs sit beside a stale verdict by design.',
+    )
+    ..writeln(
+      'The hold is fail-safe on CLEARING (it keeps the hazard up until the',
+    )
+    ..writeln(
+      'easing persists) but LAGS onset by design. Watch it escalate, then clear:',
+    )
     ..writeln('');
 
   // Partial-frame transport (KUKSA-style): a later frame re-sends only what
@@ -75,8 +95,12 @@ Future<void> main() async {
       // Honest end-of-stream (the drive finished). Never a fabricated scene.
       stdout
         ..writeln('')
-        ..writeln('— drive ended — fusion now reports: ${update.unavailableReason}')
-        ..writeln('  (no live signals → honest "unavailable", never a fabricated road)');
+        ..writeln(
+          '— drive ended — fusion now reports: ${update.unavailableReason}',
+        )
+        ..writeln(
+          '  (no live signals → honest "unavailable", never a fabricated road)',
+        );
       if (!done.isCompleted) done.complete();
     }
   });
@@ -103,8 +127,9 @@ String _describe(
   final fric = s.roadFriction == null
       ? '   ? '
       : s.roadFriction!.toStringAsFixed(2).padLeft(5);
-  final temp =
-      s.airTempC == null ? '  ? ' : '${s.airTempC!.toStringAsFixed(0)}°C'.padLeft(5);
+  final temp = s.airTempC == null
+      ? '  ? '
+      : '${s.airTempC!.toStringAsFixed(0)}°C'.padLeft(5);
   final tcs = (s.tcsEngaged ?? false) ? 'ON ' : 'off';
   final wiper = (s.wiperIntensity ?? 0).toString();
 
@@ -112,7 +137,8 @@ String _describe(
   final grip = a.gripFactor.toStringAsFixed(2);
   final marker = held ? ' (held)' : '';
 
-  final line1 = 'step ${step.toString().padLeft(2)}  '
+  final line1 =
+      'step ${step.toString().padLeft(2)}  '
       'fric=$fric temp=$temp tcs=$tcs wiper=$wiper'
       ' → $surface grip=$grip$marker';
   final line2 = '    ${_visibilityCue(visMeters)}  ${a.advisoryMessage}';

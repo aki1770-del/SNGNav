@@ -122,11 +122,7 @@ const akitaWhiteoutDrive = <VehicleConditionSignals>[
     speedKmh: 40,
   ),
   // partial: snowfall intensifies a little (wiper/rain up); friction/temp held.
-  VehicleConditionSignals(
-    wiperIntensity: 4,
-    rainIntensity: 50,
-    speedKmh: 35,
-  ),
+  VehicleConditionSignals(wiperIntensity: 4, rainIntensity: 50, speedKmh: 35),
 
   // ── Phase 3 · WHITEOUT (severe black ice) ────────────────────────────────
   // The worst-case picture: ESC friction collapses to 0.18, TCS engages on a

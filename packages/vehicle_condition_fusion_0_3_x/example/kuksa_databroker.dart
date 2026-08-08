@@ -54,9 +54,11 @@ import 'package:vehicle_condition_fusion/vehicle_condition_fusion.dart';
 Stream<Map<String, Object?>> kuksaVssFrames(KuksaClient client) {
   return client
       .subscribe(VehicleConditionSignals.recognizedVssPaths)
-      .map((update) => {
-            for (final entry in update.entries) entry.key: entry.value.value,
-          });
+      .map(
+        (update) => {
+          for (final entry in update.entries) entry.key: entry.value.value,
+        },
+      );
 }
 
 /// Wire ANY `Stream<Map<String, Object?>>` of **partial** VSS frames (the real
@@ -109,20 +111,30 @@ Future<void> main(List<String> args) async {
   stdout
     ..writeln('SOURCE: in-process FAKE (no databroker). The frames below are')
     ..writeln('shaped EXACTLY like a real `client.subscribe(...).map(.value)`')
-    ..writeln('yield — partial VSS frames of {leaf-path: decoded-scalar}. To go')
+    ..writeln(
+      'yield — partial VSS frames of {leaf-path: decoded-scalar}. To go',
+    )
     ..writeln('live, swap the fake for `kuksaVssFrames(client)` (see --live).')
     ..writeln('⚠️ SYNTHETIC hand-authored values — NOT a real vehicle/storm.')
-    ..writeln('Steps marked "(held)" = the anti-flicker debounce LAGS onset by one frame')
-    ..writeln('  (fail-safe on clearing) — a stale verdict beside fresh inputs by design,')
+    ..writeln(
+      'Steps marked "(held)" = the anti-flicker debounce LAGS onset by one frame',
+    )
+    ..writeln(
+      '  (fail-safe on clearing) — a stale verdict beside fresh inputs by design,',
+    )
     ..writeln('  NOT an under-warn.')
     ..writeln('=' * 78);
 
   // ── Demo 1 · a realistic icy drive, ending with a clean end-of-stream ──────
   stdout
     ..writeln('')
-    ..writeln('DEMO 1 — escalating icy drive  (carry-forward + garbage-frame honesty)')
+    ..writeln(
+      'DEMO 1 — escalating icy drive  (carry-forward + garbage-frame honesty)',
+    )
     ..writeln('WATCH: once black ice appears, the LAST TWO frames re-send only')
-    ..writeln('  speed / a non-finite friction — yet fric still reads 0.18 (carried,')
+    ..writeln(
+      '  speed / a non-finite friction — yet fric still reads 0.18 (carried,',
+    )
     ..writeln('  never a fabricated 1.00) and the verdict HOLDS at black ice.')
     ..writeln('-' * 78);
   await _driveAndPrint(bridgeVssFramesToFusion(_fakeIcyDriveFrames()));
@@ -130,8 +142,12 @@ Future<void> main(List<String> args) async {
   // ── Demo 2 · a mid-drive databroker DISCONNECT → honest UNKNOWN ────────────
   stdout
     ..writeln('')
-    ..writeln('DEMO 2 — mid-drive databroker DISCONNECT  (honest UNKNOWN, never stale)')
-    ..writeln('WATCH: the connection drops while on black ice — the fusion reports')
+    ..writeln(
+      'DEMO 2 — mid-drive databroker DISCONNECT  (honest UNKNOWN, never stale)',
+    )
+    ..writeln(
+      'WATCH: the connection drops while on black ice — the fusion reports',
+    )
     ..writeln('  an explicit UNAVAILABLE, NOT the now-stale black-ice verdict.')
     ..writeln('-' * 78);
   await _driveAndPrint(bridgeVssFramesToFusion(_fakeDisconnectFrames()));
@@ -139,7 +155,9 @@ Future<void> main(List<String> args) async {
   stdout
     ..writeln('')
     ..writeln('=' * 78)
-    ..writeln('Done. An example lowers the adoption BARRIER; it is not adoption.')
+    ..writeln(
+      'Done. An example lowers the adoption BARRIER; it is not adoption.',
+    )
     ..writeln('=' * 78);
 }
 
@@ -151,7 +169,9 @@ Future<void> _runLive(String endpoint) async {
   final port = parts.length > 1 ? int.tryParse(parts[1]) ?? 55555 : 55555;
   stdout
     ..writeln('SOURCE: LIVE KuksaClient(host: $host, port: $port)')
-    ..writeln('Subscribing to: ${VehicleConditionSignals.recognizedVssPaths.join(', ')}')
+    ..writeln(
+      'Subscribing to: ${VehicleConditionSignals.recognizedVssPaths.join(', ')}',
+    )
     ..writeln('=' * 78);
 
   final client = KuksaClient(host: host, port: port);
@@ -201,23 +221,27 @@ String _describe(int step, VehicleConditionUpdate update) {
   // The hold LAGS onset by one frame by design (documented anti-flicker) and
   // fails safe on CLEARING — so a held step is NOT an under-warn; the marker
   // makes that legible rather than mistakable for the fusion under-warning.
-  final candidate =
-      DrivingConditionAssessment.fromCondition(vehicleSignalsToWeatherCondition(s));
+  final candidate = DrivingConditionAssessment.fromCondition(
+    vehicleSignalsToWeatherCondition(s),
+  );
   final held = candidate.surfaceState != a.surfaceState;
   final marker = held ? ' (held)' : '';
 
   final fric = s.roadFriction == null
       ? '  ?  '
       : s.roadFriction!.toStringAsFixed(2).padLeft(5);
-  final temp =
-      s.airTempC == null ? '   ? ' : '${s.airTempC!.toStringAsFixed(0)}°C'.padLeft(5);
+  final temp = s.airTempC == null
+      ? '   ? '
+      : '${s.airTempC!.toStringAsFixed(0)}°C'.padLeft(5);
   final tcs = (s.tcsEngaged ?? false) ? 'ON ' : 'off';
   final wiper = (s.wiperIntensity ?? 0).toString();
 
-  final line1 = 'step ${step.toString().padLeft(2)}  '
+  final line1 =
+      'step ${step.toString().padLeft(2)}  '
       'fric=$fric temp=$temp tcs=$tcs wiper=$wiper'
       '  →  ${a.surfaceState.name}$marker';
-  final line2 = '          grip=${a.gripFactor.toStringAsFixed(2)}  '
+  final line2 =
+      '          grip=${a.gripFactor.toStringAsFixed(2)}  '
       '“${a.advisoryMessage}”';
   return '$line1\n$line2';
 }

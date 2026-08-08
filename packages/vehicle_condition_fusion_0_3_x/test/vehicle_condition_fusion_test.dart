@@ -23,117 +23,130 @@ Future<void> pumpEventQueue([int times = 20]) async {
 }
 
 void main() {
-  group('vehicleSignalsToWeatherCondition + assessment fusion (deterministic)',
-      () {
-    DrivingConditionAssessment assess(VehicleConditionSignals s) =>
-        DrivingConditionAssessment.fromCondition(
-          vehicleSignalsToWeatherCondition(s),
+  group(
+    'vehicleSignalsToWeatherCondition + assessment fusion (deterministic)',
+    () {
+      DrivingConditionAssessment assess(VehicleConditionSignals s) =>
+          DrivingConditionAssessment.fromCondition(
+            vehicleSignalsToWeatherCondition(s),
+          );
+
+      test('low road friction → black ice + ice advisory', () {
+        final a = assess(
+          const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
         );
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+        expect(a.advisoryMessage.toLowerCase(), contains('ice'));
+      });
 
-    test('low road friction → black ice + ice advisory', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-      expect(a.advisoryMessage.toLowerCase(), contains('ice'));
-    });
+      test('heavy snowfall, adequate grip → compacted snow + fog wall', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.5, // not below the icy threshold
+            wiperIntensity: 5, // heavy
+            airTempC: -5.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.compactedSnow);
+        // heavy precip → 300 m visibility proxy → strong fog opacity
+        expect(a.visibility.opacity, greaterThan(0.5));
+      });
 
-    test('heavy snowfall, adequate grip → compacted snow + fog wall', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.5, // not below the icy threshold
-        wiperIntensity: 5, // heavy
-        airTempC: -5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.compactedSnow);
-      // heavy precip → 300 m visibility proxy → strong fog opacity
-      expect(a.visibility.opacity, greaterThan(0.5));
-    });
+      test('moderate rain, warm, good grip → wet + mild fog', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.9,
+            wiperIntensity: 4, // moderate
+            airTempC: 8.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.wet);
+        // moderate precip → 800 m → some, but not heavy, fog
+        expect(a.visibility.opacity, greaterThan(0.0));
+        expect(a.visibility.opacity, lessThan(0.5));
+      });
 
-    test('moderate rain, warm, good grip → wet + mild fog', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.9,
-        wiperIntensity: 4, // moderate
-        airTempC: 8.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.wet);
-      // moderate precip → 800 m → some, but not heavy, fog
-      expect(a.visibility.opacity, greaterThan(0.0));
-      expect(a.visibility.opacity, lessThan(0.5));
-    });
+      test('TCS engaged on a COLD road → ice risk → black ice', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.6, // not itself below the icy threshold
+            tcsEngaged: true,
+            airTempC: 0.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+      });
 
-    test('TCS engaged on a COLD road → ice risk → black ice', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.6, // not itself below the icy threshold
-        tcsEngaged: true,
-        airTempC: 0.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-    });
-
-    test('TCS engaged on a WARM road → NOT ice (aquaplaning, not freezing)',
+      test(
+        'TCS engaged on a WARM road → NOT ice (aquaplaning, not freezing)',
         () {
-      final a = assess(const VehicleConditionSignals(
-        tcsEngaged: true,
-        wiperIntensity: 4, // moderate rain
-        airTempC: 12.0,
-      ));
-      expect(a.surfaceState, isNot(RoadSurfaceState.blackIce));
-    });
-
-    test('dry, warm, full grip, no precip → dry + normal advisory', () {
-      final a = assess(const VehicleConditionSignals(
-        roadFriction: 0.95,
-        wiperIntensity: 0,
-        airTempC: 5.0,
-      ));
-      expect(a.surfaceState, RoadSurfaceState.dry);
-    });
-
-    test('missing temperature + low friction → still black ice '
-        '(friction is a direct measurement)', () {
-      final a = assess(const VehicleConditionSignals(roadFriction: 0.2));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-    });
-
-    // REGRESSION (0.3.2): an ABSENT temperature must not be assumed warm and
-    // used to dismiss a real traction-loss event. Against 0.3.1 this returned
-    // iceRisk:false (assumed +5 °C) — a live skid reported as a non-icy road.
-    test('traction loss (TCS) + UNKNOWN temperature → ice risk '
-        '(absence never downgrades a hazard)', () {
-      final c = vehicleSignalsToWeatherCondition(
-        const VehicleConditionSignals(tcsEngaged: true), // no airTempC
+          final a = assess(
+            const VehicleConditionSignals(
+              tcsEngaged: true,
+              wiperIntensity: 4, // moderate rain
+              airTempC: 12.0,
+            ),
+          );
+          expect(a.surfaceState, isNot(RoadSurfaceState.blackIce));
+        },
       );
-      expect(c.iceRisk, isTrue);
-      final a = assess(const VehicleConditionSignals(tcsEngaged: true));
-      expect(a.surfaceState, RoadSurfaceState.blackIce);
-      expect(a.advisoryMessage.toLowerCase(), contains('ice'));
-    });
 
-    test('traction loss (ABS/ESC) + UNKNOWN temperature → ice risk', () {
-      expect(
-        vehicleSignalsToWeatherCondition(
-          const VehicleConditionSignals(absEngaged: true),
-        ).iceRisk,
-        isTrue,
-      );
-      expect(
-        vehicleSignalsToWeatherCondition(
-          const VehicleConditionSignals(escEngaged: true),
-        ).iceRisk,
-        isTrue,
-      );
-    });
+      test('dry, warm, full grip, no precip → dry + normal advisory', () {
+        final a = assess(
+          const VehicleConditionSignals(
+            roadFriction: 0.95,
+            wiperIntensity: 0,
+            airTempC: 5.0,
+          ),
+        );
+        expect(a.surfaceState, RoadSurfaceState.dry);
+      });
 
-    // Guard the other direction: a KNOWN warm temperature must still clear a
-    // traction-loss event as aquaplaning, not ice (no new cry-wolf).
-    test('traction loss (TCS) + KNOWN warm temperature → NOT ice', () {
-      final c = vehicleSignalsToWeatherCondition(
-        const VehicleConditionSignals(tcsEngaged: true, airTempC: 12.0),
-      );
-      expect(c.iceRisk, isFalse);
-    });
-  });
+      test('missing temperature + low friction → still black ice '
+          '(friction is a direct measurement)', () {
+        final a = assess(const VehicleConditionSignals(roadFriction: 0.2));
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+      });
+
+      // REGRESSION (0.3.2): an ABSENT temperature must not be assumed warm and
+      // used to dismiss a real traction-loss event. Against 0.3.1 this returned
+      // iceRisk:false (assumed +5 °C) — a live skid reported as a non-icy road.
+      test('traction loss (TCS) + UNKNOWN temperature → ice risk '
+          '(absence never downgrades a hazard)', () {
+        final c = vehicleSignalsToWeatherCondition(
+          const VehicleConditionSignals(tcsEngaged: true), // no airTempC
+        );
+        expect(c.iceRisk, isTrue);
+        final a = assess(const VehicleConditionSignals(tcsEngaged: true));
+        expect(a.surfaceState, RoadSurfaceState.blackIce);
+        expect(a.advisoryMessage.toLowerCase(), contains('ice'));
+      });
+
+      test('traction loss (ABS/ESC) + UNKNOWN temperature → ice risk', () {
+        expect(
+          vehicleSignalsToWeatherCondition(
+            const VehicleConditionSignals(absEngaged: true),
+          ).iceRisk,
+          isTrue,
+        );
+        expect(
+          vehicleSignalsToWeatherCondition(
+            const VehicleConditionSignals(escEngaged: true),
+          ).iceRisk,
+          isTrue,
+        );
+      });
+
+      // Guard the other direction: a KNOWN warm temperature must still clear a
+      // traction-loss event as aquaplaning, not ice (no new cry-wolf).
+      test('traction loss (TCS) + KNOWN warm temperature → NOT ice', () {
+        final c = vehicleSignalsToWeatherCondition(
+          const VehicleConditionSignals(tcsEngaged: true, airTempC: 12.0),
+        );
+        expect(c.iceRisk, isFalse);
+      });
+    },
+  );
 
   group('VehicleConditionFusion (injected snapshot stream)', () {
     test('emits a fused live assessment from a snapshot', () async {
@@ -142,10 +155,9 @@ void main() {
       final results = <VehicleConditionUpdate>[];
       final sub = fusion.conditions.listen(results.add);
 
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-      ));
+      source.add(
+        const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
+      );
       await pumpEventQueue();
 
       expect(results, hasLength(1));
@@ -170,22 +182,19 @@ void main() {
       });
 
       // dry baseline
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.95,
-        airTempC: 5.0,
-      ));
+      source.add(
+        const VehicleConditionSignals(roadFriction: 0.95, airTempC: 5.0),
+      );
       await pumpEventQueue();
       // one icy reading (should be HELD — below the hysteresis threshold)
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: 5.0,
-      ));
+      source.add(
+        const VehicleConditionSignals(roadFriction: 0.2, airTempC: 5.0),
+      );
       await pumpEventQueue();
       // a second icy reading (now persists → flip allowed)
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: 5.0,
-      ));
+      source.add(
+        const VehicleConditionSignals(roadFriction: 0.2, airTempC: 5.0),
+      );
       await pumpEventQueue();
 
       // dry, then HELD dry (flicker suppressed), then black ice.
@@ -200,44 +209,51 @@ void main() {
       await source.close();
     });
 
-    test('does NOT emit when no signal is present (never fabricates)',
-        () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion = VehicleConditionFusion(signals: source.stream);
-      final results = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(results.add);
+    test(
+      'does NOT emit when no signal is present (never fabricates)',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion(signals: source.stream);
+        final results = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(results.add);
 
-      source.add(const VehicleConditionSignals()); // all-null snapshot
-      source.add(const VehicleConditionSignals()); // still nothing real
-      await pumpEventQueue();
+        source.add(const VehicleConditionSignals()); // all-null snapshot
+        source.add(const VehicleConditionSignals()); // still nothing real
+        await pumpEventQueue();
 
-      expect(results, isEmpty);
+        expect(results, isEmpty);
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
-    test('honest fallback: a stream ERROR surfaces unavailable, no throw',
-        () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion = VehicleConditionFusion(signals: source.stream);
-      final results = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(results.add);
+    test(
+      'honest fallback: a stream ERROR surfaces unavailable, no throw',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion(signals: source.stream);
+        final results = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(results.add);
 
-      source.addError('connection refused');
-      await pumpEventQueue();
+        source.addError('connection refused');
+        await pumpEventQueue();
 
-      expect(results, hasLength(1));
-      expect(results.single.isAvailable, isFalse);
-      expect(results.single.assessment, isNull);
-      expect(fusion.available, isFalse);
-      expect(results.single.unavailableReason, contains('connection refused'));
+        expect(results, hasLength(1));
+        expect(results.single.isAvailable, isFalse);
+        expect(results.single.assessment, isNull);
+        expect(fusion.available, isFalse);
+        expect(
+          results.single.unavailableReason,
+          contains('connection refused'),
+        );
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
     test('honest fallback: stream DONE surfaces unavailable', () async {
       final source = StreamController<VehicleConditionSignals>();
@@ -265,161 +281,184 @@ void main() {
     // hold the surface for an extra reading and mask the divergence.
 
     test(
-        'fromPartialFrames: a later PARTIAL frame HOLDS a once-seen ice signal '
-        '(no under-warn)', () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion = VehicleConditionFusion.fromPartialFrames(
-        partialFrames: source.stream,
-        surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
-      );
-      final updates = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(updates.add);
+      'fromPartialFrames: a later PARTIAL frame HOLDS a once-seen ice signal '
+      '(no under-warn)',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion.fromPartialFrames(
+          partialFrames: source.stream,
+          surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+        );
+        final updates = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(updates.add);
 
-      // frame1: a complete-enough first frame asserting black ice.
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-      ));
-      await pumpEventQueue();
-      expect(updates.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+        // frame1: a complete-enough first frame asserting black ice.
+        source.add(
+          const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
+        );
+        await pumpEventQueue();
+        expect(
+          updates.last.assessment!.surfaceState,
+          RoadSurfaceState.blackIce,
+        );
 
-      // frame2: a PARTIAL frame — only the wiper re-sent; roadFriction and
-      // airTempC are NOT re-sent (null = "unchanged" on this transport).
-      source.add(const VehicleConditionSignals(wiperIntensity: 5));
-      await pumpEventQueue();
+        // frame2: a PARTIAL frame — only the wiper re-sent; roadFriction and
+        // airTempC are NOT re-sent (null = "unchanged" on this transport).
+        source.add(const VehicleConditionSignals(wiperIntensity: 5));
+        await pumpEventQueue();
 
-      // Ice is STILL HELD: carry-forward restored the friction/temp, so the
-      // partial frame does not under-warn while the hazard persists.
-      expect(updates.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+        // Ice is STILL HELD: carry-forward restored the friction/temp, so the
+        // partial frame does not under-warn while the hazard persists.
+        expect(
+          updates.last.assessment!.surfaceState,
+          RoadSurfaceState.blackIce,
+        );
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
     test(
-        'default constructor: the SAME two as COMPLETE snapshots — a null in '
-        'the second is "unknown now", so it does NOT stale-over-warn', () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion = VehicleConditionFusion(
-        signals: source.stream,
-        surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
-      );
-      final updates = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(updates.add);
+      'default constructor: the SAME two as COMPLETE snapshots — a null in '
+      'the second is "unknown now", so it does NOT stale-over-warn',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion(
+          signals: source.stream,
+          surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+        );
+        final updates = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(updates.add);
 
-      // frame1: complete snapshot asserting black ice (same as above).
-      source.add(const VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-      ));
-      await pumpEventQueue();
-      expect(updates.last.assessment!.surfaceState, RoadSurfaceState.blackIce);
+        // frame1: complete snapshot asserting black ice (same as above).
+        source.add(
+          const VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0),
+        );
+        await pumpEventQueue();
+        expect(
+          updates.last.assessment!.surfaceState,
+          RoadSurfaceState.blackIce,
+        );
 
-      // frame2: a COMPLETE snapshot where roadFriction (and airTempC) are
-      // GENUINELY null — the source is stating the ice signal is no longer
-      // valid, not merely "not re-sent".
-      source.add(const VehicleConditionSignals(wiperIntensity: 5));
-      await pumpEventQueue();
+        // frame2: a COMPLETE snapshot where roadFriction (and airTempC) are
+        // GENUINELY null — the source is stating the ice signal is no longer
+        // valid, not merely "not re-sent".
+        source.add(const VehicleConditionSignals(wiperIntensity: 5));
+        await pumpEventQueue();
 
-      // The complete-snapshot rail correctly treats null as "unknown now" and
-      // does NOT carry the ice forward: the second yields NOT black ice.
-      expect(
-        updates.last.assessment!.surfaceState,
-        isNot(RoadSurfaceState.blackIce),
-      );
+        // The complete-snapshot rail correctly treats null as "unknown now" and
+        // does NOT carry the ice forward: the second yields NOT black ice.
+        expect(
+          updates.last.assessment!.surfaceState,
+          isNot(RoadSurfaceState.blackIce),
+        );
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
-    test('fromPartialFrames honest degradation: stream ERROR → unavailable',
-        () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion =
-          VehicleConditionFusion.fromPartialFrames(partialFrames: source.stream);
-      final results = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(results.add);
+    test(
+      'fromPartialFrames honest degradation: stream ERROR → unavailable',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion.fromPartialFrames(
+          partialFrames: source.stream,
+        );
+        final results = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(results.add);
 
-      source.addError('broker drop');
-      await pumpEventQueue();
+        source.addError('broker drop');
+        await pumpEventQueue();
 
-      expect(results, hasLength(1));
-      expect(results.single.isAvailable, isFalse);
-      expect(fusion.available, isFalse);
-      expect(results.single.unavailableReason, contains('broker drop'));
+        expect(results, hasLength(1));
+        expect(results.single.isAvailable, isFalse);
+        expect(fusion.available, isFalse);
+        expect(results.single.unavailableReason, contains('broker drop'));
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
-    test('fromPartialFrames never fabricates: empty frames → no emit',
-        () async {
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion =
-          VehicleConditionFusion.fromPartialFrames(partialFrames: source.stream);
-      final results = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(results.add);
+    test(
+      'fromPartialFrames never fabricates: empty frames → no emit',
+      () async {
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion.fromPartialFrames(
+          partialFrames: source.stream,
+        );
+        final results = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(results.add);
 
-      source.add(const VehicleConditionSignals()); // empty partial frame
-      source.add(const VehicleConditionSignals()); // still nothing real
-      await pumpEventQueue();
+        source.add(const VehicleConditionSignals()); // empty partial frame
+        source.add(const VehicleConditionSignals()); // still nothing real
+        await pumpEventQueue();
 
-      expect(results, isEmpty);
+        expect(results, isEmpty);
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
-    test('carriedForwardOnto: per-field — non-null wins, null carries forward',
-        () {
-      const previous = VehicleConditionSignals(
-        roadFriction: 0.2,
-        airTempC: -5.0,
-        speedKmh: 40.0,
-      );
-      const partial = VehicleConditionSignals(
-        wiperIntensity: 5, // new
-        airTempC: -8.0, // overrides the carried value
-        // roadFriction & speedKmh NOT re-sent → carried forward
-      );
+    test(
+      'carriedForwardOnto: per-field — non-null wins, null carries forward',
+      () {
+        const previous = VehicleConditionSignals(
+          roadFriction: 0.2,
+          airTempC: -5.0,
+          speedKmh: 40.0,
+        );
+        const partial = VehicleConditionSignals(
+          wiperIntensity: 5, // new
+          airTempC: -8.0, // overrides the carried value
+          // roadFriction & speedKmh NOT re-sent → carried forward
+        );
 
-      final merged = partial.carriedForwardOnto(previous);
+        final merged = partial.carriedForwardOnto(previous);
 
-      expect(merged.roadFriction, 0.2); // carried forward
-      expect(merged.speedKmh, 40.0); // carried forward
-      expect(merged.wiperIntensity, 5); // new value
-      expect(merged.airTempC, -8.0); // newer value wins over carried
-      expect(merged.tcsEngaged, isNull); // never seen by either → still null
-    });
+        expect(merged.roadFriction, 0.2); // carried forward
+        expect(merged.speedKmh, 40.0); // carried forward
+        expect(merged.wiperIntensity, 5); // new value
+        expect(merged.airTempC, -8.0); // newer value wins over carried
+        expect(merged.tcsEngaged, isNull); // never seen by either → still null
+      },
+    );
   });
 
   group('SDK-free mock seam', () {
-    test('a one-line mock — no SDK, no protobuf, no databroker — drives fusion',
-        () async {
-      // The entire mock: a direct const construction. No Datapoint, no
-      // generated protobuf types, no databroker connection.
-      const mock = VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0);
-      expect(mock.hasAnySignal, isTrue);
+    test(
+      'a one-line mock — no SDK, no protobuf, no databroker — drives fusion',
+      () async {
+        // The entire mock: a direct const construction. No Datapoint, no
+        // generated protobuf types, no databroker connection.
+        const mock = VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0);
+        expect(mock.hasAnySignal, isTrue);
 
-      final source = StreamController<VehicleConditionSignals>();
-      final fusion = VehicleConditionFusion(signals: source.stream);
-      final results = <VehicleConditionUpdate>[];
-      final sub = fusion.conditions.listen(results.add);
+        final source = StreamController<VehicleConditionSignals>();
+        final fusion = VehicleConditionFusion(signals: source.stream);
+        final results = <VehicleConditionUpdate>[];
+        final sub = fusion.conditions.listen(results.add);
 
-      source.add(mock);
-      await pumpEventQueue();
+        source.add(mock);
+        await pumpEventQueue();
 
-      expect(results.single.assessment!.surfaceState,
-          RoadSurfaceState.blackIce);
+        expect(
+          results.single.assessment!.surfaceState,
+          RoadSurfaceState.blackIce,
+        );
 
-      await sub.cancel();
-      await fusion.dispose();
-      await source.close();
-    });
+        await sub.cancel();
+        await fusion.dispose();
+        await source.close();
+      },
+    );
 
     test('equatable value semantics on the snapshot', () {
       const a = VehicleConditionSignals(roadFriction: 0.2, airTempC: -5.0);
