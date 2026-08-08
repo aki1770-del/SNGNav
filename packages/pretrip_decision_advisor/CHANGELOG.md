@@ -1,5 +1,160 @@
 # Changelog
 
+## 0.5.4
+
+The affirmative all-clear must now be EARNED. **Your build will not break** — no
+signature, type or member changed — **but what your users read WILL change, and
+in some cases a briefing you used to get is now a typed stop.** Please read: the
+second half of this note is about a recommendation that actively sent drivers
+somewhere.
+
+### What you already have, in the version you are running now
+
+Every hazard test in `SnowAwarePretripAdvisor.hazardOf` is guarded
+`field != null && ...`. So a forecast slot carrying a temperature and nothing
+else does not fail any test — it falls THROUGH all of them and returns
+`HourHazard.clear`, and the briefing prints:
+
+> No winter hazard signals in your trip window.
+> 出発時間帯に冬季の危険を示す兆候はありません。
+
+That sentence is a claim about the WINDOW. It was being made from data in which
+visibility, precipitation and the road surface had never been looked at.
+
+0.5.2 fixed exactly this fabrication one level up — a window with NO forecast at
+all — and said so plainly. This is the per-slot half it named and left open, and
+0.5.3's own changelog listed it under "Still present — not fixed here".
+
+**This is not a corner case; it is the normal shape of real data.**
+`pretrip_source_met_norway` emits `visibilityMeters: null` and
+`estimatedRoadCondition: null` on every slot — its own source comment reads
+*"Compact product carries neither visibility nor surface state."* And this
+package's own `example/main.dart` builds its forecast as
+`HourlyForecast(hour: ..., tempCelsius: -6)`, commented *"temperature only, NO
+visibility (exactly the shape a compact global forecast gives)"*.
+
+Four ways an all-clear was reported over data nobody measured:
+
+| what happened | what you were told |
+|---|---|
+| visibility + road surface never measured | "No winter hazard signals in your trip window." |
+| caller passed `RoadConditionEstimate.unknown` — honestly saying *it could not look* | identical briefing to a caller reporting a **dry** road |
+| a 3-hour trip with only the first hour forecast | "No winter hazard signals in your trip window." |
+| `tempCelsius` is `NaN` (every `<=` is false, so nothing decides) | "No winter hazard signals in your trip window." |
+
+### The one that put her on the road
+
+`_findBetterWindow` accepted any later hour scoring at worst `caution` — and an
+hour nobody measured scores `clear`. So the advisor offered, as the safer
+window, the hour it knew least about.
+
+Run `example/main.dart` on 0.5.2. A **measured 80 m whiteout** at 07:00, later
+hours carrying temperature only:
+
+```
+Verdict : waitAdvised
+Strength: advisoryStrong          ← the strongest this package can say
+Delay   : 1:00:00
+  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
+  - Conditions improve by about 08:15.
+```
+
+It told her to wait out a whiteout and leave at 08:15 — into an hour whose
+visibility and road surface were never reported. On 0.5.4 the same example
+reads:
+
+```
+Verdict : hazardPersists
+Delay   : 0:00:00
+  - Visibility may drop to ~80 m around 07:00 — whiteout conditions.
+  - No clearly better departure window within the next 6 h — consider whether
+    this trip is needed today.
+```
+
+An unassessable hour is now SKIPPED, not offered. A later hour that IS fully
+measured still wins, so the search is not muted — only made honest.
+
+### What changed
+
+- **`brief(...)` throws the new `PretripAssessmentIncompleteException`** when a
+  forecast covers the window but the fields deciding the ladder were never
+  measured. It extends `PretripDataAbsentException`, so the `catch` clause 0.5.2
+  already asked you to write catches it with no edit. The message names the
+  exact hour and the exact missing families.
+- **`briefOrNull(...)` returns `null`** in that case. Its published contract is
+  unchanged — `null` has always meant "we do not know" — it now covers one more
+  way of not knowing.
+- **`advise(...)` is unchanged**: still returns `null`, still never throws.
+- **`evidenceGaps(slot)`** (new) returns the `HazardEvidenceGap`s a slot left
+  undecided. Public on purpose: the advisor stops asserting what it did not
+  measure, but it does not decide for you what an acceptable gap is. Read them
+  and apply your own regional policy.
+- **`allClearEarned(forecast:commute:)`** (new) answers before you call, so you
+  can branch instead of catch.
+- **A non-finite field no longer crashes the advisor.** A `-Infinity`
+  temperature or visibility reached `.round()` in `_describe` and threw
+  `UnsupportedError: Infinity or NaN toInt` — an **untyped** error, so the
+  `on PretripDataAbsentException` clause did NOT catch it and the app went down.
+  Such a slot now falls through to the generic chip.
+- **`hazardOf` is unchanged in logic** — token-for-token identical to 0.5.2
+  (183 tokens, verified). Its only textual difference is one line-wrap applied
+  by `dart format` under SDK 3.11, which reformatted this whole package;
+  the published 0.5.2 archive is itself format-dirty under that SDK, so the
+  reformat is pre-existing debt and lands in its own commit. Absence is
+  reported BESIDE the ladder, never on it: a gap never raises a band and never
+  lowers one.
+
+### The rule, so the behaviour is predictable
+
+> Positive evidence fires on partial knowledge. Negative conclusions require
+> whole knowledge.
+
+A measured hazard still reports from whatever data you have — a whiteout with
+everything else absent is still `severe`. Only the affirmative all-clear, and
+the affirmative "conditions improve at 08:15", need the whole picture. That is
+the same asymmetry 0.5.3 applied to the official-warning line.
+
+`HourHazard` gains **no** `unknown` member. Absence does not belong anywhere on
+a measurement scale: at the benign end it invents safety, at the adverse end it
+invents danger, and both are fabrications. It is reported in a separate type.
+
+### If you now get a stop where you used to get a briefing
+
+You are being told something true that you were not told before. Three ways
+forward:
+
+1. **Fill the gap.** `mergeObservedVisibility` (already exported) puts a
+   measured `VisibilityObservation` into the departure hour;
+   `estimatedRoadCondition` takes your own road-surface estimate.
+2. **Branch.** `briefOrNull(...)` returns `null`; `allClearEarned(...)` tells
+   you in advance.
+3. **Catch.** `on PretripDataAbsentException` — the clause 0.5.2 asked for.
+
+We would rather hand you a stop you must handle than a green card we did not
+earn. Expect the stop to be common with a compact forecast product: that is not
+the gate being noisy, it is the honest state of that data.
+
+### Honest bounds — what 0.5.4 does NOT fix
+
+- **`hazardPersists` still says "no clearly better window within 6 h"** after
+  skipping hours it could not assess. That is a negative claim on partial
+  knowledge, and saying it properly needs a new `PretripMessages` member —
+  which is a compile break for anyone who `implements` that class, so it cannot
+  ship inside `^0.5.0`. The direction is conservative (it never suggests a
+  delay), so it ships as-is and is named rather than hidden.
+- **`summarizeAreaConditions` / `AreaConditionRead` are untouched here.** The
+  area read runs the same per-slot ladder and has the same gap; it is being
+  worked on a separate line and is not changed by this patch.
+- **A `-Infinity` temperature still reads as `caution`** (`-Infinity <= 0.0` is
+  true). That is inventing a hazard from a non-value — the mirror of inventing
+  safety. It is left alone deliberately: this patch never suppresses a band the
+  ladder produced, because a gate that can delete a hazard is worse than the
+  defect it fixes. Flagged for the safety owner, not silently changed.
+- **Compiler-additive, with one bound stated plainly:** new methods were added
+  to the concrete `SnowAwarePretripAdvisor`. Subclassing and instantiation are
+  unaffected; only a class that `implements SnowAwarePretripAdvisor` (rather
+  than the `PretripAdvisor` contract it exists for) would need the new members.
+
 ## 0.5.2
 
 ### Safety defect in 0.5.1 and earlier — please read
