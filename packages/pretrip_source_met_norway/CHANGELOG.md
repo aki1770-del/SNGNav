@@ -43,6 +43,14 @@
   about **itself** — checked against the version being published, not against
   whatever is currently on the registry (a document that names the registry's
   version is false the moment it ships).
+- **`README.md` Status corrected as a CLAIM, not a token.** It read *"Extracted
+  verbatim (no behaviour change) from the SNGNav app's
+  `MetNorwayHourlyForecastProvider`"* — true of 0.1.0, false of this release,
+  and by now circular: the app's provider file is 14 lines and its last line
+  re-exports this package. The coverage API added here has never existed in the
+  app. The sentence is now bound to the version it was true of.
+- **Internal shorthand removed from the landing page and the example.** Both
+  used a pronoun with no antecedent for a reader who arrives at pub.dev.
 - **Also in this release, so the changelog describes the whole diff:** the
   `isComplete` dartdoc was reworded (it named an unshipped version); the
   package `description` was shortened 232 → 167 characters, which is the

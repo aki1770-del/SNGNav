@@ -3,8 +3,8 @@
 // Fetches a MET Norway hourly forecast for a point and hands the resulting
 // WeatherForecast MEASUREMENT to the pretrip_decision_advisor so an edge
 // developer can build their own pre-trip "Before you drive" surface. The
-// locationforecast product is GLOBAL, so this works for a Nagoya commute
-// (HER) and an Akita one (HER mother) as well as a Nordic one.
+// locationforecast product is GLOBAL, so this works for a Nagoya commute and
+// a rural Akita one as well as a Nordic one.
 //
 // MET Norway terms REQUIRE an identifying User-Agent naming your app plus a
 // contact point. The placeholder below is NOT accepted by api.met.no (it
@@ -40,7 +40,7 @@ Future<void> main() async {
 
   final provider = MetNorwayHourlyForecastProvider(userAgent: kUserAgent);
   try {
-    // Nagoya (HER). Coordinates are truncated to 4 decimals before sending.
+    // Nagoya. Coordinates are truncated to 4 decimals before sending.
     final forecast = await provider.fetchForecast(
       latitude: 35.1709,
       longitude: 136.8815,

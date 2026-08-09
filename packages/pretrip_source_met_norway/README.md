@@ -17,9 +17,16 @@ Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
 
 ## Status
 
-Phase: maintained — v0.2.3. Requires `pretrip_decision_advisor >=0.5.3 <0.7.0`. Extracted verbatim (no behaviour change) from the
-SNGNav app's `MetNorwayHourlyForecastProvider`. The `locationforecast`
-product is global, so this serves a Nagoya commute as well as a Tromsø one.
+Phase: maintained — v0.2.3. Requires `pretrip_decision_advisor >=0.5.3 <0.7.0`.
+
+The HTTP client and mapper were extracted verbatim from the SNGNav app's
+`MetNorwayHourlyForecastProvider` **at v0.1.0**. That direction has since
+reversed: the app now consumes this package. Later versions are developed
+here, and 0.2.3's mapping-coverage API (`fetchForecastWithCoverage`,
+`MetNorwayMappingCoverage`) has no counterpart in the app.
+
+The `locationforecast` product is global, so this serves a Nagoya commute as
+well as a Tromsø one.
 
 ## Safety contract — honesty rules (BINDING, verbatim)
 
@@ -127,7 +134,8 @@ MET Norway locationforecast/2.0/compact feed
 ```
 
 This package exists so an edge developer can warn a driver before she sets
-out — HER in Nagoya, HER mother in Akita (heavy-snow), a driver in Tromsø —
+out — a commuter in Nagoya, an elderly driver in rural Akita (heavy-snow), a
+driver in Tromsø —
 and her family, especially in compound-failure conditions when standard
 navigation infrastructure has gone away. Package count is not the success
 metric; an edge developer running it and a driver seeing the briefing is.
