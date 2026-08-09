@@ -39,9 +39,16 @@
   class sweep itself had been scoped to API-usage and had not run over
   version claims about *this* package: `QUICKSTART` stated we were published
   at 0.1.1 while the registry said 0.2.2, and told a newcomer to pin it. The
-  sweep is now standing, unconditional, and covers self-version claims
-  checked against the live registry — recorded at
-  `skills/nordic-data-integration/bylaws.md` §2-bis.
+  sweep is now standing, unconditional, and covers claims this package makes
+  about **itself** — checked against the version being published, not against
+  whatever is currently on the registry (a document that names the registry's
+  version is false the moment it ships).
+- **Also in this release, so the changelog describes the whole diff:** the
+  `isComplete` dartdoc was reworded (it named an unshipped version); the
+  package `description` was shortened 232 → 167 characters, which is the
+  blurb pub.dev search shows; and governance vocabulary and repository paths
+  that do not resolve here were removed from the shipped library, tests and
+  changelog.
 - **Minimum supported `pretrip_decision_advisor` raised to 0.5.3**, matching
   `pubspec.yaml`. Measured per version: `briefOrNull()` arrived in **0.5.2**,
   `PretripAssessmentIncompleteException` — which this package's tests
@@ -96,7 +103,13 @@
   throws its loud typed `MetNorwayForecastException` on a non-200 response; only
   the example's handling changed. No public API change.
 
-## 0.2.0 — 2026-06-24 — Re-pin advisor to ^0.4.0 (catalog resolvability)
+## 0.2.0 — NEVER PUBLISHED (folded into 0.2.1)
+
+> This heading described work that was released as **0.2.1**; **0.2.0 was never
+> published** and cannot be resolved. Kept, marked, and not rewritten, because
+> it shipped in 0.2.1 and 0.2.2 — a reader who pinned it got a hard
+> version-solving failure. Original heading: *Re-pin advisor to ^0.4.0
+> (catalog resolvability)*.
 
 - Shifts the `pretrip_decision_advisor` requirement from the 0.2.x range to the
   0.4.x range; advisor 0.2.x/0.3.x are no longer supported by this version. This

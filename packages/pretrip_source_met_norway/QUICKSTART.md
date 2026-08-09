@@ -41,8 +41,9 @@ Nothing here depends on the SNGNav app, and the render path runs **offline and
 deterministic** — no network, no LLM, no Google Maps, no GPS. That is the
 point: when all of that has gone away, this still helps her decide.
 
-**Maturity, stated plainly:** `pretrip_source_met_norway` is published at
-**0.2.2** — pre-1.0, early and evolving, published by an *unverified uploader*.
+**Maturity, stated plainly:** this document ships with **v0.2.3** of
+`pretrip_source_met_norway` — pre-1.0, early and evolving, published by an
+*unverified uploader*.
 It is honest and tested, but treat the API as still settling. If you pin, pin
 the current version or a `^0.2.x` range — **do not pin 0.1.x**: that line's
 example crashes on an unhandled HTTP 403 with the placeholder User-Agent, and
@@ -405,7 +406,7 @@ chips themselves, with every measured number passed through verbatim). That
 work is staged on the `feat/ja-pretrip-briefing` branch and is render-verified
 in Japanese; English is always the present fallback for any unsupported locale,
 so an unsupported language degrades to the English **reason**, never to no
-reason. (As of 0.2.2 it is not yet in any published version —
+reason. (It is not yet in any published version as of this one —
 `localizeHeadline` is the part that works today.)
 
 ---

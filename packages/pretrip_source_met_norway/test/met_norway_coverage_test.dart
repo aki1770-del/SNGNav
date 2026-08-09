@@ -1,5 +1,4 @@
-// Holds the obligation NDI recorded against itself in
-// skills/nordic-data-integration/bylaws.md §14.4: the mapper dropped
+// Before 0.2.3 the mapper dropped
 // timeseries slices silently, so a slice WE dropped was indistinguishable
 // from one the publisher never issued, and both from an hour that is fine.
 //
@@ -28,7 +27,7 @@ Map<String, dynamic> _goodSlice(String t) => {
 };
 
 void main() {
-  group('§14.4 — the dropped slice is visible', () {
+  group('the dropped slice is visible', () {
     test('a complete response reports complete coverage and no drops', () {
       final r = mapLocationForecastWithCoverage(
         _resp([
@@ -159,8 +158,8 @@ void main() {
     });
   });
 
-  group('§14.4 — the PRE-LOOP paths, where the record used to lie', () {
-    // CT caught this at the publish gate: the 0.2.3 candidate reported
+  group('the PRE-LOOP paths, where the record used to lie', () {
+    // An earlier draft of this type reported
     // slicesSeen: 0, dropped: 0, isComplete: TRUE for a response that carried
     // usable slices and failed only on meta.updated_at — indistinguishable
     // from a genuinely empty timeseries. The type built to make a hole

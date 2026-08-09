@@ -261,7 +261,7 @@ class MetNorwayMappingCoverage {
   /// hour was actually produced.
   ///
   /// Deliberately false when the response was unusable before the loop: a
-  /// response we could not read at all must never report as complete. That
+  /// response we could not read at all must never report as complete.
   /// An earlier draft of this getter reported `isComplete: true` for a
   /// response carrying usable slices that failed only on `meta.updated_at`;
   /// it never shipped.
@@ -313,8 +313,7 @@ WeatherForecast? mapLocationForecastToWeatherForecast(
 /// As [mapLocationForecastToWeatherForecast], but also reports what was
 /// dropped and why (see [MetNorwayMappingCoverage]).
 ///
-/// Added 2026-08-09 to hold the obligation NDI recorded against itself in
-/// `skills/nordic-data-integration/bylaws.md` §14.4: the mapper dropped
+/// Added in 0.2.3. Before it, the mapper dropped
 /// slices silently, so the hole it handed over was invisible. Dropping is
 /// still the right call — we will not guess a temperature — but a consumer
 /// can now see that we dropped, and why.

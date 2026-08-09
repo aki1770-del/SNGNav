@@ -24,8 +24,8 @@ dependencies:
   #   0.5.2 added briefOrNull(), which this package's example and QUICKSTART use;
   #   0.5.3 added PretripAssessmentIncompleteException, which this package's
   #   tests reference and its docs describe.
-  # `dart pub downgrade && dart analyze` is the proof. An earlier candidate
-  # declared >=0.5.0 and then >=0.5.2; both were false and would not compile.
+  # `dart pub downgrade && dart analyze` is the proof. Earlier releases
+  # declared >=0.5.0 and >=0.5.2; both were false and would not compile.
   pretrip_decision_advisor: '>=0.5.3 <0.7.0'
 
 dev_dependencies:
