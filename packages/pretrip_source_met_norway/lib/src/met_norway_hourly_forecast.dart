@@ -262,9 +262,9 @@ class MetNorwayMappingCoverage {
   ///
   /// Deliberately false when the response was unusable before the loop: a
   /// response we could not read at all must never report as complete. That
-  /// was the defect this getter shipped with in the 0.2.3 candidate — it
-  /// said `isComplete: true` for a response carrying usable slices that
-  /// failed only on `meta.updated_at`.
+  /// An earlier draft of this getter reported `isComplete: true` for a
+  /// response carrying usable slices that failed only on `meta.updated_at`;
+  /// it never shipped.
   bool get isComplete => dropped == 0 && hoursEmitted > 0;
 
   /// True when the response could not be read at all — no `properties`, no

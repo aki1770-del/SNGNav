@@ -35,8 +35,13 @@
   README's first callout points a newcomer at it. When a dependency changes a
   method's failure mode, the sweep has to cover every shipped surface that
   calls it. **`README.md` — the pub.dev landing page — was missed by that
-  round too and is corrected here; the sweep is now run by CLASS against the
-  publish manifest rather than by the filename the previous review named.**
+  round too and is corrected here.** A fourth review then found that the
+  class sweep itself had been scoped to API-usage and had not run over
+  version claims about *this* package: `QUICKSTART` stated we were published
+  at 0.1.1 while the registry said 0.2.2, and told a newcomer to pin it. The
+  sweep is now standing, unconditional, and covers self-version claims
+  checked against the live registry — recorded at
+  `skills/nordic-data-integration/bylaws.md` §2-bis.
 - **Minimum supported `pretrip_decision_advisor` raised to 0.5.3**, matching
   `pubspec.yaml`. Measured per version: `briefOrNull()` arrived in **0.5.2**,
   `PretripAssessmentIncompleteException` — which this package's tests

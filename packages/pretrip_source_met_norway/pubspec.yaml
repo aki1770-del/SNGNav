@@ -1,9 +1,8 @@
 name: pretrip_source_met_norway
 description: >-
-  MET Norway locationforecast hourly-forecast source for the
-  pretrip_decision_advisor contract. Maps the global locationforecast
-  compact product to a WeatherForecast measurement for the pre-trip
-  "Before you drive" briefing. Pure Dart.
+  MET Norway locationforecast source for the pretrip_decision_advisor
+  contract. Maps the global compact product to a WeatherForecast, with
+  per-slice coverage. Pure Dart.
 version: 0.2.3
 license: BSD-3-Clause
 
