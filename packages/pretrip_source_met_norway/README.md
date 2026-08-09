@@ -17,7 +17,7 @@ Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
 
 ## Status
 
-Phase: maintained — v0.2.3. Extracted verbatim (no behaviour change) from the
+Phase: maintained — v0.2.3. Requires `pretrip_decision_advisor >=0.5.3 <0.7.0`. Extracted verbatim (no behaviour change) from the
 SNGNav app's `MetNorwayHourlyForecastProvider`. The `locationforecast`
 product is global, so this serves a Nagoya commute as well as a Tromsø one.
 
@@ -58,6 +58,17 @@ them:
 This contract is condition-GENERAL: visibility in metres and an hourly
 forecast serve every weather turmoil (fog, rain, dust, snow), not snow
 alone.
+
+- **An all-clear can never be earned from this product alone, and that is
+  permanent.** Because `visibilityMeters` and `estimatedRoadCondition` are
+  ALWAYS null here, `SnowAwarePretripAdvisor.brief()` will THROW
+  `PretripAssessmentIncompleteException` rather than report "no hazard" it did
+  not measure — on calm forecasts too. This is not a defect and not a gap we
+  intend to close; the compact product does not carry those fields. Use
+  `briefOrNull()` and render "not assessed", or supply the missing
+  measurement yourself (`mergeObservedVisibility`, `estimatedRoadCondition`).
+  A HAZARD still reports from whatever WAS measured — the asymmetry is
+  deliberate.
 
 - **A skipped slice is countable, and you can see it.** The mapper skips a
   timeseries slice it cannot honestly use — an unparseable time, no
@@ -168,7 +179,12 @@ Future<void> main() async {
       return;
     }
     const advisor = SnowAwarePretripAdvisor();
-    final briefing = advisor.brief(
+    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.3 the
+    // advisor THROWS rather than report an all-clear it did not measure, and
+    // it fires on the COMMON path here — including a calm forecast. This
+    // product carries neither visibility nor road surface (see the honesty
+    // rules above), so a MET-Norway-only input can never earn "no hazard".
+    final briefing = advisor.briefOrNull(
       forecast: forecast,
       commute: CommuteShape(
         plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -181,6 +197,11 @@ Future<void> main() async {
         reactionTimeSeconds: 1.5,
       ),
     );
+    if (briefing == null) {
+      print('Verdict: not assessed — the forecast could not earn a '
+          'conclusion (no visibility or road-surface measurement).');
+      return;
+    }
     print('Verdict: ${briefing.verdict.name}');
   } finally {
     provider.close();

@@ -130,7 +130,7 @@ Future<PretripBriefing?> assembleMetNorwayBriefing({
     }
 
     const advisor = SnowAwarePretripAdvisor();
-    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.2 the
+    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.3 the
     // advisor THROWS PretripAssessmentIncompleteException rather than report
     // an all-clear it did not measure — and it fires on the COMMON path here,
     // including a calm forecast. This product carries neither visibility nor

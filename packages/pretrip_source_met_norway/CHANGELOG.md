@@ -21,7 +21,7 @@
   to that type's owner has NOT been proposed** — it is recorded as owed, and
   saying "proposed" would have credited work nobody has done.
 - **Compatibility with `pretrip_decision_advisor` 0.5.3 verified on a fresh
-  resolution.** From advisor 0.5.2, `brief()` throws
+  resolution.** From advisor 0.5.3, `brief()` throws
   `PretripAssessmentIncompleteException` rather than reporting an all-clear it
   did not measure. **This product carries neither visibility nor road
   surface**, so a MET-Norway-only input can never earn an all-clear — that is
@@ -34,10 +34,16 @@
   `example/main.dart` only; QUICKSTART is the larger shipped document and the
   README's first callout points a newcomer at it. When a dependency changes a
   method's failure mode, the sweep has to cover every shipped surface that
-  calls it.
-- **Minimum supported `pretrip_decision_advisor` raised to 0.5.2** — this
-  package calls `briefOrNull()`, which does not exist in 0.5.0/0.5.1. The
-  previous `>=0.5.0` lower bound was false and would not have compiled.
+  calls it. **`README.md` — the pub.dev landing page — was missed by that
+  round too and is corrected here; the sweep is now run by CLASS against the
+  publish manifest rather than by the filename the previous review named.**
+- **Minimum supported `pretrip_decision_advisor` raised to 0.5.3**, matching
+  `pubspec.yaml`. Measured per version: `briefOrNull()` arrived in **0.5.2**,
+  `PretripAssessmentIncompleteException` — which this package's tests
+  reference and its docs describe — arrived in **0.5.3**. The earlier
+  `>=0.5.0` and `>=0.5.2` bounds were both false and would not have compiled;
+  the current one is proven by `dart pub downgrade && dart analyze`, not
+  asserted.
 - Purely additive to this package's API. Patch version chosen so it is
   reachable from an existing `^0.2.2` constraint; a minor would not be.
   **Stated honestly: this package currently has no published dependents, so
