@@ -17,8 +17,9 @@
 - **Bound, stated plainly:** `WeatherForecast` itself is untouched — it
   belongs to `pretrip_decision_advisor` and is not ours to change. A consumer
   holding only a `WeatherForecast` still cannot see the hole; the coverage
-  record is a separate value you must ask for. Carrying a coverage member to
-  that type's owner is proposed, not done.
+  record is a separate value you must ask for. **Carrying a coverage member
+  to that type's owner has NOT been proposed** — it is recorded as owed, and
+  saying "proposed" would have credited work nobody has done.
 - **Compatibility with `pretrip_decision_advisor` 0.5.3 verified on a fresh
   resolution.** From advisor 0.5.2, `brief()` throws
   `PretripAssessmentIncompleteException` rather than reporting an all-clear it
@@ -27,9 +28,21 @@
   the permanent honest outcome, not a defect. `example/main.dart` now uses
   `briefOrNull()` and prints "not assessed" instead of a verdict it does not
   have; the dead `PretripVerdict.noData` branch is retired.
+- **`QUICKSTART.md` corrected too, not just the example.** Both of its
+  `advisor.brief(...)` call sites are now `briefOrNull()` with the
+  "not assessed" branch and prose saying why it fires. The first fix reached
+  `example/main.dart` only; QUICKSTART is the larger shipped document and the
+  README's first callout points a newcomer at it. When a dependency changes a
+  method's failure mode, the sweep has to cover every shipped surface that
+  calls it.
+- **Minimum supported `pretrip_decision_advisor` raised to 0.5.2** — this
+  package calls `briefOrNull()`, which does not exist in 0.5.0/0.5.1. The
+  previous `>=0.5.0` lower bound was false and would not have compiled.
 - Purely additive to this package's API. Patch version chosen so it is
-  reachable from an existing `^0.2.2` constraint; `0.3.0` would have reached
-  nobody already pinned.
+  reachable from an existing `^0.2.2` constraint; a minor would not be.
+  **Stated honestly: this package currently has no published dependents, so
+  the version choice reaches nobody today — it is weakly better and can never
+  be worse, not a delivery.**
 
 
 
@@ -48,6 +61,14 @@
   (橋は路面より先に凍結します) shipped there. No behavior change in this
   package itself; the constraint widening is the release.
 
+
+  > **Correction, 2026-08-09:** `pretrip_decision_advisor` **0.6.0 has never
+  > been published** — pub.dev's latest is 0.5.3, and `HourHazard.unknown`
+  > does not exist there. The widen above was made against a local,
+  > unpublished package. The range is harmless (it resolves to 0.5.3) but the
+  > claim was not true of the registry, and a reader of this shipped file was
+  > told about a version they cannot obtain. Left in place and corrected here
+  > rather than rewritten, because it was published.
 
 ## 0.2.1 — 2026-06-26 — Example no longer crashes on first run
 

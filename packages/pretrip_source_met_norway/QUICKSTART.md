@@ -130,7 +130,14 @@ Future<PretripBriefing?> assembleMetNorwayBriefing({
     }
 
     const advisor = SnowAwarePretripAdvisor();
-    return advisor.brief(
+    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.2 the
+    // advisor THROWS PretripAssessmentIncompleteException rather than report
+    // an all-clear it did not measure — and it fires on the COMMON path here,
+    // including a calm forecast. This product carries neither visibility nor
+    // road surface (honesty rule, Step 3), so a MET-Norway-only input can
+    // never earn "no hazard". briefOrNull() returns null instead of throwing;
+    // render that as "not assessed", never as "clear".
+    return advisor.briefOrNull(
       forecast: forecast,
       commute: CommuteShape(
         plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -216,7 +223,11 @@ Future<PretripBriefing?> assembleAkitaWhiteoutBriefing() async {
         : mergeObservedVisibility(forecast, visibility, commute.plannedDeparture);
 
     const advisor = SnowAwarePretripAdvisor();
-    return advisor.brief(
+    // briefOrNull() here too. Merging a measured visibility closes ONE of the
+    // two gaps; road surface is still unmeasured, so an all-clear can still
+    // be unearnable and brief() would throw. A hazard, by contrast, still
+    // reports from whatever WAS measured — the asymmetry is deliberate.
+    return advisor.briefOrNull(
       forecast: merged,
       commute: commute,
       profile: const DriverProfileSpec(
