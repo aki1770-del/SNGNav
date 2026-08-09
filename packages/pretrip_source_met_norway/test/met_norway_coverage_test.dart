@@ -158,4 +158,72 @@ void main() {
       expect(old.issuedAt, wrapped.issuedAt);
     });
   });
+
+  group('§14.4 — the PRE-LOOP paths, where the record used to lie', () {
+    // CT caught this at the publish gate: the 0.2.3 candidate reported
+    // slicesSeen: 0, dropped: 0, isComplete: TRUE for a response that carried
+    // usable slices and failed only on meta.updated_at — indistinguishable
+    // from a genuinely empty timeseries. The type built to make a hole
+    // visible had a hole, on exactly the paths no test covered.
+
+    test(
+      'unparseable issuedAt still reports the slices the publisher SENT',
+      () {
+        final r = mapLocationForecastWithCoverage({
+          'properties': {
+            'meta': {'updated_at': 'not-a-timestamp'},
+            'timeseries': [
+              _goodSlice('2026-01-15T07:00:00Z'),
+              _goodSlice('2026-01-15T08:00:00Z'),
+              _goodSlice('2026-01-15T09:00:00Z'),
+            ],
+          },
+        });
+        expect(r.forecast, isNull);
+        expect(
+          r.coverage.slicesSeen,
+          3,
+          reason: 'three slices were sent; reporting 0 was the defect',
+        );
+        expect(r.coverage.hoursEmitted, 0);
+        expect(r.coverage.dropped, 3);
+        expect(r.coverage.responseUnusable, isTrue);
+        expect(
+          r.coverage.isComplete,
+          isFalse,
+          reason: 'a response we could not read must never report complete',
+        );
+      },
+    );
+
+    test('missing properties is unusable and not complete', () {
+      final r = mapLocationForecastWithCoverage(<String, dynamic>{});
+      expect(r.forecast, isNull);
+      expect(r.coverage.slicesSeen, 0);
+      expect(r.coverage.responseUnusable, isTrue);
+      expect(r.coverage.isComplete, isFalse);
+    });
+
+    test('empty timeseries is unusable and not complete', () {
+      final r = mapLocationForecastWithCoverage({
+        'properties': {
+          'meta': {'updated_at': '2026-01-15T06:00:00Z'},
+          'timeseries': <Map<String, dynamic>>[],
+        },
+      });
+      expect(r.forecast, isNull);
+      expect(r.coverage.responseUnusable, isTrue);
+      expect(r.coverage.isComplete, isFalse);
+    });
+
+    test('every slice dropped in-loop is also not complete', () {
+      final r = mapLocationForecastWithCoverage(
+        _resp([
+          {'time': 'bad'},
+        ]),
+      );
+      expect(r.forecast, isNull);
+      expect(r.coverage.isComplete, isFalse);
+    });
+  });
 }

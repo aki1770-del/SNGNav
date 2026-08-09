@@ -243,36 +243,66 @@ void main() {
         ),
       );
 
-      // Precipitation at -4 °C is the advisor's icing surface → elevated,
-      // and a clear window exists within the horizon → wait advised.
+      // Precipitation at -4 °C is the advisor's icing surface → elevated.
       expect(briefing.peakHazard, HourHazard.elevated);
-      expect(briefing.verdict, PretripVerdict.waitAdvised);
-      expect(
-        briefing.recommendation!.suggestedDelay,
-        greaterThan(Duration.zero),
-      );
+
+      // From pretrip_decision_advisor 0.5.2 the verdict is hazardPersists,
+      // not waitAdvised, and that is CORRECT for this source. "Wait" means a
+      // later hour is clear; the advisor will not certify an hour clear
+      // without whole knowledge, and the MET Norway compact product carries
+      // NEITHER visibility NOR road surface (both are ALWAYS null here, by
+      // this package's own honesty rule). So no hour in the horizon can earn
+      // "clear", and the honest answer is that the hazard persists rather
+      // than an invented safe window. The advisor caught up with our rule.
+      expect(briefing.verdict, PretripVerdict.hazardPersists);
     });
 
-    test('the real June Nagoya capture maps to a clear verdict', () {
+    test('the real June capture cannot earn an all-clear from this product — '
+        'the advisor refuses, and we assert the refusal', () {
       final forecast = mapLocationForecastToWeatherForecast(_loadFixture())!;
       const advisor = SnowAwarePretripAdvisor();
-      final briefing = advisor.brief(
-        forecast: forecast,
-        // Depart within the captured forecast's first hour.
-        commute: CommuteShape(
-          plannedDeparture: DateTime.utc(2026, 6, 12, 9, 15).toLocal(),
-          plannedDuration: const Duration(minutes: 30),
-          routeIdentifiers: const ['live-commute'],
-          flexibility: CommuteFlexibility.discretionary,
-        ),
-        profile: const DriverProfileSpec(
-          profileTag: 'demo',
-          reactionTimeSeconds: 1.5,
-        ),
+      final commute = CommuteShape(
+        plannedDeparture: DateTime.utc(2026, 6, 12, 9, 15).toLocal(),
+        plannedDuration: const Duration(minutes: 30),
+        routeIdentifiers: const ['live-commute'],
+        flexibility: CommuteFlexibility.discretionary,
       );
-      // 23.7 °C clearsky June morning — the honest verdict is "clear", and
-      // nothing in the pipeline fabricated a winter hazard from null fields.
-      expect(briefing.verdict, PretripVerdict.clear);
+      const profile = DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
+      );
+
+      // A 23.7 °C clear June morning LOOKS clear — and the advisor still will
+      // not say so, because roadSurface and visibility were never measured
+      // and a negative conclusion ("no hazard") requires whole knowledge.
+      // This package can never supply those two fields from the compact
+      // product, so this is the permanent honest outcome for a MET-Norway-only
+      // input, not a defect and not a temporary gap.
+      expect(
+        () => advisor.brief(
+          forecast: forecast,
+          commute: commute,
+          profile: profile,
+        ),
+        throwsA(isA<PretripAssessmentIncompleteException>()),
+      );
+
+      // The documented non-throwing escape hatch returns null rather than
+      // fabricating an all-clear.
+      expect(
+        advisor.briefOrNull(
+          forecast: forecast,
+          commute: commute,
+          profile: profile,
+        ),
+        isNull,
+      );
+
+      // Nothing in the pipeline fabricated a winter hazard from null fields
+      // either: the mapping itself is intact.
+      expect(forecast.hourly, isNotEmpty);
+      expect(forecast.hourly.first.visibilityMeters, isNull);
+      expect(forecast.hourly.first.estimatedRoadCondition, isNull);
     });
   });
 }

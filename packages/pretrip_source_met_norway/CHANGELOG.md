@@ -1,22 +1,37 @@
+# Changelog
+
 ## 0.2.3
 
-- **Coverage is now visible.** `mapLocationForecastWithCoverage` returns the
-  forecast together with `MetNorwayMappingCoverage`: how many timeseries
-  slices the publisher sent, how many became hours, and **why** each dropped
-  slice dropped (`MetNorwaySliceDrop`). `expectedDrops` counts the 6-hourly
-  tail — the publisher's documented shape; `unexpectedDrops` counts the rest.
+- **Coverage is now visible — from the API this package documents.**
+  `MetNorwayHourlyForecastProvider.fetchForecastWithCoverage()` and the
+  top-level `mapLocationForecastWithCoverage()` both return the forecast
+  together with `MetNorwayMappingCoverage`: how many timeseries slices the
+  publisher sent, how many became hours, and **why** each dropped slice
+  dropped (`MetNorwaySliceDrop`). `expectedDrops` counts the publisher's
+  documented 6-hourly tail; `unexpectedDrops` counts the rest.
   Previously a slice *we* skipped was indistinguishable from an hour the
-  publisher never issued, and both from an hour that is genuinely fine: we
-  handed over a list with a hole and no way to see the hole.
-- **Nothing is guessed, and nothing changed about what we emit.** We still
-  skip rather than interpolate a missing temperature. The existing
-  `mapLocationForecastToWeatherForecast` delegates and is behaviour-identical
-  (covered by test); `WeatherForecast` is untouched — that type belongs to
-  `pretrip_decision_advisor` and is not ours to mutate.
-- Purely additive. Patch version chosen deliberately so it is reachable from
-  an existing `^0.2.2` constraint.
+  publisher never issued, and both from an hour that is genuinely fine.
+- **Nothing is guessed.** A missing `air_temperature` is still skipped, never
+  interpolated. `fetchForecast()` and `mapLocationForecastToWeatherForecast()`
+  are unchanged in behaviour and still available.
+- **Bound, stated plainly:** `WeatherForecast` itself is untouched — it
+  belongs to `pretrip_decision_advisor` and is not ours to change. A consumer
+  holding only a `WeatherForecast` still cannot see the hole; the coverage
+  record is a separate value you must ask for. Carrying a coverage member to
+  that type's owner is proposed, not done.
+- **Compatibility with `pretrip_decision_advisor` 0.5.3 verified on a fresh
+  resolution.** From advisor 0.5.2, `brief()` throws
+  `PretripAssessmentIncompleteException` rather than reporting an all-clear it
+  did not measure. **This product carries neither visibility nor road
+  surface**, so a MET-Norway-only input can never earn an all-clear — that is
+  the permanent honest outcome, not a defect. `example/main.dart` now uses
+  `briefOrNull()` and prints "not assessed" instead of a verdict it does not
+  have; the dead `PretripVerdict.noData` branch is retired.
+- Purely additive to this package's API. Patch version chosen so it is
+  reachable from an existing `^0.2.2` constraint; `0.3.0` would have reached
+  nobody already pinned.
 
-# Changelog
+
 
 ## 0.2.2
 

@@ -23,9 +23,11 @@
 /// `air_temperature`). It never interpolates. Because [WeatherForecast]
 /// carries no coverage member, a skipped slice used to be invisible: a hole
 /// we made looked identical to an hour the publisher never issued. Use
-/// [mapLocationForecastWithCoverage] to see what was dropped and why
-/// ([MetNorwayMappingCoverage]); `unexpectedDrops` counts only the drops
-/// that are NOT the publisher's documented 6-hourly shape.
+/// [MetNorwayHourlyForecastProvider.fetchForecastWithCoverage] (or the
+/// top-level [mapLocationForecastWithCoverage] if you already hold the JSON)
+/// to see what was dropped and why ([MetNorwayMappingCoverage]);
+/// `unexpectedDrops` counts only the drops that are NOT the publisher's
+/// documented 6-hourly shape.
 ///
 /// Service trace (driver in unexpected weather; ≤4 hops):
 ///   MET Norway locationforecast/2.0/compact feed

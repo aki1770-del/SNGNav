@@ -17,7 +17,7 @@ Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
 
 ## Status
 
-Phase: extract — v0.1.0. Extracted verbatim (no behaviour change) from the
+Phase: maintained — v0.2.3. Extracted verbatim (no behaviour change) from the
 SNGNav app's `MetNorwayHourlyForecastProvider`. The `locationforecast`
 product is global, so this serves a Nagoya commute as well as a Tromsø one.
 
@@ -58,6 +58,18 @@ them:
 This contract is condition-GENERAL: visibility in metres and an hourly
 forecast serve every weather turmoil (fog, rain, dust, snow), not snow
 alone.
+
+- **A skipped slice is countable, and you can see it.** The mapper skips a
+  timeseries slice it cannot honestly use — an unparseable time, no
+  `next_1_hours` (the 6-hourly tail), or no `air_temperature` — and never
+  interpolates. Because `WeatherForecast` carries no coverage member, a slice
+  we skipped used to be indistinguishable from an hour the publisher never
+  issued. Use `fetchForecastWithCoverage()` (or `mapLocationForecastWithCoverage()`
+  if you already hold the JSON) to get a `MetNorwayMappingCoverage`: slices
+  seen, hours emitted, and the cause of every drop. `unexpectedDrops` counts
+  only the drops that are NOT the publisher's documented 6-hourly shape.
+  **Bound:** a consumer holding only the plain `WeatherForecast` still cannot
+  see the hole — that type belongs to `pretrip_decision_advisor`.
 
 ## Measurement vs warning — this package and its sibling
 

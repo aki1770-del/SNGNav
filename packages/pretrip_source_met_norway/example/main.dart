@@ -86,7 +86,7 @@ void _runOfflineMapperDemo() {
 
 void _printBriefing(WeatherForecast forecast) {
   const advisor = SnowAwarePretripAdvisor();
-  final briefing = advisor.brief(
+  final briefing = advisor.briefOrNull(
     forecast: forecast,
     commute: CommuteShape(
       plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -100,14 +100,24 @@ void _printBriefing(WeatherForecast forecast) {
     ),
   );
 
-  print('Verdict: ${briefing.verdict.name}');
-  // Guard the verdict FIRST. Up to pretrip_decision_advisor 0.5.1 this line
-  // printed "clear" for a trip with ZERO forecast data — `peakHazard` was
-  // hardcoded to HourHazard.clear on the noData branch, and this example had no
-  // verdict check. An unforecast morning is not a clear morning.
-  if (briefing.verdict == PretripVerdict.noData) {
-    print('Peak hazard: not assessed — no forecast covers this trip window');
+  // briefOrNull() returns null instead of throwing when the advisor cannot
+  // earn a conclusion — e.g. it will not certify "no hazard" without whole
+  // knowledge, and the MET Norway compact product carries neither visibility
+  // nor road surface. An unassessable morning is not a clear morning, and
+  // this demo says so rather than printing a verdict it does not have.
+  if (briefing == null) {
+    print(
+      'Verdict: not assessed — the forecast could not earn a conclusion '
+      'for this window (no visibility or road-surface measurement).',
+    );
+    print(
+      '  Supply one with mergeObservedVisibility / estimatedRoadCondition,',
+    );
+    print(
+      '  or use advisor.evidenceGaps(slot) to inspect and set your own policy.',
+    );
   } else {
+    print('Verdict: ${briefing.verdict.name}');
     print('Peak hazard: ${briefing.peakHazard.name}');
   }
   // Attribution is REQUIRED wherever the data is shown:

@@ -86,6 +86,23 @@ class MetNorwayHourlyForecastProvider {
   Future<WeatherForecast?> fetchForecast({
     required double latitude,
     required double longitude,
+  }) async => (await fetchForecastWithCoverage(
+    latitude: latitude,
+    longitude: longitude,
+  )).forecast;
+
+  /// As [fetchForecast], but also reports what the mapper dropped and why.
+  ///
+  /// This is the same network path; only the return type differs. It exists
+  /// because coverage that is reachable only from a top-level mapping
+  /// function is not reachable from the API this package documents — and a
+  /// signal a developer cannot reach is not a signal.
+  ///
+  /// See [MetNorwayMappingCoverage]. `unexpectedDrops` counts only the drops
+  /// that are NOT the publisher's documented 6-hourly tail.
+  Future<MetNorwayForecastWithCoverage> fetchForecastWithCoverage({
+    required double latitude,
+    required double longitude,
   }) async {
     if (userAgent.trim().isEmpty) {
       throw const MetNorwayForecastException(
@@ -143,7 +160,7 @@ class MetNorwayHourlyForecastProvider {
         'MET Norway response is not a JSON object.',
       );
     }
-    return mapLocationForecastToWeatherForecast(decoded);
+    return mapLocationForecastWithCoverage(decoded);
   }
 
   /// Releases the underlying client if this provider constructed it.
@@ -201,6 +218,12 @@ enum MetNorwaySliceDrop {
   /// `air_temperature` absent. The one required contract field; we skip
   /// rather than invent a temperature.
   missingAirTemperature,
+
+  /// The whole response was unusable before any slice was examined:
+  /// `properties` absent, or `meta.updated_at` absent/unparseable, or
+  /// `timeseries` absent/not a list. Recorded against the response, not
+  /// against a slice — see [MetNorwayMappingCoverage.responseUnusable].
+  responseUnusable,
 }
 
 /// What the mapper dropped, and why.
@@ -230,11 +253,26 @@ class MetNorwayMappingCoverage {
   /// Dropped slices by cause. Absent keys mean zero.
   final Map<MetNorwaySliceDrop, int> dropsByCause;
 
-  /// Total slices dropped.
+  /// Total slices dropped. On an unusable response this equals
+  /// [slicesSeen] — every slice the publisher sent went unused.
   int get dropped => slicesSeen - hoursEmitted;
 
-  /// True when every slice the publisher issued became an hour.
-  bool get isComplete => dropped == 0;
+  /// True when every slice the publisher issued became an hour **and** an
+  /// hour was actually produced.
+  ///
+  /// Deliberately false when the response was unusable before the loop: a
+  /// response we could not read at all must never report as complete. That
+  /// was the defect this getter shipped with in the 0.2.3 candidate — it
+  /// said `isComplete: true` for a response carrying usable slices that
+  /// failed only on `meta.updated_at`.
+  bool get isComplete => dropped == 0 && hoursEmitted > 0;
+
+  /// True when the response could not be read at all — no `properties`, no
+  /// parseable `meta.updated_at`, or no usable `timeseries`. When this is
+  /// true no slice was ever examined, and [slicesSeen] is the number of
+  /// slices present in the response (0 if we could not even find the list).
+  bool get responseUnusable =>
+      (dropsByCause[MetNorwaySliceDrop.responseUnusable] ?? 0) > 0;
 
   /// Drops that are the publisher's documented shape rather than a gap in
   /// what we were given — currently only the 6-hourly tail.
@@ -285,24 +323,38 @@ MetNorwayForecastWithCoverage mapLocationForecastWithCoverage(
 ) {
   final drops = <MetNorwaySliceDrop, int>{};
   void drop(MetNorwaySliceDrop cause) => drops[cause] = (drops[cause] ?? 0) + 1;
-  const empty = MetNorwayMappingCoverage(
-    slicesSeen: 0,
-    hoursEmitted: 0,
-    dropsByCause: <MetNorwaySliceDrop, int>{},
-  );
-  MetNorwayForecastWithCoverage none() =>
-      const MetNorwayForecastWithCoverage(forecast: null, coverage: empty);
+
+  /// Unusable-response exit. [seen] carries the slice count when we got far
+  /// enough to find the list, so the record never reports "0 slices" for a
+  /// response that plainly carried them.
+  MetNorwayForecastWithCoverage none({int seen = 0}) =>
+      MetNorwayForecastWithCoverage(
+        forecast: null,
+        coverage: MetNorwayMappingCoverage(
+          slicesSeen: seen,
+          hoursEmitted: 0,
+          dropsByCause: const <MetNorwaySliceDrop, int>{
+            MetNorwaySliceDrop.responseUnusable: 1,
+          },
+        ),
+      );
   final properties = response['properties'];
   if (properties is! Map<String, dynamic>) return none();
+
+  final rawSeries = properties['timeseries'];
+  final seenBefore = rawSeries is List ? rawSeries.length : 0;
 
   final meta = properties['meta'];
   final issuedAt = meta is Map<String, dynamic>
       ? _parseIsoOrNull(meta['updated_at'])
       : null;
-  if (issuedAt == null) return none();
+  // Report the slices the publisher DID send even though we cannot use them:
+  // "we could not read the issue time" and "there was nothing to read" are
+  // different facts and must not look the same.
+  if (issuedAt == null) return none(seen: seenBefore);
 
-  final timeseries = properties['timeseries'];
-  if (timeseries is! List || timeseries.isEmpty) return none();
+  final timeseries = rawSeries;
+  if (timeseries is! List || timeseries.isEmpty) return none(seen: seenBefore);
 
   final hourly = <HourlyForecast>[];
   for (final raw in timeseries) {
