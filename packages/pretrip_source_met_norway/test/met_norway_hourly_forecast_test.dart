@@ -24,8 +24,7 @@ import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:pretrip_source_met_norway/pretrip_source_met_norway.dart';
 import 'package:test/test.dart';
 
-const _fixturePath =
-    'test/fixtures/met_norway_compact_nagoya_2026_06_12.json';
+const _fixturePath = 'test/fixtures/met_norway_compact_nagoya_2026_06_12.json';
 
 Map<String, dynamic> _loadFixture() =>
     jsonDecode(File(_fixturePath).readAsStringSync()) as Map<String, dynamic>;
@@ -36,39 +35,35 @@ Map<String, dynamic> _loadFixture() =>
 Map<String, dynamic> _syntheticResponse({
   String updatedAt = '2026-01-01T05:30:00Z',
   required List<(String, double?, double?)> slices,
-}) =>
-    {
-      'type': 'Feature',
-      'geometry': {
-        'type': 'Point',
-        'coordinates': [136.8815, 35.1709, 10],
-      },
-      'properties': {
-        'meta': {
-          'updated_at': updatedAt,
-          'units': {'air_temperature': 'celsius'},
-        },
-        'timeseries': [
-          for (final (time, temp, precip) in slices)
-            {
-              'time': time,
-              'data': {
-                'instant': {
-                  'details': {
-                    'air_temperature': ?temp,
-                    'relative_humidity': 80.0,
-                  },
-                },
-                if (precip != null)
-                  'next_1_hours': {
-                    'summary': {'symbol_code': 'snow'},
-                    'details': {'precipitation_amount': precip},
-                  },
-              },
+}) => {
+  'type': 'Feature',
+  'geometry': {
+    'type': 'Point',
+    'coordinates': [136.8815, 35.1709, 10],
+  },
+  'properties': {
+    'meta': {
+      'updated_at': updatedAt,
+      'units': {'air_temperature': 'celsius'},
+    },
+    'timeseries': [
+      for (final (time, temp, precip) in slices)
+        {
+          'time': time,
+          'data': {
+            'instant': {
+              'details': {'air_temperature': ?temp, 'relative_humidity': 80.0},
             },
-        ],
-      },
-    };
+            if (precip != null)
+              'next_1_hours': {
+                'summary': {'symbol_code': 'snow'},
+                'details': {'precipitation_amount': precip},
+              },
+          },
+        },
+    ],
+  },
+};
 
 void main() {
   group('mapLocationForecastToWeatherForecast — real captured response', () {
@@ -79,10 +74,7 @@ void main() {
       // The captured response has 90 slices, 63 of them hourly
       // (next_1_hours present) — only those map.
       expect(forecast!.hourly.length, 63);
-      expect(
-        forecast.issuedAt.toUtc(),
-        DateTime.utc(2026, 6, 12, 9, 15, 55),
-      );
+      expect(forecast.issuedAt.toUtc(), DateTime.utc(2026, 6, 12, 9, 15, 55));
 
       final first = forecast.hourly.first;
       expect(first.hour.toUtc(), DateTime.utc(2026, 6, 12, 9));
@@ -110,10 +102,12 @@ void main() {
   group('mapLocationForecastToWeatherForecast — honesty rules', () {
     test('slices without next_1_hours (6-hourly tail) are skipped', () {
       final forecast = mapLocationForecastToWeatherForecast(
-        _syntheticResponse(slices: [
-          ('2026-01-01T06:00:00Z', -4.0, 1.5),
-          ('2026-01-01T12:00:00Z', -2.0, null), // 6-hourly shape — skipped
-        ]),
+        _syntheticResponse(
+          slices: [
+            ('2026-01-01T06:00:00Z', -4.0, 1.5),
+            ('2026-01-01T12:00:00Z', -2.0, null), // 6-hourly shape — skipped
+          ],
+        ),
       );
       expect(forecast!.hourly.length, 1);
       expect(forecast.hourly.single.hour.toUtc(), DateTime.utc(2026, 1, 1, 6));
@@ -121,10 +115,12 @@ void main() {
 
     test('a slice missing air_temperature is skipped, not guessed', () {
       final forecast = mapLocationForecastToWeatherForecast(
-        _syntheticResponse(slices: [
-          ('2026-01-01T06:00:00Z', null, 1.5),
-          ('2026-01-01T07:00:00Z', -4.0, 1.5),
-        ]),
+        _syntheticResponse(
+          slices: [
+            ('2026-01-01T06:00:00Z', null, 1.5),
+            ('2026-01-01T07:00:00Z', -4.0, 1.5),
+          ],
+        ),
       );
       expect(forecast!.hourly.length, 1);
       expect(forecast.hourly.single.tempCelsius, -4.0);
@@ -158,9 +154,9 @@ void main() {
         MockClient((request) async {
           seen = request;
           return http.Response(
-            jsonEncode(_syntheticResponse(
-              slices: [('2026-01-01T06:00:00Z', -4.0, 1.5)],
-            )),
+            jsonEncode(
+              _syntheticResponse(slices: [('2026-01-01T06:00:00Z', -4.0, 1.5)]),
+            ),
             200,
             headers: {'content-type': 'application/json'},
           );
@@ -217,18 +213,19 @@ void main() {
   });
 
   group('end-to-end: live-shaped winter response → pre-trip verdict', () {
-    test(
-        'snow at -4 °C fires the icing rule from temperature + precipitation '
+    test('snow at -4 °C fires the icing rule from temperature + precipitation '
         'alone (no visibility in the compact product)', () {
       // Snowy departure hour, clearing two hours later — the canonical
       // wait-advised morning, expressed purely in compact-product fields.
       final forecast = mapLocationForecastToWeatherForecast(
-        _syntheticResponse(slices: [
-          ('2026-01-01T07:00:00Z', -4.0, 2.5),
-          ('2026-01-01T08:00:00Z', -3.0, 1.0),
-          ('2026-01-01T09:00:00Z', -1.0, 0.0),
-          ('2026-01-01T10:00:00Z', 0.0, 0.0),
-        ]),
+        _syntheticResponse(
+          slices: [
+            ('2026-01-01T07:00:00Z', -4.0, 2.5),
+            ('2026-01-01T08:00:00Z', -3.0, 1.0),
+            ('2026-01-01T09:00:00Z', -1.0, 0.0),
+            ('2026-01-01T10:00:00Z', 0.0, 0.0),
+          ],
+        ),
       )!;
 
       const advisor = SnowAwarePretripAdvisor();
@@ -250,7 +247,10 @@ void main() {
       // and a clear window exists within the horizon → wait advised.
       expect(briefing.peakHazard, HourHazard.elevated);
       expect(briefing.verdict, PretripVerdict.waitAdvised);
-      expect(briefing.recommendation!.suggestedDelay, greaterThan(Duration.zero));
+      expect(
+        briefing.recommendation!.suggestedDelay,
+        greaterThan(Duration.zero),
+      );
     });
 
     test('the real June Nagoya capture maps to a clear verdict', () {

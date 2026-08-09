@@ -1,3 +1,21 @@
+## 0.2.3
+
+- **Coverage is now visible.** `mapLocationForecastWithCoverage` returns the
+  forecast together with `MetNorwayMappingCoverage`: how many timeseries
+  slices the publisher sent, how many became hours, and **why** each dropped
+  slice dropped (`MetNorwaySliceDrop`). `expectedDrops` counts the 6-hourly
+  tail — the publisher's documented shape; `unexpectedDrops` counts the rest.
+  Previously a slice *we* skipped was indistinguishable from an hour the
+  publisher never issued, and both from an hour that is genuinely fine: we
+  handed over a list with a hole and no way to see the hole.
+- **Nothing is guessed, and nothing changed about what we emit.** We still
+  skip rather than interpolate a missing temperature. The existing
+  `mapLocationForecastToWeatherForecast` delegates and is behaviour-identical
+  (covered by test); `WeatherForecast` is untouched — that type belongs to
+  `pretrip_decision_advisor` and is not ours to mutate.
+- Purely additive. Patch version chosen deliberately so it is reachable from
+  an existing `^0.2.2` constraint.
+
 # Changelog
 
 ## 0.2.2
