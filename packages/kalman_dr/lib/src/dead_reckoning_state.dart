@@ -139,6 +139,12 @@ class DeadReckoningState extends Equatable {
 
   /// Convert the current state to a [GeoPosition] with degraded accuracy.
   ///
+  /// The result is always [PositionSource.deadReckoned]: a
+  /// [DeadReckoningState] is a prediction structure, so every position it
+  /// yields is extrapolated, never measured. [GeoPosition.extrapolatedFor]
+  /// carries the same elapsed interval the accuracy degradation is computed
+  /// from, so the radius and the age of the evidence cannot drift apart.
+  ///
   /// The [now] parameter allows deterministic testing. Defaults to
   /// [DateTime.now] in production.
   GeoPosition toGeoPosition({DateTime? now}) {
@@ -150,6 +156,8 @@ class DeadReckoningState extends Equatable {
       speed: speed,
       heading: heading,
       timestamp: timestamp,
+      source: PositionSource.deadReckoned,
+      extrapolatedFor: timestamp.difference(lastGpsTime),
     );
   }
 

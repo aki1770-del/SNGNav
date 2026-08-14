@@ -6,9 +6,17 @@
 ///   - **linear**: constant-velocity extrapolation (baseline mode)
 ///   - **kalman**: Extended Kalman Filter with covariance tracking
 ///
-/// The consumer sees only a stream of [GeoPosition] — no changes needed.
-/// Dead reckoning positions have degrading accuracy so the consumer
-/// correctly transitions from `fix` → `degraded` as uncertainty grows.
+/// Every emitted [GeoPosition] states its own provenance in
+/// [GeoPosition.source], so a consumer holding the object alone — without this
+/// provider, and without reading [isDrActive] at some later moment — can tell a
+/// measured fix from an invented one.
+///
+/// **Accuracy is not that signal, and must not be used as one.** Dead-reckoned
+/// accuracy does degrade (+5 m/s), but it starts from the last fix's own
+/// radius: one second of extrapolation off a clean 8 m fix reports 13 m and so
+/// reads *better* than a genuine 40 m measurement taken under heavy tree cover.
+/// A consumer ranking by accuracy alone will prefer the invention to the truth.
+/// Ask [GeoPosition.isDeadReckoned] instead.
 ///
 /// Safety: ASIL-QM — display only, no vehicle control.
 ///
@@ -96,6 +104,13 @@ class DeadReckoningProvider implements LocationProvider {
   StreamSubscription<GeoPosition>? _innerSub;
   bool _isDrActive = false;
 
+  /// Wall-clock moment of the last accepted inbound reading, in either mode.
+  ///
+  /// The basis for [GeoPosition.extrapolatedFor] on the Kalman path. The
+  /// filter's own clock advances on `predict()` as well as `update()`, so it
+  /// cannot answer "how long since a sensor last spoke" — this can.
+  DateTime? _lastMeasurementAt;
+
   DeadReckoningProvider({
     required LocationProvider inner,
     this.mode = DeadReckoningMode.linear,
@@ -120,6 +135,7 @@ class DeadReckoningProvider implements LocationProvider {
     _controller ??= StreamController<GeoPosition>.broadcast();
     _isDrActive = false;
     _lastState = null;
+    _lastMeasurementAt = null;
     if (mode == DeadReckoningMode.kalman) {
       _kalman = KalmanFilter();
     }
@@ -245,7 +261,19 @@ class DeadReckoningProvider implements LocationProvider {
         timestamp: pos.timestamp,
       );
 
+      // A real reading was just incorporated. This is the clock
+      // `extrapolatedFor` measures from — advanced ONLY here, because this is
+      // the only Kalman path where a sensor actually contributes. A fix
+      // arriving without speed/heading (the `else` branch) is forwarded but
+      // never reaches the filter, so it must not reset the extrapolation clock.
+      _lastMeasurementAt = DateTime.now();
+
       // Emit filtered position (smoother than raw GPS).
+      //
+      // This is NOT the raw measurement: it is the filter's estimate, formed
+      // from the reading and the prior prediction. It is marked `fused` rather
+      // than `measured` because a consumer comparing it against the sensor
+      // would find them different, and has a right to know why.
       final s = kf.state;
       _controller!.add(
         GeoPosition(
@@ -255,10 +283,18 @@ class DeadReckoningProvider implements LocationProvider {
           speed: s.speed,
           heading: s.heading,
           timestamp: pos.timestamp,
+          source: PositionSource.fused,
+          extrapolatedFor: Duration.zero,
         ),
       );
     } else {
       // No speed/heading — forward raw GPS, don't update filter.
+      //
+      // Pass-through, provenance untouched: this provider did not measure the
+      // coordinate and cannot vouch for it. Whatever the inner provider
+      // declared (including `unknown`) is what the consumer receives. Stamping
+      // `measured` here would be this library asserting a sensor reading it
+      // never saw.
       _controller!.add(pos);
     }
   }
@@ -376,6 +412,13 @@ class DeadReckoningProvider implements LocationProvider {
       return;
     }
 
+    // Pure prediction — no sensor reading behind this coordinate.
+    //
+    // `timestamp` is the emission moment and is therefore always fresh; it says
+    // nothing about the age of the evidence. `source` and `extrapolatedFor`
+    // carry that, so a consumer applying an ordinary freshness check is no
+    // longer misled into treating an invented dot as a live one.
+    final now = DateTime.now();
     _controller!.add(
       GeoPosition(
         latitude: result.lat,
@@ -383,7 +426,11 @@ class DeadReckoningProvider implements LocationProvider {
         accuracy: result.accuracy,
         speed: result.speed,
         heading: result.heading,
-        timestamp: DateTime.now(),
+        timestamp: now,
+        source: PositionSource.deadReckoned,
+        extrapolatedFor: _lastMeasurementAt == null
+            ? null
+            : now.difference(_lastMeasurementAt!),
       ),
     );
   }

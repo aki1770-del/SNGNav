@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+- **`GeoPosition` now states its own provenance.** New `PositionSource` enum
+  (`measured` / `fused` / `deadReckoned` / `unknown`) on `GeoPosition.source`,
+  with `isMeasured`, `containsMeasurement` and `isDeadReckoned`. A consumer
+  holding only a position can now tell a real fix from an extrapolated one.
+  Previously the only discriminator was the provider's out-of-band `isDrActive`
+  getter, which is unavailable to anyone holding just a position — a stored
+  trajectory, a BLoC state, a log line, a downstream fusion library.
+- **Neither accuracy nor timestamp discriminated, and the docs said accuracy
+  did.** One second of dead reckoning off a clean 8 m fix reports 13 m, which
+  reads *better* than a genuine 40 m fix under heavy tree cover; both clear
+  `isNavigationGrade`. And an extrapolated position carries the emission time,
+  so it looks *fresher* than the real fix behind it. The library docstring
+  promising accuracy-based degradation as the consumer's signal is corrected.
+- **New `GeoPosition.extrapolatedFor`** — how long an estimate has run without a
+  sensor reading. Not recoverable from `accuracy`, which conflates base fix
+  quality with elapsed drift.
+- **Kalman-mode GPS-present output is marked `fused`, not `measured`.** It was
+  already the filter's estimate rather than the sensor's value; that is now
+  visible rather than implied.
+- **`source` participates in equality.** Without it, `Stream.distinct()`
+  silently swallowed the measured → dead-reckoned transition at a stationary
+  coordinate — exactly the event a consumer needs.
+- Additive and non-breaking: the new parameters are optional, the default is
+  `unknown` (never `measured` — a library cannot assert a sensor reading it did
+  not take), and `toString()` is byte-identical for producers that have not
+  adopted the field.
+
 ## 0.4.4
 
 - Provenance correction (honesty-of-record): the 0.4.3 CHANGELOG stated "No code

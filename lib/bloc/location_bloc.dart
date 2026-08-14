@@ -116,9 +116,26 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     // Reset stale timer on every (valid) position update.
     _resetStaleTimer();
 
-    // Detect dead reckoning status from the provider.
+    // Dead-reckoning status comes from the POSITION, not from the provider.
+    //
+    // `provider.isDrActive` is read here, in the event handler — but the
+    // position was emitted earlier and reached us through the BLoC event queue.
+    // In that gap the provider can flip: a returning GPS fix calls _stopDr()
+    // synchronously inside the provider's own listener, so a genuinely
+    // dead-reckoned position that is still queued gets labelled as a live fix,
+    // and her dot is shown as measured when it was invented. The object's own
+    // testimony is emitted-time truth and cannot drift.
+    //
+    // The provider read survives only as the fallback for a provider that has
+    // not adopted `PositionSource` — never as an override of what the position
+    // itself declares.
     final provider = _provider;
-    final isDr = provider is DeadReckoningProvider && provider.isDrActive;
+    final isDr = switch (pos.source) {
+      PositionSource.deadReckoned => true,
+      PositionSource.measured || PositionSource.fused => false,
+      PositionSource.unknown =>
+        provider is DeadReckoningProvider && provider.isDrActive,
+    };
 
     if (pos.isNavigationGrade) {
       emit(LocationState(
