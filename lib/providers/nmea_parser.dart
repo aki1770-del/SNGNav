@@ -117,6 +117,9 @@ class NmeaParser {
       speed: speedMs,
       heading: headingDeg,
       timestamp: DateTime.now(),
+      // Decoded from a receiver's own sentence — measured, not inferred.
+      source: PositionSource.measured,
+      extrapolatedFor: Duration.zero,
     );
   }
 
@@ -148,6 +151,9 @@ class NmeaParser {
       speed: _lastSpeed,
       heading: _lastHeading,
       timestamp: DateTime.now(),
+      // Decoded from a receiver's own sentence — measured, not inferred.
+      source: PositionSource.measured,
+      extrapolatedFor: Duration.zero,
     );
   }
 

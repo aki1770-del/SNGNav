@@ -319,6 +319,11 @@ class GeoClueDbusSession implements GeoClueSession {
       speed: await _readOptionalDouble(location, 'Speed'),
       heading: await _readOptionalDouble(location, 'Heading'),
       timestamp: now(),
+      // Read off the platform's GNSS stack. This provider is one of the few
+      // parties entitled to claim `measured`, because it is the one that
+      // actually asked the sensor.
+      source: PositionSource.measured,
+      extrapolatedFor: Duration.zero,
     );
   }
 
