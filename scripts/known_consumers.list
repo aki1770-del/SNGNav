@@ -16,6 +16,23 @@
 #
 # Add a line whenever a real consumer is verified (downstream-pull sensor,
 # adoption ledger, or a maintainer telling us). Remove only with a ledger note.
+# PDS repair 2026-08-14: this registry was 4 days behind its own purpose. Of the
+# three lines below, one is local, one is ours, and one (drunkenv2) returns 404 on
+# both read-surfaces — so G8 was protecting ZERO live external consumers while two
+# were verified live on 2026-08-10 and re-verified 2026-08-14. The gate logic is
+# sound (constraint_admits was tested this turn on all four real pins, incl. the
+# 0.0.x wall and an exact pin); only the registry was stale. Added by PDS, the seat
+# that verified them; the gate script itself is untouched (build-track owns it).
+#
+# G8 fetches raw.githubusercontent.com/<repo>/HEAD/<path> = the DEFAULT branch.
+# That is the correct governing ref for both, and it matters: awaken_v1 carries
+# DIFFERENT pins across its 17 branches (exact on 15 incl. default `master`,
+# caret on the two oldest). HEAD resolves to `master` = the exact pin. Do not
+# "fix" this to `main` — that would read the stale caret and overstate our reach.
 example-app	local:example/pubspec.yaml
 jitreq-drunkenv2	github:Jitreq/drunkenv2:pubspec.yaml
 sngnav-app	github:aki1770-del/sngnav-app:pubspec.yaml
+# Verified live by PDS 2026-08-10, re-verified from each manifest 2026-08-14.
+# Neither is a payer; both are weavers carrying full D4 dignity.
+paila-offline-gps	github:JohnAdhikari/paila-offline-gps:pubspec.yaml
+codestorm-awaken-v1	github:CodeStorm-Hub/awaken_v1:pubspec.yaml
