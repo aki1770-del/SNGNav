@@ -155,10 +155,18 @@ class GeoPosition extends Equatable {
     speed,
     heading,
     timestamp,
-    // Provenance participates in equality on purpose. Without it, a consumer
-    // applying `Stream.distinct()` would silently swallow the measured ->
-    // dead-reckoned transition whenever it happens at a stationary coordinate
-    // — losing exactly the event that matters.
+    // Provenance participates in equality on purpose: a consumer's own dedupe
+    // — `.distinct()`, a `Set`, a "has this changed?" guard — would otherwise
+    // swallow the measured -> dead-reckoned transition whenever it happens at
+    // a stationary coordinate, losing exactly the event that matters. This is
+    // about the streams a consumer derives; our own emission count is
+    // unchanged by it.
+    //
+    // The cost is real and is why 0.5.0 took the minor slot: two positions
+    // that were `==` in 0.4.4 are no longer `==` if one side has been through
+    // a codec that drops `source`. A `Map`/`Set` keyed on GeoPosition will
+    // miss. If you change this list, `test/consumer_compatibility_test.dart`
+    // is the test that should fail first.
     source,
     extrapolatedFor,
   ];

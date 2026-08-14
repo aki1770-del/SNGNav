@@ -33,14 +33,19 @@
 - **Kalman-mode GPS-present output is marked `fused`, not `measured`.** It was
   already the filter's estimate rather than the sensor's value; that is now
   visible rather than implied.
-- **`source` participates in equality.** Without it, `Stream.distinct()`
-  silently swallowed the measured → dead-reckoned transition at a stationary
-  coordinate — exactly the event a consumer needs.
+- **`source` participates in equality.** This protects a consumer's own
+  dedupe — `.distinct()`, a `Set`, a "has this changed?" guard — from swallowing
+  the measured → dead-reckoned transition at a stationary coordinate, which is
+  exactly the event worth knowing. It is *not* a change in what this package
+  emits: the provider's own stream emits the same number of positions as
+  before, measured. The protection is for the stream you derive, not the one we
+  hand you.
 - API-additive: the new parameters are optional, the default is `unknown`
   (never `measured` — a library cannot assert a sensor reading it did not
-  take), and `toString()` is byte-identical for producers that have not adopted
-  the field. Source compatibility is unchanged; see the equality note above for
-  the one behaviour that is not.
+  take), and `toString()` is byte-identical **for positions you construct
+  yourself without passing `source`** — not for positions this package emits,
+  which now carry their provenance and print it. Source compatibility is
+  unchanged; see the equality note above for the one behaviour that is not.
 
 ## 0.4.4
 
