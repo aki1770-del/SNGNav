@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.5
 
 - **`GeoPosition` now states its own provenance.** New `PositionSource` enum
   (`measured` / `fused` / `deadReckoned` / `unknown`) on `GeoPosition.source`,
