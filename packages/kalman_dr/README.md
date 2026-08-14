@@ -27,7 +27,7 @@ Pure Dart, no native dependencies.
 
 ```yaml
 dependencies:
-  kalman_dr: ^0.4.3
+  kalman_dr: ^0.5.0
 ```
 
 ## Quick Start
@@ -70,9 +70,10 @@ final provider = DeadReckoningProvider(
 );
 
 provider.positions.listen((position) {
-  // Receives GPS when available, Kalman predictions when GPS is lost
+  // Receives GPS when available, Kalman predictions when GPS is lost.
+  // `source` says which one you are holding; accuracy does not.
   print('${position.latitude}, ${position.longitude} '
-      '(accuracy: ${position.accuracyMetres}m)');
+      '(${position.source.name}, accuracy: ${position.accuracy}m)');
 });
 ```
 
@@ -130,18 +131,23 @@ class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
           return const Text('Waiting for location...');
         }
 
-        final degraded = position.accuracyMetres > 25;
+        // Ask the position where it came from. Do NOT infer this from
+        // accuracy: one second of dead reckoning off a clean 8 m fix reports
+        // ~13 m, which reads *better* than a genuine 40 m fix under tree
+        // cover. Accuracy answers "how confident", never "is this real".
+        final predicted = position.isDeadReckoned;
         return ListTile(
           title: Text(
             '${position.latitude.toStringAsFixed(5)}, '
             '${position.longitude.toStringAsFixed(5)}',
           ),
           subtitle: Text(
-            degraded
-                ? 'Predicted path — accuracy '
-                    '${position.accuracyMetres.toStringAsFixed(0)}m'
+            predicted
+                ? 'Predicted path — no fix for '
+                    '${position.extrapolatedFor?.inSeconds ?? 0}s, accuracy '
+                    '${position.accuracy.toStringAsFixed(0)}m'
                 : 'Live GPS lock — accuracy '
-                    '${position.accuracyMetres.toStringAsFixed(0)}m',
+                    '${position.accuracy.toStringAsFixed(0)}m',
           ),
         );
       },

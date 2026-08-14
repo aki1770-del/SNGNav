@@ -1,7 +1,19 @@
 # Changelog
 
-## 0.4.5
+## 0.5.0
 
+- **BREAKING (behaviour, not API): `GeoPosition` equality changed.** `source`
+  now participates in `==` and `hashCode`, so a position tagged `measured`,
+  `fused` or `deadReckoned` is no longer equal to an otherwise-identical
+  position carrying the default `unknown`. If you put `GeoPosition` in a `Set`
+  or use it as a `Map` key, and one side of the comparison has been through a
+  serializer that predates this release, **lookups that used to hit now return
+  `null`, silently** — no exception, no analyzer warning. This affects the
+  GPS-present `fused` path, not only the dead-reckoning fallback. The case
+  worth naming: a last-known-position cache keyed by `GeoPosition` starts
+  missing precisely when GPS is gone. Carry `source` through your codecs, or
+  key on `(latitude, longitude, timestamp)`. Everything compiles unchanged;
+  this is why it takes the minor slot rather than riding in as a patch.
 - **`GeoPosition` now states its own provenance.** New `PositionSource` enum
   (`measured` / `fused` / `deadReckoned` / `unknown`) on `GeoPosition.source`,
   with `isMeasured`, `containsMeasurement` and `isDeadReckoned`. A consumer
@@ -24,10 +36,11 @@
 - **`source` participates in equality.** Without it, `Stream.distinct()`
   silently swallowed the measured → dead-reckoned transition at a stationary
   coordinate — exactly the event a consumer needs.
-- Additive and non-breaking: the new parameters are optional, the default is
-  `unknown` (never `measured` — a library cannot assert a sensor reading it did
-  not take), and `toString()` is byte-identical for producers that have not
-  adopted the field.
+- API-additive: the new parameters are optional, the default is `unknown`
+  (never `measured` — a library cannot assert a sensor reading it did not
+  take), and `toString()` is byte-identical for producers that have not adopted
+  the field. Source compatibility is unchanged; see the equality note above for
+  the one behaviour that is not.
 
 ## 0.4.4
 
