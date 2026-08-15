@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.5.1
+
+**A documentation patch, and one line of it is a real defect that could crash your app.**
+
+- **⚑ FIXED: every `.listen()` example on this page taught a pattern that crashes.**
+  `DeadReckoningProvider` pushes a terminal `DeadReckoningAccuracyExceededException`
+  onto `positions` when dead reckoning drifts past the 500 m safety cap. **Every
+  snippet we shipped through `0.5.0` called `.listen()` with no `onError`** — the
+  word `onError` appeared **zero times** in the published README. A reader who
+  copied our Quick Start took an **uncaught zone error**, and it fires precisely
+  when DR has drifted furthest: the deepest point of a GPS outage, which is the
+  worst possible moment for a navigation app to die. Every example now registers
+  `onError`, and the Features list says the cap emits a terminal error.
+- **FIXED: the page contradicted itself about what `accuracy` means.** The Features
+  list sold *"covariance-driven accuracy: honestly degrades over time during GPS
+  loss"* while the integration section warned *"Accuracy answers 'how confident',
+  never 'is this real'."* **Both were on the same page.** Provenance
+  (`position.source`) is now stated first and named as the only liveness signal;
+  accuracy is described as a confidence number and nothing else.
+- **FIXED: reader-supplied symbols in examples are now declared** (`// oracle:placeholders`),
+  so a reader can see at a glance which identifiers are theirs to provide. Five
+  symbols across the README and three library doc comments were undeclared, which
+  meant copying an example verbatim produced a compiler error with no hint why.
+
+**⚑ DISCLOSURE OWED SINCE `0.1.0`, and not made until now.** From `0.1.0` through
+`0.4.4` this package's README used `position.accuracyMetres` — **a member
+`GeoPosition` has never had** — in both examples, so **neither example compiled**,
+across four releases. Worse, it taught `accuracyMetres > 25` as the way to tell a
+live fix from an extrapolation, which is **exactly the inference this package
+exists to refute**: 1 s of dead reckoning off a clean 8 m fix reports ~13 m and
+would render as "live", while a genuine 40 m fix under tree cover would render as
+"predicted". `0.5.0` fixed the page but **did not disclose that it had been wrong**.
+It is disclosed here.
+
+**Nothing in this release changes runtime behaviour, the public API, or the
+equality contract.** `0.5.0`'s breaking change stands as described below. This is
+in-range for any `^0.5.0` dependency: a `pub upgrade` carries it.
+
+
 ## 0.5.0
 
 - **BREAKING (behaviour, not API): `GeoPosition` equality changed.** `source`

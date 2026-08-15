@@ -48,12 +48,17 @@ enum PositionSource {
 /// was measured or invented.
 ///
 /// ```dart
-/// provider.positions.listen((pos) {
-///   if (pos.isDeadReckoned) {
-///     // No sensor reading behind this dot. Say so before she turns on it.
-///     showEstimatedPositionWarning(pos.extrapolatedFor);
-///   }
-/// });
+/// // oracle:placeholders provider, showEstimatedPositionWarning
+/// provider.positions.listen(
+///   (pos) {
+///     if (pos.isDeadReckoned) {
+///       // No sensor reading behind this dot. Say so before she turns on it.
+///       showEstimatedPositionWarning(pos.extrapolatedFor);
+///     }
+///   },
+///   // REQUIRED: terminal error at the 500 m cap; uncaught without this.
+///   onError: (Object e) {/* DR stopped — the dot is no longer trustworthy */},
+/// );
 /// ```
 class GeoPosition extends Equatable {
   /// Latitude in decimal degrees (WGS-84).
