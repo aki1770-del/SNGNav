@@ -11,16 +11,23 @@
 /// Safety: ASIL-QM — display only, no vehicle control.
 ///
 /// ```dart
+/// // oracle:placeholders myGpsProvider
 /// import 'package:kalman_dr/kalman_dr.dart';
 ///
 /// final provider = DeadReckoningProvider(
-///   inner: myGpsProvider,
+///   inner: myGpsProvider, // your own LocationProvider
 ///   mode: DeadReckoningMode.kalman,
 /// );
 /// await provider.start();
-/// provider.positions.listen((pos) {
-///   print('${pos.latitude}, ${pos.longitude} ±${pos.accuracy}m');
-/// });
+/// provider.positions.listen(
+///   (pos) {
+///     print('${pos.latitude}, ${pos.longitude} ±${pos.accuracy}m');
+///   },
+///   // REQUIRED: at the 500 m cap this stream emits a terminal
+///   // DeadReckoningAccuracyExceededException. Without onError it becomes an
+///   // uncaught zone error, at the deepest point of a GPS outage.
+///   onError: (Object e) {/* DR stopped — stop claiming to know where she is */},
+/// );
 /// ```
 library;
 

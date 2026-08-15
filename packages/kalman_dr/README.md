@@ -18,8 +18,15 @@ Pure Dart, no native dependencies.
 ## Features
 
 - **4D state vector**: latitude, longitude, speed, heading
-- **Covariance-driven accuracy**: honestly degrades over time during GPS loss
-- **Safety cap**: stops at 500m accuracy — no false confidence
+- **Provenance, not accuracy, tells you what you are holding**: `position.source`
+  answers *"is this real?"*; `position.accuracy` only ever answers *"how
+  confident?"*. **Never infer liveness from the accuracy number** — 1 s of dead
+  reckoning off a clean 8 m fix reports ~13 m, which reads *better* than a
+  genuine 40 m fix under tree cover. See "Reading a position" below.
+- **Covariance-driven accuracy**: the uncertainty estimate grows during GPS loss
+  rather than freezing — an honest *confidence* number, never a liveness signal
+- **Safety cap**: stops at 500m accuracy — no false confidence. **The stream
+  emits a terminal error at the cap; register `onError`** (see Quick Start)
 - **Two modes**: EKF (full) and linear extrapolation (lightweight)
 - **Decorator pattern**: wraps any `LocationProvider` transparently
 
@@ -64,17 +71,31 @@ filter.update(
 ### Wrap a location provider
 
 ```dart
+// oracle:placeholders SimulatedLocationProvider
 final provider = DeadReckoningProvider(
-  inner: SimulatedLocationProvider(),
+  inner: SimulatedLocationProvider(), // your own LocationProvider
   mode: DeadReckoningMode.kalman,
 );
 
-provider.positions.listen((position) {
-  // Receives GPS when available, Kalman predictions when GPS is lost.
-  // `source` says which one you are holding; accuracy does not.
-  print('${position.latitude}, ${position.longitude} '
-      '(${position.source.name}, accuracy: ${position.accuracy}m)');
-});
+provider.positions.listen(
+  (position) {
+    // Receives GPS when available, Kalman predictions when GPS is lost.
+    // `source` says which one you are holding; accuracy does not.
+    print('${position.latitude}, ${position.longitude} '
+        '(${position.source.name}, accuracy: ${position.accuracy}m)');
+  },
+  // REQUIRED, not optional. When dead reckoning drifts past the 500 m safety
+  // cap this stream emits a terminal DeadReckoningAccuracyExceededException.
+  // Without onError that becomes an UNCAUGHT error in your zone — and it
+  // fires precisely when DR has drifted furthest, which is the deepest point
+  // of a GPS outage. That is the worst possible moment for your app to die.
+  onError: (Object error) {
+    if (error is DeadReckoningAccuracyExceededException) {
+      // The estimate is no longer trustworthy and DR has stopped.
+      // Tell the driver you no longer know where she is. Do not guess.
+    }
+  },
+);
 ```
 
 ## Integration Pattern

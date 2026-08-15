@@ -68,7 +68,8 @@ enum DeadReckoningMode {
 ///
 /// Usage:
 /// ```dart
-/// final gps = MyGpsProvider();
+/// // oracle:placeholders MyGpsProvider
+/// final gps = MyGpsProvider(); // your own LocationProvider
 /// // Linear mode (baseline):
 /// final linear = DeadReckoningProvider(inner: gps);
 /// // Kalman mode (advanced):
