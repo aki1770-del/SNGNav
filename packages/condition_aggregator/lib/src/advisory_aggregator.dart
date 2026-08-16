@@ -37,6 +37,7 @@ import 'dart:async' show TimeoutException;
 
 import 'advisory.dart';
 import 'advisory_absence.dart';
+import 'advisory_feed_freshness.dart';
 import 'advisory_lookup.dart';
 import 'advisory_provider.dart';
 
@@ -80,18 +81,37 @@ class AdvisoryAggregateResult {
   /// — we will not claim completeness on your behalf.
   final int? sourcesQueried;
 
+  /// Sources that **answered**, and whose answer has stopped moving.
+  ///
+  /// A frozen publisher is not an unreachable one: it serves HTTP 200, valid
+  /// data and an empty warning list forever, so it never lands in
+  /// [providerErrors]. Before this list existed, that was indistinguishable
+  /// from a clear sky, and [canAssertNoAdvisory] said "measured calm" over a
+  /// document 81 days old. It now says `false`.
+  ///
+  /// Populated only from adapters implementing
+  /// [AdvisoryFeedFreshnessReporting], and only when they **measured** the
+  /// staleness. Empty means "no source reported itself stale" — which includes
+  /// "no source can report", so an empty list is not proof of freshness. See
+  /// AoU-CA-004 in `SEOOC_ASSUMPTIONS.md`.
+  final List<AdvisoryFeedStaleness> staleSources;
+
   const AdvisoryAggregateResult({
     required this.advisories,
     required this.providerErrors,
     this.sourcesQueried,
+    this.staleSources = const <AdvisoryFeedStaleness>[],
   });
 
-  /// `true` only when **every source answered** — the one condition under which
-  /// you may honestly tell a driver *"no advisory is in force."*
+  /// `true` only when **every source answered, and answered with a document
+  /// that is still being written** — the one condition under which you may
+  /// honestly tell a driver *"no advisory is in force."*
   ///
-  /// It is `false` whenever any source could not be reached, and `false` when no
-  /// source was asked at all. Silence from a source you could not reach is not
-  /// an all-clear; it is a gap.
+  /// It is `false` whenever any source could not be reached, `false` when no
+  /// source was asked at all, and `false` when a source reported its own feed
+  /// stale. Silence from a source you could not reach is not an all-clear; it
+  /// is a gap. **Silence from a source that stopped talking months ago is not
+  /// an all-clear either** — it is the same gap wearing the shape of an answer.
   ///
   /// ```dart
   /// // oracle:placeholders agg, show, showNoAdvisory, showFeedDown
@@ -111,10 +131,19 @@ class AdvisoryAggregateResult {
   /// nothing, and never tell her it is clear.
   bool get canAssertNoAdvisory {
     if (providerErrors.isNotEmpty) return false;
+    // A source that answered with a dead document has not told us the sky is
+    // clear; it has told us nothing, at length. Reachability was never the
+    // question — recency is.
+    if (staleSources.isNotEmpty) return false;
     final n = sourcesQueried;
     if (n == null) return false; // unknown provenance — we will not claim it
     return n > 0; // zero sources asked is not an all-clear either
   }
+
+  /// `true` when at least one source reported its own document stale.
+  ///
+  /// Distinct from [isUnavailable]: we *did* look, and what we found was old.
+  bool get hasStaleSource => staleSources.isNotEmpty;
 
   /// The sources we could not read, and why — typed in
   /// [AdvisoryProviderError.reason], so the reason survives into whatever
@@ -198,7 +227,16 @@ class AdvisoryAggregateResult {
 
     if (canAssertNoAdvisory) return AdvisoryLookupComplete(advisories);
     if (isUnavailable) return AdvisoryLookupUnavailable(failures);
-    return AdvisoryLookupPartial(advisories: advisories, unreachable: failures);
+    return AdvisoryLookupPartial(
+      advisories: advisories,
+      unreachable: failures,
+      // A frozen source is neither reachable-and-whole nor unreachable. It is
+      // partial: we saw what it had, and we cannot conclude completeness from
+      // it. Carried so the integrator can say WHICH source went quiet and how
+      // long ago, rather than being handed a Partial with an empty
+      // `unreachable` list and no way to explain it to the driver.
+      staleSources: staleSources,
+    );
   }
 
   /// The loud stop, opt-in: throws [AdvisoryLookupIncompleteException] unless
@@ -214,6 +252,28 @@ class AdvisoryAggregateResult {
     final down = providerErrors
         .map((e) => '${e.source.name} (${e.reason.name})')
         .join(', ');
+
+    // The frozen case first: it is the one that otherwise reads as success, so
+    // a message about unreachable sources would be actively misleading here —
+    // nothing was unreachable.
+    if (providerErrors.isEmpty && staleSources.isNotEmpty) {
+      final frozen = staleSources.map((s) => s.toString()).join('; ');
+      throw AdvisoryLookupIncompleteException(
+        unreachable: providerErrors,
+        message:
+            'Every source answered, but a source is serving a document that '
+            'has stopped being updated: $frozen. An empty advisory list from a '
+            'feed that stopped being written is not an all-clear — it is the '
+            'absence of any current statement, wearing the shape of one. We '
+            'will not report a calm we did not measure. Forward: act on the '
+            'advisories you did get (a hazard seen is a hazard real), and tell '
+            'the driver the advisory feed has not updated since the time above '
+            'instead of telling her it is clear. To opt out for a source whose '
+            'cadence you know differs, widen that adapter\'s staleness '
+            'threshold — do not suppress the report here.',
+      );
+    }
+
     throw AdvisoryLookupIncompleteException(
       unreachable: providerErrors,
       message: providerErrors.isEmpty
@@ -360,6 +420,7 @@ class AdvisoryAggregator {
     }
     final advisories = <Advisory>[];
     final errors = <AdvisoryProviderError>[];
+    final stale = <AdvisoryFeedStaleness>[];
     for (final p in _providers) {
       try {
         final found = await p.fetchActiveAdvisoriesAtPoint(
@@ -367,6 +428,19 @@ class AdvisoryAggregator {
           longitude: longitude,
         );
         advisories.addAll(found);
+        // Read immediately after the await on the SAME adapter, so the report
+        // belongs to the fetch we just made. Adapters that cannot honour that
+        // under concurrency are contracted to return null rather than another
+        // query's answer (see AdvisoryFeedFreshnessReporting.feedStaleness).
+        //
+        // Only adapters that opted in are asked. An adapter that does not
+        // implement the interface is NOT assumed fresh and is NOT assumed
+        // stale — it is unmeasured, and the residual is stated in AoU-CA-004
+        // rather than papered over with a default.
+        if (p is AdvisoryFeedFreshnessReporting) {
+          final s = (p as AdvisoryFeedFreshnessReporting).feedStaleness;
+          if (s != null) stale.add(s);
+        }
       } on Object catch (e) {
         // The adapter lit the lamp. Up to 0.0.7 we flattened it to a String and
         // filed it in a list nothing was obliged to read — so a source outage
@@ -388,6 +462,7 @@ class AdvisoryAggregator {
       advisories: advisories,
       providerErrors: errors,
       sourcesQueried: _providers.length,
+      staleSources: List<AdvisoryFeedStaleness>.unmodifiable(stale),
     );
   }
 

@@ -44,6 +44,7 @@ library;
 
 import 'advisory.dart';
 import 'advisory_absence.dart';
+import 'advisory_feed_freshness.dart';
 
 /// What we found when we asked about a point — including the honest case where
 /// we could not ask.
@@ -118,10 +119,20 @@ final class AdvisoryLookupPartial extends AdvisoryLookup {
   /// The sources that could not be read, and why.
   final List<AdvisorySourceFailure> unreachable;
 
-  /// Some sources answered; [unreachable] did not.
+  /// Sources that **answered**, with a document that has stopped being updated.
+  ///
+  /// A frozen source is not unreachable — it lands here, not in [unreachable],
+  /// and it is why this lookup can be `Partial` with an empty [unreachable]
+  /// list. Without it the integrator would be handed an incompleteness it
+  /// could not explain to the driver.
+  final List<AdvisoryFeedStaleness> staleSources;
+
+  /// Some sources answered; [unreachable] did not, and [staleSources] answered
+  /// with documents that have stopped moving.
   const AdvisoryLookupPartial({
     required this.advisories,
     required this.unreachable,
+    this.staleSources = const <AdvisoryFeedStaleness>[],
   });
 }
 

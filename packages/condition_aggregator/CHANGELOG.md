@@ -1,5 +1,124 @@
 # Changelog
 
+## 0.0.10 — A feed that stopped being written could still say "no advisory in force"
+
+**An honesty fix at the one predicate that gates a positive all-clear — and it
+is inert until an adapter feeds it. Both halves of that sentence are load-bearing.**
+
+*This release was headlined "Safety fix" in draft. AAA's audit called that a
+reach claim for a guard that cannot currently fire, and it was right: the
+headline is the line that travels, and it would have travelled further than the
+truth. Corrected before publish.*
+
+`canAssertNoAdvisory` is the getter this package tells you to gate any
+"nothing is in force" message on. Its own documentation says *"never tell her it
+is clear."* It was defined over **reachability**:
+
+```dart
+if (providerErrors.isNotEmpty) return false;
+return sourcesQueried > 0;
+```
+
+**A frozen publisher is reachable.** It serves HTTP 200, valid JSON and an empty
+warning list, indefinitely. Nothing fails, so `providerErrors` stays empty, so
+the predicate returned `true` — and `fold` took the `complete` branch,
+`toLookup` returned `AdvisoryLookupComplete`, and `requireCompleteLookup` stayed
+silent. Four honesty surfaces, one wrong answer, because they all derive from
+that single predicate.
+
+### What was measured (live, 2026-08-16)
+
+JMA `bosai/warning/data/warning/` documents:
+
+* Niigata `150000` — last written **2026-05-26T15:45+09:00**, **81.8 days**,
+  zero warnings. Our winter instrument records two branches for that point and
+  says to quote neither alone: the primary read was `heightenedCaution` — but
+  **only ever about the visibility reading's age** — and the in-car-sensor
+  counterfactual was `continueDriving` with no reason and no stated unknown.
+  **Neither branch mentioned the feed being 81 days dead, because nothing in
+  the stack could.**
+* Akita `050000` — **2026-05-28T06:11+09:00**.
+* Yamagata `060000` — **2026-05-28T09:48+09:00**. Not lockstep; no single
+  "frozen at T" figure is right.
+* Confirmed at origin via `last-modified`, so not a cache artifact, and
+  nationwide rather than regional. JMA itself was **not** down — its official
+  developer feed was live with 515 警報・注意報 entries the same minute.
+
+The existing per-advisory freshness surfaces (`Advisory.effective`,
+`stalenessAt`, `isStaleAt`) are correct and could not help: a frozen document
+listing zero warnings produces **no `Advisory` object** to carry a timestamp, so
+they are structurally unreachable in exactly the case that matters. Freshness
+had to become reportable about the **source**.
+
+### Added
+
+- **`AdvisoryFeedStaleness`** — one source's measured report that its own
+  upstream document has stopped being updated: `source`, `documentTime`, `age`,
+  `detail`.
+- **`AdvisoryFeedFreshnessReporting`** — an **opt-in** adapter capability,
+  deliberately a *separate* interface rather than a new member on
+  `AdvisoryProvider`, so that every adapter already implementing that contract
+  compiles and behaves **unchanged**.
+- **`AdvisoryAggregateResult.staleSources`** + **`hasStaleSource`**.
+- **`AdvisoryLookupPartial.staleSources`** — so a lookup that is `Partial` with
+  an *empty* `unreachable` list can still be explained to a driver.
+
+### Changed
+
+- **`canAssertNoAdvisory` now returns `false` when any source reported itself
+  stale.** This propagates to `fold`, `toLookup` and `requireCompleteLookup`.
+- `requireCompleteLookup` throws a frozen-specific message naming the document
+  and its age — a message about unreachable sources would be actively
+  misleading here, because nothing was unreachable.
+
+### ⚑ Read this before upgrading — and then read the honest part
+
+**Nothing changes for you today.** The guard fires only on a *positive,
+measured* staleness report from an adapter that opted in, and **zero of the five
+packages implementing `AdvisoryProvider` have opted in** as of 2026-08-16 —
+`condition_aggregator_jma`, `_nws`, `_met_norway`, `_digitraffic`,
+`_owm_road_risk`. Verified: all five analyze clean and their **143 existing
+tests pass unchanged** against this release, as do the two downstream consumers
+`driving_weather` (88) and `drive_situation_fusion` (13).
+
+**Which means the guard is armed and unfed, and we are telling you rather than
+letting the version number imply otherwise.** Until an adapter reports freshness,
+a frozen feed still satisfies `canAssertNoAdvisory` through that adapter. If
+feed-freshness matters to you — and on a winter-driving surface it does — see
+**AoU-CA-004** in `SEOOC_ASSUMPTIONS.md` for the three things you can do now.
+
+Once an adapter *does* opt in, a lookup that used to be `Complete` can become
+`Partial`. That is the fix working, not a regression, and it is disclosed here
+rather than left for you to find in production.
+
+**We did not default unmeasured sources to "stale"** — that manufactures doubt
+on a clear day, which is the same class of lie as manufacturing calm, pointed
+the other way. **We did not default them to "fresh"** — that is the defect.
+Neither default is honest, so there is no default.
+
+### Also added
+
+- `SOTIF_INSUFFICIENCIES.md` — the ISO 21448 performance-insufficiency table
+  (SOTIF-CA-001 fixed here; **CA-002 coverage-gap, CA-003 never-expiring
+  advisory and CA-004 completeness-lost-at-the-advisor-seam remain OPEN and are
+  named, not buried**).
+- `SEOOC_ASSUMPTIONS.md` — ISO 26262 Part 10 assumptions of use. Nine rows;
+  **three enforced by code, six stated only**, and that ratio is written down.
+
+### Verified by
+
+`test/frozen_feed_test.dart` — 8 tests, GREEN, including a "no cry-wolf" group
+pinning the deliberate no-op for adapters that never opted in.
+
+The **RED proof is `tool/red_proof/`**, and it is separate on purpose: the guard
+test references symbols this release introduced, so against 0.0.9 it does not
+fail — it fails to *load*. `tool/red_proof/run_red_proof.sh` rebuilds pristine
+0.0.9 **from the pub-cache tarball** and asserts the reproduction FAILS there.
+Verified 2026-08-16: **4/4 red** across `canAssertNoAdvisory`, `fold`,
+`requireCompleteLookup` and `toLookup`. Run it yourself; it exits 0 only if the
+defect reproduces, and exits 2 rather than claiming anything if it cannot
+reconstruct 0.0.9.
+
 ## 0.0.9
 
 **The compiler-enforced version of the 0.0.8 honesty fix — shipped as a patch,

@@ -3,7 +3,7 @@ description: >-
   Source-neutral interface for severity-qualified meteorological-advisory
   aggregation. Defines Advisory event + AdvisoryProvider for per-source
   adapters. Pure Dart.
-version: 0.0.9
+version: 0.0.10
 
 # Deploy-graduated 2026-05-03 per FDD bylaws Rule 6 (i)-(vi) all-green
 # + Komada-voice pre-authorization carried by the authoring spawn.
