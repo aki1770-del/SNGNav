@@ -40,8 +40,8 @@ Four hops, with the driver as the terminal beneficiary.
 
 ```yaml
 dependencies:
-  nav2_safety_layer: ^0.1.0
-  navigation_safety_core: ^0.10.0
+  nav2_safety_layer: ^0.1.3
+  navigation_safety_core: ^0.11.0  # 0.10.x also supported (>=0.10.0 <0.12.0)
   # plus the ROS-Dart bridge of your choice
 ```
 

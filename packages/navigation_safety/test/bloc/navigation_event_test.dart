@@ -29,7 +29,13 @@ void main() {
     test('base events keep empty props', () {
       expect(const NavigationStopped().props, isEmpty);
       expect(const ManeuverAdvanced().props, isEmpty);
-      expect(const SafetyAlertDismissed().props, isEmpty);
+    });
+
+    test('dismissal exposes conditionCleared, default false (0.9.5)', () {
+      expect(const SafetyAlertDismissed().props, [false]);
+      expect(const SafetyAlertDismissed(conditionCleared: true).props, [true]);
+      // Two default instances stay equal, as in 0.9.4.
+      expect(const SafetyAlertDismissed(), const SafetyAlertDismissed());
     });
 
     test('started event exposes route and destination label', () {

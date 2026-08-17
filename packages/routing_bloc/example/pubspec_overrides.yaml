@@ -1,0 +1,16 @@
+# Local-path overrides for monorepo development ONLY (excluded from the
+# published archive via .pubignore). Trimmed to the packages actually in this
+# example's dependency graph: pub treats every override as a root dependency,
+# so listing unrelated siblings drags their constraints into the solve —
+# several unpublished siblings require routing_engine ^0.6.0, which conflicts
+# with this example's published-line pin.
+#
+# routing_engine is intentionally NOT overridden: the example targets the
+# PUBLISHED 0.5.x API (non-nullable RouteManeuver.position), while the local
+# sibling source is the unpublished 0.6.x line (nullable position), which
+# cannot compile this example.
+dependency_overrides:
+  navigation_safety:
+    path: ../../navigation_safety
+  navigation_safety_core:
+    path: ../../navigation_safety_core

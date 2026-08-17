@@ -2,7 +2,7 @@ name: routing_bloc
 description: >-
   Route lifecycle state machine (idle / loading / active / error) with
   glanceable progress UI. Works with any routing_engine backend.
-version: 0.4.4
+version: 0.4.5
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -22,7 +22,12 @@ dependencies:
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
   navigation_safety: ^0.9.0
-  routing_engine: '>=0.4.0 <0.6.0'
+  # Spans routing_engine 0.6.0 (RouteManeuver.position became nullable — the
+  # Null Island fix). This package's lib/ reads no maneuver position, so 0.6.0
+  # is source-compatible; the widen exists because a 0.x MINOR bump is a hard
+  # stop for consumers, and without it route_condition_forecast 0.2.0 (which
+  # pins >=0.6.0) and this package could not resolve together at all.
+  routing_engine: '>=0.4.0 <0.7.0'
 
 dev_dependencies:
   flutter_test:
@@ -30,13 +35,9 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
 
-# Monorepo development: use local path for sibling packages. Published
-# releases resolve against pub.dev via the caret constraint above.
-dependency_overrides:
-  navigation_safety:
-    path: ../navigation_safety
-  navigation_safety_core:
-    path: ../navigation_safety_core
+# Monorepo development: sibling packages resolve via local paths declared in
+# pubspec_overrides.yaml (not published). Published releases resolve against
+# pub.dev via the caret constraints above.
 
 flutter:
   uses-material-design: true

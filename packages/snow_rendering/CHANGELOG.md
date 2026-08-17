@@ -1,5 +1,146 @@
 # Changelog
 
+## 0.3.0
+
+### Safety defect in 0.2.7 and earlier — please read
+
+**Up to and including 0.2.7, this package told drivers "Conditions normal"
+about roads it had no data for.**
+
+`RoadSurfaceState.fromCondition()` could not say "I don't know". Its return type
+was non-nullable, so a `WeatherCondition` carrying no real measurements fell
+through the decision tree to `RoadSurfaceState.dry` — and `dry` carries
+`gripFactor: 1.0`. The full chain was:
+
+```
+no data  ->  RoadSurfaceState.dry  ->  gripFactor 1.0  (MAXIMUM GRIP)
+         ->  RecommendedResponse.proceed
+         ->  advisoryMessage "Conditions normal"
+```
+
+This mattered because `driving_weather` up to 0.4.4 manufactured exactly such a
+condition: `WeatherCondition.clear()` hardcoded `temperatureCelsius = 5.0`,
+`visibilityMeters = 10000`, `windSpeedKmh = 0.0` and `iceRisk = false`, and
+`DigitrafficWeatherProvider` returned it whenever the advisory feed came back
+**empty**. An empty feed means "no advisory was published". It does not mean the
+road is clear and +5 °C.
+
+So: **if you shipped 0.2.7 or earlier on a Digitraffic-backed feed, a driver may
+have been shown a green light — "Conditions normal", full grip — for a road that
+was in fact freezing, at the exact moment the feed had nothing to say.** That is
+the opposite of what this package exists to do.
+
+pub.dev versions are immutable: we cannot withdraw the affected releases. This
+note is the recall.
+
+### Breaking: absence of data can no longer be mistaken for good conditions
+
+- `RoadSurfaceState.fromCondition()` now returns **`RoadSurfaceState?`**. `null`
+  means "cannot classify" — it is never `dry`. A benign classification now
+  requires knowing BOTH the temperature and the precipitation type.
+- `DrivingConditionAssessment.surfaceState` is now `RoadSurfaceState?` and
+  **`gripFactor` is now `double?`**. An unknown surface has no grip coefficient;
+  inventing one (0.2.7 returned `1.0`) is the same defect class as inventing a
+  temperature.
+- `DrivingConditionAssessment.visibility` is now `VisibilityDegradation?` and
+  `precipitation` is now `PrecipitationConfig?`. `null` is *not*
+  `VisibilityDegradation.clear` and *not* `PrecipitationConfig.none` — rendering
+  a clear sky over weather nobody measured is the same lie at the render seam.
+- `PrecipitationConfig.fromCondition()` now returns `PrecipitationConfig?`
+  (`null` when precipitation was not reported; `none` only when the feed
+  actually said there is none).
+- **New `RecommendedResponse.conditionsUnknown`.** This adds an enum value, so
+  exhaustive `switch`es over `RecommendedResponse` will stop compiling. That is
+  deliberate and it is disclosed, not hidden: you must decide what your app does
+  when the road cannot be assessed.
+- `DrivingConditionAssessment.recommendedResponse` **no longer defaults to
+  `proceed`** — it is a required parameter. A default of `proceed` meant an
+  assessment that said nothing about the road silently claimed the road was fine.
+- New `DrivingConditionAssessment.isAssessed`.
+
+The advisory for the unknown tier is:
+
+> Conditions unavailable — no data received; drive to what you can see
+
+That is the compound-failure answer. When the feed is gone, the app SAYS SO
+instead of painting "Conditions normal" — her own eyes are the sensor that still
+works.
+
+### The asymmetry (why this does not cry wolf)
+
+Absence is reported as **unknown**, never escalated to a hazard. Failing
+"safe" by raising an alert on every offline moment would paint black ice
+continuously; the driver would learn within one trip that the alert means
+nothing, and would then ignore it on the night it was real. Crying wolf is not
+honesty — it is a different lie with a safer-sounding name.
+
+Instead:
+
+- **POSITIVE evidence fires on partial data.** An asserted `iceRisk`, deep cold,
+  heavy snow, a severe authority assertion, or sub-200 m visibility still warns
+  even when every other field is absent. An absent field can never *suppress* a
+  warning that a known field already justifies.
+- **The NEGATIVE verdict ("proceed") requires complete data.**
+- Everything else is `conditionsUnknown`, which the driver is *told* about.
+
+### Migration
+
+| 0.2.7 | 0.3.0 | On `null` / `conditionsUnknown` |
+| --- | --- | --- |
+| `RoadSurfaceState fromCondition(c)` | `RoadSurfaceState? fromCondition(c)` | Do not substitute `dry`. Surface the unknown state. |
+| `assessment.gripFactor` (`double`) | `double?` | Do not substitute `1.0`. |
+| `assessment.surfaceState` | `RoadSurfaceState?` | — |
+| `assessment.visibility` | `VisibilityDegradation?` | Do not substitute `.clear`. |
+| `assessment.precipitation` | `PrecipitationConfig?` | Do not substitute `.none`. |
+| `switch (response) { proceed, reduceSpeed, considerTurningBack }` | `+ conditionsUnknown` | Tell the driver the road could not be assessed. |
+
+If you find yourself writing `?? RoadSurfaceState.dry`, `?? 1.0`, or
+`?? RecommendedResponse.proceed`, you are re-adding the defect this release
+removes.
+
+### What this release does NOT fix
+
+Honesty about the boundary of a fix is part of the fix, and the heading above
+("absence of data can no longer be mistaken for good conditions") is an absolute
+statement that one path still escapes:
+
+- **An absent HUMIDITY reading still falls through to `dry`.** On the
+  radiative-frost path (`road_surface_state.dart`: `precip == none`, `temp >
+  -3 °C`, humidity absent), `isRadiativeFrostBlackIce` abstains and the
+  classifier reaches `return dry` — so on a humidity-blind feed, an unjudged
+  frost morning still reads as confident safety, `gripFactor: 1.0`,
+  "Conditions normal". This is the same defect class as the one this release
+  removes, on the one input it does not cover.
+
+  It is documented in `KNOWN_LIMITATIONS.md` §4 and recorded as a residual
+  performance insufficiency in `SAFETY_BOUNDARY.md` §3. Feed `humidityRH` (the
+  Open-Meteo provider supplies it) and the frost classifier will judge the
+  morning rather than abstain.
+
+### Also
+
+- A road-authority advisory that carries NO measurements (the Digitraffic /
+  CAP shape: an authority declares a situation but measures no temperature, no
+  visibility, no wind) now reaches the driver as `reduceSpeed` with
+  *"A road advisory is in force; the road itself is not measured — drive to what
+  you can see"*, rather than being reported as "no data received". The
+  authority's declaration is POSITIVE evidence and fires on partial data, per
+  the asymmetry above.
+- `"Conditions normal"` is now **unreachable** unless the response tier is
+  `proceed`. It was previously the fall-through string for ANY condition no
+  branch described — including a severe authority assertion and heavy snow with
+  no temperature, both of which correctly produced `reduceSpeed` and then
+  printed "Conditions normal" underneath it.
+- The `conditionsUnknown` tier has a **Japanese** voice:
+  `RecommendedResponse.conditionsUnknown.announcement` →
+  「路面状況を取得できていません。見える範囲で運転してください。」 The moment the
+  feed dies is exactly the moment an English-only sentence becomes silence, and
+  silence on a safety surface reads as "nothing is wrong".
+- Requires `driving_weather: ^0.5.0` (the Measured-or-Absent contract).
+- Behaviour on **fully measured** data is unchanged — every pre-existing test
+  still passes. The break only reaches code paths where data was absent, which
+  is precisely where the old behaviour was wrong.
+
 ## 0.2.7
 
 - **Precise surface vocabulary on the announcement seam.** New

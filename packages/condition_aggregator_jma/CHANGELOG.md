@@ -1,5 +1,171 @@
 # Changelog
 
+## 0.3.2 — 2026-08-16 — The adapter can finally say the feed stopped moving, and says it OUT OF BAND
+
+**The defect, measured live.** On 2026-08-16 the JMA warning document for
+**Akita** (`bosai/warning/data/warning/050000.json`) answered HTTP 200 with
+`reportDatetime` `2026-05-28T06:11:00+09:00` — **80.3 days old** — and one
+in-force `雷注意報` (thunder advisory, code 14, status 発表). **Niigata**
+(`150000`) answered with a document **81.9 days old** carrying
+`発表警報・注意報はなし` — no warnings at all.
+
+Up to and including 0.3.1 this adapter could express **neither** shape:
+
+* It relayed the dead thunder advisory as a current `moderate` hazard, because
+  the JMA JSON still lists it as `発表` and the package has no way to say the
+  document itself has stopped being written. Our own winter-evidence instrument
+  recorded that dead advisory as an **ACTIVE hazard 355 times** over Akita,
+  Yokote and Yuzawa — **198 of them while the measured air temperature was at
+  or above 25 °C, the hottest at 34.9 °C.** A thunder advisory from May,
+  rendered as in force, at 34.9 °C.
+* Worse, when a frozen document lists **nothing**, the adapter returns an empty
+  list — the **identical value a genuinely clear sky produces**. A false alarm
+  is contradicted by the windscreen. A false all-clear removes the reason to
+  look out of it.
+
+**What 0.3.2 adds.** `JmaAdvisoryProvider` now implements
+`AdvisoryFeedFreshnessReporting` (condition_aggregator 0.0.10) and reports, from
+the publisher's own `reportDatetime`, how old the document it just read actually
+is:
+
+```dart
+import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
+
+Future<void> main() async {
+  final jma = JmaAdvisoryProvider(userAgent: '(myapp, https://example.com)');
+  await jma.init();
+  try {
+    final advisories = await jma.fetchActiveAdvisoriesAtPoint(
+      latitude: 39.7186,
+      longitude: 140.1024,
+    );
+    final stale = jma.feedStaleness; // null when the document is current
+    if (stale != null) {
+      // stale.documentTime, stale.age, stale.detail
+      // Any "no warnings" from this read is NOT evidence of a calm road.
+      print('stale by ${stale.age!.inDays} d: ${stale.detail}');
+    }
+    print('${advisories.length} advisory/advisories');
+  } finally {
+    jma.close();
+  }
+}
+```
+
+Through `AdvisoryAggregator` it lands on `AdvisoryAggregateResult.staleSources`
+/ `.hasStaleSource`, and **`canAssertNoAdvisory` becomes `false`** over a frozen
+feed. An integrator that already gates its all-clear on `canAssertNoAdvisory`
+gets the correction with **no code change at all**.
+
+**New API (additive; nothing removed, nothing renamed):**
+
+- `JmaAdvisoryProvider.feedStaleness` → `AdvisoryFeedStaleness?`
+- `JmaAdvisoryProvider.staleFeedThreshold` (constructor, defaults to 6 h)
+- `kJmaDefaultStaleFeedThreshold`
+- `jmaFeedReportDatetime(String body)` → the document-level timestamp, readable
+  even when the document lists zero warnings
+
+**What 0.3.2 deliberately does NOT change — read this before upgrading.**
+
+- **The returned `List<Advisory>` is byte-for-byte what 0.3.1 returned.** No
+  synthetic "feed is stale" advisory is appended to it. That shortcut was built
+  and rejected: an integrator that grades hazard by taking the maximum
+  `Advisory.severity` across the returned list — with no filter on `eventClass`
+  — would convert a statement about the **feed** into a positive assertion of
+  small **weather**, and would flip its `isEmpty` branch in the same step.
+  `minor` is not a floor at such a consumer; it is a rung on the ladder. A
+  feed-health fact must not enter the severity ladder, so it travels out of
+  band. `test/frozen_feed_out_of_band_test.dart` fails loudly if anyone later
+  reaches for the in-band route.
+- **`Advisory.expires` is still `null`.** JMA's warning JSON carries no expiry
+  field. Synthesising one would write our inference into a field you read as the
+  publisher's word. Use `Advisory.effective` (the document's `reportDatetime`)
+  and now `feedStaleness` to age an advisory yourself.
+- **The dead advisory is still returned.** Suppressing a stale warning would
+  convert a false alarm into a false all-clear, which is the worse failure.
+
+**Honest bounds — what is still broken after this release.**
+
+- **Hokkaido throws.** The catalogued office code `010000` returns **HTTP 404**
+  from JMA (verified live 2026-08-16; `011000` returns 200, so the probe is
+  sound). Every query from a Hokkaido point therefore raises
+  `JmaAdvisoryFetchException`. This is **unchanged from 0.3.1 and is not fixed
+  here.** It is left as a loud failure rather than repaired by guessing
+  replacement bounding boxes we have not verified — a fabricated box would be a
+  silent wrong answer, and this package prefers a thrown exception to a
+  confident lie. Hokkaido is the snowiest prefecture in Japan and this is the
+  most consequential open gap in the package.
+- **`null` from `feedStaleness` is not proof of freshness.** It means "no
+  positive evidence of staleness" — which includes a document with no parseable
+  timestamp and a fetch that failed.
+- **The six-prefecture coverage catalog is unchanged.** A point outside it still
+  returns an empty list by design; that empty list is a coverage gap, not a
+  measured calm.
+- **A release reaches a version *range*, not a lockfile.** If you pin
+  `^0.3.0` or `^0.3.1`, `dart pub get` will keep handing you 0.3.1 until you run
+  `dart pub upgrade`. If you ship a built application, your users get this only
+  when you rebuild.
+- **0.3.1 remains on pub.dev.** It was published 2026-07-15; the 7-day
+  retraction window closed 24.6 days before this release. It cannot be
+  withdrawn, and anyone who pins it and never upgrades keeps the frozen-feed
+  blindness.
+
+**Requires `condition_aggregator: ^0.0.10`** (up from `^0.0.5`) — the version
+that introduced `AdvisoryFeedFreshnessReporting`. Checked on the real solver
+against both known consumer constraints (`^0.0.9` and `>=0.0.3 <0.1.0`): both
+intersect to `>=0.0.10 <0.1.0`, so the upgrade resolves.
+
+
+## 0.3.1 — 2026-07-15 — Surfaced warning classes widened: downpour / typhoon-wind / thunder / fog added (snow-only → all-season)
+
+**The defect.** Up to and including 0.3.0 this adapter recognised only **six
+winter-snow warning codes**. Every other JMA warning class was filtered out and
+silently discarded. A **大雨特別警報 (torrential-rain emergency warning)** or a
+**暴風特別警報 (typhoon-wind emergency warning)** in force over the driver's
+point produced an **empty advisory list** — indistinguishable, to a caller, from
+a clear sky. A package that reads JMA's warning feed and returns "nothing" while
+JMA is broadcasting its highest-level emergency warning is worse than one that
+does not read the feed at all: the absence renders as calm.
+
+0.3.1 widens the surfaced set from six codes to fifteen. This is **additive
+within 0.3.x**: no signature, type or constant is removed or changed, and the
+adapter emits **more** advisories for the same input, never fewer. Callers on
+`^0.3.0` receive it as a patch.
+
+- **Newly recognised classes (9),** keyed on the bosai warning JSON numeric
+  `code`:
+  - `33` → 大雨特別警報 (extreme) · `43` → 大雨危険警報 (extreme, JMA level 40)
+  - `03` → 大雨警報 (severe) · `10` → 大雨注意報 (moderate)
+  - `35` → 暴風特別警報 (extreme) · `05` → 暴風警報 (severe)
+  - `15` → 強風注意報 (moderate) · `14` → 雷注意報 (moderate)
+  - `20` → 濃霧注意報 (moderate)
+- **The six winter-snow codes behave exactly as before** (06 大雪警報 /
+  12 大雪注意報 / 02 暴風雪警報 / 26 着雪注意報 / 36 大雪特別警報 /
+  32 暴風雪特別警報), and `kJmaSnowWarningCodes` is retained **unchanged** —
+  still the six snow entries — for callers that key on the snow classes
+  specifically.
+- **New:** `kJmaWarningCodes` — the complete surfaced code→verbatim-name map,
+  and the map the parse filter now consumes. Exported.
+- **Severity:** 危険警報 (level 40) is checked **before** the bare 警報 suffix,
+  which it also ends with; falling through would have under-graded a level-40 to
+  `severe`. There is no rung between `severe` and `extreme`, so level 40 maps up
+  to `extreme` alongside 特別警報 (level 50) — the caution-adding direction.
+- **Behaviour change to be aware of:** a point with, e.g., only a 雷注意報 in
+  force previously returned an **empty** list and now returns **one** `Advisory`
+  (`moderate`). Callers that treated "empty" as "no weather at all" will now see
+  non-snow advisories on the same path. Event names are relayed verbatim, so a
+  caller can filter on `eventClass` or on `kJmaSnowWarningCodes` if it wants the
+  old snow-only behaviour.
+- **Code↔name provenance:** every pair above was read directly from the JMA
+  bosai warning frontend's own served `code2WarningInfo` lookup
+  (`https://www.jma.go.jp/bosai/warning/`), and cross-checked against a second
+  read of the same source. Both reads agree on every code, and both reproduce
+  the six existing snow codes exactly.
+- **Out of scope:** 氾濫 (river-flood) classes are **not** included — they ride
+  JMA's separate `code2FloodWarningInfo` lookup, whose code space collides with
+  this map's, on a different JSON branch. They cannot be added without a
+  source-branch change.
+
 ## 0.3.0 — 2026-06-29 — Conservative prefecture union at borders (over-warn on resolution; partial reads signalled)
 
 **Border-resolution change (minor bump).** Prefecture resolution at a border

@@ -42,10 +42,8 @@ class LocalizationController {
   /// degraded estimate freezes at last-known and grows its radius).
   final DeadReckoningSeam? deadReckoningSeam;
 
-  LocalizationController({
-    LocalizationConfig? config,
-    this.deadReckoningSeam,
-  }) : config = config ?? const LocalizationConfig();
+  LocalizationController({LocalizationConfig? config, this.deadReckoningSeam})
+    : config = config ?? const LocalizationConfig();
 
   // ---- state ----
   double? _lastTrustedLat;
@@ -74,9 +72,23 @@ class LocalizationController {
   /// The most recently emitted estimate, or `null` before any input.
   LocalizationEstimate? get current => _last;
 
-  /// Process a newly arrived raw [fix] with its [trust] verdict (the caller
-  /// maps `trust` from e.g. `position_integrity`). Returns the one honest
-  /// estimate for this moment.
+  /// Process a newly arrived raw [fix] with its [trust] verdict. Returns the one
+  /// honest estimate for this moment.
+  ///
+  /// **[trust] defaults to [TrustSignal.trusted] — this default believes the
+  /// fix.** It is not a safe default; it is a *usable* one (a controller that
+  /// trusted nothing could never anchor, and would degrade forever). If you do
+  /// not supply a verdict, a multipath or teleported fix is presented as a
+  /// confident dot, and guidance will be spoken from it.
+  ///
+  /// You supply the verdict. Either compute it — see [TrustSignal] for a worked
+  /// assessment using only the fields a platform locator already gives you
+  /// (finite geometry, reported accuracy, and an implied-speed jump check) — or
+  /// take it from the `position_integrity` package on pub.dev, whose
+  /// `IntegrityVerdict.status` maps one-to-one onto [TrustSignal].
+  ///
+  /// Docs up to 0.1.3 stated that package was not published. True when 0.1.3
+  /// shipped, false from 2026-07-23; corrected in 0.1.4.
   LocalizationEstimate onFix(
     RawFix fix, {
     TrustSignal trust = TrustSignal.trusted,
@@ -84,8 +96,7 @@ class LocalizationController {
     final now = fix.timestamp;
 
     // Garbage geometry can never be trusted, whatever the caller claims.
-    final effectiveTrust =
-        fix.hasFiniteGeometry ? trust : TrustSignal.failed;
+    final effectiveTrust = fix.hasFiniteGeometry ? trust : TrustSignal.failed;
 
     if (effectiveTrust == TrustSignal.trusted) {
       // Out-of-order / stale-trusted guard. A "trusted" fix whose timestamp is
@@ -118,16 +129,18 @@ class LocalizationController {
       // fix reconverges (cleared); an imprecise, beyond-horizon trusted fix is
       // adopted as the baseline but we remain honestly `lost`.
       _lost = beyondHorizon;
-      return _emit(LocalizationEstimate(
-        latitude: fix.latitude,
-        longitude: fix.longitude,
-        confidenceRadiusMeters: fix.accuracyMeters,
-        mode: beyondHorizon
-            ? LocalizationMode.lost
-            : LocalizationMode.gpsTrusted,
-        secondsSinceTrustedFix: 0,
-        basis: EstimateBasis.trustedGpsFix,
-      ));
+      return _emit(
+        LocalizationEstimate(
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          confidenceRadiusMeters: fix.accuracyMeters,
+          mode: beyondHorizon
+              ? LocalizationMode.lost
+              : LocalizationMode.gpsTrusted,
+          secondsSinceTrustedFix: 0,
+          basis: EstimateBasis.trustedGpsFix,
+        ),
+      );
     }
 
     // suspect / failed: do NOT blend the fix coordinates. We degrade.
@@ -145,14 +158,16 @@ class LocalizationController {
   LocalizationEstimate poll(DateTime now) {
     if (_lastTrustedTime == null) {
       // Nothing has ever been trusted and nothing to guess from.
-      return _emit(const LocalizationEstimate(
-        latitude: double.nan,
-        longitude: double.nan,
-        confidenceRadiusMeters: double.infinity,
-        mode: LocalizationMode.lost,
-        secondsSinceTrustedFix: double.infinity,
-        basis: EstimateBasis.unanchoredGuess,
-      ));
+      return _emit(
+        const LocalizationEstimate(
+          latitude: double.nan,
+          longitude: double.nan,
+          confidenceRadiusMeters: double.infinity,
+          mode: LocalizationMode.lost,
+          secondsSinceTrustedFix: double.infinity,
+          basis: EstimateBasis.unanchoredGuess,
+        ),
+      );
     }
     // A long gap since the last trusted fix means GPS has effectively dropped.
     return _degraded(now, LocalizationMode.deadReckoning);
@@ -168,33 +183,37 @@ class LocalizationController {
     // No trusted baseline yet: the best we can honestly do is a coarse,
     // explicitly-unanchored guess (mode lost), or nothing.
     if (_lastTrustedTime == null) {
-      if (unanchoredFallback != null &&
-          unanchoredFallback.hasFiniteGeometry) {
+      if (unanchoredFallback != null && unanchoredFallback.hasFiniteGeometry) {
         final r = _bumpFloor(
-          _maxFinite(unanchoredFallback.accuracyMeters,
-              config.maxTrustworthyRadiusMeters),
+          _maxFinite(
+            unanchoredFallback.accuracyMeters,
+            config.maxTrustworthyRadiusMeters,
+          ),
         );
-        return _emit(LocalizationEstimate(
-          latitude: unanchoredFallback.latitude,
-          longitude: unanchoredFallback.longitude,
-          confidenceRadiusMeters: r,
+        return _emit(
+          LocalizationEstimate(
+            latitude: unanchoredFallback.latitude,
+            longitude: unanchoredFallback.longitude,
+            confidenceRadiusMeters: r,
+            mode: LocalizationMode.lost,
+            secondsSinceTrustedFix: double.infinity,
+            basis: EstimateBasis.unanchoredGuess,
+          ),
+        );
+      }
+      return _emit(
+        const LocalizationEstimate(
+          latitude: double.nan,
+          longitude: double.nan,
+          confidenceRadiusMeters: double.infinity,
           mode: LocalizationMode.lost,
           secondsSinceTrustedFix: double.infinity,
           basis: EstimateBasis.unanchoredGuess,
-        ));
-      }
-      return _emit(const LocalizationEstimate(
-        latitude: double.nan,
-        longitude: double.nan,
-        confidenceRadiusMeters: double.infinity,
-        mode: LocalizationMode.lost,
-        secondsSinceTrustedFix: double.infinity,
-        basis: EstimateBasis.unanchoredGuess,
-      ));
+        ),
+      );
     }
 
-    final secondsDead =
-        now.difference(_lastTrustedTime!).inMicroseconds / 1e6;
+    final secondsDead = now.difference(_lastTrustedTime!).inMicroseconds / 1e6;
     final secondsSafe = secondsDead.isFinite && secondsDead >= 0
         ? secondsDead
         : 0.0;
@@ -279,19 +298,23 @@ class LocalizationController {
       _lost = true;
     }
 
-    return _emit(LocalizationEstimate(
-      latitude: lat,
-      longitude: lon,
-      confidenceRadiusMeters: radius,
-      mode: mode,
-      secondsSinceTrustedFix: secondsSafe,
-      basis: basis,
-    ));
+    return _emit(
+      LocalizationEstimate(
+        latitude: lat,
+        longitude: lon,
+        confidenceRadiusMeters: radius,
+        mode: mode,
+        secondsSinceTrustedFix: secondsSafe,
+        basis: basis,
+      ),
+    );
   }
 
   /// Force the radius to never decrease while degraded, and remember the floor.
   double _bumpFloor(double candidate) {
-    final r = candidate > _degradedRadiusFloor ? candidate : _degradedRadiusFloor;
+    final r = candidate > _degradedRadiusFloor
+        ? candidate
+        : _degradedRadiusFloor;
     _degradedRadiusFloor = r;
     return r;
   }

@@ -3,7 +3,7 @@ description: >-
   Pure Dart core models for navigation safety — alert severity,
   safety score, threshold config, navigation route, safety scenarios.
   No Flutter dependency.
-version: 0.11.1
+version: 0.11.4
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:

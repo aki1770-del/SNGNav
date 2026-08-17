@@ -99,26 +99,23 @@ void main() {
       );
     });
 
-    test(
-      'the NaN-floor no-alert path is unreachable: construction rejects the '
-      'NaN floor, so a worst-case score still ALERTS critical',
-      () {
-        // Defensive end-to-end: prove the conservative-alert guarantee
-        // cannot be silently defeated via a non-finite floor.
-        expect(
-          () => NavigationSafetyConfig(warningScoreFloor: double.nan),
-          throwsA(isA<ArgumentError>()),
-        );
-        final config = NavigationSafetyConfig();
-        final worstCase = SafetyScore(
-          overall: 0,
-          gripScore: 0,
-          visibilityScore: 0,
-          fleetConfidenceScore: 0,
-        );
-        expect(worstCase.toAlertSeverity(config), AlertSeverity.critical);
-      },
-    );
+    test('the NaN-floor no-alert path is unreachable: construction rejects the '
+        'NaN floor, so a worst-case score still ALERTS critical', () {
+      // Defensive end-to-end: prove the conservative-alert guarantee
+      // cannot be silently defeated via a non-finite floor.
+      expect(
+        () => NavigationSafetyConfig(warningScoreFloor: double.nan),
+        throwsA(isA<ArgumentError>()),
+      );
+      final config = NavigationSafetyConfig();
+      final worstCase = SafetyScore(
+        overall: 0,
+        gripScore: 0,
+        visibilityScore: 0,
+        fleetConfidenceScore: 0,
+      );
+      expect(worstCase.toAlertSeverity(config), AlertSeverity.critical);
+    });
 
     test('equality holds for identical configs', () {
       final a = NavigationSafetyConfig();

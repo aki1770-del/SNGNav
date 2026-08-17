@@ -3,7 +3,7 @@ description: >-
   Flutter safety-alert overlay + navigation session state machine
   with configurable severity thresholds. Display-only, never
   controlling.
-version: 0.9.3
+version: 0.9.5
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -22,7 +22,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
-  navigation_safety_core: ^0.10.0
+  navigation_safety_core: '>=0.10.0 <0.12.0'
 
 dev_dependencies:
   flutter_test:
@@ -30,12 +30,5 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
   mocktail: ^1.0.4
-
-# Monorepo development: resolve sibling package locally; published
-# releases resolve against pub.dev via the caret constraint above.
-dependency_overrides:
-  navigation_safety_core:
-    path: ../navigation_safety_core
-
 flutter:
   uses-material-design: true

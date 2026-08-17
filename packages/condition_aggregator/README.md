@@ -54,6 +54,60 @@ You get back an `AdvisoryAggregateResult`: `r.advisories` is the typed,
 normalized merge across every provider, and `r.providerErrors` lists which
 sources failed (so a single failing feed never silently drops the rest).
 
+## An empty list is not always an all-clear (read this)
+
+`r.advisories.isEmpty` is **true in two very different situations**:
+
+1. every source answered and no advisory is in force — the road really is clear;
+2. every source was **down**, so nothing was read — you have no idea if it is clear.
+
+They render as the same empty list. During a feed outage in a blizzard, reading
+case 2 as case 1 tells a driver the road is clear when you never looked.
+
+**So gate any "no advisory in force" message on `r.canAssertNoAdvisory`**, which
+is `true` only when every source answered:
+
+```dart
+// oracle:placeholders r, show, showNoAdvisory, showFeedDown
+for (final a in r.advisories) show(a);      // always safe: a hazard seen is real
+
+if (r.advisories.isEmpty) {
+  if (r.canAssertNoAdvisory) {
+    showNoAdvisory();                        // every source answered — real all-clear
+  } else {
+    showFeedDown(r.providerErrors);          // we could not look — say so, not "clear"
+  }
+}
+```
+
+Or use `r.fold(...)`, whose three callbacks are `required` so it will not let you
+forget the outage case:
+
+```dart
+// oracle:placeholders r
+final banner = r.fold(
+  complete: (advisories) => advisories.isEmpty ? '警報なし' : advisories.first.headline,
+  partial: (seen, down) => seen.isEmpty ? '一部の気象情報を取得できません' : seen.first.headline,
+  unavailable: (down) => '気象情報を取得できません',   // NOT "clear"
+);
+```
+
+Each `providerErrors` entry carries a typed `reason` (`AdvisoryUnavailableReason`)
+so you can tell the driver *"the weather service did not answer"* in her language
+rather than showing her a `SocketException`. If you would rather fail than risk a
+false all-clear, `r.requireCompleteLookup()` throws
+`AdvisoryLookupIncompleteException` (with the way forward in its message).
+
+**The asymmetry:** act on what was *seen* even on partial data; only claim
+*silence* when the lookup was complete. That is honesty without crying wolf.
+
+> **Want the compiler to enforce this?** `condition_aggregator` **0.1.0** —
+> when it is available on pub.dev — changes the return type to a sealed
+> `AdvisoryLookup` (`Complete` / `Partial` / `Unavailable`) — Dart's exhaustive
+> `switch` then refuses to compile a caller who never handled "could not look."
+> That is a breaking change; 0.0.8 is the non-breaking patch that reaches you
+> first.
+
 Running the snippet (`dart run example/quickstart.dart`) prints:
 
 ```
@@ -91,6 +145,7 @@ Use a real publisher feed by depending on an adapter package instead of the
 inline `MyProvider` above:
 
 ```dart
+// oracle:placeholders package:condition_aggregator_nws/condition_aggregator_nws.dart, NwsAdvisoryProvider
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_nws/condition_aggregator_nws.dart';
 

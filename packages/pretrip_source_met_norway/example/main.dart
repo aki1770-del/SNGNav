@@ -3,8 +3,8 @@
 // Fetches a MET Norway hourly forecast for a point and hands the resulting
 // WeatherForecast MEASUREMENT to the pretrip_decision_advisor so an edge
 // developer can build their own pre-trip "Before you drive" surface. The
-// locationforecast product is GLOBAL, so this works for a Nagoya commute
-// (HER) and an Akita one (HER mother) as well as a Nordic one.
+// locationforecast product is GLOBAL, so this works for a Nagoya commute and
+// a rural Akita one as well as a Nordic one.
 //
 // MET Norway terms REQUIRE an identifying User-Agent naming your app plus a
 // contact point. The placeholder below is NOT accepted by api.met.no (it
@@ -40,7 +40,7 @@ Future<void> main() async {
 
   final provider = MetNorwayHourlyForecastProvider(userAgent: kUserAgent);
   try {
-    // Nagoya (HER). Coordinates are truncated to 4 decimals before sending.
+    // Nagoya. Coordinates are truncated to 4 decimals before sending.
     final forecast = await provider.fetchForecast(
       latitude: 35.1709,
       longitude: 136.8815,
@@ -86,7 +86,7 @@ void _runOfflineMapperDemo() {
 
 void _printBriefing(WeatherForecast forecast) {
   const advisor = SnowAwarePretripAdvisor();
-  final briefing = advisor.brief(
+  final briefing = advisor.briefOrNull(
     forecast: forecast,
     commute: CommuteShape(
       plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -100,8 +100,26 @@ void _printBriefing(WeatherForecast forecast) {
     ),
   );
 
-  print('Verdict: ${briefing.verdict.name}');
-  print('Peak hazard: ${briefing.peakHazard.name}');
+  // briefOrNull() returns null instead of throwing when the advisor cannot
+  // earn a conclusion — e.g. it will not certify "no hazard" without whole
+  // knowledge, and the MET Norway compact product carries neither visibility
+  // nor road surface. An unassessable morning is not a clear morning, and
+  // this demo says so rather than printing a verdict it does not have.
+  if (briefing == null) {
+    print(
+      'Verdict: not assessed — the forecast could not earn a conclusion '
+      'for this window (no visibility or road-surface measurement).',
+    );
+    print(
+      '  Supply one with mergeObservedVisibility / estimatedRoadCondition,',
+    );
+    print(
+      '  or use advisor.evidenceGaps(slot) to inspect and set your own policy.',
+    );
+  } else {
+    print('Verdict: ${briefing.verdict.name}');
+    print('Peak hazard: ${briefing.peakHazard.name}');
+  }
   // Attribution is REQUIRED wherever the data is shown:
   //   Data from MET Norway (https://api.met.no/) —
   //   data dual-licensed under NLOD 2.0 AND CC BY 4.0.

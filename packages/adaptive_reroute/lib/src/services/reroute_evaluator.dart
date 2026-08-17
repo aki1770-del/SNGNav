@@ -8,6 +8,11 @@ import 'detour_planner.dart';
 /// Evaluates a [RouteForecast] and decides whether to reroute.
 ///
 /// Evaluation rules (applied in order):
+/// 0. If any segment endpoint — or the current position — is (0, 0) or
+///    non-finite, the geometry is a placeholder or corrupt and the forecast
+///    over it cannot be trusted → [RerouteDecision.cannotAssess]. No detour
+///    bearing is computed from such a position, and the route is never
+///    reported clear over it.
 /// 1. If the forecast has no hazards → [RerouteDecision.clear].
 /// 2. If the first hazard ETA exceeds [AdaptiveRerouteConfig.hazardWindowSeconds]
 ///    → hazard is beyond the look-ahead window; flag but do not reroute yet.
@@ -34,6 +39,34 @@ class RerouteEvaluator {
     RouteForecast forecast, {
     required LatLng currentPosition,
   }) {
+    // Rule 0: refuse to assess placeholder or corrupt geometry. A segment
+    // endpoint at (0, 0) or a non-finite coordinate is not a place on the
+    // route; bearing math toward it aims detours at (0, 0), and a "clear"
+    // verdict over it reports absence of data as certainty of safety.
+    final poisoned = forecast.segments
+        .where((s) => _isUnusablePoint(s.segment.start) ||
+            _isUnusablePoint(s.segment.end))
+        .toList();
+    if (poisoned.isNotEmpty) {
+      final first = poisoned.first;
+      final others = poisoned.length - 1;
+      return RerouteDecision.cannotAssess(
+        reason: 'Segment ${first.segment.index} has an unusable position '
+            '((0, 0) placeholder or non-finite coordinate'
+            '${others > 0 ? '; $others more segment${others > 1 ? 's' : ''} affected' : ''}) '
+            '— the route could not be assessed',
+        triggerSegment: first,
+      );
+    }
+
+    if (_isUnusablePoint(currentPosition)) {
+      return const RerouteDecision.cannotAssess(
+        reason: 'Current position is unusable ((0, 0) placeholder or '
+            'non-finite coordinate) — the approach bearing cannot be '
+            'computed and the route could not be assessed',
+      );
+    }
+
     if (!forecast.hasAnyHazard) {
       return const RerouteDecision.clear();
     }
@@ -87,6 +120,13 @@ class RerouteEvaluator {
     }
     return 'Hazardous weather at segment ${trigger.segment.index} in $etaMin min';
   }
+
+  /// True when [p] cannot be trusted as a real position: exact (0, 0)
+  /// (the null-position placeholder) or any non-finite coordinate.
+  static bool _isUnusablePoint(LatLng p) =>
+      !p.latitude.isFinite ||
+      !p.longitude.isFinite ||
+      (p.latitude == 0.0 && p.longitude == 0.0);
 
   /// Bearing from [from] to [to] in degrees (0–360, clockwise from north).
   static double _bearing(LatLng from, LatLng to) {

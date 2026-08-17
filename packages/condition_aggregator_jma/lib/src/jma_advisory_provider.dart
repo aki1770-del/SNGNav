@@ -6,7 +6,9 @@
 /// for an interior point, or the full containing set at a border (the
 /// boxes overlap along every shared border) — fetches each prefecture's
 /// `warning/{areacode}.json` **concurrently**, parses the current in-force
-/// warnings, filters to the snow / blizzard / icing classes, maps each to
+/// warnings, filters to the surfaced classes (`kJmaWarningCodes` — the
+/// snow / blizzard / icing classes plus, from 0.3.1, the downpour /
+/// typhoon-wind / thunder / fog turmoil classes), maps each to
 /// a source-neutral `Advisory`, and returns the **deduplicated union**.
 /// This is the conservative, over-warn handling of border ambiguity: a
 /// border driver never misses a neighbouring prefecture's warning because
@@ -99,9 +101,24 @@ class JmaAdvisoryFetchException implements Exception {
   }
 }
 
+/// Default [JmaAdvisoryProvider.staleFeedThreshold] — six hours.
+///
+/// The JMA warning documents are rewritten far more often than this when the
+/// service is operating; six hours is chosen to be comfortably longer than any
+/// normal quiet interval, so the report fires on a feed that has genuinely
+/// stopped rather than on an ordinary lull. It is not a guess about weather —
+/// it is a bound on publisher cadence, and it is the adapter's to own because
+/// a JMA warning document and an NWS CAP feed have different natural rhythms.
+///
+/// Deliberately generous: the failure this guards against is measured in
+/// **days** (80.3 on Akita, 2026-08-16). A tighter threshold would buy nothing
+/// and would risk crying wolf on a quiet night.
+const Duration kJmaDefaultStaleFeedThreshold = Duration(hours: 6);
+
 /// Adapter implementing [AdvisoryProvider] against the JMA windowless
 /// per-prefecture warning JSON.
-class JmaAdvisoryProvider implements AdvisoryProvider {
+class JmaAdvisoryProvider
+    implements AdvisoryProvider, AdvisoryFeedFreshnessReporting {
   /// Base URL for the per-prefecture warning JSON. Default points at
   /// the public JMA bosai endpoint; injectable for testing or for an
   /// integrator-side mirror.
@@ -118,12 +135,54 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   /// Whether [init] has been called.
   bool _initialized = false;
 
+  /// How old a JMA warning document may be before this adapter reports it
+  /// stale through [feedStaleness]. Defaults to
+  /// [kJmaDefaultStaleFeedThreshold] (six hours).
+  ///
+  /// Widen it for a deployment that knows a slower cadence. Do not narrow it
+  /// below the publisher's real rhythm — a stale report that fires on an
+  /// ordinary quiet hour teaches an integrator to ignore the one that matters.
+  final Duration staleFeedThreshold;
+
+  /// Clock seam. Injectable so the freshness tests can age a document by
+  /// eighty days without waiting eighty days.
+  final DateTime Function() _clock;
+
+  /// Snapshot of the staleness measured during the most recent point query.
+  AdvisoryFeedStaleness? _feedStaleness;
+
   JmaAdvisoryProvider({
     this.warningJsonBaseUrl = kJmaWarningJsonBaseUrl,
     this.userAgent =
         '(sngnav-class app, https://github.com/aki1770-del/sngnav)',
     http.Client? client,
-  }) : _http = client ?? http.Client();
+    this.staleFeedThreshold = kJmaDefaultStaleFeedThreshold,
+    DateTime Function()? clock,
+  }) : _http = client ?? http.Client(),
+       _clock = clock ?? DateTime.now;
+
+  /// The staleness measured during the **most recent**
+  /// [fetchActiveAdvisoriesAtPoint], or `null` when every document read was
+  /// current — or when age could not be established at all.
+  ///
+  /// **`null` is not proof of freshness.** It means "no positive evidence of
+  /// staleness", exactly as the interface contracts. A document with no
+  /// parseable `reportDatetime` leaves this null; so does a fetch that failed,
+  /// because a failure is already reported through the exception path and
+  /// re-reporting it here would double-count one absence as two.
+  ///
+  /// **This is reported OUT OF BAND, and that is the whole design.** The
+  /// obvious alternative — appending a synthetic "this feed is stale" entry to
+  /// the returned list — was built and rejected: an integrator that grades
+  /// hazard by taking the maximum `Advisory.severity` across the returned list
+  /// (a real consumer of this package does exactly that) would convert a
+  /// statement about the FEED into a positive assertion of small WEATHER, and
+  /// would flip its empty-list branch at the same time. A feed-health fact must
+  /// not enter the severity ladder. It travels here instead, where a consumer
+  /// reads it deliberately or not at all, and where reading it cannot be
+  /// confused with reading the sky.
+  @override
+  AdvisoryFeedStaleness? get feedStaleness => _feedStaleness;
 
   /// Releases the underlying HTTP client. Safe to call once after the
   /// provider's last fetch.
@@ -159,6 +218,11 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
             'once before any fetch.',
       );
     }
+
+    // Snapshot semantics: this query's answer, never the previous query's.
+    // Cleared BEFORE any I/O so an early return or a throw can never leave a
+    // stale staleness report standing.
+    _feedStaleness = null;
 
     final prefectureCodes = prefectureCodesForPoint(
       latitude: latitude,
@@ -257,6 +321,48 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     //     discarded here, so a partial border read landed as a COMPLETE,
     //     fully-successful result with no staleness signal — a silent
     //     under-warn at the exact scenario this border-union exists for.
+    // FEED LIVENESS, measured here and reported OUT OF BAND.
+    //
+    // Deliberately independent of whether the warning union ends up empty. A
+    // frozen JMA document fails in two directions: it keeps serving a warning
+    // that ended months ago, or it serves nothing at all — and the second is
+    // the worse one, because an empty list from a dead document is the
+    // identical value a clear sky produces. A liveness check that only ran when
+    // there were warnings to attach it to would be blind in exactly that case.
+    //
+    // Nothing below touches `merged` / `deduped`. The list this method returns
+    // is what 0.3.1 returned, unchanged.
+    final now = _clock();
+    DateTime? worstDocumentTime;
+    Duration? worstAge;
+    final staleCodes = <String>[];
+    for (final r in results) {
+      final dt = r.documentTime;
+      if (dt == null) continue; // failed fetch, or no parseable timestamp
+      final age = now.difference(dt);
+      if (age < staleFeedThreshold) continue;
+      staleCodes.add(r.prefectureCode);
+      if (worstAge == null || age > worstAge) {
+        worstAge = age;
+        worstDocumentTime = dt;
+      }
+    }
+    if (staleCodes.isNotEmpty) {
+      final days = worstAge!.inDays;
+      final hours = worstAge.inHours;
+      _feedStaleness = AdvisoryFeedStaleness(
+        source: AdvisorySource.jmaJapan,
+        documentTime: worstDocumentTime,
+        age: worstAge,
+        detail:
+            'JMA warning document for '
+            '${staleCodes.join(', ')} last written '
+            '${days >= 1 ? '$days d' : '$hours h'} ago; exceeds the '
+            '${staleFeedThreshold.inHours} h threshold this adapter owns. '
+            'Any "no warnings" from this read is NOT evidence of a calm road.',
+      );
+    }
+
     final merged = <Advisory>[];
     JmaAdvisoryFetchException? firstFailure;
     final failedPrefectureCodes = <String>[];
@@ -295,8 +401,9 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       throw JmaAdvisoryFetchException(
         'Incomplete border read for prefectures '
         '(${prefectureCodes.join(', ')}): a containing prefecture fetch '
-        'failed and the reachable prefecture(s) reported no in-force snow '
-        'warning, so the result cannot be presented as an all-clear.',
+        'failed and the reachable prefecture(s) reported no in-force '
+        'surfaced warning, so the result cannot be presented as an '
+        'all-clear.',
         uri: firstFailure.uri,
         statusCode: firstFailure.statusCode,
       );
@@ -341,7 +448,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   Future<_PrefectureFetchResult> _fetchPrefecture(String prefectureCode) async {
     final uri = Uri.parse('$warningJsonBaseUrl$prefectureCode.json');
     try {
-      final advisories = await _fetchAndParse(uri, prefectureCode).timeout(
+      final parsed = await _fetchAndParse(uri, prefectureCode).timeout(
         kJmaFetchWallClockBudget,
         onTimeout: () {
           final seconds = kJmaFetchWallClockBudget.inSeconds;
@@ -354,7 +461,11 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
           );
         },
       );
-      return _PrefectureFetchResult.success(prefectureCode, advisories);
+      return _PrefectureFetchResult.success(
+        prefectureCode,
+        parsed.advisories,
+        parsed.documentTime,
+      );
     } on JmaAdvisoryFetchException catch (e) {
       return _PrefectureFetchResult.failure(prefectureCode, e);
     } catch (e) {
@@ -372,18 +483,26 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     }
   }
 
-  Future<List<Advisory>> _fetchAndParse(Uri uri, String prefectureCode) async {
+  Future<_ParsedFeed> _fetchAndParse(Uri uri, String prefectureCode) async {
     final body = await _httpGet(uri, kJmaWarningJsonMaxBytes);
     final List<JmaWarningRecord> records;
+    final DateTime? documentTime;
     try {
       records = parseJmaWarningJson(body, prefectureCode: prefectureCode);
+      // Read from the document, not from the records: a frozen document with
+      // ZERO warnings has no records to carry a timestamp, and that is the
+      // case the liveness check exists for.
+      documentTime = jmaFeedReportDatetime(body);
     } on FormatException catch (e) {
       throw JmaAdvisoryFetchException(
         'JMA warning JSON parse failed: $e',
         uri: uri,
       );
     }
-    return records.map(mapJmaWarningToAdvisory).toList();
+    return _ParsedFeed(
+      records.map(mapJmaWarningToAdvisory).toList(),
+      documentTime,
+    );
   }
 
   Future<String> _httpGet(Uri uri, int maxBytes) async {
@@ -439,21 +558,45 @@ class _PrefectureFetchResult {
   final List<Advisory> advisories;
   final JmaAdvisoryFetchException? failure;
 
+  /// The publisher's own `reportDatetime` on the document this prefecture
+  /// answered with, or null on a failed fetch / an unparseable timestamp.
+  ///
+  /// Carried on the result rather than recomputed later because the liveness
+  /// question must be answerable for a prefecture that returned ZERO warnings
+  /// — there is no advisory left to hang the timestamp on.
+  final DateTime? documentTime;
+
   const _PrefectureFetchResult._(
     this.prefectureCode,
     this.advisories,
     this.failure,
+    this.documentTime,
   );
 
   factory _PrefectureFetchResult.success(
     String prefectureCode,
     List<Advisory> advisories,
-  ) => _PrefectureFetchResult._(prefectureCode, advisories, null);
+    DateTime? documentTime,
+  ) => _PrefectureFetchResult._(prefectureCode, advisories, null, documentTime);
 
   factory _PrefectureFetchResult.failure(
     String prefectureCode,
     JmaAdvisoryFetchException failure,
-  ) => _PrefectureFetchResult._(prefectureCode, const <Advisory>[], failure);
+  ) => _PrefectureFetchResult._(
+    prefectureCode,
+    const <Advisory>[],
+    failure,
+    null,
+  );
+}
+
+/// One prefecture's parsed document: the advisories it listed, and when the
+/// publisher last wrote it. Internal — the two travel together because the
+/// timestamp survives an empty advisory list and nothing else does.
+class _ParsedFeed {
+  final List<Advisory> advisories;
+  final DateTime? documentTime;
+  const _ParsedFeed(this.advisories, this.documentTime);
 }
 
 /// Merges advisories collected across one-or-more border prefectures into

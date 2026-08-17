@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.1.6
+
+- **Fix: placeholder positions no longer produce detours aimed at (0, 0), and
+  are never reported as clear.** In 0.1.5, a route segment carrying a
+  placeholder or corrupt endpoint — latitude/longitude (0, 0) or a non-finite
+  value — was fed directly into the detour bearing math, so the evaluator
+  could recommend detour waypoints pointing toward (0, 0) in the Atlantic
+  Ocean; and when no hazard was flagged over such segments, the route came
+  back as `RerouteDecision.clear()` — reason "Route is clear",
+  confidence 1.0. Absence of usable position data was reported as certainty
+  of safety.
+- New: `RerouteDecision.cannotAssess()` — a third decision outcome
+  (`shouldReroute` false, confidence 0.0, no detour waypoints, reason naming
+  the unassessable segment). `RerouteEvaluator.evaluate` now returns it, before
+  any bearing math and before trusting hazard results, whenever any segment
+  endpoint — or the current position — is (0, 0) or non-finite. Callers should
+  treat it as "unknown", never as "clear". Additive: no existing constructor or
+  API changed.
+- `DetourPlanner.plan` now skips hazard zones whose centre is (0, 0) or
+  non-finite (or whose radius is non-finite) instead of projecting bypass
+  waypoints from an unusable position, and returns no waypoints for a
+  non-finite approach bearing.
+- Removed the monorepo-only `dependency_overrides` block from the pubspec
+  (it never applied to consumers of the published package).
+
 ## 0.1.5
 
 - Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can

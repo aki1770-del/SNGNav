@@ -1,21 +1,19 @@
 /// SimulatedWeatherProvider unit tests.
 ///
-/// Tests:
-///   1. conditions stream emits after startMonitoring
-///   2. First emission is clear (Phase 0)
-///   3. Second emission is light snow (Phase 1)
-///   4. Emits all 6 phases in sequence
-///   5. Scenario cycles back to Phase 0 after Phase 5
-///   6. stopMonitoring stops emissions
-///   7. dispose closes the stream
-///   8. Phase 3 (heavy snow) is hazardous
-///   9. Phase 4 (ice risk) has iceRisk = true
-///  10. Custom interval is respected
+/// The simulator is the ONE legitimate caller of a complete "clear" value: it
+/// ASSERTS a scenario, which is not a claim about the world. Every condition it
+/// emits therefore carries [ObservationSource.simulated].
 library;
 
 import 'package:test/test.dart';
 
 import 'package:driving_weather/driving_weather.dart';
+
+/// The simulator never fails, so every reading is an observation.
+WeatherCondition _conditionOf(WeatherReading reading) {
+  expect(reading, isA<WeatherObserved>());
+  return (reading as WeatherObserved).condition;
+}
 
 void main() {
   group('SimulatedWeatherProvider', () {
@@ -32,141 +30,157 @@ void main() {
     });
 
     test('conditions stream emits after startMonitoring', () async {
-      final firstCondition = provider.conditions.first;
+      final first = provider.conditions.first;
       await provider.startMonitoring();
 
-      final condition = await firstCondition.timeout(
-        const Duration(seconds: 2),
-      );
-      expect(condition, isA<WeatherCondition>());
+      final reading = await first.timeout(const Duration(seconds: 2));
+      expect(reading, isA<WeatherObserved>());
     });
 
-    test('first emission is clear (Phase 0)', () async {
-      final firstCondition = provider.conditions.first;
-      await provider.startMonitoring();
+    test(
+      'every emission is labelled as simulated, never as measured',
+      () async {
+        final readings = <WeatherReading>[];
+        final sub = provider.conditions.listen(readings.add);
+        await provider.startMonitoring();
 
-      final condition = await firstCondition;
-      expect(condition.precipType, PrecipitationType.none);
-      expect(condition.isSnowing, false);
-    });
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+
+        expect(readings, isNotEmpty);
+        for (final r in readings) {
+          expect(_conditionOf(r).source, ObservationSource.simulated);
+        }
+
+        await sub.cancel();
+      },
+    );
+
+    test(
+      'first emission is clear (Phase 0) — and says it is simulated',
+      () async {
+        final first = provider.conditions.first;
+        await provider.startMonitoring();
+
+        final c = _conditionOf(await first);
+        expect(c.precipType, PrecipitationType.none);
+        expect(c.snowing, SafetyVerdict.notHazardous);
+        expect(c.source, ObservationSource.simulated);
+        // A complete scenario, so an honest negative verdict is possible.
+        expect(c.hazard, SafetyVerdict.notHazardous);
+      },
+    );
 
     test('second emission is light snow (Phase 1)', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
-      // Wait for two emissions (initial + first timer tick)
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      expect(emissions.length, greaterThanOrEqualTo(2));
-      expect(emissions[1].precipType, PrecipitationType.snow);
-      expect(emissions[1].intensity, PrecipitationIntensity.light);
-      expect(emissions[1].temperatureCelsius, 1.0);
+      expect(readings.length, greaterThanOrEqualTo(2));
+      final c = _conditionOf(readings[1]);
+      expect(c.precipType, PrecipitationType.snow);
+      expect(c.intensity, PrecipitationIntensity.light);
+      expect(c.temperatureCelsius, 1.0);
 
       await sub.cancel();
     });
 
     test('emits all 6 phases in sequence', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
-      // Wait for all 6 phases (initial + 5 ticks at 50ms each)
       await Future<void>.delayed(const Duration(milliseconds: 350));
 
-      expect(emissions.length, greaterThanOrEqualTo(6));
+      expect(readings.length, greaterThanOrEqualTo(6));
 
-      // Phase 0: clear
-      expect(emissions[0].precipType, PrecipitationType.none);
-      // Phase 1: light snow
-      expect(emissions[1].intensity, PrecipitationIntensity.light);
-      // Phase 2: moderate snow
-      expect(emissions[2].intensity, PrecipitationIntensity.moderate);
-      // Phase 3: heavy snow
-      expect(emissions[3].intensity, PrecipitationIntensity.heavy);
-      // Phase 4: moderate + ice
-      expect(emissions[4].iceRisk, true);
-      // Phase 5: light snow (clearing)
-      expect(emissions[5].intensity, PrecipitationIntensity.light);
-      expect(emissions[5].temperatureCelsius, 0.0);
+      expect(_conditionOf(readings[0]).precipType, PrecipitationType.none);
+      expect(_conditionOf(readings[1]).intensity, PrecipitationIntensity.light);
+      expect(
+        _conditionOf(readings[2]).intensity,
+        PrecipitationIntensity.moderate,
+      );
+      expect(_conditionOf(readings[3]).intensity, PrecipitationIntensity.heavy);
+      expect(_conditionOf(readings[4]).iceRisk, isTrue);
+      expect(_conditionOf(readings[5]).intensity, PrecipitationIntensity.light);
+      expect(_conditionOf(readings[5]).temperatureCelsius, 0.0);
 
       await sub.cancel();
     });
 
     test('scenario cycles back to Phase 0 after Phase 5', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
-      // Wait for 7 emissions (full cycle + one more)
       await Future<void>.delayed(const Duration(milliseconds: 400));
 
-      expect(emissions.length, greaterThanOrEqualTo(7));
-      // Phase 6 = Phase 0 (cycle)
-      expect(emissions[6].precipType, PrecipitationType.none);
+      expect(readings.length, greaterThanOrEqualTo(7));
+      expect(_conditionOf(readings[6]).precipType, PrecipitationType.none);
 
       await sub.cancel();
     });
 
     test('stopMonitoring stops emissions', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      final countBeforeStop = emissions.length;
+      final countBeforeStop = readings.length;
 
       await provider.stopMonitoring();
       await Future<void>.delayed(const Duration(milliseconds: 150));
 
-      // No new emissions after stop
-      expect(emissions.length, countBeforeStop);
+      expect(readings.length, countBeforeStop);
 
       await sub.cancel();
     });
 
     test('dispose stops timer and allows cleanup', () async {
-      final emissions = <WeatherCondition>[];
+      final readings = <WeatherReading>[];
       await provider.startMonitoring();
-      final sub = provider.conditions.listen(emissions.add);
+      final sub = provider.conditions.listen(readings.add);
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
-      final countBeforeDispose = emissions.length;
+      final countBeforeDispose = readings.length;
 
       provider.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 150));
 
-      // No new emissions after dispose
-      expect(emissions.length, countBeforeDispose);
+      expect(readings.length, countBeforeDispose);
 
       await sub.cancel();
     });
 
     test('Phase 3 (heavy snow) is hazardous', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 250));
 
-      expect(emissions.length, greaterThanOrEqualTo(4));
-      expect(emissions[3].isHazardous, true);
-      expect(emissions[3].intensity, PrecipitationIntensity.heavy);
-      expect(emissions[3].visibilityMeters, 150);
+      expect(readings.length, greaterThanOrEqualTo(4));
+      final c = _conditionOf(readings[3]);
+      expect(c.hazard, SafetyVerdict.hazardous);
+      expect(c.intensity, PrecipitationIntensity.heavy);
+      expect(c.visibilityMeters, 150);
 
       await sub.cancel();
     });
 
     test('Phase 4 (ice risk) has iceRisk = true', () async {
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
       await Future<void>.delayed(const Duration(milliseconds: 300));
 
-      expect(emissions.length, greaterThanOrEqualTo(5));
-      expect(emissions[4].iceRisk, true);
-      expect(emissions[4].isHazardous, true);
+      expect(readings.length, greaterThanOrEqualTo(5));
+      final c = _conditionOf(readings[4]);
+      expect(c.iceRisk, isTrue);
+      expect(c.hazard, SafetyVerdict.hazardous);
 
       await sub.cancel();
     });
@@ -177,17 +191,15 @@ void main() {
         interval: const Duration(milliseconds: 200),
       );
 
-      final emissions = <WeatherCondition>[];
-      final sub = provider.conditions.listen(emissions.add);
+      final readings = <WeatherReading>[];
+      final sub = provider.conditions.listen(readings.add);
       await provider.startMonitoring();
 
-      // After 150ms, only the initial emission should have fired
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      expect(emissions.length, 1);
+      expect(readings.length, 1);
 
-      // After 350ms total, 2 emissions (initial + 1 tick)
       await Future<void>.delayed(const Duration(milliseconds: 200));
-      expect(emissions.length, 2);
+      expect(readings.length, 2);
 
       await sub.cancel();
     });

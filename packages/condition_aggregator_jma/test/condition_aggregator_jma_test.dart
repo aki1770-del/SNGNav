@@ -25,8 +25,9 @@ http.Response _utf8Response(String body, int status) => http.Response.bytes(
 
 /// Akita warning JSON fixture carrying an in-force 大雪警報 (code 06,
 /// status 発表) in the coarse area + a 着雪注意報 (code 26) in a
-/// municipality block, plus a non-snow 雷注意報 (code 14) that the
-/// snow filter must drop. Shape mirrors the live
+/// municipality block, plus a 雷注意報 (code 14). Through 0.3.0 code 14
+/// was the non-snow drop-proof; from 0.3.1 it IS surfaced (moderate) —
+/// the widening is the point. Shape mirrors the live
 /// `bosai/warning/data/warning/050000.json` (verified 2026-06-26).
 const String _akitaWarningJsonWithOoyukiKeihou = '''
 {
@@ -53,8 +54,10 @@ const String _akitaWarningJsonWithOoyukiKeihou = '''
 }
 ''';
 
-/// Akita warning JSON with only a non-snow 雷注意報 (code 14) — the
-/// real currently-in-force live shape (Akita, observed 2026-06-26).
+/// Akita warning JSON with only a 雷注意報 (code 14) — the real
+/// currently-in-force live shape (Akita, observed 2026-06-26). Through
+/// 0.3.0 this parsed to empty (non-snow); from 0.3.1 雷注意報 is a
+/// surfaced class and this shape yields one moderate Advisory.
 const String _akitaWarningJsonThunderOnly = '''
 {
   "reportDatetime": "2026-05-28T06:11:00+09:00",
@@ -65,6 +68,91 @@ const String _akitaWarningJsonThunderOnly = '''
       "areas": [
         {"code": "050010", "warnings": [{"code": "14", "status": "発表"}]},
         {"code": "050020", "warnings": [{"code": "14", "status": "発表"}]}
+      ]
+    }
+  ]
+}
+''';
+
+/// Akita warning JSON with only a 乾燥注意報 (code 21 — a real served
+/// class that is genuinely OUTSIDE the 0.3.1 surfaced set). Takes over
+/// the "non-surfaced code is dropped" proof role that 雷注意報 (code 14)
+/// held through 0.3.0, since code 14 now surfaces.
+const String _akitaWarningJsonDryOnly = '''
+{
+  "reportDatetime": "2026-07-10T06:11:00+09:00",
+  "publishingOffice": "秋田地方気象台",
+  "headlineText": "秋田県では、空気の乾燥した状態が続いています。",
+  "areaTypes": [
+    {
+      "areas": [
+        {"code": "050010", "warnings": [{"code": "21", "status": "発表"}]},
+        {"code": "050020", "warnings": [{"code": "21", "status": "発表"}]}
+      ]
+    }
+  ]
+}
+''';
+
+/// Akita warning JSON carrying an in-force 大雨警報 (code 03, 発表) in the
+/// coarse area + a 強風注意報 (code 15, 継続) in a municipality block —
+/// a realistic sudden summer / typhoon turmoil shape for the 0.3.1
+/// widening (same document structure as the live
+/// `bosai/warning/data/warning/050000.json`).
+const String _akitaWarningJsonRainstorm = '''
+{
+  "reportDatetime": "2026-07-10T13:23:00+09:00",
+  "publishingOffice": "秋田地方気象台",
+  "headlineText": "秋田県では、１０日夜のはじめ頃まで土砂災害や低い土地の浸水に警戒してください。",
+  "areaTypes": [
+    {
+      "areas": [
+        {"code": "050010", "warnings": [{"code": "03", "status": "発表"}]},
+        {"code": "050020", "warnings": [{"code": "03", "status": "発表"}]}
+      ]
+    },
+    {
+      "areas": [
+        {"code": "0520100", "warnings": [{"code": "03", "status": "発表"}, {"code": "15", "status": "継続"}]},
+        {"code": "0520200", "warnings": [{"code": "15", "status": "継続"}]}
+      ]
+    }
+  ]
+}
+''';
+
+/// Akita warning JSON carrying an in-force 大雨危険警報 (code 43, JMA
+/// level 40 / 警戒レベル4相当 — the only 危険警報 rung among the surfaced
+/// classes) — end-to-end proof that code 43 maps to extreme through the
+/// full fetch path, so a reorder of the severity endsWith chain cannot
+/// silently under-grade a level-40 to severe with a green suite.
+const String _akitaWarningJsonWithOoameKikenKeihou = '''
+{
+  "reportDatetime": "2026-07-10T18:40:00+09:00",
+  "publishingOffice": "秋田地方気象台",
+  "headlineText": "秋田県では、災害の危険度が高まっています。警戒レベル４相当。",
+  "areaTypes": [
+    {
+      "areas": [
+        {"code": "050010", "warnings": [{"code": "43", "status": "発表"}]}
+      ]
+    }
+  ]
+}
+''';
+
+/// Akita warning JSON where a 大雨警報 (code 03) and a 強風注意報 (code
+/// 15) have just been cancelled (status 解除) — the 0.3.1 classes must
+/// honour the same 解除 exclusion as the snow classes.
+const String _akitaWarningJsonRainstormCancelled = '''
+{
+  "reportDatetime": "2026-07-10T18:00:00+09:00",
+  "publishingOffice": "秋田地方気象台",
+  "headlineText": "秋田県の大雨警報は解除されました。",
+  "areaTypes": [
+    {
+      "areas": [
+        {"code": "050010", "warnings": [{"code": "03", "status": "解除"}, {"code": "15", "status": "解除"}]}
       ]
     }
   ]
@@ -128,20 +216,23 @@ const String _yamagataWarningJsonWithBoufuusetsuKeihou = '''
 }
 ''';
 
-/// Yamagata (060000) warning JSON carrying only a non-snow 雷注意報 (code
-/// 14) — a fast, in-force-but-no-snow ("fast-empty") sibling used by the
-/// border-slow-own-warning regression test, where HER OWN prefecture
-/// answers a real snow warning on a slow link while the other containing
-/// prefecture answers quickly with no snow warning.
-const String _yamagataWarningJsonThunderOnly = '''
+/// Yamagata (060000) warning JSON carrying only a 乾燥注意報 (code 21 —
+/// outside the surfaced set) — a fast, in-force-but-nothing-surfaced
+/// ("fast-empty") sibling used by the border-slow-own-warning regression
+/// test, where HER OWN prefecture answers a real snow warning on a slow
+/// link while the other containing prefecture answers quickly with no
+/// surfaced warning. (Through 0.3.0 this fixture used 雷注意報, code 14;
+/// that class surfaces from 0.3.1, so the empty-contribution role moved
+/// to a genuinely non-surfaced code.)
+const String _yamagataWarningJsonDryOnly = '''
 {
   "reportDatetime": "2026-01-15T14:00:00+09:00",
   "publishingOffice": "山形地方気象台",
-  "headlineText": "山形県では、落雷に注意してください。",
+  "headlineText": "山形県では、空気の乾燥した状態が続いています。",
   "areaTypes": [
     {
       "areas": [
-        {"code": "060010", "warnings": [{"code": "14", "status": "発表"}]}
+        {"code": "060010", "warnings": [{"code": "21", "status": "発表"}]}
       ]
     }
   ]
@@ -259,11 +350,11 @@ void main() {
         latitude: 39.7186, // Akita-shi
         longitude: 140.1024,
       );
-      // Distinct snow codes in force: 06 (大雪警報) + 26 (着雪注意報).
-      // 14 (雷) is non-snow → dropped; 12 lives only in timeSeries
-      // (forecast) → ignored.
+      // Distinct surfaced codes in force: 06 (大雪警報) + 26 (着雪注意報)
+      // + 14 (雷注意報 — surfaced from 0.3.1); 12 lives only in
+      // timeSeries (forecast) → ignored.
       final byClass = {for (final a in advisories) a.eventClass: a};
-      expect(byClass.keys.toSet(), equals({'大雪警報', '着雪注意報'}));
+      expect(byClass.keys.toSet(), equals({'大雪警報', '着雪注意報', '雷注意報'}));
 
       final ooyuki = byClass['大雪警報']!;
       expect(ooyuki.source, equals(AdvisorySource.jmaJapan));
@@ -275,6 +366,7 @@ void main() {
       expect(ooyuki.effective, isNotNull);
 
       expect(byClass['着雪注意報']!.severity, equals(AdvisorySeverity.moderate));
+      expect(byClass['雷注意報']!.severity, equals(AdvisorySeverity.moderate));
     });
 
     test('fetch maps an in-force 大雪特別警報 (code 36) to one EXTREME '
@@ -300,11 +392,103 @@ void main() {
       expect(tokubetsu.areaDescription, equals('秋田県'));
     });
 
-    test('fetch returns empty when only non-snow warnings are in force '
-        '(live Akita 雷注意報 shape) — proves fetch+parse+filter on the '
-        'real current state', () async {
+    test('fetch surfaces an in-force 雷注意報 (code 14, the live Akita '
+        'shape that parsed to empty through 0.3.0) as one moderate '
+        'Advisory — the 0.3.1 widening on a real observed state', () async {
       final mock = MockClient((req) async {
         return _utf8Response(_akitaWarningJsonThunderOnly, 200);
+      });
+      final provider = JmaAdvisoryProvider(
+        warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
+        client: mock,
+      );
+      await provider.init();
+      final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+        latitude: 39.7186,
+        longitude: 140.1024,
+      );
+      expect(advisories.length, equals(1));
+      final thunder = advisories.single;
+      expect(thunder.eventClass, equals('雷注意報'));
+      expect(thunder.severity, equals(AdvisorySeverity.moderate));
+      expect(thunder.areaDescription, equals('秋田県'));
+    });
+
+    test('fetch maps a realistic turmoil state (大雨警報 code 03 + '
+        '強風注意報 code 15) to the right Advisories — severe downpour '
+        'card + moderate wind card (0.3.1)', () async {
+      final mock = MockClient((req) async {
+        return _utf8Response(_akitaWarningJsonRainstorm, 200);
+      });
+      final provider = JmaAdvisoryProvider(
+        warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
+        client: mock,
+      );
+      await provider.init();
+      final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+        latitude: 39.7186, // Akita-shi → 050000
+        longitude: 140.1024,
+      );
+      final byClass = {for (final a in advisories) a.eventClass: a};
+      expect(byClass.keys.toSet(), equals({'大雨警報', '強風注意報'}));
+
+      final ooame = byClass['大雨警報']!;
+      expect(ooame.source, equals(AdvisorySource.jmaJapan));
+      expect(ooame.severity, equals(AdvisorySeverity.severe));
+      expect(ooame.areaDescription, equals('秋田県'));
+      expect(ooame.effective, isNotNull);
+
+      final kyoufuu = byClass['強風注意報']!;
+      expect(kyoufuu.severity, equals(AdvisorySeverity.moderate));
+      expect(kyoufuu.areaDescription, equals('秋田県'));
+    });
+
+    test('fetch maps an in-force 大雨危険警報 (code 43, JMA level 40) to '
+        'ONE extreme Advisory end-to-end — the ordering-sensitive '
+        '危険警報 rung cannot be under-graded to severe (0.3.1)', () async {
+      final mock = MockClient((req) async {
+        return _utf8Response(_akitaWarningJsonWithOoameKikenKeihou, 200);
+      });
+      final provider = JmaAdvisoryProvider(
+        warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
+        client: mock,
+      );
+      await provider.init();
+      final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+        latitude: 39.7186,
+        longitude: 140.1024,
+      );
+      expect(advisories.length, equals(1));
+      final kiken = advisories.single;
+      expect(kiken.eventClass, equals('大雨危険警報'));
+      expect(kiken.severity, equals(AdvisorySeverity.extreme));
+      expect(kiken.source, equals(AdvisorySource.jmaJapan));
+      expect(kiken.areaDescription, equals('秋田県'));
+    });
+
+    test('fetch drops just-cancelled (解除) 0.3.1-class warnings '
+        '(大雨警報 03 + 強風注意報 15 解除) — the new classes honour the '
+        'same 解除 exclusion as the snow classes', () async {
+      final mock = MockClient((req) async {
+        return _utf8Response(_akitaWarningJsonRainstormCancelled, 200);
+      });
+      final provider = JmaAdvisoryProvider(
+        warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
+        client: mock,
+      );
+      await provider.init();
+      final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+        latitude: 39.7186,
+        longitude: 140.1024,
+      );
+      expect(advisories, isEmpty);
+    });
+
+    test('fetch returns empty when only NON-surfaced warnings are in '
+        'force (乾燥注意報 code 21) — proves fetch+parse+filter still '
+        'drops classes outside kJmaWarningCodes', () async {
+      final mock = MockClient((req) async {
+        return _utf8Response(_akitaWarningJsonDryOnly, 200);
       });
       final provider = JmaAdvisoryProvider(
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
@@ -402,7 +586,8 @@ void main() {
         prefectureCode: '050000',
       );
       final byCode = {for (final r in records) r.warningCode: r};
-      expect(byCode.keys.toSet(), equals({'06', '26'}));
+      // 14 (雷注意報) is surfaced from 0.3.1 alongside the snow codes.
+      expect(byCode.keys.toSet(), equals({'06', '14', '26'}));
 
       final ooyuki = byCode['06']!;
       expect(ooyuki.eventName, equals('大雪警報'));
@@ -434,9 +619,40 @@ void main() {
       expect(records, isEmpty);
     });
 
-    test('filters out non-snow codes (14 雷注意報)', () {
+    test('maps 雷注意報 (code 14, surfaced from 0.3.1) — the live shape '
+        'that parsed to empty through 0.3.0', () {
       final records = parseJmaWarningJson(
         _akitaWarningJsonThunderOnly,
+        prefectureCode: '050000',
+      );
+      expect(records.length, equals(1));
+      expect(records.single.warningCode, equals('14'));
+      expect(records.single.eventName, equals('雷注意報'));
+    });
+
+    test('filters out non-surfaced codes (21 乾燥注意報)', () {
+      final records = parseJmaWarningJson(
+        _akitaWarningJsonDryOnly,
+        prefectureCode: '050000',
+      );
+      expect(records, isEmpty);
+    });
+
+    test('maps 0.3.1 turmoil codes 03 (大雨警報) + 15 (強風注意報) to '
+        'verbatim names, deduped across areas', () {
+      final records = parseJmaWarningJson(
+        _akitaWarningJsonRainstorm,
+        prefectureCode: '050000',
+      );
+      final byCode = {for (final r in records) r.warningCode: r};
+      expect(byCode.keys.toSet(), equals({'03', '15'}));
+      expect(byCode['03']!.eventName, equals('大雨警報'));
+      expect(byCode['15']!.eventName, equals('強風注意報'));
+    });
+
+    test('filters out cancelled (解除) 0.3.1-class warnings', () {
+      final records = parseJmaWarningJson(
+        _akitaWarningJsonRainstormCancelled,
         prefectureCode: '050000',
       );
       expect(records, isEmpty);
@@ -538,6 +754,56 @@ void main() {
     });
   });
 
+  group('kJmaWarningCodes (the 0.3.1 parse filter)', () {
+    test('pins the six 0.2.0 snow codes unchanged (verbatim)', () {
+      expect(kJmaWarningCodes['06'], equals('大雪警報'));
+      expect(kJmaWarningCodes['12'], equals('大雪注意報'));
+      expect(kJmaWarningCodes['02'], equals('暴風雪警報'));
+      expect(kJmaWarningCodes['26'], equals('着雪注意報'));
+      expect(kJmaWarningCodes['36'], equals('大雪特別警報'));
+      expect(kJmaWarningCodes['32'], equals('暴風雪特別警報'));
+    });
+
+    test('pins the nine 0.3.1 downpour / typhoon / turmoil codes verbatim '
+        '(verified against the JMA bosai code2WarningInfo served table, '
+        'read twice 2026-07-10)', () {
+      expect(kJmaWarningCodes['33'], equals('大雨特別警報'));
+      expect(kJmaWarningCodes['43'], equals('大雨危険警報'));
+      expect(kJmaWarningCodes['03'], equals('大雨警報'));
+      expect(kJmaWarningCodes['10'], equals('大雨注意報'));
+      expect(kJmaWarningCodes['35'], equals('暴風特別警報'));
+      expect(kJmaWarningCodes['05'], equals('暴風警報'));
+      expect(kJmaWarningCodes['15'], equals('強風注意報'));
+      expect(kJmaWarningCodes['14'], equals('雷注意報'));
+      expect(kJmaWarningCodes['20'], equals('濃霧注意報'));
+      // Exactly the six snow + nine turmoil classes — an accidental
+      // add/delete cannot pass silently.
+      expect(kJmaWarningCodes.length, equals(15));
+    });
+
+    test('back-compat invariant: every kJmaSnowWarningCodes entry is in '
+        'kJmaWarningCodes with the identical name (the doc-comment '
+        'promise on the retained snow map)', () {
+      for (final entry in kJmaSnowWarningCodes.entries) {
+        expect(
+          kJmaWarningCodes[entry.key],
+          equals(entry.value),
+          reason:
+              'snow code ${entry.key} must be in the parse filter '
+              'with the identical verbatim name',
+        );
+      }
+    });
+
+    test('does NOT contain 暴風危険警報 / 大雪危険警報 / 暴風雪危険警報 '
+        '(the served level-40 slot is empty for the wind / snow families '
+        '— only 大雨 has a 危険警報 rung)', () {
+      expect(kJmaWarningCodes.values.contains('暴風危険警報'), isFalse);
+      expect(kJmaWarningCodes.values.contains('大雪危険警報'), isFalse);
+      expect(kJmaWarningCodes.values.contains('暴風雪危険警報'), isFalse);
+    });
+  });
+
   group('mapJmaWarningToAdvisory', () {
     JmaWarningRecord record(String name, String code) => JmaWarningRecord(
       warningCode: code,
@@ -574,6 +840,29 @@ void main() {
       );
       expect(
         mapJmaWarningToAdvisory(record('大雪特別警報', '36')).severity,
+        equals(AdvisorySeverity.extreme),
+      );
+    });
+
+    test('severity maps 危険警報 (JMA level 40) → extreme, NOT severe — '
+        'the ordering-sensitive rung: 危険警報 also ends with 警報, so a '
+        'reordered suffix chain would under-grade it (0.3.1)', () {
+      expect(
+        mapJmaWarningToAdvisory(record('大雨危険警報', '43')).severity,
+        equals(AdvisorySeverity.extreme),
+      );
+      // The neighbouring rain rungs keep their own grades — the 危険警報
+      // check must not swallow them.
+      expect(
+        mapJmaWarningToAdvisory(record('大雨警報', '03')).severity,
+        equals(AdvisorySeverity.severe),
+      );
+      expect(
+        mapJmaWarningToAdvisory(record('大雨注意報', '10')).severity,
+        equals(AdvisorySeverity.moderate),
+      );
+      expect(
+        mapJmaWarningToAdvisory(record('大雨特別警報', '33')).severity,
         equals(AdvisorySeverity.extreme),
       );
     });
@@ -625,14 +914,20 @@ void main() {
         equals({'/jma/warning/050000.json', '/jma/warning/060000.json'}),
       );
 
-      // Union: Akita 大雪警報 + Akita 着雪注意報 + Yamagata 暴風雪警報.
+      // Union: Akita 大雪警報 + 着雪注意報 + 雷注意報 (code 14, surfaced
+      // from 0.3.1 — the widening flows through the border union too) +
+      // Yamagata 暴風雪警報.
       final byClassToArea = <String, Set<String>>{};
       for (final a in advisories) {
         byClassToArea
             .putIfAbsent(a.eventClass, () => <String>{})
             .add(a.areaDescription);
       }
-      expect(byClassToArea.keys.toSet(), equals({'大雪警報', '着雪注意報', '暴風雪警報'}));
+      expect(
+        byClassToArea.keys.toSet(),
+        equals({'大雪警報', '着雪注意報', '雷注意報', '暴風雪警報'}),
+      );
+      expect(byClassToArea['雷注意報'], equals({'秋田県'}));
       // The neighbouring prefecture's warning is present and correctly
       // labelled in Japanese (D4) — the south-Akita driver sees Yamagata's
       // 暴風雪警報 labelled 山形県, distinct from their own 秋田県 warning.
@@ -823,7 +1118,7 @@ void main() {
     });
 
     // SHOULD-2: one containing prefecture succeeds EMPTY (Akita, only a
-    // non-snow 雷注意報 in force) while another FAILS (Yamagata 503). The
+    // non-surfaced 乾燥注意報 in force) while another FAILS (Yamagata 503). The
     // empty union is an INCOMPLETE read, not a true all-clear — returning []
     // would tell a border driver 'no warnings' when the unreachable
     // prefecture could hold an active 大雪警報. FAILS against the un-hardened
@@ -834,8 +1129,10 @@ void main() {
       final provider = JmaAdvisoryProvider(
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
-          '050000': () =>
-              _utf8Response(_akitaWarningJsonThunderOnly, 200), // no snow
+          '050000': () => _utf8Response(
+            _akitaWarningJsonDryOnly,
+            200,
+          ), // no surfaced class (code 21 乾燥注意報; 雷注意報 surfaces from 0.3.1)
           '060000': () => http.Response('Service Unavailable', 503), // fails
         }),
       );
@@ -973,10 +1270,11 @@ void main() {
         advisories.any((a) => a.eventClass == kJmaIncompleteReadEventClass),
         isFalse,
       );
-      // The real union is unchanged (both prefectures' warnings present).
+      // The real union is unchanged (both prefectures' warnings present;
+      // 雷注意報 surfaces from 0.3.1).
       expect(
         advisories.map((a) => a.eventClass).toSet(),
-        equals({'大雪警報', '着雪注意報', '暴風雪警報'}),
+        equals({'大雪警報', '着雪注意報', '雷注意報', '暴風雪警報'}),
       );
     });
 
@@ -1238,7 +1536,7 @@ void main() {
             if (req.url.path.endsWith('060000.json')) {
               // The OTHER prefecture answers fast with a non-snow advisory only
               // (success, but nothing for the snow classes) → empty contribution.
-              return _utf8Response(_yamagataWarningJsonThunderOnly, 200);
+              return _utf8Response(_yamagataWarningJsonDryOnly, 200);
             }
             // HER own prefecture (Akita) answers a real 大雪警報 at ~15 s.
             return Future<http.Response>.delayed(

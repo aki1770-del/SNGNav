@@ -1,34 +1,332 @@
 /// AdvisoryAggregator — multi-source advisory aggregation primitive.
 ///
 /// Fans a single point query out across registered [AdvisoryProvider]s,
-/// returning the merged list of active advisories.
+/// returning the merged list of active advisories **plus the truth about which
+/// sources could not be read**.
 ///
-/// Per-provider failure handling: a per-provider failure is logged into
-/// the result's `providerErrors` list and the aggregator continues with
-/// surviving providers. The driver receiving advisory information from
-/// N-1 providers on transient failure of the Nth is preferable to the
-/// driver receiving zero providers because of one fault. The aggregator
-/// collects per-provider errors so the integrator can surface staleness
-/// honestly (warn-and-continue, not abort).
+/// ## Read this before you trust an empty list
+///
+/// A per-provider failure is recorded in
+/// [AdvisoryAggregateResult.providerErrors] and the aggregator continues with
+/// the surviving providers. Getting advisories from N−1 providers when the Nth
+/// is down beats getting none. **But that is only half of honest.**
+///
+/// The other half is this: when every provider fails, `advisories` is an
+/// **empty list** — the exact same value it holds when the sky is genuinely
+/// clear and no advisory is in force. Those are different facts. One of them is
+/// a weather-service outage during a blizzard.
+///
+/// Up to 0.0.7, the only way to tell them apart was to remember to read
+/// `providerErrors` — and a field you *can* ignore *will* be ignored. That is
+/// precisely how this shipped.
+///
+/// **So: an empty `advisories` list means "no advisory is in force" ONLY when
+/// [AdvisoryAggregateResult.canAssertNoAdvisory] is `true`.** Otherwise it means
+/// "we did not manage to look." Never render the second as the first.
+///
+/// [AdvisoryAggregateResult.fold] handles all three cases in six lines and will
+/// not let you forget one. [AdvisoryAggregateResult.requireCompleteLookup] is
+/// the loud stop if you would rather fail than show an all-clear you did not
+/// earn.
+///
+/// In 0.1.0 the return type is a sealed `AdvisoryLookup` and the **compiler**
+/// refuses a caller who never handled "could not look".
 library;
 
+import 'dart:async' show TimeoutException;
+
 import 'advisory.dart';
+import 'advisory_absence.dart';
+import 'advisory_feed_freshness.dart';
+import 'advisory_lookup.dart';
 import 'advisory_provider.dart';
 
-/// Result of one aggregator query — the merged advisory list plus any
-/// per-provider failures that occurred during the fan-out.
+/// Result of one aggregator query — the merged advisory list, the per-provider
+/// failures, and the one question that keeps you honest:
+/// [canAssertNoAdvisory].
+///
+/// ## The asymmetry (caution-add-only)
+///
+/// A hazard **seen** is a hazard **real**, even when some source was
+/// unreachable — act on [advisories] regardless. But *"no advisory is in
+/// force"* is a claim about **completeness**, and you may only make it when the
+/// lookup was complete.
+///
+/// Positive evidence fires on partial knowledge. A negative conclusion requires
+/// whole knowledge. That asymmetry is what lets a system be honest without
+/// crying wolf.
 class AdvisoryAggregateResult {
   /// All advisories from providers that responded successfully.
+  ///
+  /// **Safe to act on.** Not the whole picture unless [canAssertNoAdvisory].
+  ///
+  /// An **empty** list here is NOT an all-clear on its own — it is also what you
+  /// get when every source was unreachable. Gate any "nothing is in force"
+  /// message on [canAssertNoAdvisory].
   final List<Advisory> advisories;
 
-  /// One entry per provider that errored; consumed by the integrator
-  /// for staleness / honesty surfacing.
+  /// One entry per provider that errored.
+  ///
+  /// Reading this is optional and therefore easy to skip — which is why
+  /// [canAssertNoAdvisory] exists. Prefer it.
   final List<AdvisoryProviderError> providerErrors;
+
+  /// How many sources were asked, when known.
+  ///
+  /// The aggregator always sets this. It is optional only so that this
+  /// constructor stays source-compatible with 0.0.7 callers (test fakes, etc.).
+  ///
+  /// **If you construct this object yourself, pass it.** When it is `null` we do
+  /// not know whether every source answered, so [canAssertNoAdvisory] is `false`
+  /// — we will not claim completeness on your behalf.
+  final int? sourcesQueried;
+
+  /// Sources that **answered**, and whose answer has stopped moving.
+  ///
+  /// A frozen publisher is not an unreachable one: it serves HTTP 200, valid
+  /// data and an empty warning list forever, so it never lands in
+  /// [providerErrors]. Before this list existed, that was indistinguishable
+  /// from a clear sky, and [canAssertNoAdvisory] said "measured calm" over a
+  /// document 81 days old. It now says `false`.
+  ///
+  /// Populated only from adapters implementing
+  /// [AdvisoryFeedFreshnessReporting], and only when they **measured** the
+  /// staleness. Empty means "no source reported itself stale" — which includes
+  /// "no source can report", so an empty list is not proof of freshness. See
+  /// AoU-CA-004 in `SEOOC_ASSUMPTIONS.md`.
+  final List<AdvisoryFeedStaleness> staleSources;
 
   const AdvisoryAggregateResult({
     required this.advisories,
     required this.providerErrors,
+    this.sourcesQueried,
+    this.staleSources = const <AdvisoryFeedStaleness>[],
   });
+
+  /// `true` only when **every source answered, and answered with a document
+  /// that is still being written** — the one condition under which you may
+  /// honestly tell a driver *"no advisory is in force."*
+  ///
+  /// It is `false` whenever any source could not be reached, `false` when no
+  /// source was asked at all, and `false` when a source reported its own feed
+  /// stale. Silence from a source you could not reach is not an all-clear; it
+  /// is a gap. **Silence from a source that stopped talking months ago is not
+  /// an all-clear either** — it is the same gap wearing the shape of an answer.
+  ///
+  /// ```dart
+  /// // oracle:placeholders agg, show, showNoAdvisory, showFeedDown
+  /// final r = await agg.fetchActiveAdvisoriesAtPoint(
+  ///     latitude: 39.7186, longitude: 140.1024);
+  /// for (final a in r.advisories) show(a);          // always safe
+  /// if (r.advisories.isEmpty) {
+  ///   if (r.canAssertNoAdvisory) {
+  ///     showNoAdvisory();                            // the silence is real
+  ///   } else {
+  ///     showFeedDown(r.providerErrors);              // we could not look
+  ///   }
+  /// }
+  /// ```
+  ///
+  /// If this is `false`, tell her *what you do not know*. Do not tell her
+  /// nothing, and never tell her it is clear.
+  bool get canAssertNoAdvisory {
+    if (providerErrors.isNotEmpty) return false;
+    // A source that answered with a dead document has not told us the sky is
+    // clear; it has told us nothing, at length. Reachability was never the
+    // question — recency is.
+    if (staleSources.isNotEmpty) return false;
+    final n = sourcesQueried;
+    if (n == null) return false; // unknown provenance — we will not claim it
+    return n > 0; // zero sources asked is not an all-clear either
+  }
+
+  /// `true` when at least one source reported its own document stale.
+  ///
+  /// Distinct from [isUnavailable]: we *did* look, and what we found was old.
+  bool get hasStaleSource => staleSources.isNotEmpty;
+
+  /// The sources we could not read, and why — typed in
+  /// [AdvisoryProviderError.reason], so the reason survives into whatever
+  /// language the driver reads.
+  ///
+  /// Same list as [providerErrors]; named as it is in 0.1.0, so the migration is
+  /// a rename you can make today.
+  List<AdvisoryProviderError> get unreachable => providerErrors;
+
+  /// What we actually saw. Same list as [advisories]; named as it is in 0.1.0.
+  List<Advisory> get seen => advisories;
+
+  /// `true` when **no source answered** — we did not look, and we know nothing.
+  ///
+  /// This is not "clear". Show the driver that the feed is down. She can decide
+  /// what to do with a gap; she can decide nothing about a silence she was never
+  /// told about.
+  bool get isUnavailable {
+    final n = sourcesQueried;
+    if (n == null) return false; // unknown provenance — cannot say
+    return n - providerErrors.length <= 0;
+  }
+
+  /// Handle every case, or do not compile.
+  ///
+  /// The three callbacks are `required`, so — unlike a field you can skip —
+  /// `fold` will not let you forget the case where we could not look. It is the
+  /// closest 0.0.8 can get to the sealed `AdvisoryLookup` of 0.1.0 without
+  /// breaking your build.
+  ///
+  /// ```dart
+  /// // oracle:placeholders r
+  /// final banner = r.fold(
+  ///   complete: (a) => a.isEmpty ? '警報なし' : a.first.headline,
+  ///   partial: (seen, down) => seen.isEmpty
+  ///       ? '一部の気象情報を取得できません'   // NOT "no advisory"
+  ///       : seen.first.headline,
+  ///   unavailable: (down) => '気象情報を取得できません',  // NOT "clear"
+  /// );
+  /// ```
+  ///
+  /// * [complete] — every source answered. An empty list here genuinely means
+  ///   *no advisory in force*. This is the only shape in which that is true.
+  /// * [partial] — act on what was seen; you may **not** conclude "nothing is in
+  ///   force", because the warning you are missing may be in the source that did
+  ///   not answer.
+  /// * [unavailable] — we did not look. Not clear.
+  T fold<T>({
+    required T Function(List<Advisory> advisories) complete,
+    required T Function(
+      List<Advisory> seen,
+      List<AdvisoryProviderError> unreachable,
+    )
+    partial,
+    required T Function(List<AdvisoryProviderError> unreachable) unavailable,
+  }) {
+    if (canAssertNoAdvisory) return complete(advisories);
+    if (isUnavailable) return unavailable(providerErrors);
+    return partial(advisories, providerErrors);
+  }
+
+  /// This same result as the **sealed** [AdvisoryLookup], which the compiler
+  /// will not let you read without handling the case where we could not look.
+  ///
+  /// `fold` and [canAssertNoAdvisory] work, and they must be *remembered*. This
+  /// does not: a `switch` over [AdvisoryLookup] is exhaustive, so omitting the
+  /// "feed was down" branch is a compile error rather than a silent all-clear.
+  ///
+  /// Identical in name and shape to the type 0.1.0 returns directly, so code
+  /// written against it migrates with no change.
+  AdvisoryLookup toLookup() {
+    final failures = providerErrors
+        .map(
+          (e) => AdvisorySourceFailure(
+            source: e.source,
+            reason: e.reason,
+            cause: e.cause,
+          ),
+        )
+        .toList(growable: false);
+
+    if (canAssertNoAdvisory) return AdvisoryLookupComplete(advisories);
+    if (isUnavailable) return AdvisoryLookupUnavailable(failures);
+    return AdvisoryLookupPartial(
+      advisories: advisories,
+      unreachable: failures,
+      // A frozen source is neither reachable-and-whole nor unreachable. It is
+      // partial: we saw what it had, and we cannot conclude completeness from
+      // it. Carried so the integrator can say WHICH source went quiet and how
+      // long ago, rather than being handed a Partial with an empty
+      // `unreachable` list and no way to explain it to the driver.
+      staleSources: staleSources,
+    );
+  }
+
+  /// The loud stop, opt-in: throws [AdvisoryLookupIncompleteException] unless
+  /// every source answered.
+  ///
+  /// Call this before any code path that would tell a driver the road is clear.
+  /// Nothing throws it unless you ask — 0.0.7 callers are untouched.
+  ///
+  /// A stop with no restart is a wall, not a loom, so the exception says what
+  /// broke, why we refuse to guess, and the way forward.
+  void requireCompleteLookup() {
+    if (canAssertNoAdvisory) return;
+    final down = providerErrors
+        .map((e) => '${e.source.name} (${e.reason.name})')
+        .join(', ');
+
+    // The frozen case first: it is the one that otherwise reads as success, so
+    // a message about unreachable sources would be actively misleading here —
+    // nothing was unreachable.
+    if (providerErrors.isEmpty && staleSources.isNotEmpty) {
+      final frozen = staleSources.map((s) => s.toString()).join('; ');
+      throw AdvisoryLookupIncompleteException(
+        unreachable: providerErrors,
+        message:
+            'Every source answered, but a source is serving a document that '
+            'has stopped being updated: $frozen. An empty advisory list from a '
+            'feed that stopped being written is not an all-clear — it is the '
+            'absence of any current statement, wearing the shape of one. We '
+            'will not report a calm we did not measure. Forward: act on the '
+            'advisories you did get (a hazard seen is a hazard real), and tell '
+            'the driver the advisory feed has not updated since the time above '
+            'instead of telling her it is clear. To opt out for a source whose '
+            'cadence you know differs, widen that adapter\'s staleness '
+            'threshold — do not suppress the report here.',
+      );
+    }
+
+    throw AdvisoryLookupIncompleteException(
+      unreachable: providerErrors,
+      message: providerErrors.isEmpty
+          ? 'No advisory source was asked (sourcesQueried='
+                '${sourcesQueried ?? "unknown"}), so the empty advisory list is '
+                'not an all-clear — it is an absence of any lookup. We will not '
+                'guess. Forward: register at least one AdvisoryProvider, or '
+                'handle this and tell the driver the advisory feed is '
+                'unavailable rather than clear.'
+          : 'Could not read $down, so the advisory list may be missing a '
+                'warning that is really in force. We will not report an '
+                'all-clear we did not earn. Forward: act on the advisories you '
+                'did get (a hazard seen is a hazard real), tell the driver which '
+                'sources are down instead of telling her it is clear, or — when '
+                'it is available on pub.dev — upgrade to condition_aggregator '
+                '0.1.0, where the return type is a sealed AdvisoryLookup and '
+                'the compiler asks this question for you.',
+    );
+  }
+}
+
+/// Thrown by [AdvisoryAggregateResult.requireCompleteLookup] when at least one
+/// advisory source could not be read — so the advisory list in hand may be
+/// missing a warning that is really in force.
+///
+/// This is the opt-in loud stop, for callers who would rather fail than show a
+/// driver an all-clear they did not earn. **Nothing throws it unless you ask**;
+/// existing 0.0.7 call sites never see it.
+///
+/// The way forward is in [message], and in three sentences:
+///
+/// * act on what you did see — a hazard seen is a hazard real, even on partial
+///   data; just do not claim "nothing is in force";
+/// * catch this and tell the driver *which* sources are down ([unreachable]
+///   names them, with a typed [AdvisoryProviderError.reason] you can translate);
+/// * or move to `condition_aggregator` 0.1.0 — when it is available on
+///   pub.dev — where the return type is a sealed `AdvisoryLookup` and the
+///   compiler refuses a caller who never handled "could not look".
+class AdvisoryLookupIncompleteException implements Exception {
+  /// The sources that could not be read, and why.
+  final List<AdvisoryProviderError> unreachable;
+
+  /// What happened, why we refuse to guess, and the way forward — in plain
+  /// words, safe to log.
+  final String message;
+
+  const AdvisoryLookupIncompleteException({
+    required this.unreachable,
+    required this.message,
+  });
+
+  @override
+  String toString() => 'AdvisoryLookupIncompleteException: $message';
 }
 
 /// One per-provider error captured during a fan-out.
@@ -37,13 +335,32 @@ class AdvisoryProviderError {
   final AdvisorySource source;
 
   /// Human-readable description of the failure (typically `e.toString()`).
+  ///
+  /// For **us**, in logs. A driver cannot act on a `SocketException`; she can
+  /// act on [reason].
   final String message;
 
-  const AdvisoryProviderError({required this.source, required this.message});
+  /// Why the source could not be read — typed, so an integrator can say it in
+  /// the language his driver actually reads.
+  ///
+  /// Best-effort: [AdvisoryUnavailableReason.unclassified] when the aggregator
+  /// cannot tell, rather than a guess.
+  final AdvisoryUnavailableReason reason;
+
+  /// The underlying error object, for logs. Never show this to a driver.
+  final Object? cause;
+
+  const AdvisoryProviderError({
+    required this.source,
+    required this.message,
+    this.reason = AdvisoryUnavailableReason.unclassified,
+    this.cause,
+  });
 
   @override
   String toString() =>
-      'AdvisoryProviderError(source: ${source.name}): $message';
+      'AdvisoryProviderError(source: ${source.name}, '
+      'reason: ${reason.name}): $message';
 }
 
 /// Multi-source aggregator. Holds N providers; init's them all; queries
@@ -84,6 +401,13 @@ class AdvisoryAggregator {
   /// failures are NOT caught here (they fire from [init], which the
   /// caller invokes explicitly).
   ///
+  /// **An empty [AdvisoryAggregateResult.advisories] is not an all-clear
+  /// unless [AdvisoryAggregateResult.canAssertNoAdvisory] is `true`.** When
+  /// every source is down, this method returns an empty advisory list — the
+  /// same value as a clear sky. Gate any "no advisory in force" message on
+  /// `canAssertNoAdvisory`, or use [AdvisoryAggregateResult.fold], which will
+  /// not let you skip the case.
+  ///
   /// Throws [StateError] if called before [init].
   Future<AdvisoryAggregateResult> fetchActiveAdvisoriesAtPoint({
     required double latitude,
@@ -96,6 +420,7 @@ class AdvisoryAggregator {
     }
     final advisories = <Advisory>[];
     final errors = <AdvisoryProviderError>[];
+    final stale = <AdvisoryFeedStaleness>[];
     for (final p in _providers) {
       try {
         final found = await p.fetchActiveAdvisoriesAtPoint(
@@ -103,15 +428,82 @@ class AdvisoryAggregator {
           longitude: longitude,
         );
         advisories.addAll(found);
+        // Read immediately after the await on the SAME adapter, so the report
+        // belongs to the fetch we just made. Adapters that cannot honour that
+        // under concurrency are contracted to return null rather than another
+        // query's answer (see AdvisoryFeedFreshnessReporting.feedStaleness).
+        //
+        // Only adapters that opted in are asked. An adapter that does not
+        // implement the interface is NOT assumed fresh and is NOT assumed
+        // stale — it is unmeasured, and the residual is stated in AoU-CA-004
+        // rather than papered over with a default.
+        if (p is AdvisoryFeedFreshnessReporting) {
+          final s = (p as AdvisoryFeedFreshnessReporting).feedStaleness;
+          if (s != null) stale.add(s);
+        }
       } on Object catch (e) {
+        // The adapter lit the lamp. Up to 0.0.7 we flattened it to a String and
+        // filed it in a list nothing was obliged to read — so a source outage
+        // reached the integrator as `[]`, the same value as a clear night. The
+        // failure now also carries a TYPED reason, and `sourcesQueried` below
+        // lets the caller ask `canAssertNoAdvisory` instead of remembering to
+        // check this list.
         errors.add(
-          AdvisoryProviderError(source: p.source, message: e.toString()),
+          AdvisoryProviderError(
+            source: p.source,
+            message: e.toString(),
+            reason: _classify(e),
+            cause: e,
+          ),
         );
       }
     }
     return AdvisoryAggregateResult(
       advisories: advisories,
       providerErrors: errors,
+      sourcesQueried: _providers.length,
+      staleSources: List<AdvisoryFeedStaleness>.unmodifiable(stale),
     );
+  }
+
+  /// The same fan-out as [fetchActiveAdvisoriesAtPoint], returned as the
+  /// **sealed** [AdvisoryLookup] so the "we could not look" case cannot be
+  /// skipped.
+  ///
+  /// Prefer this in new code. [fetchActiveAdvisoriesAtPoint] is unchanged and
+  /// still supported; this is additive.
+  ///
+  /// In 0.1.0 `fetchActiveAdvisoriesAtPoint` returns this type directly — code
+  /// written against this method compiles there unchanged.
+  Future<AdvisoryLookup> lookupAtPoint({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final r = await fetchActiveAdvisoriesAtPoint(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    return r.toLookup();
+  }
+
+  /// Best-effort classification of an adapter failure. Returns
+  /// [AdvisoryUnavailableReason.unclassified] rather than guessing — the raw
+  /// error is preserved on [AdvisoryProviderError.cause] either way.
+  static AdvisoryUnavailableReason _classify(Object e) {
+    if (e is TimeoutException) return AdvisoryUnavailableReason.timedOut;
+    if (e is FormatException) return AdvisoryUnavailableReason.unparseable;
+    if (e is AdvisoryProviderInitException) {
+      return AdvisoryUnavailableReason.notInitialised;
+    }
+    // dart:io / package:http types are not importable here (pure Dart, and this
+    // package must stay web-safe), so the family is matched by type name.
+    final name = e.runtimeType.toString();
+    if (name.contains('SocketException') ||
+        name.contains('HandshakeException') ||
+        name.contains('ClientException') ||
+        name.contains('HttpException')) {
+      return AdvisoryUnavailableReason.networkUnreachable;
+    }
+    return AdvisoryUnavailableReason.unclassified;
   }
 }

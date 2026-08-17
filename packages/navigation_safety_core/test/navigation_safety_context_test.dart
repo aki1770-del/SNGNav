@@ -86,20 +86,27 @@ void main() {
       // freezing fog — the worst case) saturates to 100%, never throws.
       for (final p in [100.1, 101.5, 105.0]) {
         final ctx = DrivingContext.withPercentHumidity(humidityPercent: p);
-        expect(ctx.humidityRH, closeTo(1.0, 1e-12),
-            reason: 'supersaturated $p%% must saturate to 1.0');
+        expect(
+          ctx.humidityRH,
+          closeTo(1.0, 1e-12),
+          reason: 'supersaturated $p%% must saturate to 1.0',
+        );
       }
       // 0.0 (the common missing-data sentinel) and negatives -> unknown.
       for (final p in [0.0, -5.0]) {
         final ctx = DrivingContext.withPercentHumidity(humidityPercent: p);
-        expect(ctx.humidityRH, isNull,
-            reason: '$p must be treated as unknown, not crash');
+        expect(
+          ctx.humidityRH,
+          isNull,
+          reason: '$p must be treated as unknown, not crash',
+        );
       }
       // Sub-1% is almost certainly a mis-wired FRACTION -> rejected loudly.
       expect(
         () => DrivingContext.withPercentHumidity(humidityPercent: 0.95),
         throwsArgumentError,
-        reason: 'a fraction in the percent door must be rejected, not '
+        reason:
+            'a fraction in the percent door must be rejected, not '
             'silently read as 0.95%% RH',
       );
       // Implausible values -> rejected (surface the feed bug).
@@ -111,8 +118,9 @@ void main() {
         );
       }
       // 100% RH (saturated air) is a legal reading.
-      final saturated =
-          DrivingContext.withPercentHumidity(humidityPercent: 100.0);
+      final saturated = DrivingContext.withPercentHumidity(
+        humidityPercent: 100.0,
+      );
       expect(saturated.humidityRH, closeTo(1.0, 1e-12));
     });
 
@@ -135,8 +143,10 @@ void main() {
         ),
       );
       // Strict: the lift FIRED (deleting the lift branch fails this test).
-      expect(cfg.warningTemperatureCelsius,
-          greaterThan(base.warningTemperatureCelsius));
+      expect(
+        cfg.warningTemperatureCelsius,
+        greaterThan(base.warningTemperatureCelsius),
+      );
       // Value-pinned: base 0degC lifts to exactly 1degC at these inputs.
       expect(base.warningTemperatureCelsius, 0);
       expect(cfg.warningTemperatureCelsius, 1);

@@ -21,11 +21,29 @@ simulated scenarios for demos and testing.
 - **SimulatedWeatherProvider** — Demo provider with a realistic mountain-pass
   snow scenario
 
+## It will not tell you something it did not measure
+
+This is the package's central promise, and in versions up to 0.4.4 it was
+broken — an empty advisory feed produced a fabricated `+5.0 °C, no ice`. See
+[CHANGELOG 0.5.0](CHANGELOG.md) for the full disclosure and migration table.
+
+- Every measured field is **nullable**. `null` means NOT MEASURED — never zero,
+  never benign, never "clear".
+- Safety verdicts are **tri-state** (`SafetyVerdict`), never `bool`. A `bool`
+  cannot say "I don't know", so it resolves absence into its `false` branch —
+  which for a hazard question is the *clear road* branch.
+- A failed fetch is a `WeatherStale` or `WeatherUnavailable` reading, not a
+  silently re-dated old value.
+
+Positive hazard evidence fires even on partial data; only the *negative* verdict
+("all clear") requires complete data. So going offline does not raise a false
+alarm — it reports `unknown`, which you can actually tell the driver.
+
 ## Install
 
 ```yaml
 dependencies:
-  driving_weather: ^0.4.3
+  driving_weather: ^0.5.0
 ```
 
 ## Quick Start
@@ -40,15 +58,22 @@ final provider = OpenMeteoWeatherProvider(
 );
 await provider.startMonitoring();
 
-provider.conditions.listen((condition) {
-  print('${condition.precipType.name} ${condition.intensity.name}');
-  print('Visibility: ${condition.visibilityMeters}m');
-
-  if (condition.isHazardous) {
-    print('⚠ Hazardous conditions detected');
-  }
-  if (condition.iceRisk) {
-    print('⚠ Ice risk — temperature: ${condition.temperatureCelsius}°C');
+provider.conditions.listen((reading) {
+  switch (reading) {
+    case WeatherObserved(:final condition):
+      switch (condition.hazard) {
+        case SafetyVerdict.hazardous:
+          print('⚠ Hazardous conditions detected');
+        case SafetyVerdict.notHazardous:
+          print('Assessed: no hazard');
+        case SafetyVerdict.unknown:
+          // NOT a green light. Nobody measured the road — say so.
+          print('Conditions unavailable — drive to what you can see');
+      }
+    case WeatherStale(:final lastKnown, :final age):
+      print('Stale (${age.inMinutes} min old): ${lastKnown.precipType?.name}');
+    case WeatherUnavailable():
+      print('No weather data');
   }
 });
 ```
@@ -101,29 +126,56 @@ class _WeatherBannerState extends State<WeatherBanner> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<WeatherCondition>(
+    return StreamBuilder<WeatherReading>(
       stream: provider.conditions,
       builder: (context, snapshot) {
-        final condition = snapshot.data;
-        if (condition == null) {
+        final reading = snapshot.data;
+        if (reading == null) {
           return const Text('Loading weather...');
         }
 
-        return ListTile(
-          title: Text(
-            '${condition.precipType.name} '
-            '${condition.intensity.name}',
-          ),
-          subtitle: Text(
-            'Visibility ${condition.visibilityMeters.toStringAsFixed(0)}m • '
-            'Ice risk ${condition.iceRisk ? 'yes' : 'no'}',
-          ),
-          trailing: condition.isHazardous
-              ? const Icon(Icons.warning_amber_rounded)
-              : const Icon(Icons.cloud_outlined),
-        );
+        return switch (reading) {
+          WeatherObserved(:final condition) => ListTile(
+              title: Text(
+                '${condition.precipType?.name ?? 'unknown'} '
+                '${condition.intensity?.name ?? ''}',
+              ),
+              subtitle: Text(_describe(condition)),
+              trailing: switch (condition.hazard) {
+                SafetyVerdict.hazardous =>
+                  const Icon(Icons.warning_amber_rounded),
+                SafetyVerdict.notHazardous =>
+                  const Icon(Icons.cloud_outlined),
+                // Absence is shown as absence — never as a calm sky.
+                SafetyVerdict.unknown => const Icon(Icons.help_outline),
+              },
+            ),
+          WeatherStale(:final age) => ListTile(
+              title: const Text('Weather data is stale'),
+              subtitle: Text('Last observed ${age.inMinutes} min ago'),
+              trailing: const Icon(Icons.history),
+            ),
+          WeatherUnavailable() => const ListTile(
+              title: Text('No weather data'),
+              subtitle: Text('Conditions unknown — drive to what you can see'),
+              trailing: Icon(Icons.cloud_off),
+            ),
+        };
       },
     );
+  }
+
+  // Render absence as absence. Never substitute a value.
+  String _describe(WeatherCondition c) {
+    final visibility = c.visibilityMeters == null
+        ? 'Visibility unknown'
+        : 'Visibility ${c.visibilityMeters!.toStringAsFixed(0)}m';
+    final ice = switch (c.iceRisk) {
+      true => 'Ice risk yes',
+      false => 'Ice risk no',
+      null => 'Ice risk unknown',
+    };
+    return '$visibility • $ice';
   }
 }
 ```
@@ -144,34 +196,53 @@ class MyFleetWeatherProvider implements WeatherProvider {
 
 | Type | Purpose |
 |------|---------|
-| `WeatherCondition` | Snapshot of precipitation, temperature, visibility, wind, and ice risk. |
+| `WeatherCondition` | Snapshot of precipitation, temperature, visibility, wind, and ice risk — each of which may be *absent*. |
+| `WeatherReading` | Sealed: `WeatherObserved` \| `WeatherStale` \| `WeatherUnavailable`. What a provider actually hands you. |
+| `SafetyVerdict` | `hazardous` \| `notHazardous` \| `unknown`. The third one is the point. |
+| `ObservationSource` | `measured` \| `derived` \| `simulated` — provenance of the fields that are present. |
+| `HazardAssertion` | A hazard *declared* by a road authority, as distinct from one *measured* by a sensor. |
 | `WeatherProvider` | Abstract interface for live or simulated weather sources. |
-| `OpenMeteoWeatherProvider` | Pulls real weather data with offline fallback behavior. |
-| `SimulatedWeatherProvider` | Provides deterministic demo and test weather sequences. |
+| `OpenMeteoWeatherProvider` | Pulls real weather data; reports staleness rather than concealing it. |
+| `DigitrafficWeatherProvider` | Finnish road-authority advisories, carried as an assertion — never as invented sensor values. |
+| `SimulatedWeatherProvider` | Deterministic demo/test sequences, labelled `simulated`. |
 
 ## Model
 
+**Every measured field is nullable, and `null` means NOT MEASURED.**
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `precipType` | `PrecipitationType` | none, rain, snow, sleet, hail |
-| `intensity` | `PrecipitationIntensity` | none, light, moderate, heavy |
-| `temperatureCelsius` | `double` | Temperature in °C |
-| `visibilityMeters` | `double` | 10000 = clear, <1000 = reduced, <200 = hazardous |
-| `windSpeedKmh` | `double` | Wind speed |
-| `iceRisk` | `bool` | Black ice / road icing risk |
+| `precipType` | `PrecipitationType?` | none, rain, snow, sleet, hail. `null` ≠ `none`. |
+| `intensity` | `PrecipitationIntensity?` | none, light, moderate, heavy |
+| `temperatureCelsius` | `double?` | °C. `null` never means "above freezing". |
+| `visibilityMeters` | `double?` | 10000 = clear, <1000 = reduced, <200 = hazardous. `null` never means "clear". |
+| `windSpeedKmh` | `double?` | `null` never means "calm". |
+| `iceRisk` | `bool?` | Black ice / road icing risk. `null` never means "no ice". |
+| `humidityRH` | `double?` | Relative humidity %, for radiative-frost black ice. |
+| `hazardAssertion` | `HazardAssertion?` | Severity *declared* by an authority. |
+| `source` | `ObservationSource` | Provenance of the present fields (required). |
 | `timestamp` | `DateTime` | Observation time |
 
-### Convenience getters
+### Safety verdicts (tri-state — never `bool`)
 
-- `isSnowing` — snow at any intensity
-- `hasReducedVisibility` — visibility < 1 km
-- `isHazardous` — heavy precip, very low visibility, or ice
-- `isFreezing` — temperature ≤ 0°C
+- `hazard` — heavy precip, visibility < 200 m, ice risk, or a severe/extreme
+  authority assertion. Fires on **partial** data. Returns `notHazardous` only
+  when ice risk, intensity *and* visibility are all known and none fired;
+  otherwise `unknown`.
+- `snowing` — `unknown` when precipitation was not reported.
+- `reducedVisibility` — `unknown` when visibility was not measured.
+- `freezing` — `unknown` when temperature was not measured.
+
+`unknown` is not a green light. Show it to the driver.
 
 ## Safety
 
 Display and advisory only — does not control vehicle systems.
 Built with automotive-grade test discipline, usable in any Flutter app.
+
+See [`SAFETY_BOUNDARY.md`](SAFETY_BOUNDARY.md) for the full safety-class boundary
+record, including the §0 correction notice and a known SOTIF performance
+insufficiency that is *not* fixed in 0.5.0 (sub-zero clear-sky residual ice).
 
 ## Works With
 

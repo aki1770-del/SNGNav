@@ -17,9 +17,16 @@ Pure Dart. Only `http` and `pretrip_decision_advisor` runtime dependencies.
 
 ## Status
 
-Phase: extract — v0.1.0. Extracted verbatim (no behaviour change) from the
-SNGNav app's `MetNorwayHourlyForecastProvider`. The `locationforecast`
-product is global, so this serves a Nagoya commute as well as a Tromsø one.
+Phase: maintained — v0.2.3. Requires `pretrip_decision_advisor >=0.5.3 <0.7.0`.
+
+The HTTP client and mapper were extracted verbatim from the SNGNav app's
+`MetNorwayHourlyForecastProvider` **at v0.1.0**. That direction has since
+reversed: the app now consumes this package. Later versions are developed
+here, and 0.2.3's mapping-coverage API (`fetchForecastWithCoverage`,
+`MetNorwayMappingCoverage`) has no counterpart in the app.
+
+The `locationforecast` product is global, so this serves a Nagoya commute as
+well as a Tromsø one.
 
 ## Safety contract — honesty rules (BINDING, verbatim)
 
@@ -58,6 +65,29 @@ them:
 This contract is condition-GENERAL: visibility in metres and an hourly
 forecast serve every weather turmoil (fog, rain, dust, snow), not snow
 alone.
+
+- **An all-clear can never be earned from this product alone, and that is
+  permanent.** Because `visibilityMeters` and `estimatedRoadCondition` are
+  ALWAYS null here, `SnowAwarePretripAdvisor.brief()` will THROW
+  `PretripAssessmentIncompleteException` rather than report "no hazard" it did
+  not measure — on calm forecasts too. This is not a defect and not a gap we
+  intend to close; the compact product does not carry those fields. Use
+  `briefOrNull()` and render "not assessed", or supply the missing
+  measurement yourself (`mergeObservedVisibility`, `estimatedRoadCondition`).
+  A HAZARD still reports from whatever WAS measured — the asymmetry is
+  deliberate.
+
+- **A skipped slice is countable, and you can see it.** The mapper skips a
+  timeseries slice it cannot honestly use — an unparseable time, no
+  `next_1_hours` (the 6-hourly tail), or no `air_temperature` — and never
+  interpolates. Because `WeatherForecast` carries no coverage member, a slice
+  we skipped used to be indistinguishable from an hour the publisher never
+  issued. Use `fetchForecastWithCoverage()` (or `mapLocationForecastWithCoverage()`
+  if you already hold the JSON) to get a `MetNorwayMappingCoverage`: slices
+  seen, hours emitted, and the cause of every drop. `unexpectedDrops` counts
+  only the drops that are NOT the publisher's documented 6-hourly shape.
+  **Bound:** a consumer holding only the plain `WeatherForecast` still cannot
+  see the hole — that type belongs to `pretrip_decision_advisor`.
 
 ## Measurement vs warning — this package and its sibling
 
@@ -104,7 +134,8 @@ MET Norway locationforecast/2.0/compact feed
 ```
 
 This package exists so an edge developer can warn a driver before she sets
-out — HER in Nagoya, HER mother in Akita (heavy-snow), a driver in Tromsø —
+out — a commuter in Nagoya, an elderly driver in rural Akita (heavy-snow), a
+driver in Tromsø —
 and her family, especially in compound-failure conditions when standard
 navigation infrastructure has gone away. Package count is not the success
 metric; an edge developer running it and a driver seeing the briefing is.
@@ -156,7 +187,12 @@ Future<void> main() async {
       return;
     }
     const advisor = SnowAwarePretripAdvisor();
-    final briefing = advisor.brief(
+    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.3 the
+    // advisor THROWS rather than report an all-clear it did not measure, and
+    // it fires on the COMMON path here — including a calm forecast. This
+    // product carries neither visibility nor road surface (see the honesty
+    // rules above), so a MET-Norway-only input can never earn "no hazard".
+    final briefing = advisor.briefOrNull(
       forecast: forecast,
       commute: CommuteShape(
         plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -169,6 +205,11 @@ Future<void> main() async {
         reactionTimeSeconds: 1.5,
       ),
     );
+    if (briefing == null) {
+      print('Verdict: not assessed — the forecast could not earn a '
+          'conclusion (no visibility or road-surface measurement).');
+      return;
+    }
     print('Verdict: ${briefing.verdict.name}');
   } finally {
     provider.close();

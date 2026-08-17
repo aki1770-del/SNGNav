@@ -255,11 +255,18 @@ double _truncateToFourDecimals(double v) {
 /// - `source` ← `AdvisorySource.metNorway`
 /// - `eventClass` ← derived from the first matched condition:
 ///   - `Freezing precipitation` when air_temperature ≤
-///     [freezingTemperatureCelsius] AND next-hour precipitation > 0
-///   - `Heavy precipitation` when next-hour precipitation ≥
-///     [heavyPrecipitationMmPerHour]
+///     [freezingTemperatureCelsius] AND next-hour precipitation was
+///     MEASURED above 0
+///   - `Heavy precipitation` when next-hour precipitation was MEASURED
+///     at ≥ [heavyPrecipitationMmPerHour]
+///   - `Freezing, precipitation not measured` when air_temperature ≤
+///     [freezingTemperatureCelsius] AND the feed carried no
+///     `precipitation_amount` at all — see [_deriveSeverity]; this
+///     case is `AdvisorySeverity.unknown`, never the milder
+///     `Subzero forecast`
 ///   - `Subzero forecast` when air_temperature ≤
-///     [freezingTemperatureCelsius] AND precipitation == 0
+///     [freezingTemperatureCelsius] AND precipitation was MEASURED at
+///     exactly 0
 ///   - else: returns null (no advisory)
 /// - `severity` ← heuristic by combined temperature + precipitation
 ///   intensity (see [_deriveSeverity])
@@ -320,7 +327,27 @@ Advisory? mapLocationForecastResponseToAdvisory({
   }
 
   final temperature = _readNum(instantDetails?['air_temperature']);
-  final precipitation = _readNum(next1Details?['precipitation_amount']) ?? 0.0;
+  // NULLABLE, deliberately. `null` means the feed did not carry a numeric
+  // `precipitation_amount` for this slice — it does NOT mean 0.0 mm.
+  //
+  // Up to and including 0.0.5 this line read `... ?? 0.0`, and that single
+  // `?? 0.0` did two things, both fabrication:
+  //   (1) with a freezing temperature and an UNMEASURED precipitation figure,
+  //       `_classify` saw `precipitation == 0` and returned the benign
+  //       'Subzero forecast' (moderate) rather than the 'Freezing
+  //       precipitation' (severe/extreme) it would have reached had the value
+  //       actually been measured above zero — absence bought a downgrade;
+  //   (2) `_composeDescription` then printed 'next_1_hours
+  //       precipitation_amount 0.0 mm' into the text a driver reads, for a
+  //       figure the publisher never sent.
+  //
+  // The trigger surface is real: measured against the live compact product on
+  // 2026-08-08, 32 of 86 timeseries slices carried no `next_1_hours` block at
+  // all. This mapper reads `timeseries[0]`, which did carry one at every
+  // coordinate sampled — so absence here is a latent path, not an observed
+  // live one. A latent fabrication is still a fabrication: the guard belongs
+  // at the read, not at the caller's discretion.
+  final precipitation = _readNum(next1Details?['precipitation_amount']);
 
   final eventClass = _classify(
     temperature: temperature,
@@ -370,25 +397,61 @@ Advisory? mapLocationForecastResponseToAdvisory({
   );
 }
 
+/// Event classes this adapter can emit.
+///
+/// [kEventFreezingPrecipNotMeasured] exists because absence must not be sorted
+/// onto the benign end of the scale. With a freezing temperature and an
+/// unmeasured precipitation figure we do not know whether ice is falling — and
+/// per the contract's asymmetry (positive hazard evidence may fire on partial
+/// data; a "nothing is wrong here" verdict requires complete data) an unknown
+/// must not be quietly filed as the milder [kEventSubzeroForecast].
+///
+/// Exported as constants so a consumer can branch on them without matching
+/// literal strings that a future release might reword.
+const String kEventFreezingPrecipitation = 'Freezing precipitation';
+
+/// See [kEventFreezingPrecipitation]. Emitted at
+/// `AdvisorySeverity.unknown` — never `moderate`.
+const String kEventFreezingPrecipNotMeasured =
+    'Freezing, precipitation not measured';
+
+/// See [kEventFreezingPrecipitation].
+const String kEventHeavyPrecipitation = 'Heavy precipitation';
+
+/// See [kEventFreezingPrecipitation]. Requires a MEASURED zero.
+const String kEventSubzeroForecast = 'Subzero forecast';
+
 String? _classify({
   required double? temperature,
-  required double precipitation,
+  required double? precipitation,
   required double heavyPrecipitationMmPerHour,
   required double freezingTemperatureCelsius,
 }) {
   final freezing =
       temperature != null && temperature <= freezingTemperatureCelsius;
-  final heavy = precipitation >= heavyPrecipitationMmPerHour;
-  if (freezing && precipitation > 0) return 'Freezing precipitation';
-  if (heavy) return 'Heavy precipitation';
-  if (freezing && precipitation == 0) return 'Subzero forecast';
+
+  // An unmeasured precipitation figure can never make `heavy` true — and it
+  // must never make it FALSE either. It is simply not evidence.
+  final heavy =
+      precipitation != null && precipitation >= heavyPrecipitationMmPerHour;
+
+  if (freezing && precipitation != null && precipitation > 0) {
+    return kEventFreezingPrecipitation;
+  }
+  if (heavy) return kEventHeavyPrecipitation;
+  // Freezing, and nobody measured whether anything is falling. Ordered BEFORE
+  // the subzero branch so that absence can never reach it.
+  if (freezing && precipitation == null) {
+    return kEventFreezingPrecipNotMeasured;
+  }
+  if (freezing && precipitation == 0) return kEventSubzeroForecast;
   return null;
 }
 
 AdvisorySeverity _deriveSeverity({
   required String eventClass,
   required double? temperature,
-  required double precipitation,
+  required double? precipitation,
   required double heavyPrecipitationMmPerHour,
   required double freezingTemperatureCelsius,
 }) {
@@ -402,13 +465,21 @@ AdvisorySeverity _deriveSeverity({
   //   risk but no active fall).
   // - minor: otherwise (defensive default; classify() would have
   //   returned null in that case).
-  if (eventClass == 'Freezing precipitation' &&
+  if (eventClass == kEventFreezingPrecipitation &&
+      precipitation != null &&
       precipitation >= heavyPrecipitationMmPerHour) {
     return AdvisorySeverity.extreme;
   }
-  if (eventClass == 'Freezing precipitation') return AdvisorySeverity.severe;
-  if (eventClass == 'Heavy precipitation') return AdvisorySeverity.severe;
-  if (eventClass == 'Subzero forecast') return AdvisorySeverity.moderate;
+  if (eventClass == kEventFreezingPrecipitation) return AdvisorySeverity.severe;
+  if (eventClass == kEventHeavyPrecipitation) return AdvisorySeverity.severe;
+  // Freezing, and nobody measured whether anything is falling. This is NOT the
+  // milder "subzero and dry" case — we do not know that it is dry. The severity
+  // is therefore UNSTATED rather than defaulted: an unmeasured field must not
+  // buy a downgrade. This branch MUST precede the subzero branch below.
+  if (eventClass == kEventFreezingPrecipNotMeasured) {
+    return AdvisorySeverity.unknown;
+  }
+  if (eventClass == kEventSubzeroForecast) return AdvisorySeverity.moderate;
   return AdvisorySeverity.minor;
 }
 
@@ -437,17 +508,24 @@ String _composeHeadline({
 
 String _composeDescription({
   required double? temperature,
-  required double precipitation,
+  required double? precipitation,
   required String? symbolCode,
 }) {
   final parts = <String>[];
   if (temperature != null) {
     parts.add('air_temperature ${temperature.toStringAsFixed(1)} °C');
   }
-  parts.add(
-    'next_1_hours precipitation_amount '
-    '${precipitation.toStringAsFixed(1)} mm',
-  );
+  // A figure the feed did not send is not printed as one. Up to 0.0.5 this
+  // line unconditionally emitted 'precipitation_amount 0.0 mm' into the text a
+  // driver reads, for a value nobody measured.
+  if (precipitation != null) {
+    parts.add(
+      'next_1_hours precipitation_amount '
+      '${precipitation.toStringAsFixed(1)} mm',
+    );
+  } else {
+    parts.add('next_1_hours precipitation_amount not reported');
+  }
   if (symbolCode != null) parts.add('symbol_code $symbolCode');
   parts.add(AdvisorySource.metNorway.attributionString);
   return parts.join('. ');
