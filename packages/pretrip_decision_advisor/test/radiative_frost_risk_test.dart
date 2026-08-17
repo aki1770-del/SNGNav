@@ -24,8 +24,11 @@ void main() {
   const advisor = SnowAwarePretripAdvisor();
   final at = DateTime(2026, 1, 15, 6); // an Akita winter pre-dawn hour
 
-  HourlyForecast slot({required double temp, double? rh}) =>
-      HourlyForecast(hour: at, tempCelsius: temp, humidityRH: rh);
+  HourlyForecast slot({required double temp, double? rh}) => HourlyForecast(
+        hour: at,
+        tempCelsius: temp,
+        humidityRH: rh,
+      );
 
   group('radiativeFrostRisk delegates to the single source of truth', () {
     // Anti-drift: the pre-trip advisor and the in-drive road-surface classifier
@@ -34,23 +37,15 @@ void main() {
     // divergent copy, this fails.
     test('matches isRadiativeFrostBlackIce for every (temp, rh)', () {
       const temps = [-1.0, 0.0, 0.2, 0.5, 1.0, 2.0, 3.0, 3.1, 5.0, 20.0];
-      const humidities = [
-        null,
-        0.0,
-        4.0,
-        25.0,
-        40.0,
-        60.0,
-        80.0,
-        95.0,
-        100.0,
-        120.0,
-      ];
+      const humidities = [null, 0.0, 4.0, 25.0, 40.0, 60.0, 80.0, 95.0, 100.0, 120.0];
       for (final t in temps) {
         for (final rh in humidities) {
           expect(
             advisor.radiativeFrostRisk(slot(temp: t, rh: rh)),
-            isRadiativeFrostBlackIce(ambientCelsius: t, humidityRHPercent: rh),
+            isRadiativeFrostBlackIce(
+              ambientCelsius: t,
+              humidityRHPercent: rh,
+            ),
             reason: 'divergence at temp=$t rh=$rh',
           );
         }
@@ -62,85 +57,51 @@ void main() {
     test('fires in the above-zero-ambient black-ice window', () {
       expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 95)), isTrue);
       expect(advisor.radiativeFrostRisk(slot(temp: 1.0, rh: 60)), isTrue);
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 3.0, rh: 80)),
-        isTrue,
-        reason: 'the ceiling is inclusive: 3.0 °C is inside the envelope',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 3.0, rh: 80)), isTrue,
+          reason: 'the ceiling is inclusive: 3.0 °C is inside the envelope');
     });
 
     test('does not fire when the surface estimate stays above freezing', () {
       expect(advisor.radiativeFrostRisk(slot(temp: 1.0, rh: 95)), isFalse);
       expect(advisor.radiativeFrostRisk(slot(temp: 0.2, rh: 99)), isFalse);
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 3.0, rh: 100)),
-        isFalse,
-        reason: 'saturated air: surface estimate == ambient == +3.0',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 3.0, rh: 100)), isFalse,
+          reason: 'saturated air: surface estimate == ambient == +3.0');
     });
 
     test('CEILING: warm ambient never fires, whatever the dew point '
         '(the cry-wolf class the adversarial panel caught)', () {
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 5.0, rh: 40)),
-        isFalse,
-        reason: 'dew point −7.5 but ambient 5.0 > ceiling 3.0',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 5.0, rh: 40)), isFalse,
+          reason: 'dew point −7.5 but ambient 5.0 > ceiling 3.0');
       expect(advisor.radiativeFrostRisk(slot(temp: 10.0, rh: 45)), isFalse);
       expect(advisor.radiativeFrostRisk(slot(temp: 15.0, rh: 30)), isFalse);
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 20.0, rh: 25)),
-        isFalse,
-        reason: 'the benign dry afternoon must NEVER chip black ice',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 3.1, rh: 40)),
-        isFalse,
-        reason: 'just above the ceiling',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 20.0, rh: 25)), isFalse,
+          reason: 'the benign dry afternoon must NEVER chip black ice');
+      expect(advisor.radiativeFrostRisk(slot(temp: 3.1, rh: 40)), isFalse,
+          reason: 'just above the ceiling');
     });
 
     test('absence or dirty data is never presence of hazard — and never '
-        'an exception (adapted-from-core semantics: ignore, don\'t throw)', () {
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5)),
-        isFalse,
-        reason: 'null humidity adds nothing',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 0.0)),
-        isFalse,
-        reason: '0.0 is the missing-data sentinel',
-      );
+        'an exception (adapted-from-core semantics: ignore, don\'t throw)',
+        () {
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5)), isFalse,
+          reason: 'null humidity adds nothing');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 0.0)), isFalse,
+          reason: '0.0 is the missing-data sentinel');
       expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: -5.0)), isFalse);
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 120.0)),
-        isFalse,
-        reason: 'implausible reading adds nothing (feed bug, not hazard)',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: double.nan)),
-        isFalse,
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 120.0)), isFalse,
+          reason: 'implausible reading adds nothing (feed bug, not hazard)');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: double.nan)),
+          isFalse);
       // A mis-wired FRACTION in the percent field would fabricate a deep
       // depression — the plausibility floor (rh < 5.0 ignored) kills the
       // whole class, INCLUDING exactly 1.0 (saturated air, the single most
       // common fraction value — the leak 3 of 5 re-review lenses caught).
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 0.95)),
-        isFalse,
-        reason: 'mis-wired fraction 0.95 must add nothing',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 1.0)),
-        isFalse,
-        reason: 'mis-wired fraction 1.0 (saturated air) must add nothing',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 4.9)),
-        isFalse,
-        reason: 'below the physical-plausibility floor',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 0.95)), isFalse,
+          reason: 'mis-wired fraction 0.95 must add nothing');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 1.0)), isFalse,
+          reason: 'mis-wired fraction 1.0 (saturated air) must add nothing');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 4.9)), isFalse,
+          reason: 'below the physical-plausibility floor');
       // The floor itself is real weather territory and computes normally
       // (5% RH @ 0.5C -> dew far below zero -> fires, inside the ceiling).
       expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 5.0)), isTrue);
@@ -152,31 +113,19 @@ void main() {
       final subnormal = slot(temp: 0.5, rh: 5e-324);
       expect(() => advisor.radiativeFrostRisk(subnormal), returnsNormally);
       expect(advisor.radiativeFrostRisk(subnormal), isFalse);
-      expect(
-        () => advisor.hazardOf(subnormal),
-        returnsNormally,
-        reason: 'ONE corrupt slot must never take down the whole briefing',
-      );
+      expect(() => advisor.hazardOf(subnormal), returnsNormally,
+          reason: 'ONE corrupt slot must never take down the whole briefing');
     });
 
     test('supersaturation reads as saturated air', () {
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 101.0)),
-        isFalse,
-        reason: 'saturated air at +0.5 ambient: surface estimate +0.5 > 0',
-      );
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.0, rh: 101.0)),
-        isTrue,
-        reason: 'saturated air at 0.0 ambient: surface estimate 0.0 <= 0',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 101.0)), isFalse,
+          reason: 'saturated air at +0.5 ambient: surface estimate +0.5 > 0');
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.0, rh: 101.0)), isTrue,
+          reason: 'saturated air at 0.0 ambient: surface estimate 0.0 <= 0');
       // The inclusive upper guard endpoint: 105.0 is accepted (as saturated).
       expect(advisor.radiativeFrostRisk(slot(temp: 0.0, rh: 105.0)), isTrue);
-      expect(
-        advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 105.1)),
-        isFalse,
-        reason: 'just past the guard: implausible, adds nothing',
-      );
+      expect(advisor.radiativeFrostRisk(slot(temp: 0.5, rh: 105.1)), isFalse,
+          reason: 'just past the guard: implausible, adds nothing');
     });
   });
 
@@ -224,33 +173,25 @@ void main() {
           flexibility: CommuteFlexibility.discretionary,
         ),
         profile: const DriverProfileSpec(
-          profileTag: 'akita',
-          reactionTimeSeconds: 1.5,
-        ),
+            profileTag: 'akita', reactionTimeSeconds: 1.5),
       );
     }
 
     test('a radiative-frost-only window carries the blackIce chip — never '
-        'the generic fallback (deleting the _describe branch fails this)', () {
+        'the generic fallback (deleting the _describe branch fails this)',
+        () {
       final briefing = briefFor([
         slot(temp: 0.5, rh: 95),
         HourlyForecast(
-          hour: at.add(const Duration(hours: 1)),
-          tempCelsius: 0.5,
-          humidityRH: 95,
-        ),
+            hour: at.add(const Duration(hours: 1)),
+            tempCelsius: 0.5,
+            humidityRH: 95),
       ]);
       final chips = briefing.recommendation!.rationale.join(' | ');
-      expect(
-        chips,
-        contains('Black ice possible'),
-        reason: 'the radiative-frost chip must describe the slot',
-      );
-      expect(
-        chips,
-        isNot(contains('Winter conditions possible')),
-        reason: 'the specific chip must not fall through to the generic',
-      );
+      expect(chips, contains('Black ice possible'),
+          reason: 'the radiative-frost chip must describe the slot');
+      expect(chips, isNot(contains('Winter conditions possible')),
+          reason: 'the specific chip must not fall through to the generic');
     });
 
     test('at/below-zero ambient keeps freezingAir precedence '
@@ -258,10 +199,9 @@ void main() {
       final briefing = briefFor([
         slot(temp: -1.0, rh: 95),
         HourlyForecast(
-          hour: at.add(const Duration(hours: 1)),
-          tempCelsius: -1.0,
-          humidityRH: 95,
-        ),
+            hour: at.add(const Duration(hours: 1)),
+            tempCelsius: -1.0,
+            humidityRH: 95),
       ]);
       final chips = briefing.recommendation!.rationale.join(' | ');
       expect(chips, contains('Freezing air'));
@@ -281,13 +221,9 @@ void main() {
       final text = PretripMessages.en.blackIceRadiativeRisk('06:00');
       expect(text.toLowerCase(), contains('black ice'));
       expect(text, contains('above 0'));
-      expect(
-        text.toLowerCase(),
-        isNot(contains('overnight')),
-        reason:
-            'the chip is emitted per-slot; it must not claim a time '
-            'of day the slot may contradict',
-      );
+      expect(text.toLowerCase(), isNot(contains('overnight')),
+          reason: 'the chip is emitted per-slot; it must not claim a time '
+              'of day the slot may contradict');
     });
   });
 }

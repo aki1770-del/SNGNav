@@ -18,17 +18,6 @@
 /// number; an observation is valid for its departure hour only; a null
 /// field is the driver's own judgement, never a fabricated hazard.
 ///
-/// Coverage: the mapper SKIPS a timeseries slice it cannot honestly use (an
-/// unparseable time, no `next_1_hours` — the 6-hourly tail —, or no
-/// `air_temperature`). It never interpolates. Because [WeatherForecast]
-/// carries no coverage member, a skipped slice used to be invisible: a hole
-/// we made looked identical to an hour the publisher never issued. Use
-/// [MetNorwayHourlyForecastProvider.fetchForecastWithCoverage] (or the
-/// top-level [mapLocationForecastWithCoverage] if you already hold the JSON)
-/// to see what was dropped and why ([MetNorwayMappingCoverage]);
-/// `unexpectedDrops` counts only the drops that are NOT the publisher's
-/// documented 6-hourly shape.
-///
 /// Service trace (driver in unexpected weather; ≤4 hops):
 ///   MET Norway locationforecast/2.0/compact feed
 ///     → `MetNorwayHourlyForecastProvider` (this package)
@@ -47,10 +36,6 @@ library;
 export 'src/met_norway_hourly_forecast.dart'
     show
         MetNorwayForecastException,
-        MetNorwayForecastWithCoverage,
         MetNorwayHourlyForecastProvider,
-        MetNorwayMappingCoverage,
-        MetNorwaySliceDrop,
         kMetNorwayLocationForecastUrl,
-        mapLocationForecastToWeatherForecast,
-        mapLocationForecastWithCoverage;
+        mapLocationForecastToWeatherForecast;

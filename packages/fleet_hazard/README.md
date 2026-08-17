@@ -126,62 +126,16 @@ In a full navigation UI, this same `zones` list is what you would pass to a map
 overlay layer so the driver sees clustered snowy and icy segments, not raw per-
 vehicle noise.
 
-## An empty result is not an all-clear
-
-`HazardAggregator.aggregate()` returns an empty list in three different
-situations, and **it cannot tell you which one you are in**:
-
-* nobody has reported this road;
-* the fleet drove it and found it clear;
-* the fleet drove it and every sensor returned `RoadCondition.unknown`.
-
-If you render an empty list as a clear road, you will show a driver a clear road
-on stretches where nothing is known at all. Use `aggregateWithProvenance()` when
-a person is going to act on the answer:
-
-```dart
-// oracle:placeholders reports
-final result = HazardAggregator.aggregateWithProvenance(
-  reports,
-  maxAge: const Duration(minutes: 30),
-);
-
-if (result.isSilent) {
-  // No fresh reports at all. Say so — do not render a clear road.
-} else if (result.isAllUnknown) {
-  // Vehicles drove it; none could read it. Also not a clear road.
-} else if (result.isMeasuredClear) {
-  // Vehicles drove it and found it fine. This you may render as clear.
-} else {
-  for (final zone in result.zones) {
-    // Hazard zones, same clustering as aggregate().
-  }
-}
-```
-
-`maxAge` is what makes a claim like *"12 vehicles reported in the last 30
-minutes"* true: reports older than it are excluded from clustering and counted
-in `result.staleCount`. Omit `maxAge` and **no age filter is applied at all** —
-a report from last week counts the same as one from a minute ago.
-
-`result.freshestReportAt` is `null` when nothing was reported. `null` means NOT
-KNOWN — do not coalesce it into a time or render it as freshness.
-
 ## Implement a provider
 
 ```dart
-import 'dart:async';
-
 class MyFleetProvider implements FleetProvider {
-  final _controller = StreamController<FleetReport>.broadcast();
-
   @override
   Stream<FleetReport> get reports => _controller.stream;
 
   @override
   Future<void> startListening() async {
-    // Connect to your telemetry source, and add each report:
-    //   _controller.add(report);
+    // Connect to your telemetry source
   }
 
   @override
@@ -191,7 +145,7 @@ class MyFleetProvider implements FleetProvider {
 
   @override
   void dispose() {
-    _controller.close();
+    // Release resources
   }
 }
 ```
@@ -203,8 +157,7 @@ class MyFleetProvider implements FleetProvider {
 | `FleetReport` | Individual vehicle report (the input atom) carrying `vehicleId`, position, road condition, confidence, and timestamp. |
 | `ZoneObservation` | Anonymized observation retained inside a zone — position, condition, timestamp, confidence; **no `vehicleId`**. |
 | `HazardZone` | Clustered geographic hazard summary with severity, a precomputed `vehicleCount`, and confidence rollups over anonymized observations. |
-| `HazardAggregator` | Pure Dart clustering algorithm that converts reports into hazard zones. `aggregate()` returns a bare `List<HazardZone>`; `aggregateWithProvenance()` returns a `FleetAggregate` and enforces `maxAge`. |
-| `FleetAggregate` | Aggregation result that keeps *absence* distinct from *a measured all-clear*: `zones`, `reportCount`, `unknownCount`, `staleCount`, `freshestReportAt`, plus `isSilent` / `isMeasuredClear` / `isAllUnknown`. |
+| `HazardAggregator` | Pure Dart clustering algorithm that converts reports into hazard zones. |
 | `FleetProvider` | Stream-based interface for simulated, local, or remote fleet telemetry sources. |
 | `RoadCondition` | Canonical hazard labels such as `dry`, `snowy`, and `icy`. |
 

@@ -120,41 +120,6 @@ final alerts = await client.fetchTrack([
   `AdvisorySource.other`. `AdvisoryAggregator` consumers handle it like
   any other advisory.
 
-## When the publisher is silent
-
-A source can be silent in ways that are not the same fact, and this adapter
-keeps them apart rather than resolving them all to one convenient value. An
-unmeasured field never buys a downgrade here: "we do not know" and "it is fine"
-are different sentences, and only one of them is safe to tell a driver.
-
-| the publisher… | you get |
-| --- | --- |
-| answered, and nothing is active at this point | an empty list, and `OwmRoadRiskRead.isComplete == true` |
-| answered with a good alert, but stated no `event_level` | the alert, with `reportedEventLevel == null` and `Advisory.severity == AdvisorySeverity.unknown` — never a low severity |
-| could not be reached, or answered unreadably in full | a thrown `OwmRoadRiskHttpException` / `OwmRoadRiskParseException` — never an empty list |
-| answered, and part of the answer was unreadable | the readable advisories **plus** a `minor`-severity notice with `eventClass == kOwmRoadRiskIncompleteReadEventClass` |
-| told us it does not cover this point or hour | **nothing — see the honest bound below** |
-
-**Read `reportedEventLevel`, not `eventLevel`.** `eventLevel` is non-null for
-source compatibility and reads `0` both when the publisher stated level `0` and
-when it stated no level at all, so a threshold such as `eventLevel >= 2`
-silently treats an unstated level as a mild one. `reportedEventLevel` is `null`
-in that case, which is *off* the scale rather than at the benign end of it, and
-the analyzer will stop the comparison instead of letting it under-warn.
-
-**Honest bound — declared coverage gaps have no vocabulary here.** The
-publisher's road-risk response has no field that says "this point or this hour
-is outside my coverage". So a genuine all-clear and an uncovered slice arrive at
-this adapter identically, and this package **cannot** distinguish them. The
-distinction is absent at the wire, and rather than invent a signal we do not
-have, we state that we do not have it. If OpenWeatherMap adds a coverage
-declaration, carrying it into `Advisory` is an upstream proposal to
-`condition_aggregator`, not something this adapter may decide alone.
-
-Our honesty is also bounded at the wire in one further way: if the publisher
-sends a figure that is itself wrong, this adapter relays it faithfully. We do
-not claim past that.
-
 ## Standards mapping
 
 This package is intended for **SAE J3016 Level 0 and Level 1 supportive
@@ -177,13 +142,6 @@ boundary disclosure.
   `appid`. The OpenWeatherMap terms of service govern key usage and
   data redistribution; consult those terms before building consumer
   surfaces over this adapter.
-- **Not a claim that silence is safety.** An empty result from this adapter
-  means the publisher answered and reported nothing — not that the road is
-  clear, and not that this point is covered. It throws rather than returning an
-  empty list when it could not read the answer, but a publisher that simply does
-  not cover a place will say nothing, and that is indistinguishable from an
-  all-clear at this API. Do not build a "conditions normal" affirmation on an
-  empty result from one adapter.
 - **Not an offline-first data source.** The OpenWeatherMap Road Risk
   endpoint is a commercial, internet-only API. In a compound-failure
   scenario where internet is lost, this provider will throw

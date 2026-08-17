@@ -12,14 +12,13 @@ WeatherCondition _condition({
   visibilityMeters: 10000,
   windSpeedKmh: 0,
   iceRisk: false,
-  source: ObservationSource.measured,
   timestamp: DateTime(2026),
 );
 
 void main() {
   group('PrecipitationConfig.fromCondition', () {
     test('no precipitation → none (zero particles)', () {
-      final config = PrecipitationConfig.fromCondition(_condition())!;
+      final config = PrecipitationConfig.fromCondition(_condition());
       expect(config.particleCount, 0);
       expect(config, PrecipitationConfig.none);
     });
@@ -30,7 +29,7 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.none,
         ),
-      )!;
+      );
       expect(config, PrecipitationConfig.none);
     });
 
@@ -40,7 +39,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.light,
         ),
-      )!;
+      );
       expect(config.particleCount, 150); // (0.3 * 500).round()
     });
 
@@ -50,7 +49,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.particleCount, 300); // (0.6 * 500).round()
     });
 
@@ -60,7 +59,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.heavy,
         ),
-      )!;
+      );
       expect(config.particleCount, 500); // (1.0 * 500).round()
     });
 
@@ -70,7 +69,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minVelocity, 2.0);
       expect(config.maxVelocity, 4.0);
     });
@@ -81,7 +80,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minSize, 2.0);
       expect(config.maxSize, 6.0);
     });
@@ -92,7 +91,7 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.lifetime, 4.0);
     });
 
@@ -102,7 +101,7 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minVelocity, 7.0);
       expect(config.maxVelocity, 12.0);
     });
@@ -113,7 +112,7 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minSize, 1.0);
       expect(config.maxSize, 3.0);
     });
@@ -124,7 +123,7 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.lifetime, 1.5);
     });
 
@@ -134,7 +133,7 @@ void main() {
           precipType: PrecipitationType.sleet,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minVelocity, 4.0);
       expect(config.maxVelocity, 8.0);
     });
@@ -145,7 +144,7 @@ void main() {
           precipType: PrecipitationType.hail,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minVelocity, 8.0);
       expect(config.maxVelocity, 15.0);
     });
@@ -156,7 +155,7 @@ void main() {
           precipType: PrecipitationType.hail,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(config.minSize, 3.0);
       expect(config.maxSize, 8.0);
     });
@@ -167,13 +166,13 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       final snow = PrecipitationConfig.fromCondition(
         _condition(
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(rain.maxVelocity, greaterThan(snow.maxVelocity));
     });
 
@@ -183,13 +182,13 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       final snow = PrecipitationConfig.fromCondition(
         _condition(
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.moderate,
         ),
-      )!;
+      );
       expect(snow.maxSize, greaterThan(rain.maxSize));
     });
 
@@ -199,13 +198,13 @@ void main() {
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.heavy,
         ),
-      )!;
+      );
       final light = PrecipitationConfig.fromCondition(
         _condition(
           precipType: PrecipitationType.rain,
           intensity: PrecipitationIntensity.light,
         ),
-      )!;
+      );
       expect(heavy.particleCount, greaterThan(light.particleCount));
     });
 
@@ -215,13 +214,13 @@ void main() {
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.heavy,
         ),
-      )!;
+      );
       final b = PrecipitationConfig.fromCondition(
         _condition(
           precipType: PrecipitationType.snow,
           intensity: PrecipitationIntensity.heavy,
         ),
-      )!;
+      );
       expect(a, b);
     });
   });

@@ -43,10 +43,4 @@ export 'src/met_norway_advisory_provider.dart'
         mapLocationForecastResponseToAdvisory,
         kDefaultMetNorwayLocationForecastUrl,
         kDefaultMetNorwayHeavyPrecipitationMmPerHour,
-        kDefaultMetNorwayFreezingTemperatureCelsius,
-        // Event-class constants (0.0.6). Additive: a consumer that matched on
-        // literal strings keeps working; these exist so it no longer has to.
-        kEventFreezingPrecipitation,
-        kEventFreezingPrecipNotMeasured,
-        kEventHeavyPrecipitation,
-        kEventSubzeroForecast;
+        kDefaultMetNorwayFreezingTemperatureCelsius;

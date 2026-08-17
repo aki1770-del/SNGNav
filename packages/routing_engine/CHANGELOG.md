@@ -1,35 +1,5 @@
 # Changelog
 
-## 0.5.1
-
-Unlocatable maneuvers are skipped — never placed at Null Island.
-
-**Defect fixed:** 0.5.0 (and every earlier release) substituted
-`LatLng(0, 0)` — Null Island, a real coordinate in the Gulf of Guinea — for
-any maneuver whose location the routing engine did not supply. On the OSRM
-path this fired when a step's `maneuver.location` was missing or malformed;
-on the Valhalla path when `begin_shape_index` pointed past the decoded
-polyline, and a *missing* `begin_shape_index` silently anchored the maneuver
-at the route start. Two tests in the published suite asserted this
-substitution as correct behavior; they certified the defect rather than
-catching it.
-
-**Fix:** a maneuver that cannot be located is now skipped — it does not
-appear in `RouteResult.maneuvers` at all, and no substitute coordinate is
-ever emitted. Route geometry, total distance, and total duration are
-unchanged. Consumers segmenting or plotting by maneuver position will no
-longer receive a fabricated (0, 0) point; consumers counting maneuvers may
-see fewer entries only in responses where the engine omitted a location.
-
-- OSRM: a step whose `maneuver.location` is missing, shorter than
-  `[lon, lat]`, or non-numeric is skipped (previously the non-numeric case
-  could also throw mid-parse).
-- Valhalla: a maneuver whose `begin_shape_index` is missing, negative, or
-  beyond the decoded polyline is skipped.
-- The two tests that asserted the `(0, 0)` substitution now assert the skip,
-  and regression tests cover the mixed case: one located plus one unlocated
-  maneuver yields exactly the located one, with no maneuver at (0, 0).
-
 ## 0.5.0
 
 Turn-by-turn narration honors the requested language — Japanese by default.

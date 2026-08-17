@@ -40,7 +40,6 @@ library;
 
 import 'package:japanese_snow_vocabulary/japanese_snow_vocabulary.dart';
 
-import 'recommended_response.dart';
 import 'road_surface_state.dart';
 
 /// Announcement content for one classified road surface.
@@ -177,71 +176,6 @@ extension RoadSurfaceStateAnnouncement on RoadSurfaceState {
               'Standing water on the road. Risk of aquaplaning. '
               'Reduce speed.',
         );
-    }
-  }
-}
-
-/// Announcement for the tier that has NO classified surface: the road
-/// conditions could not be assessed at all.
-///
-/// This tier is why the Measured-or-Absent contract exists, and it is the
-/// D3 compound-failure moment — the feed is gone, and the only sensor still
-/// working is her own eyes. It therefore needs a voice, in the language the
-/// driver this app anchors on actually reads. Every OTHER surface state in
-/// this package already speaks Japanese; shipping the absence state in English
-/// only would mean that on the one night the network dies in Akita, the voice
-/// lane either falls back to English or says nothing — and silence on a safety
-/// surface reads as "nothing is wrong", which is the very defect this release
-/// removes from the type system, reappearing at the reach layer.
-///
-/// There is deliberately no [RoadSurfaceAnnouncement.termJa] and no JAF
-/// vocabulary entry: an unclassified surface has no surface class, and naming
-/// one would be the fabrication again.
-const RoadSurfaceAnnouncement conditionsUnknownAnnouncement =
-    RoadSurfaceAnnouncement(
-      jaSpokenText: '路面状況を取得できていません。見える範囲で運転してください。',
-      enSpokenText:
-          'Road conditions unavailable — drive to what you can see.',
-    );
-
-/// Announcement for a road-authority declaration carrying no measurement:
-/// something IS in force, and the road itself was not measured.
-///
-/// Digitraffic (and the CAP feeds generally) announce road *situations*
-/// declared by an authority; they measure no temperature, no visibility and no
-/// wind. The alert is real. The measurements do not exist. This line says both,
-/// and neither more strongly than it is.
-const RoadSurfaceAnnouncement roadAdvisoryUnmeasuredAnnouncement =
-    RoadSurfaceAnnouncement(
-      jaSpokenText:
-          'この地域に道路に関する注意報が出ています。路面の実測データはありません。'
-          '見える範囲で運転してください。',
-      enSpokenText:
-          'A road advisory is in force. The road itself is not measured. '
-          'Drive to what you can see.',
-    );
-
-/// Announcement lookup for the typed response tier.
-///
-/// Covers the two tiers that have NO [RoadSurfaceState] to announce, and which
-/// therefore cannot enter the voice lane through
-/// [RoadSurfaceStateAnnouncement] at all: the road was not assessed, or an
-/// authority declared a hazard nobody measured.
-extension RecommendedResponseAnnouncement on RecommendedResponse {
-  /// The driver-facing announcement for the absence tiers, or `null` for the
-  /// tiers whose announcement comes from the classified
-  /// [RoadSurfaceState] instead.
-  ///
-  /// [proceed] returns `null` — there is nothing to announce about a road that
-  /// was assessed and found benign.
-  RoadSurfaceAnnouncement? get announcement {
-    switch (this) {
-      case RecommendedResponse.conditionsUnknown:
-        return conditionsUnknownAnnouncement;
-      case RecommendedResponse.proceed:
-      case RecommendedResponse.reduceSpeed:
-      case RecommendedResponse.considerTurningBack:
-        return null;
     }
   }
 }

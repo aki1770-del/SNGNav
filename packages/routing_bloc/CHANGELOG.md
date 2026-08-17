@@ -1,29 +1,5 @@
 # Changelog
 
-## 0.4.5
-
-- Widen the `routing_engine` constraint to `>=0.4.0 <0.7.0`.
-
-  Up to `routing_engine` 0.5.0, `RouteManeuver.position` silently substituted
-  `const LatLng(0, 0)` — Null Island, a real coordinate in the Gulf of
-  Guinea — for a maneuver whose location failed to parse. `routing_engine`
-  0.5.1 fixes this in-range by skipping unlocatable maneuvers, and a future
-  0.6.0 line makes the position nullable instead. **This package's `lib/`
-  reads no maneuver position**, so either line is source-compatible and this
-  is a PATCH release, not a breaking one.
-
-  The widen is not cosmetic: for a 0.x package a caret does not admit the next
-  minor, so without it this package and any future consumer of the
-  `routing_engine` 0.6.x line would have an EMPTY intersection — a hard
-  `version solving failed` for a consumer combining the two.
-
-- The example app pins `routing_engine` to the published line
-  (`>=0.4.0 <0.6.0`, resolving 0.5.x today) and is written against the 0.5.x
-  API, so it resolves and compiles for anyone copying it as-is. On 0.5.1+
-  the engine itself skips unlocatable maneuvers, so every maneuver the
-  example receives carries a real position — no substitute coordinate is
-  ever shown.
-
 ## 0.4.4
 
 - Widen the `routing_engine` constraint to `>=0.4.0 <0.6.0` so consumers can

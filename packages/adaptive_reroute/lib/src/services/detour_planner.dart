@@ -22,35 +22,19 @@ class DetourPlanner {
   ///
   /// [approachBearing] is the bearing (degrees, clockwise from north) of the
   /// vehicle's direction of travel at the hazard approach point.
-  ///
-  /// Zones whose centre is (0, 0) or non-finite, or whose radius is
-  /// non-finite, are skipped: a bypass waypoint cannot be projected from a
-  /// placeholder position. A non-finite [approachBearing] yields no
-  /// waypoints at all.
   List<DetourWaypoint> plan(
     List<HazardZone> zones, {
     required double approachBearing,
   }) {
     if (zones.isEmpty) return const [];
-    if (!approachBearing.isFinite) return const [];
 
     final waypoints = <DetourWaypoint>[];
     for (final zone in zones) {
-      if (_isUnusableCenter(zone.center) || !zone.radiusMeters.isFinite) {
-        continue;
-      }
       final offset = zone.radiusMeters + config.detourOffsetMeters;
       waypoints.addAll(_waypointsForZone(zone, approachBearing, offset));
     }
     return waypoints;
   }
-
-  /// True when [p] cannot be trusted as a real position: exact (0, 0)
-  /// (the null-position placeholder) or any non-finite coordinate.
-  static bool _isUnusableCenter(LatLng p) =>
-      !p.latitude.isFinite ||
-      !p.longitude.isFinite ||
-      (p.latitude == 0.0 && p.longitude == 0.0);
 
   List<DetourWaypoint> _waypointsForZone(
     HazardZone zone,

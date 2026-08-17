@@ -10,23 +10,23 @@ import 'package:test/test.dart';
 const _whiteoutVis = 80.0;
 
 WeatherForecast _whiteoutForecast(DateTime base) => WeatherForecast(
-  issuedAt: base,
-  hourly: [
-    HourlyForecast(
-      hour: base.add(const Duration(hours: 1)),
-      tempCelsius: -3.0,
-      visibilityMeters: _whiteoutVis,
-      estimatedRoadCondition: RoadConditionEstimate.ice,
-    ),
-  ],
-);
+      issuedAt: base,
+      hourly: [
+        HourlyForecast(
+          hour: base.add(const Duration(hours: 1)),
+          tempCelsius: -3.0,
+          visibilityMeters: _whiteoutVis,
+          estimatedRoadCondition: RoadConditionEstimate.ice,
+        ),
+      ],
+    );
 
 CommuteShape _commute(CommuteFlexibility flex, DateTime base) => CommuteShape(
-  plannedDuration: const Duration(minutes: 30),
-  plannedDeparture: base.add(const Duration(hours: 1)),
-  routeIdentifiers: const ['t'],
-  flexibility: flex,
-);
+      plannedDuration: const Duration(minutes: 30),
+      plannedDeparture: base.add(const Duration(hours: 1)),
+      routeIdentifiers: const ['t'],
+      flexibility: flex,
+    );
 
 const _profile = DriverProfileSpec(profileTag: 't', reactionTimeSeconds: 1.5);
 
@@ -45,11 +45,8 @@ void main() {
     expect(briefing.chips.first, contains('whiteout'));
     // No Japanese leaked into the default surface.
     for (final c in briefing.chips) {
-      expect(
-        RegExp(r'[぀-ヿ一-龯]').hasMatch(c),
-        isFalse,
-        reason: 'English default must carry no CJK: $c',
-      );
+      expect(RegExp(r'[぀-ヿ一-龯]').hasMatch(c), isFalse,
+          reason: 'English default must carry no CJK: $c');
     }
   });
 
@@ -63,11 +60,8 @@ void main() {
     expect(briefing.chips, isNotEmpty);
     // Every chip carries Japanese.
     for (final c in briefing.chips) {
-      expect(
-        RegExp(r'[぀-ヿ一-龯]').hasMatch(c),
-        isTrue,
-        reason: 'ja chip must be Japanese: $c',
-      );
+      expect(RegExp(r'[぀-ヿ一-龯]').hasMatch(c), isTrue,
+          reason: 'ja chip must be Japanese: $c');
     }
     // The whiteout reason is the Japanese whiteout phrasing.
     expect(briefing.chips.first, contains('ホワイトアウト'));
@@ -77,16 +71,8 @@ void main() {
     const en = SnowAwarePretripAdvisor();
     final ja = SnowAwarePretripAdvisor(messages: PretripMessages.ja);
     final c = _commute(CommuteFlexibility.required, base);
-    final enB = en.brief(
-      forecast: _whiteoutForecast(base),
-      commute: c,
-      profile: _profile,
-    );
-    final jaB = ja.brief(
-      forecast: _whiteoutForecast(base),
-      commute: c,
-      profile: _profile,
-    );
+    final enB = en.brief(forecast: _whiteoutForecast(base), commute: c, profile: _profile);
+    final jaB = ja.brief(forecast: _whiteoutForecast(base), commute: c, profile: _profile);
 
     // Same verdict + same number of chips: the logic is identical, only words differ.
     expect(jaB.verdict, enB.verdict);
@@ -112,26 +98,15 @@ void main() {
   // strings (the README golden depends on these byte-for-byte).
   test('EN chip strings are pinned against silent drift', () {
     const m = PretripMessages.en;
-    expect(
-      m.visibilityWhiteout(80, '07:00'),
-      'Visibility may drop to ~80 m around 07:00 — whiteout conditions.',
-    );
-    expect(
-      m.conditionsImproveBy('08:15'),
-      'Conditions improve by about 08:15.',
-    );
-    expect(
-      m.stalenessChip(7),
-      'Forecast is 7 h old at departure — check conditions again before leaving.',
-    );
-    expect(
-      m.reactionMargin(30),
-      'Extra 30 min margin added for your reaction-time profile.',
-    );
-    expect(
-      m.freezingAir(-4, '06:00'),
-      'Freezing air (-4 °C) around 06:00 — frost or black ice possible.',
-    );
+    expect(m.visibilityWhiteout(80, '07:00'),
+        'Visibility may drop to ~80 m around 07:00 — whiteout conditions.');
+    expect(m.conditionsImproveBy('08:15'), 'Conditions improve by about 08:15.');
+    expect(m.stalenessChip(7),
+        'Forecast is 7 h old at departure — check conditions again before leaving.');
+    expect(m.reactionMargin(30),
+        'Extra 30 min margin added for your reaction-time profile.');
+    expect(m.freezingAir(-4, '06:00'),
+        'Freezing air (-4 °C) around 06:00 — frost or black ice possible.');
     expect(m.noWinterHazard(), 'No winter hazard signals in your trip window.');
   });
 
@@ -143,29 +118,22 @@ void main() {
   // green on a CJK-and-digits check alone.
   test('JA safety chip strings are pinned against silent drift', () {
     const m = PretripMessages.ja;
-    expect(
-      m.visibilityWhiteout(80, '07:00'),
-      '07:00頃、視界が約80mまで低下する可能性があります — ホワイトアウト状態です。',
-    );
+    expect(m.visibilityWhiteout(80, '07:00'),
+        '07:00頃、視界が約80mまで低下する可能性があります — ホワイトアウト状態です。');
     // caution band renders the mildest hedge 可能性があります (EN "possible"),
     // never the warning-register おそれがあります.
     expect(m.slushPossible('07:00'), '07:00頃、シャーベット状の雪の可能性があります。');
-    expect(
-      m.freezingAir(-4, '06:00'),
-      '06:00頃、氷点下の気温(-4°C) — 霜やブラックアイス(見えにくい薄い氷)の可能性があります。',
-    );
+    expect(m.freezingAir(-4, '06:00'),
+        '06:00頃、氷点下の気温(-4°C) — 霜やブラックアイス(見えにくい薄い氷)の可能性があります。');
     // elevated "likely" sits above caution but below severe "expected".
-    expect(
-      m.precipNearFreezing('07:00'),
-      '07:00頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。',
-    );
+    expect(m.precipNearFreezing('07:00'),
+        '07:00頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。');
     // honesty-mode: names the hazard, urges no delay, defers to the driver.
-    expect(
-      m.requiredNoDelayUrged(),
-      'この移動は必須に設定されています — 出発を遅らせることは勧めません。'
-      '出発前に準備を整えてください。判断はあなたが行います。',
-    );
-    expect(m.allowExtraTime(), '時間に余裕をもち、車間距離を保ってください — 出発を遅らせる必要はありません。');
+    expect(m.requiredNoDelayUrged(),
+        'この移動は必須に設定されています — 出発を遅らせることは勧めません。'
+        '出発前に準備を整えてください。判断はあなたが行います。');
+    expect(m.allowExtraTime(),
+        '時間に余裕をもち、車間距離を保ってください — 出発を遅らせる必要はありません。');
   });
 
   // Every message method, both locales: the JA must carry Japanese AND preserve
@@ -203,10 +171,7 @@ void main() {
       }
     }
     // No-number chips still localize.
-    expect(
-      PretripMessages.ja.noWinterHazard(),
-      isNot(PretripMessages.en.noWinterHazard()),
-    );
+    expect(PretripMessages.ja.noWinterHazard(), isNot(PretripMessages.en.noWinterHazard()));
     expect(cjk.hasMatch(PretripMessages.ja.allowExtraTime()), isTrue);
   });
 
@@ -245,10 +210,7 @@ void main() {
       profile: _profile,
     );
     final rationale = briefing.recommendation!.rationale;
-    expect(
-      rationale,
-      equals(briefing.chips),
-      reason: 'rationale mirrors the localized chips',
-    );
+    expect(rationale, equals(briefing.chips),
+        reason: 'rationale mirrors the localized chips');
   });
 }

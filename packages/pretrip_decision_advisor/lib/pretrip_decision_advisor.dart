@@ -10,7 +10,6 @@ export 'src/area_condition_read.dart';
 export 'src/commute_shape.dart';
 export 'src/daylight.dart';
 export 'src/driver_profile_spec.dart';
-export 'src/pretrip_absence.dart';
 export 'src/pretrip_advisor.dart';
 export 'src/pretrip_messages.dart';
 export 'src/pretrip_recommendation.dart';

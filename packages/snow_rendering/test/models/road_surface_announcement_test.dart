@@ -116,12 +116,11 @@ void main() {
         visibilityMeters: 10000,
         windSpeedKmh: 5,
         humidityRH: 70,
-        source: ObservationSource.measured,
         timestamp: DateTime.utc(2026, 1, 15, 6, 30),
       );
       final surface = RoadSurfaceState.fromCondition(condition);
       expect(surface, RoadSurfaceState.blackIce);
-      expect(surface!.announcement!.termJa, 'ブラックアイスバーン');
+      expect(surface.announcement!.termJa, 'ブラックアイスバーン');
     });
   });
 }

@@ -102,31 +102,6 @@ class SafetyAlertReceived extends NavigationEvent {
   ];
 }
 
-/// The active alert should go away. Two callers, kept distinct by
-/// [conditionCleared]:
-///
-/// * `SafetyAlertDismissed()` — the DRIVER saying "stop showing me
-///   this". Refused for non-dismissible alerts — a driver cannot wave
-///   away "visibility zero - pull over immediately". This is the only
-///   behavior that existed before 0.9.5 and it is unchanged.
-/// * `SafetyAlertDismissed(conditionCleared: true)` — the HAZARD OWNER,
-///   the same data source or condition pipeline that raised the alert,
-///   reporting the condition no longer holds. When the hazard has
-///   genuinely passed, keeping the screen modal is itself a hazard, so
-///   this clears any alert, including non-dismissible ones.
-///
-/// Only the component that raised (or monitors) the condition should
-/// add the event with `conditionCleared: true`. Wiring that flag to a
-/// driver-facing dismiss control defeats the non-dismissible contract.
 class SafetyAlertDismissed extends NavigationEvent {
-  const SafetyAlertDismissed({this.conditionCleared = false});
-
-  /// True when the hazard owner reports the alerted condition has
-  /// passed (added in 0.9.5). Clears the alert regardless of its
-  /// `dismissible` flag. False — the default — is driver dismissal,
-  /// still refused for non-dismissible alerts.
-  final bool conditionCleared;
-
-  @override
-  List<Object?> get props => [conditionCleared];
+  const SafetyAlertDismissed();
 }

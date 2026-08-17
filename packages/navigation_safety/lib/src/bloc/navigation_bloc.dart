@@ -238,27 +238,10 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     );
   }
 
-  /// Clears the active alert on either of the event's two paths.
-  ///
-  /// * `conditionCleared: true` — the hazard owner (the component that
-  ///   raised the alert) reports the condition has passed (0.9.5).
-  ///   Clears any alert, including non-dismissible ones, which plain
-  ///   dismissal refuses by design. Before 0.9.5 no code path could
-  ///   clear a non-dismissible alert, so the overlay stayed modal for
-  ///   the process lifetime even after the hazard passed.
-  /// * default — driver dismissal, unchanged from 0.9.4: refused while
-  ///   the alert is non-dismissible.
   void _onAlertDismissed(
     SafetyAlertDismissed event,
     Emitter<NavigationState> emit,
   ) {
-    if (event.conditionCleared) {
-      if (!state.hasSafetyAlert) return;
-
-      emit(state.copyWith(clearAlert: true));
-      return;
-    }
-
     if (!state.alertDismissible) return;
 
     emit(state.copyWith(clearAlert: true));

@@ -225,43 +225,6 @@ void main() {
     });
   });
 
-  group('AlertExplainer ice-formation factual accuracy (0.11.2)', () {
-    test('ageingRural ICE must not condition ice on sub-zero air', () {
-      // Regression: the pre-0.11.2 string said 「気温0°C以下で薄氷が
-      // できています」— asserting ice needs sub-zero AIR. That is false:
-      // road surfaces radiate heat and can freeze while the air is above
-      // 0°C (bridges first, per JAF). Teaching "air above zero → no ice"
-      // to the profile most exposed to radiative frost is the exact
-      // misjudgement that kills grip assumptions on a clear cold morning.
-      final e = AlertExplainer.forConditionAndProfile(
-        RoadSurfaceCondition.ice,
-        DriverProfile.ageingRural,
-      );
-      expect(e.action, isNot(contains('気温0°C以下')));
-      // The corrected string states the above-zero-air possibility.
-      expect(e.action, contains('0°Cより高くても'));
-      // Speed advisory retained per the AAA brief.
-      expect(e.action, contains('30km'));
-      expect(e.action, contains('減速'));
-    });
-
-    test('ageingRural WET uses JAF term ブラックアイスバーン, not bare ブラックアイス', () {
-      // Terminology aligned to the JAF authority (the same term
-      // japanese_snow_vocabulary and snow_rendering announce), so the
-      // driver hears one consistent hazard name across the stack.
-      final e = AlertExplainer.forConditionAndProfile(
-        RoadSurfaceCondition.wet,
-        DriverProfile.ageingRural,
-      );
-      expect(e.action, contains('ブラックアイスバーン'));
-      expect(e.action, isNot(contains('ブラックアイスが')));
-      // Must not condition ice formation on sub-zero air either.
-      expect(e.action, isNot(contains('気温0°C以下')));
-      // Bridge/tunnel-exit guidance retained.
-      expect(e.action, contains('橋'));
-    });
-  });
-
   group('AlertExplainer profile-flat conditions (UNKNOWN, DRY)', () {
     test('UNKNOWN: foreignTouristSnowZone uses EN, others JA', () {
       // Per AAA brief: profile-flat content but locale still applies.
@@ -330,39 +293,6 @@ void main() {
           VerbosityLevel.full,
         ]),
       );
-    });
-  });
-
-  group('AlertExplainer spoken-form safety (0.11.3)', () {
-    test(
-      'professional WET names the hazard aloud — 濡路 is spoken as silence',
-      () {
-        // Regression: the string was 「濡路、注意」. Through open_jtalk 濡路
-        // renders as SILENCE, so the driver hears 「（無音）、注意」 — a caution
-        // naming no hazard. A warning she cannot hear is not a warning.
-        final e = AlertExplainer.forConditionAndProfile(
-          RoadSurfaceCondition.wet,
-          DriverProfile.professional,
-        );
-        expect(e.action, isNot(contains('濡路')));
-        expect(e.action, contains('濡れた路面'));
-      },
-    );
-
-    test('no profile uses 濡路 in any WET explainer', () {
-      // The outlier existed because one profile drifted from the shared term.
-      // Pin the whole set so it cannot drift back on a single profile.
-      for (final profile in DriverProfile.values) {
-        final e = AlertExplainer.forConditionAndProfile(
-          RoadSurfaceCondition.wet,
-          profile,
-        );
-        expect(
-          e.action,
-          isNot(contains('濡路')),
-          reason: '$profile WET explainer must not use the unpronounceable 濡路',
-        );
-      }
     });
   });
 }

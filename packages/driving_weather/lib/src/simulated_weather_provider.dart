@@ -4,13 +4,6 @@
 /// Emits a repeating sequence: clear → light snow → heavy snow → ice risk
 /// → clearing. No network, no external dependency.
 ///
-/// Every condition it emits carries [ObservationSource.simulated]. A simulator
-/// ASSERTING a scenario is honest — it is a claim about a scenario, never a
-/// claim about the world. That is why this provider (alone) may state a
-/// complete clear condition, via [WeatherCondition.simulatedClear].
-///
-/// Never select this provider on a path a driver relies on.
-///
 /// For real weather, use [OpenMeteoWeatherProvider].
 library;
 
@@ -18,12 +11,11 @@ import 'dart:async';
 
 import 'weather_condition.dart';
 import 'weather_provider.dart';
-import 'weather_reading.dart';
 
 class SimulatedWeatherProvider implements WeatherProvider {
   final Duration interval;
 
-  StreamController<WeatherReading>? _controller;
+  StreamController<WeatherCondition>? _controller;
   Timer? _timer;
   int _step = 0;
   bool _disposed = false;
@@ -35,8 +27,8 @@ class SimulatedWeatherProvider implements WeatherProvider {
   SimulatedWeatherProvider({this.interval = const Duration(seconds: 5)});
 
   @override
-  Stream<WeatherReading> get conditions {
-    _controller ??= StreamController<WeatherReading>.broadcast();
+  Stream<WeatherCondition> get conditions {
+    _controller ??= StreamController<WeatherCondition>.broadcast();
     return _controller!.stream;
   }
 
@@ -45,7 +37,7 @@ class SimulatedWeatherProvider implements WeatherProvider {
     // Guard: do not restart after dispose.
     if (_disposed) return;
 
-    _controller ??= StreamController<WeatherReading>.broadcast();
+    _controller ??= StreamController<WeatherCondition>.broadcast();
 
     // Cancel any existing timer — prevents leak on double-start.
     _timer?.cancel();
@@ -79,9 +71,7 @@ class SimulatedWeatherProvider implements WeatherProvider {
   void _emit() {
     if (_controller == null || _controller!.isClosed) return;
     final template = _scenario[_step];
-    // The simulator never fails, so every reading is an observation of the
-    // scenario it is asserting.
-    _controller!.add(WeatherObserved(template(DateTime.now())));
+    _controller!.add(template(DateTime.now()));
   }
 
   /// Mountain pass winter scenario — 6 phases.
@@ -89,8 +79,8 @@ class SimulatedWeatherProvider implements WeatherProvider {
   /// Simulates a drive from a city (clear) up a mountain road where
   /// snow intensifies, then clears on descent.
   static final List<WeatherCondition Function(DateTime)> _scenario = [
-    // Phase 0: Clear — city departure. Asserted by the simulator, not measured.
-    (ts) => WeatherCondition.simulatedClear(timestamp: ts),
+    // Phase 0: Clear — city departure.
+    (ts) => WeatherCondition.clear(timestamp: ts),
 
     // Phase 1: Light snow begins — entering mountain area.
     (ts) => WeatherCondition(
@@ -99,8 +89,6 @@ class SimulatedWeatherProvider implements WeatherProvider {
       temperatureCelsius: 1.0,
       visibilityMeters: 3000,
       windSpeedKmh: 15,
-      iceRisk: false,
-      source: ObservationSource.simulated,
       timestamp: ts,
     ),
 
@@ -111,8 +99,6 @@ class SimulatedWeatherProvider implements WeatherProvider {
       temperatureCelsius: -1.0,
       visibilityMeters: 800,
       windSpeedKmh: 30,
-      iceRisk: false,
-      source: ObservationSource.simulated,
       timestamp: ts,
     ),
 
@@ -123,8 +109,6 @@ class SimulatedWeatherProvider implements WeatherProvider {
       temperatureCelsius: -4.0,
       visibilityMeters: 150,
       windSpeedKmh: 45,
-      iceRisk: false,
-      source: ObservationSource.simulated,
       timestamp: ts,
     ),
 
@@ -136,7 +120,6 @@ class SimulatedWeatherProvider implements WeatherProvider {
       visibilityMeters: 500,
       windSpeedKmh: 20,
       iceRisk: true,
-      source: ObservationSource.simulated,
       timestamp: ts,
     ),
 
@@ -147,8 +130,6 @@ class SimulatedWeatherProvider implements WeatherProvider {
       temperatureCelsius: 0.0,
       visibilityMeters: 2000,
       windSpeedKmh: 10,
-      iceRisk: false,
-      source: ObservationSource.simulated,
       timestamp: ts,
     ),
   ];

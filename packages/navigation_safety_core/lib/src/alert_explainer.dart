@@ -198,25 +198,14 @@ class AlertExplainer {
       case RoadSurfaceCondition.wet:
         switch (profile) {
           case DriverProfile.ageingRural:
-            // JAF-faithful: black ice (ブラックアイスバーン) can form even
-            // when the AIR is above 0°C — the road surface cools below the
-            // air (radiative cooling), bridges and tunnel exits first. The
-            // string must not condition ice on sub-zero air temperature.
-            return '路面が濡れています。気温が0°Cより高くても路面は先に冷えて凍り、'
-                'ブラックアイスバーンになることがあります。'
+            return '路面が濡れています。ブラックアイスが形成される可能性があるため、'
                 '橋やトンネル出口で速度を落としてください';
           case DriverProfile.snowZoneExperienced:
             return '濡れた路面、橋やトンネル出口で注意';
           case DriverProfile.noviceUrban:
             return '濡れた路面、危険。スピードを落としてください';
           case DriverProfile.professional:
-            // 「濡路」was the one outlier among six profiles that all otherwise
-            // say 「濡れた路面」— and it is the one that reaches her EARS as
-            // nothing: measured through open_jtalk it renders as SILENCE, so a
-            // professional driver hears 「（無音）、注意」— a caution with no
-            // hazard named. Terse is right for this profile; unpronounceable is
-            // not. Terminology per 表記規準 v1 (2026-07-21) §V2.
-            return '濡れた路面、注意';
+            return '濡路、注意';
           case DriverProfile.agriculturalForestry:
             return '濡れた路面、未舗装路では泥濘に注意';
           case DriverProfile.foreignTouristSnowZone:
@@ -245,13 +234,7 @@ class AlertExplainer {
       case RoadSurfaceCondition.ice:
         switch (profile) {
           case DriverProfile.ageingRural:
-            // The previous string asserted 「気温0°C以下で薄氷ができています」
-            // — false: thin ice forms with air above 0°C too (the road
-            // surface radiates heat and drops below air temperature;
-            // bridges freeze first, per JAF). Ice existence must never be
-            // conditioned on sub-zero air.
-            return '凍結路面です。気温が0°Cより高くても路面は空気より冷え、'
-                '薄氷ができることがあります。橋の上は特に凍りやすい場所です。'
+            return '凍結路面です。気温0°C以下で薄氷ができています。'
                 '時速30km以下に減速し、急ブレーキは避けてください';
           case DriverProfile.snowZoneExperienced:
             return '凍結路面。30km/h以下に減速';

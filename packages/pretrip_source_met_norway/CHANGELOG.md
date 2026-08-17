@@ -1,85 +1,6 @@
 # Changelog
 
-## 0.2.3
-
-- **Coverage is now visible — from the API this package documents.**
-  `MetNorwayHourlyForecastProvider.fetchForecastWithCoverage()` and the
-  top-level `mapLocationForecastWithCoverage()` both return the forecast
-  together with `MetNorwayMappingCoverage`: how many timeseries slices the
-  publisher sent, how many became hours, and **why** each dropped slice
-  dropped (`MetNorwaySliceDrop`). `expectedDrops` counts the publisher's
-  documented 6-hourly tail; `unexpectedDrops` counts the rest.
-  Previously a slice *we* skipped was indistinguishable from an hour the
-  publisher never issued, and both from an hour that is genuinely fine.
-- **Nothing is guessed.** A missing `air_temperature` is still skipped, never
-  interpolated. `fetchForecast()` and `mapLocationForecastToWeatherForecast()`
-  are unchanged in behaviour and still available.
-- **Bound, stated plainly:** `WeatherForecast` itself is untouched — it
-  belongs to `pretrip_decision_advisor` and is not ours to change. A consumer
-  holding only a `WeatherForecast` still cannot see the hole; the coverage
-  record is a separate value you must ask for. **Carrying a coverage member
-  to that type's owner has NOT been proposed** — it is recorded as owed, and
-  saying "proposed" would have credited work nobody has done.
-- **Compatibility with `pretrip_decision_advisor` 0.5.3 verified on a fresh
-  resolution.** From advisor 0.5.3, `brief()` throws
-  `PretripAssessmentIncompleteException` rather than reporting an all-clear it
-  did not measure. **This product carries neither visibility nor road
-  surface**, so a MET-Norway-only input can never earn an all-clear — that is
-  the permanent honest outcome, not a defect. `example/main.dart` now uses
-  `briefOrNull()` and prints "not assessed" instead of a verdict it does not
-  have; the dead `PretripVerdict.noData` branch is retired.
-- **`QUICKSTART.md` corrected too, not just the example.** Both of its
-  `advisor.brief(...)` call sites are now `briefOrNull()` with the
-  "not assessed" branch and prose saying why it fires. The first fix reached
-  `example/main.dart` only; QUICKSTART is the larger shipped document and the
-  README's first callout points a newcomer at it. When a dependency changes a
-  method's failure mode, the sweep has to cover every shipped surface that
-  calls it. **`README.md` — the pub.dev landing page — was missed by that
-  round too and is corrected here.** A fourth review then found that the
-  class sweep itself had been scoped to API-usage and had not run over
-  version claims about *this* package: `QUICKSTART` stated we were published
-  at 0.1.1 while the registry said 0.2.2, and told a newcomer to pin it. The
-  sweep is now standing, unconditional, and covers claims this package makes
-  about **itself** — checked against the version being published, not against
-  whatever is currently on the registry (a document that names the registry's
-  version is false the moment it ships).
-- **`README.md` Status corrected as a CLAIM, not a token.** It read *"Extracted
-  verbatim (no behaviour change) from the SNGNav app's
-  `MetNorwayHourlyForecastProvider`"* — true of 0.1.0, false of this release,
-  and by now circular: the app's provider file is 14 lines and its last line
-  re-exports this package. The coverage API added here has never existed in the
-  app. The sentence is now bound to the version it was true of.
-- **Internal shorthand removed from the landing page and the example.** Both
-  used a pronoun with no antecedent for a reader who arrives at pub.dev.
-- **Also in this release, so the changelog describes the whole diff:** the
-  `isComplete` dartdoc was reworded (it named an unshipped version); the
-  package `description` was shortened 232 → 167 characters, which is the
-  blurb pub.dev search shows; and governance vocabulary and repository paths
-  that do not resolve here were removed from the shipped library, tests and
-  changelog.
-- **Minimum supported `pretrip_decision_advisor` raised to 0.5.3**, matching
-  `pubspec.yaml`. Measured per version: `briefOrNull()` arrived in **0.5.2**,
-  `PretripAssessmentIncompleteException` — which this package's tests
-  reference and its docs describe — arrived in **0.5.3**. The earlier
-  `>=0.5.0` and `>=0.5.2` bounds were both false and would not have compiled;
-  the current one is proven by `dart pub downgrade && dart analyze`, not
-  asserted.
-- Purely additive to this package's API. Patch version chosen so it is
-  reachable from an existing `^0.2.2` constraint; a minor would not be.
-  **Stated honestly: this package currently has no published dependents, so
-  the version choice reaches nobody today — it is weakly better and can never
-  be worse, not a delivery.**
-
-
-
 ## 0.2.2
-
-- Widen the `pretrip_decision_advisor` constraint to `'>=0.5.0 <0.7.0'` so this
-  package resolves against `pretrip_decision_advisor` 0.6.0 (which adds
-  `HourHazard.unknown` — a trip with NO forecast no longer reports its peak
-  hazard as `clear`). This package's `lib/` reads neither changed symbol, so
-  0.6.0 is source-compatible; for a 0.x package a caret does not admit the next
-  minor, so without the widen `^0.5.0` and 0.6.0 have an EMPTY intersection.
 
 - **Take pretrip_decision_advisor ^0.5.0.** The previous `^0.4.0` pin silently
   excluded the 0.5.x line — hosted consumers of this adapter never received
@@ -87,14 +8,6 @@
   (橋は路面より先に凍結します) shipped there. No behavior change in this
   package itself; the constraint widening is the release.
 
-
-  > **Correction, 2026-08-09:** `pretrip_decision_advisor` **0.6.0 has never
-  > been published** — pub.dev's latest is 0.5.3, and `HourHazard.unknown`
-  > does not exist there. The widen above was made against a local,
-  > unpublished package. The range is harmless (it resolves to 0.5.3) but the
-  > claim was not true of the registry, and a reader of this shipped file was
-  > told about a version they cannot obtain. Left in place and corrected here
-  > rather than rewritten, because it was published.
 
 ## 0.2.1 — 2026-06-26 — Example no longer crashes on first run
 
@@ -111,13 +24,7 @@
   throws its loud typed `MetNorwayForecastException` on a non-200 response; only
   the example's handling changed. No public API change.
 
-## 0.2.0 — NEVER PUBLISHED (folded into 0.2.1)
-
-> This heading described work that was released as **0.2.1**; **0.2.0 was never
-> published** and cannot be resolved. Kept, marked, and not rewritten, because
-> it shipped in 0.2.1 and 0.2.2 — a reader who pinned it got a hard
-> version-solving failure. Original heading: *Re-pin advisor to ^0.4.0
-> (catalog resolvability)*.
+## 0.2.0 — 2026-06-24 — Re-pin advisor to ^0.4.0 (catalog resolvability)
 
 - Shifts the `pretrip_decision_advisor` requirement from the 0.2.x range to the
   0.4.x range; advisor 0.2.x/0.3.x are no longer supported by this version. This

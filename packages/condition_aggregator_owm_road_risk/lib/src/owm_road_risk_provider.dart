@@ -56,30 +56,13 @@ class OwmRoadRiskClient {
        assert(apiKey != '', 'OWM Road Risk: apiKey must be non-empty.');
 
   /// Fetches alerts for a single point.
-  ///
-  /// Discards the completeness signal; see [fetchPointRead] to learn whether
-  /// part of the publisher's answer could not be read.
   Future<List<OwmRoadRiskAlert>> fetchPoint({
     required double latitude,
     required double longitude,
     DateTime? at,
   }) async {
-    final read = await fetchPointRead(
-      latitude: latitude,
-      longitude: longitude,
-      at: at,
-    );
-    return read.alerts;
-  }
-
-  /// Fetches alerts for a single point, keeping what could not be read.
-  Future<OwmRoadRiskRead> fetchPointRead({
-    required double latitude,
-    required double longitude,
-    DateTime? at,
-  }) async {
     final ts = (at ?? DateTime.now().toUtc()).millisecondsSinceEpoch ~/ 1000;
-    return fetchTrackRead([
+    return fetchTrack([
       OwmRoadRiskWaypoint(
         latitude: latitude,
         longitude: longitude,
@@ -91,28 +74,7 @@ class OwmRoadRiskClient {
   /// Fetches alerts along a multi-waypoint track. Returns a flat list
   /// of alerts (the publisher's response can attach alerts at the
   /// track level rather than per-waypoint, depending on issuer).
-  ///
-  /// Discards the completeness signal; see [fetchTrackRead], which returns the
-  /// same alerts together with a count of the entries that could not be read.
-  /// A caller that only uses this method cannot distinguish "the publisher
-  /// reported nothing" from "the publisher reported something unreadable",
-  /// except that the wholly-unreadable case throws rather than returning an
-  /// empty list.
   Future<List<OwmRoadRiskAlert>> fetchTrack(
-    List<OwmRoadRiskWaypoint> track,
-  ) async {
-    final read = await fetchTrackRead(track);
-    return read.alerts;
-  }
-
-  /// Fetches alerts along a multi-waypoint track, keeping what could not be
-  /// read alongside what could.
-  ///
-  /// Throws [OwmRoadRiskParseException] when the response carried entries and
-  /// none of them could be read. Returning an empty list there would assert
-  /// that the publisher reported no road risk, which is a measurement this
-  /// adapter did not take.
-  Future<OwmRoadRiskRead> fetchTrackRead(
     List<OwmRoadRiskWaypoint> track,
   ) async {
     if (track.isEmpty) {
@@ -168,71 +130,18 @@ class OwmRoadRiskClient {
       );
     }
 
-    // Every `continue` below used to discard an entry silently, so a response
-    // whose only content was unreadable came back as an empty list — which the
-    // AdvisoryProvider contract defines as "nothing is active at this point".
-    // The discards are now counted and carried.
     final alerts = <OwmRoadRiskAlert>[];
-    final causes = <String>[];
     for (final item in decoded) {
-      if (item is! Map<String, dynamic>) {
-        causes.add('track entry was ${_shapeOf(item)}, expected an object');
-        continue;
-      }
+      if (item is! Map<String, dynamic>) continue;
       final perWaypointAlerts = item['alerts'];
-      // A track entry with no `alerts` key at all is a well-formed "nothing
-      // active here" answer, not an unreadable entry.
-      if (perWaypointAlerts == null) continue;
-      if (perWaypointAlerts is! List) {
-        causes.add(
-          "'alerts' was ${_shapeOf(perWaypointAlerts)}, expected an array",
-        );
-        continue;
-      }
+      if (perWaypointAlerts is! List) continue;
       for (final raw in perWaypointAlerts) {
-        if (raw is! Map<String, dynamic>) {
-          causes.add('alert entry was ${_shapeOf(raw)}, expected an object');
-          continue;
-        }
-        try {
+        if (raw is Map<String, dynamic>) {
           alerts.add(OwmRoadRiskAlert.fromJson(raw));
-        } on Object catch (e) {
-          // An alert object this adapter cannot turn into a record is an
-          // unread entry, not an absent hazard. Field-level absence is handled
-          // inside fromJson and does not reach here.
-          causes.add('alert entry could not be parsed: $e');
         }
       }
     }
-
-    if (alerts.isEmpty && causes.isNotEmpty) {
-      // Nothing readable, and something was there. An empty list here would be
-      // a false all-clear.
-      throw OwmRoadRiskParseException(
-        'the publisher returned ${causes.length} '
-        '${causes.length == 1 ? 'entry' : 'entries'} and none could be read, '
-        'so no conclusion about road risk at this point is available. '
-        'Causes: ${causes.join('; ')}.',
-      );
-    }
-
-    return OwmRoadRiskRead(
-      alerts: alerts,
-      unreadableEntries: causes.length,
-      unreadableCauses: List.unmodifiable(causes),
-    );
-  }
-
-  /// Names the JSON shape of an unexpected value for the cause strings, without
-  /// echoing publisher content into a message that may end up in a log.
-  static String _shapeOf(Object? v) {
-    if (v == null) return 'null';
-    if (v is String) return 'a string';
-    if (v is num) return 'a number';
-    if (v is bool) return 'a boolean';
-    if (v is List) return 'an array';
-    if (v is Map) return 'an object';
-    return v.runtimeType.toString();
+    return alerts;
   }
 
   /// Releases the HTTP client. Call from the consuming app's lifecycle
@@ -276,40 +185,20 @@ class OwmRoadRiskProvider implements AdvisoryProvider {
     // immediately given a valid `appid`.
   }
 
-  /// Fetches active advisories at a point.
-  ///
-  /// Returns an empty list only when the publisher answered and reported
-  /// nothing. When part of the answer could not be read, the readable
-  /// advisories are returned together with a clearly-marked, low-severity
-  /// incomplete-read notice
-  /// (`Advisory.eventClass == kOwmRoadRiskIncompleteReadEventClass`) so the
-  /// partial read is never presented as a complete one. When nothing in a
-  /// non-empty answer could be read, this throws rather than reporting an
-  /// all-clear it did not measure.
   @override
   Future<List<Advisory>> fetchActiveAdvisoriesAtPoint({
     required double latitude,
     required double longitude,
   }) async {
-    final read = await _client.fetchPointRead(
+    final alerts = await _client.fetchPoint(
       latitude: latitude,
       longitude: longitude,
     );
-    final advisories = OwmRoadRiskMapper.toAdvisoryList(
-      alerts: read.alerts,
+    return OwmRoadRiskMapper.toAdvisoryList(
+      alerts: alerts,
       latitude: latitude,
       longitude: longitude,
     );
-    if (!read.isComplete) {
-      advisories.add(
-        OwmRoadRiskMapper.buildIncompleteReadNotice(
-          read: read,
-          latitude: latitude,
-          longitude: longitude,
-        ),
-      );
-    }
-    return advisories;
   }
 
   /// Releases the underlying HTTP client.

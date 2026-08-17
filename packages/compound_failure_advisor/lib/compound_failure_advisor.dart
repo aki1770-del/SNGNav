@@ -19,7 +19,6 @@
 library;
 
 export 'src/drive_advice.dart';
-export 'src/drive_advice_messages.dart';
 export 'src/drive_situation.dart';
 export 'src/in_drive_advisor.dart';
 export 'src/mirror_enums.dart';

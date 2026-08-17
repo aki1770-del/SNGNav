@@ -57,16 +57,16 @@ class MetNorwayHourlyForecastProvider {
   MetNorwayHourlyForecastProvider({
     this.endpointUrl = kMetNorwayLocationForecastUrl,
     this.userAgent = 'sngnav_snow_scene github.com/aki1770-del/SNGNav',
-  }) : _client = http.Client(),
-       _ownsClient = true;
+  })  : _client = http.Client(),
+        _ownsClient = true;
 
   /// Constructs a provider against a caller-supplied client (test injection).
   MetNorwayHourlyForecastProvider.withClient(
     http.Client client, {
     this.endpointUrl = kMetNorwayLocationForecastUrl,
     this.userAgent = 'sngnav_snow_scene github.com/aki1770-del/SNGNav',
-  }) : _client = client,
-       _ownsClient = false;
+  })  : _client = client,
+        _ownsClient = false;
 
   /// Endpoint URL — default is the public compact product.
   final String endpointUrl;
@@ -86,23 +86,6 @@ class MetNorwayHourlyForecastProvider {
   Future<WeatherForecast?> fetchForecast({
     required double latitude,
     required double longitude,
-  }) async => (await fetchForecastWithCoverage(
-    latitude: latitude,
-    longitude: longitude,
-  )).forecast;
-
-  /// As [fetchForecast], but also reports what the mapper dropped and why.
-  ///
-  /// This is the same network path; only the return type differs. It exists
-  /// because coverage that is reachable only from a top-level mapping
-  /// function is not reachable from the API this package documents — and a
-  /// signal a developer cannot reach is not a signal.
-  ///
-  /// See [MetNorwayMappingCoverage]. `unexpectedDrops` counts only the drops
-  /// that are NOT the publisher's documented 6-hourly tail.
-  Future<MetNorwayForecastWithCoverage> fetchForecastWithCoverage({
-    required double latitude,
-    required double longitude,
   }) async {
     if (userAgent.trim().isEmpty) {
       throw const MetNorwayForecastException(
@@ -117,22 +100,17 @@ class MetNorwayHourlyForecastProvider {
       },
     );
 
-    final response = await _client
-        .get(
-          uri,
-          headers: <String, String>{
-            'User-Agent': userAgent,
-            'Accept': 'application/json',
-            'Accept-Encoding': 'gzip',
-          },
-        )
-        .timeout(
-          _kFetchBudget,
-          onTimeout: () => throw MetNorwayForecastException(
-            'Wall-clock budget ${_kFetchBudget.inSeconds}s exhausted before '
-            'MET Norway response.',
-          ),
-        );
+    final response = await _client.get(uri, headers: <String, String>{
+      'User-Agent': userAgent,
+      'Accept': 'application/json',
+      'Accept-Encoding': 'gzip',
+    }).timeout(
+      _kFetchBudget,
+      onTimeout: () => throw MetNorwayForecastException(
+        'Wall-clock budget ${_kFetchBudget.inSeconds}s exhausted before '
+        'MET Norway response.',
+      ),
+    );
 
     if (response.statusCode != 200) {
       throw MetNorwayForecastException(
@@ -160,7 +138,7 @@ class MetNorwayHourlyForecastProvider {
         'MET Norway response is not a JSON object.',
       );
     }
-    return mapLocationForecastWithCoverage(decoded);
+    return mapLocationForecastToWeatherForecast(decoded);
   }
 
   /// Releases the underlying client if this provider constructed it.
@@ -192,240 +170,63 @@ class MetNorwayHourlyForecastProvider {
 /// it is absent/unparseable rather than inventing an issue time (the
 /// advisor's staleness chip depends on it being real).
 ///
-/// Why a `timeseries` slice was dropped by
-/// [mapLocationForecastWithCoverage].
-///
-/// Each member names a publisher-side absence we refused to guess past. The
-/// point of naming them is that a dropped slice and an hour the publisher
-/// never issued must not look the same to a consumer.
-enum MetNorwaySliceDrop {
-  /// The slice was not a JSON object.
-  malformedSlice,
-
-  /// `time` was absent or not ISO-8601 parseable.
-  unparseableTime,
-
-  /// `data` was absent or not a JSON object.
-  missingData,
-
-  /// `next_1_hours` absent. Expected on the 6-hourly tail of the compact
-  /// product — this is the publisher's shape, not a defect.
-  noHourlyBlock,
-
-  /// `instant.details` absent or not a JSON object.
-  missingInstantDetails,
-
-  /// `air_temperature` absent. The one required contract field; we skip
-  /// rather than invent a temperature.
-  missingAirTemperature,
-
-  /// The whole response was unusable before any slice was examined:
-  /// `properties` absent, or `meta.updated_at` absent/unparseable, or
-  /// `timeseries` absent/not a list. Recorded against the response, not
-  /// against a slice — see [MetNorwayMappingCoverage.responseUnusable].
-  responseUnusable,
-}
-
-/// What the mapper dropped, and why.
-///
-/// `WeatherForecast` is `{hourly, issuedAt}` and carries no coverage member,
-/// so without this record a slice **we** dropped is indistinguishable from a
-/// slice the publisher never issued, and both are indistinguishable from an
-/// hour that is genuinely fine. We hand over a list with a hole; this is the
-/// hole, counted and attributed.
-///
-/// We do not add a member to `WeatherForecast` — that type belongs to
-/// `pretrip_decision_advisor` and is not ours to mutate. This record lives on
-/// our side of the boundary.
-class MetNorwayMappingCoverage {
-  const MetNorwayMappingCoverage({
-    required this.slicesSeen,
-    required this.hoursEmitted,
-    required this.dropsByCause,
-  });
-
-  /// Slices present in the publisher's `timeseries`.
-  final int slicesSeen;
-
-  /// Slices that became an `HourlyForecast`.
-  final int hoursEmitted;
-
-  /// Dropped slices by cause. Absent keys mean zero.
-  final Map<MetNorwaySliceDrop, int> dropsByCause;
-
-  /// Total slices dropped. On an unusable response this equals
-  /// [slicesSeen] — every slice the publisher sent went unused.
-  int get dropped => slicesSeen - hoursEmitted;
-
-  /// True when every slice the publisher issued became an hour **and** an
-  /// hour was actually produced.
-  ///
-  /// Deliberately false when the response was unusable before the loop: a
-  /// response we could not read at all must never report as complete.
-  /// An earlier draft of this getter reported `isComplete: true` for a
-  /// response carrying usable slices that failed only on `meta.updated_at`;
-  /// it never shipped.
-  bool get isComplete => dropped == 0 && hoursEmitted > 0;
-
-  /// True when the response could not be read at all — no `properties`, no
-  /// parseable `meta.updated_at`, or no usable `timeseries`. When this is
-  /// true no slice was ever examined, and [slicesSeen] is the number of
-  /// slices present in the response (0 if we could not even find the list).
-  bool get responseUnusable =>
-      (dropsByCause[MetNorwaySliceDrop.responseUnusable] ?? 0) > 0;
-
-  /// Drops that are the publisher's documented shape rather than a gap in
-  /// what we were given — currently only the 6-hourly tail.
-  int get expectedDrops => dropsByCause[MetNorwaySliceDrop.noHourlyBlock] ?? 0;
-
-  /// Drops that are NOT the publisher's documented shape. A non-zero value
-  /// here is the honest signal that the response carried hours we could not
-  /// use — it is not a defect claim about the publisher, and it is not a
-  /// reason to guess.
-  int get unexpectedDrops => dropped - expectedDrops;
-
-  @override
-  String toString() =>
-      'MetNorwayMappingCoverage(seen: $slicesSeen, emitted: $hoursEmitted, '
-      'dropped: $dropped, unexpected: $unexpectedDrops, by: $dropsByCause)';
-}
-
-/// A forecast together with what was dropped producing it.
-class MetNorwayForecastWithCoverage {
-  const MetNorwayForecastWithCoverage({
-    required this.forecast,
-    required this.coverage,
-  });
-
-  /// Null for the same reasons [mapLocationForecastToWeatherForecast] returns
-  /// null: no parseable `issuedAt`, no usable `timeseries`, or no slice
-  /// survived.
-  final WeatherForecast? forecast;
-
-  final MetNorwayMappingCoverage coverage;
-}
-
 /// Top-level for direct-call testing.
 WeatherForecast? mapLocationForecastToWeatherForecast(
   Map<String, dynamic> response,
-) => mapLocationForecastWithCoverage(response).forecast;
-
-/// As [mapLocationForecastToWeatherForecast], but also reports what was
-/// dropped and why (see [MetNorwayMappingCoverage]).
-///
-/// Added in 0.2.3. Before it, the mapper dropped
-/// slices silently, so the hole it handed over was invisible. Dropping is
-/// still the right call — we will not guess a temperature — but a consumer
-/// can now see that we dropped, and why.
-MetNorwayForecastWithCoverage mapLocationForecastWithCoverage(
-  Map<String, dynamic> response,
 ) {
-  final drops = <MetNorwaySliceDrop, int>{};
-  void drop(MetNorwaySliceDrop cause) => drops[cause] = (drops[cause] ?? 0) + 1;
-
-  /// Unusable-response exit. [seen] carries the slice count when we got far
-  /// enough to find the list, so the record never reports "0 slices" for a
-  /// response that plainly carried them.
-  MetNorwayForecastWithCoverage none({int seen = 0}) =>
-      MetNorwayForecastWithCoverage(
-        forecast: null,
-        coverage: MetNorwayMappingCoverage(
-          slicesSeen: seen,
-          hoursEmitted: 0,
-          dropsByCause: const <MetNorwaySliceDrop, int>{
-            MetNorwaySliceDrop.responseUnusable: 1,
-          },
-        ),
-      );
   final properties = response['properties'];
-  if (properties is! Map<String, dynamic>) return none();
-
-  final rawSeries = properties['timeseries'];
-  final seenBefore = rawSeries is List ? rawSeries.length : 0;
+  if (properties is! Map<String, dynamic>) return null;
 
   final meta = properties['meta'];
   final issuedAt = meta is Map<String, dynamic>
       ? _parseIsoOrNull(meta['updated_at'])
       : null;
-  // Report the slices the publisher DID send even though we cannot use them:
-  // "we could not read the issue time" and "there was nothing to read" are
-  // different facts and must not look the same.
-  if (issuedAt == null) return none(seen: seenBefore);
+  if (issuedAt == null) return null;
 
-  final timeseries = rawSeries;
-  if (timeseries is! List || timeseries.isEmpty) return none(seen: seenBefore);
+  final timeseries = properties['timeseries'];
+  if (timeseries is! List || timeseries.isEmpty) return null;
 
   final hourly = <HourlyForecast>[];
   for (final raw in timeseries) {
-    if (raw is! Map<String, dynamic>) {
-      drop(MetNorwaySliceDrop.malformedSlice);
-      continue;
-    }
+    if (raw is! Map<String, dynamic>) continue;
     final hour = _parseIsoOrNull(raw['time']);
-    if (hour == null) {
-      drop(MetNorwaySliceDrop.unparseableTime);
-      continue;
-    }
+    if (hour == null) continue;
 
     final data = raw['data'];
-    if (data is! Map<String, dynamic>) {
-      drop(MetNorwaySliceDrop.missingData);
-      continue;
-    }
+    if (data is! Map<String, dynamic>) continue;
 
     // Hourly resolution only: the 6-hourly tail has no next_1_hours block
     // and is skipped, never interpolated.
     final next1 = data['next_1_hours'];
-    if (next1 is! Map<String, dynamic>) {
-      drop(MetNorwaySliceDrop.noHourlyBlock);
-      continue;
-    }
+    if (next1 is! Map<String, dynamic>) continue;
 
     final instant = data['instant'];
     final instantDetails = instant is Map<String, dynamic>
         ? instant['details']
         : null;
-    if (instantDetails is! Map<String, dynamic>) {
-      drop(MetNorwaySliceDrop.missingInstantDetails);
-      continue;
-    }
+    if (instantDetails is! Map<String, dynamic>) continue;
 
     final temp = _readNum(instantDetails['air_temperature']);
-    if (temp == null) {
-      drop(MetNorwaySliceDrop.missingAirTemperature);
-      continue;
-    } // required contract field — skip, not guess
+    if (temp == null) continue; // required contract field — skip, not guess
 
     final next1Details = next1['details'];
     final precip = next1Details is Map<String, dynamic>
         ? _readNum(next1Details['precipitation_amount'])
         : null;
 
-    hourly.add(
-      HourlyForecast(
-        hour: hour.toLocal(),
-        tempCelsius: temp,
-        humidityRH: _readNum(instantDetails['relative_humidity']),
-        precipitationMmPerHour: precip,
-        // Compact product carries neither visibility nor surface state.
-        visibilityMeters: null,
-        estimatedRoadCondition: null,
-      ),
-    );
+    hourly.add(HourlyForecast(
+      hour: hour.toLocal(),
+      tempCelsius: temp,
+      humidityRH: _readNum(instantDetails['relative_humidity']),
+      precipitationMmPerHour: precip,
+      // Compact product carries neither visibility nor surface state.
+      visibilityMeters: null,
+      estimatedRoadCondition: null,
+    ));
   }
 
-  final coverage = MetNorwayMappingCoverage(
-    slicesSeen: timeseries.length,
-    hoursEmitted: hourly.length,
-    dropsByCause: Map.unmodifiable(drops),
-  );
-  if (hourly.isEmpty) {
-    return MetNorwayForecastWithCoverage(forecast: null, coverage: coverage);
-  }
-  return MetNorwayForecastWithCoverage(
-    forecast: WeatherForecast(hourly: hourly, issuedAt: issuedAt.toLocal()),
-    coverage: coverage,
-  );
+  if (hourly.isEmpty) return null;
+  return WeatherForecast(hourly: hourly, issuedAt: issuedAt.toLocal());
 }
 
 double _truncateToFourDecimals(double v) {

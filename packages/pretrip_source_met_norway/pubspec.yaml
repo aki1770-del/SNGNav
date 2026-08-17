@@ -1,9 +1,10 @@
 name: pretrip_source_met_norway
 description: >-
-  MET Norway locationforecast source for the pretrip_decision_advisor
-  contract. Maps the global compact product to a WeatherForecast, with
-  per-slice coverage. Pure Dart.
-version: 0.2.3
+  MET Norway locationforecast hourly-forecast source for the
+  pretrip_decision_advisor contract. Maps the global locationforecast
+  compact product to a WeatherForecast measurement for the pre-trip
+  "Before you drive" briefing. Pure Dart.
+version: 0.2.2
 license: BSD-3-Clause
 
 repository: https://github.com/aki1770-del/SNGNav
@@ -20,13 +21,7 @@ environment:
 
 dependencies:
   http: ^1.3.0
-  # Minimum 0.5.3, and it is a REAL minimum, proven not asserted:
-  #   0.5.2 added briefOrNull(), which this package's example and QUICKSTART use;
-  #   0.5.3 added PretripAssessmentIncompleteException, which this package's
-  #   tests reference and its docs describe.
-  # `dart pub downgrade && dart analyze` is the proof. Earlier releases
-  # declared >=0.5.0 and >=0.5.2; both were false and would not compile.
-  pretrip_decision_advisor: '>=0.5.3 <0.7.0'
+  pretrip_decision_advisor: ^0.5.0
 
 dev_dependencies:
   test: ^1.25.0

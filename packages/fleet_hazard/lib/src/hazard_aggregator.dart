@@ -5,7 +5,6 @@ import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
 
-import 'fleet_aggregate.dart';
 import 'fleet_report.dart';
 import 'hazard_zone.dart';
 import 'zone_observation.dart';
@@ -22,27 +21,6 @@ class HazardAggregator {
   static const double maxZoneRadius = 5000;
 
   /// Clusters hazard reports into zones.
-  ///
-  /// **This method cannot tell absence from an all-clear.** It returns an empty
-  /// list in three different worlds, and gives you no way to distinguish them:
-  ///
-  /// * no reports were supplied — *nobody has driven this road*;
-  /// * reports were supplied and all were dry/wet — *the fleet says it is fine*;
-  /// * reports were supplied and all were [RoadCondition.unknown] — *the fleet
-  ///   drove it and could not tell*.
-  ///
-  /// An empty result from this method therefore must **never** be rendered to a
-  /// driver as a clear road. Reports carrying [RoadCondition.unknown] are
-  /// dropped here without trace, because the hazard filter keeps only snowy and
-  /// icy.
-  ///
-  /// **This method also applies no recency filter.** Every report is considered
-  /// however old it is; a report from yesterday counts exactly as much as one
-  /// from a minute ago.
-  ///
-  /// Use [aggregateWithProvenance] to get the counts that separate those worlds,
-  /// and to enforce recency. This method's behavior is unchanged and will stay
-  /// unchanged — existing callers are not affected.
   static List<HazardZone> aggregate(
     List<FleetReport> reports, {
     double clusterRadius = defaultClusterRadius,
@@ -80,75 +58,6 @@ class HazardAggregator {
     }
 
     return zones;
-  }
-
-  /// Clusters hazard reports into zones **and reports what it was told**.
-  ///
-  /// Unlike [aggregate], the result distinguishes *nobody reported this road*
-  /// from *the fleet reported it and found it clear* from *the fleet reported it
-  /// and could not read it* — three worlds that [aggregate] collapses into the
-  /// same empty list. See [FleetAggregate].
-  ///
-  /// ```dart
-  /// // oracle:placeholders reports
-  /// final result = HazardAggregator.aggregateWithProvenance(
-  ///   reports,
-  ///   maxAge: const Duration(minutes: 30),
-  /// );
-  ///
-  /// if (result.isSilent) {
-  ///   // No fresh reports at all. Say so. Do NOT render a clear road.
-  /// } else if (result.isAllUnknown) {
-  ///   // Vehicles drove it; none could tell. Also not a clear road.
-  /// } else if (result.isMeasuredClear) {
-  ///   // Vehicles drove it and found it fine. This one you may render as clear.
-  /// }
-  /// ```
-  ///
-  /// When [maxAge] is supplied, a report is considered only if
-  /// [FleetReport.isRecent] accepts it at that age; the rest are counted in
-  /// [FleetAggregate.staleCount] and excluded from clustering. When [maxAge] is
-  /// `null` **no recency filter is applied at all** — every report counts, at
-  /// any age. If your surface tells the driver something like "N vehicles
-  /// reported in the last 30 minutes", you must pass the matching [maxAge]; the
-  /// window is enforced here, never assumed.
-  ///
-  /// The clustering itself is identical to [aggregate] — this method runs the
-  /// same algorithm over the reports that survive [maxAge].
-  static FleetAggregate aggregateWithProvenance(
-    List<FleetReport> reports, {
-    double clusterRadius = defaultClusterRadius,
-    Duration? maxAge,
-  }) {
-    final considered = maxAge == null
-        ? List<FleetReport>.of(reports)
-        : reports
-              .where((report) => report.isRecent(maxAge: maxAge))
-              .toList(growable: false);
-
-    final staleCount = reports.length - considered.length;
-
-    final unknownCount = considered
-        .where((report) => report.condition == RoadCondition.unknown)
-        .length;
-
-    DateTime? freshestReportAt;
-    for (final report in considered) {
-      if (freshestReportAt == null ||
-          report.timestamp.isAfter(freshestReportAt)) {
-        freshestReportAt = report.timestamp;
-      }
-    }
-
-    final zones = aggregate(considered, clusterRadius: clusterRadius);
-
-    return FleetAggregate(
-      zones: List.unmodifiable(zones),
-      reportCount: considered.length,
-      unknownCount: unknownCount,
-      staleCount: staleCount,
-      freshestReportAt: freshestReportAt,
-    );
   }
 
   static HazardZone _buildZone(List<FleetReport> cluster) {

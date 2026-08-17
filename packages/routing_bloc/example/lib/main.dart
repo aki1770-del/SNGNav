@@ -1,29 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-// routing_engine 0.5.x does not export LatLng (0.6.x does); import it from
-// its home package, which the example already depends on. On the latlong2
-// 0.9.x line the entry library is `latlong.dart` (renamed in 0.10).
 import 'package:latlong2/latlong.dart';
 import 'package:navigation_safety/navigation_safety.dart';
 import 'package:routing_bloc/routing_bloc.dart';
 import 'package:routing_engine/routing_engine.dart';
 
-/// Local engine-route → navigation-route adapter.
+/// Local adapter mirroring lib/adapters/navigation_route_adapter.dart.
 /// RoutingState.route is RouteResult? (engine-shaped) while
 /// RouteProgressBar.route is NavigationRoute? (navigation-shaped);
 /// examples sit at that boundary and convert here.
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
     shape: shape,
-    // routing_engine 0.5.x (the published line this example pins):
-    // `RouteManeuver.position` is non-nullable, and from 0.5.1 the engine
-    // SKIPS a maneuver whose location cannot be parsed instead of
-    // substituting a fake coordinate (earlier releases emitted Null Island,
-    // LatLng(0, 0) in the Gulf of Guinea). Every maneuver present therefore
-    // carries a real position, so this adapter maps 1:1 with no null
-    // handling. (The future 0.6.x line makes `position` nullable instead;
-    // an app targeting it must decide what to do with a positionless
-    // maneuver — keep the instruction, never invent a coordinate.)
     maneuvers: maneuvers
         .map(
           (m) => NavigationManeuver(

@@ -7,7 +7,7 @@ packages:
       path: "../../adaptive_reroute"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.1.2"
   async:
     dependency: transitive
     description:
@@ -70,42 +70,42 @@ packages:
       path: "../../condition_aggregator"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.0.5"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.5"
   condition_aggregator_jma:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.2.0"
   condition_aggregator_met_norway:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_met_norway"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.2"
   condition_aggregator_nws:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_nws"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.6"
   condition_aggregator_owm_road_risk:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_owm_road_risk"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.1.3"
   crypto:
     dependency: transitive
     description:
@@ -136,21 +136,21 @@ packages:
       path: "../../driving_conditions"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.5.2"
   driving_consent:
     dependency: "direct overridden"
     description:
       path: "../../driving_consent"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.4.3"
   driving_weather:
     dependency: "direct overridden"
     description:
       path: "../../driving_weather"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.4.2"
   equatable:
     dependency: transitive
     description:
@@ -197,7 +197,7 @@ packages:
       path: "../../fleet_hazard"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.4.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -283,14 +283,14 @@ packages:
       path: "../../japanese_snow_vocabulary"
       relative: true
     source: path
-    version: "0.2.3"
+    version: "0.2.2"
   kalman_dr:
     dependency: "direct overridden"
     description:
       path: "../../kalman_dr"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.4.2"
   latlong2:
     dependency: "direct main"
     description:
@@ -353,7 +353,7 @@ packages:
       path: "../../map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.6"
+    version: "0.4.2"
   matcher:
     dependency: transitive
     description:
@@ -408,42 +408,42 @@ packages:
       path: "../../nav2_safety_layer"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.1.2"
   navigation_lend_mode_experiment:
     dependency: "direct overridden"
     description:
       path: "../../navigation_lend_mode_experiment"
       relative: true
     source: path
-    version: "0.0.2"
+    version: "0.0.1"
   navigation_safety:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety"
       relative: true
     source: path
-    version: "0.9.5"
+    version: "0.9.2"
   navigation_safety_calibration:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety_calibration"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.1.2"
   navigation_safety_core:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.3"
+    version: "0.10.4"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
       path: "../../navigation_safety_enums"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.3"
   nested:
     dependency: transitive
     description:
@@ -458,7 +458,7 @@ packages:
       path: "../../noaa_nws_adapter"
       relative: true
     source: path
-    version: "0.0.8"
+    version: "0.0.5"
   objective_c:
     dependency: transitive
     description:
@@ -473,7 +473,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.5.6"
+    version: "0.5.2"
   path:
     dependency: transitive
     description:
@@ -552,7 +552,7 @@ packages:
       path: "../../pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.4.0"
   proj4dart:
     dependency: transitive
     description:
@@ -590,21 +590,21 @@ packages:
       path: "../../route_condition_forecast"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.1.3"
   routing_bloc:
     dependency: "direct overridden"
     description:
       path: "../../routing_bloc"
       relative: true
     source: path
-    version: "0.4.5"
+    version: "0.4.2"
   routing_engine:
     dependency: "direct overridden"
     description:
       path: "../../routing_engine"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.4.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -616,7 +616,7 @@ packages:
       path: "../../snow_rendering"
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.2.3"
   source_span:
     dependency: transitive
     description:
@@ -719,7 +719,7 @@ packages:
       path: "../../voice_guidance"
       relative: true
     source: path
-    version: "0.7.3"
+    version: "0.7.0"
   web:
     dependency: transitive
     description:

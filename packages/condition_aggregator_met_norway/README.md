@@ -121,7 +121,7 @@ decimals before request per MET Norway terms.
 | Advisory field    | Source                                                |
 |-------------------|-------------------------------------------------------|
 | `source`          | `AdvisorySource.metNorway`                            |
-| `eventClass`      | Derived: `Freezing precipitation` / `Heavy precipitation` / `Freezing, precipitation not measured` / `Subzero forecast` (else: no advisory). Available as the exported constants `kEventFreezingPrecipitation`, `kEventHeavyPrecipitation`, `kEventFreezingPrecipNotMeasured`, `kEventSubzeroForecast`. |
+| `eventClass`      | Derived: `Freezing precipitation` / `Heavy precipitation` / `Subzero forecast` (else: no advisory) |
 | `severity`        | Heuristic by combined temperature + precipitation     |
 | `certainty`       | `likely` if publisher `symbol_code` present, else `possible` |
 | `urgency`         | `expected` (next-1-hour horizon)                      |
@@ -131,44 +131,18 @@ decimals before request per MET Norway terms.
 | `headline`        | `<eventClass> — <symbol_code>` when symbol present    |
 | `description`     | air_temperature + precipitation + symbol + CC-BY-4.0 attribution string |
 
-#### Heuristic severity (0.0.6)
-
-Every row below requires a **measured** `precipitation_amount`. "Measured"
-means the feed carried a numeric value for the slice — a missing field is not
-a zero.
+#### Heuristic severity at v0.0.1
 
 | Condition                                                              | Severity   |
 |------------------------------------------------------------------------|------------|
-| air_temperature ≤ 0 °C AND measured precipitation ≥ 4 mm/h             | `extreme`  |
-| air_temperature ≤ 0 °C AND measured precipitation > 0                  | `severe`   |
-| measured precipitation ≥ 4 mm/h (above freezing)                       | `severe`   |
-| air_temperature ≤ 0 °C AND precipitation **NOT MEASURED**              | `unknown`  |
-| air_temperature ≤ 0 °C AND measured precipitation == 0                 | `moderate` |
+| air_temperature ≤ 0 °C AND precipitation ≥ 4 mm/h                      | `extreme`  |
+| air_temperature ≤ 0 °C AND precipitation > 0                           | `severe`   |
+| precipitation ≥ 4 mm/h (above freezing)                                | `severe`   |
+| air_temperature ≤ 0 °C AND precipitation == 0                          | `moderate` |
 | else                                                                   | (no advisory; returns `null` / empty list) |
 
 Thresholds (4 mm/h heavy floor; 0 °C freezing floor) are
 integrator-overridable at construction time.
-
-##### Why the `unknown` row exists
-
-Up to and including **0.0.5** a missing `precipitation_amount` was read as
-`0.0`, which put a freezing road into the benign `Subzero forecast` →
-`moderate` row and printed `precipitation_amount 0.0 mm` into the driver-facing
-description. Absence bought a downgrade, and a number nobody measured was shown
-as a reading. See the 0.0.6 CHANGELOG entry for the full disclosure and for
-what it means if you are still on an earlier version.
-
-The rule this row encodes: **positive hazard evidence may fire on partial data;
-a "nothing is wrong here" verdict requires complete data.** It matches the
-convention already used across the sibling adapters
-(`condition_aggregator_digitraffic`, `_jma`, `_nws`, `_owm_road_risk`), all of
-which map an unknown to `AdvisorySeverity.unknown` and never to a low value.
-
-**If you rank advisories,** note that `AdvisorySeverity.unknown` is the **first**
-member of the enum, so a naive `severity.index` comparison sorts it *below*
-`minor`. Treat `unknown` as "do not reassure the driver", not as "less than
-minor". That enum ordering comes from `condition_aggregator` and is not changed
-here.
 
 ### License + attribution (binding)
 

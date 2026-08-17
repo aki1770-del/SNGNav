@@ -3,25 +3,14 @@ description: >-
   JMA (気象庁) adapter for the condition_aggregator interface. Maps the
   JMA windowless per-prefecture warning JSON to source-neutral Advisory
   typed events. Pure Dart.
-version: 0.3.2
+version: 0.3.0
 
 # Reads the windowless per-prefecture warning JSON
 # (bosai/warning/data/warning/{areacode}.json), which always reflects the
 # current in-force warning state (0.2.0, replacing the 0.1.x atom-feed
 # path's scroll-off false-negative). 0.3.0 resolves a border point to ALL
 # containing prefectures and returns the conservative union (over-warn;
-# partial reads flagged). 0.3.1 widens the surfaced warning classes from
-# the six winter-snow classes to fifteen, adding the downpour /
-# typhoon-wind / thunder / fog classes (kJmaWarningCodes). See README.md
-# "Status" + CHANGELOG.md.
-#
-# 0.3.2 is a BACKPORT onto the 0.3.x line, published because it is the only
-# version inside the caret range of the consumers that already hold 0.3.1.
-# It adds ONE thing: the provider now reports, OUT OF BAND, how old the JMA
-# document it just read actually is (condition_aggregator's
-# AdvisoryFeedFreshnessReporting). The returned Advisory list is byte-for-byte
-# what 0.3.1 returned - no synthetic advisory is injected, so no consumer that
-# grades hazard by severity can mistake a feed-health fact for weather.
+# partial reads flagged). See README.md "Status" + CHANGELOG.md.
 
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
@@ -36,11 +25,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  # ^0.0.10 - the version that introduced AdvisoryFeedFreshnessReporting /
-  # AdvisoryFeedStaleness. Solver-checked against both existing consumers:
-  # shadow_watch pins ^0.0.9 and sngnav-app pins '>=0.0.3 <0.1.0'; both
-  # intersect ^0.0.10 to '>=0.0.10 <0.1.0', so the upgrade resolves for both.
-  condition_aggregator: ^0.0.10
+  condition_aggregator: ^0.0.5
   # http is used to fetch the per-prefecture warning JSON. Parsing is
   # via dart:convert (no third-party XML/JSON dependency needed).
   http: ^1.0.0

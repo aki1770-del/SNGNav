@@ -1,5 +1,4 @@
-// Fetches live JMA warnings (snow + the 0.3.1 downpour / typhoon-wind /
-// thunder / fog turmoil classes) for an Akita point and prints them.
+// Fetches live JMA snow advisories for an Akita point and prints them.
 //
 // Run: dart run example/main.dart
 // The provider does real network I/O against the public JMA feed, so this
@@ -21,7 +20,7 @@ Future<void> main() async {
     );
     print(jma.source.attributionString);
     if (advisories.isEmpty) {
-      print('No active JMA warnings for this point right now.');
+      print('No active snow advisories for this point right now.');
     }
     for (final a in advisories) {
       print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');

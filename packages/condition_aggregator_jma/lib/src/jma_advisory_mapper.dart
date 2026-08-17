@@ -3,12 +3,10 @@
 /// bounding-box prefecture-code resolution that the
 /// [JmaAdvisoryProvider] composes.
 ///
-/// All surfaced advisory event names — the winter-snow classes plus the
-/// downpour / typhoon-wind / thunder / fog turmoil classes added in
-/// 0.3.1 — are passed through `Advisory.eventClass` verbatim per AAA
-/// Article 17 (β) verbatim-relay discipline. The CAP-class severity
-/// mapping is conservative (警報 → severe; 注意報 → moderate;
-/// 危険警報 → extreme; 特別警報 → extreme).
+/// All winter-snow advisory event names are passed through
+/// `Advisory.eventClass` verbatim per AAA Article 17 (β) verbatim-relay
+/// discipline. The CAP-class severity mapping is conservative
+/// (警報 → severe; 注意報 → moderate; 特別警報 → extreme).
 ///
 /// ## Why the per-prefecture warning JSON (0.2.0)
 ///
@@ -29,13 +27,10 @@
 /// Akita vs ~0.6 MB for the atom feed) — lighter on constrained
 /// in-vehicle hardware.
 ///
-/// ## Severity mapping (listed in check order)
-/// - 特別警報 (emergency warning) suffix → `AdvisorySeverity.extreme`
-/// - 危険警報 (danger warning, JMA level 40 / 警戒レベル4相当) suffix →
-///   `AdvisorySeverity.extreme` (checked BEFORE the bare 警報 suffix,
-///   which would under-grade it to severe; see [_severityForEventName])
+/// ## Severity mapping
 /// - 警報 (warning) suffix → `AdvisorySeverity.severe`
 /// - 注意報 (advisory) suffix → `AdvisorySeverity.moderate`
+/// - 特別警報 (emergency warning) suffix → `AdvisorySeverity.extreme`
 /// - any other → `AdvisorySeverity.unknown`
 ///
 /// Certainty / urgency are `unknown` — JMA's classification does not
@@ -48,18 +43,11 @@ import 'dart:convert';
 
 import 'package:condition_aggregator/condition_aggregator.dart';
 
-/// JMA warning-code → verbatim event-name for the **snow classes only**,
-/// keyed on the **bosai warning JSON** numeric `code` value (NOT the
-/// jmaxml report `<Kind><Code>`; the two code systems differ — e.g. in
-/// the bosai JSON `06` = 大雪警報, whereas the jmaxml report XML uses
-/// `33` for the same event name).
-///
-/// **Back-compat (0.3.1):** through 0.3.0 this map WAS the complete
-/// surfaced set and the parse filter. As of 0.3.1 the parse filter is
-/// [kJmaWarningCodes] (this snow subset plus the downpour / typhoon /
-/// turmoil classes); this map is retained unchanged — its six snow
-/// entries only — for consumers that key on the snow classes
-/// specifically.
+/// JMA warning-code → verbatim event-name for the snow classes this
+/// adapter surfaces, keyed on the **bosai warning JSON** numeric
+/// `code` value (NOT the jmaxml report `<Kind><Code>`; the two code
+/// systems differ — e.g. in the bosai JSON `06` = 大雪警報, whereas the
+/// jmaxml report XML uses `33` for the same event name).
 ///
 /// Each code↔name pair below was verified against the JMA bosai
 /// warning code taxonomy (the `level-NN` legend transcribed from the
@@ -98,70 +86,6 @@ const Map<String, String> kJmaSnowWarningCodes = <String, String>{
   '26': '着雪注意報',
   '36': '大雪特別警報',
   '32': '暴風雪特別警報',
-};
-
-/// JMA warning-code → verbatim event-name for the **complete** set of
-/// classes this adapter surfaces (0.3.1): the six winter-snow classes
-/// retained from 0.2.0 ([kJmaSnowWarningCodes]) plus the downpour /
-/// typhoon-wind / thunder / fog turmoil classes added in 0.3.1. Keyed
-/// on the **bosai warning JSON** numeric `code` value (NOT the jmaxml
-/// report `<Kind><Code>`; see [kJmaSnowWarningCodes]). This is the map
-/// the parse filter ([parseJmaWarningJson]) consumes.
-///
-/// Each 0.3.1 code↔name pair was verified directly against the JMA
-/// bosai warning frontend's own served `code2WarningInfo` lookup
-/// (`https://www.jma.go.jp/bosai/warning/`, page fetched and the
-/// inlined map extracted 2026-07-10; independently cross-checked
-/// against a second same-day read of the same source — both reads
-/// agree on every code below, and both reproduce the six 0.2.0 snow
-/// codes exactly):
-/// - `33` → 大雨特別警報   (`elem:"rain"`, `level:50`)
-/// - `43` → 大雨危険警報   (`elem:"rain"`, `level:40` — 警戒レベル4相当)
-/// - `03` → 大雨警報       (`elem:"rain"`, `level:30`)
-/// - `10` → 大雨注意報     (`elem:"rain"`, `level:20`)
-/// - `35` → 暴風特別警報   (`elem:"wind"`, `level:50`)
-/// - `05` → 暴風警報       (`elem:"wind"`, `level:30`)
-/// - `15` → 強風注意報     (`elem:"wind"`, `level:20`)
-/// - `14` → 雷注意報       (`elem:"thunder"`, `level:20`)
-/// - `20` → 濃霧注意報     (`elem:"fog"`, `level:20`)
-///
-/// Extraction note: the served entries are shaped like
-/// `"03":{shortNameParts:s.rain[3],nameParts:e.rain[3],elem:"rain",level:30}`
-/// with `e.rain[3]=["レベル３","大雨","警報"]`; the rain-family
-/// `nameParts` carry a leading `レベルＮ` display part, which the
-/// composed event name drops (the snow/wind families carry none, e.g.
-/// `e.wind[3]=["暴風","警報"]`).
-///
-/// NOTE — there is no 暴風危険警報 / 大雪危険警報 / 暴風雪危険警報: the
-/// served level-40 (危険警報) slot is populated only for the rain /
-/// landslide / flood / tide families (`e.wind[4]`, `e.snow[4]`, and
-/// `e.wind_snow[4]` are all `[]`), so of the classes this adapter
-/// surfaces only 大雨 has a 危険警報 rung.
-///
-/// NOTE — 氾濫 (river-flood) classes are **not** in this map: they ride
-/// JMA's separate served `code2FloodWarningInfo` lookup (its own code
-/// space — `20`/`21`/`22`/`30`/`31`/`40`/`41`/`51`/`53` — colliding
-/// with this map's codes) and a different JSON branch, so they cannot
-/// be added to this table without a source-branch change. Recorded in
-/// CHANGELOG 0.3.1 as out of scope for this widening.
-const Map<String, String> kJmaWarningCodes = <String, String>{
-  // Winter-snow classes (0.2.0; provenance on [kJmaSnowWarningCodes]).
-  '06': '大雪警報',
-  '12': '大雪注意報',
-  '02': '暴風雪警報',
-  '26': '着雪注意報',
-  '36': '大雪特別警報',
-  '32': '暴風雪特別警報',
-  // Downpour / typhoon / turmoil classes (0.3.1; provenance above).
-  '33': '大雨特別警報',
-  '43': '大雨危険警報',
-  '03': '大雨警報',
-  '10': '大雨注意報',
-  '35': '暴風特別警報',
-  '05': '暴風警報',
-  '15': '強風注意報',
-  '14': '雷注意報',
-  '20': '濃霧注意報',
 };
 
 /// Warning `status` values that mean the warning is **in force**. The
@@ -368,10 +292,10 @@ List<String> prefectureCodesForPoint({
   return codes;
 }
 
-/// One in-force surfaced-class warning extracted from a per-prefecture
-/// warning JSON. Deduplicated to one record per distinct surfaced
-/// warning code in the prefecture (the same code is repeated across
-/// every sub-area / municipality in the JSON; for a prefecture-resolved
+/// One in-force snow-class warning extracted from a per-prefecture
+/// warning JSON. Deduplicated to one record per distinct snow warning
+/// code in the prefecture (the same code is repeated across every
+/// sub-area / municipality in the JSON; for a prefecture-resolved
 /// lat/lon lookup that detail is below this adapter's resolution).
 class JmaWarningRecord {
   /// Bosai warning-JSON numeric `code`, e.g. `06`. Stable identifier;
@@ -416,39 +340,8 @@ class JmaWarningRecord {
   });
 }
 
-/// Reads ONLY the document-level `reportDatetime` out of a per-prefecture
-/// warning JSON [body] — the publisher's own statement of when it last wrote
-/// this document.
-///
-/// **Why this is separate from [parseJmaWarningJson].** That function returns
-/// the in-force warning records, and each record carries `reportDateTime`. But
-/// a frozen feed's worst shape is the one where it lists **no warnings at
-/// all**: `parseJmaWarningJson` then returns an empty list, and every
-/// per-record timestamp goes with it. The document age has to be readable
-/// independently of whether the document had anything to say, because the
-/// case that needs it most is precisely the case with nothing in it.
-///
-/// Measured 2026-08-16 against the live feed: Akita `050000` answered HTTP 200
-/// with `reportDatetime` `2026-05-28T06:11:00+09:00` — 80.3 days old — and one
-/// in-force 雷注意報. Niigata `150000` answered with a document 81 days old and
-/// **zero** warnings, which is the identical value a genuinely clear sky
-/// produces.
-///
-/// Returns `null` when the field is absent or unparseable. `null` means "we
-/// could not establish the document's age", never "the document is current" —
-/// the caller must not read absence as freshness.
-DateTime? jmaFeedReportDatetime(String body) {
-  final dynamic decoded = json.decode(body);
-  if (decoded is! Map<String, dynamic>) {
-    throw const FormatException('JMA warning JSON root is not a JSON object.');
-  }
-  final raw = decoded['reportDatetime'];
-  if (raw is! String || raw.isEmpty) return null;
-  return DateTime.tryParse(raw);
-}
-
 /// Parses one per-prefecture warning JSON [body] into the in-force
-/// surfaced-class [JmaWarningRecord]s for [prefectureCode].
+/// snow-class [JmaWarningRecord]s for [prefectureCode].
 ///
 /// The JSON shape (verified live 2026-06-26 against
 /// `bosai/warning/data/warning/050000.json`):
@@ -467,10 +360,9 @@ DateTime? jmaFeedReportDatetime(String body) {
 ///
 /// Only `areaTypes[].areas[].warnings[]` (the current in-force state)
 /// is consumed; `timeSeries` (the forecast outlook) is intentionally
-/// ignored. Warnings are filtered to the surfaced codes
-/// ([kJmaWarningCodes] — snow plus the 0.3.1 downpour / typhoon /
-/// turmoil classes) and to non-cancelled status, then deduplicated to
-/// one record per distinct code.
+/// ignored. Warnings are filtered to the snow-class codes
+/// ([kJmaSnowWarningCodes]) and to non-cancelled status, then
+/// deduplicated to one record per distinct snow code.
 List<JmaWarningRecord> parseJmaWarningJson(
   String body, {
   required String prefectureCode,
@@ -497,7 +389,7 @@ List<JmaWarningRecord> parseJmaWarningJson(
       jmaPrefectureName(prefectureCode) ??
       prefectureCode;
 
-  // Dedup to one record per distinct in-force surfaced code; keep first
+  // Dedup to one record per distinct in-force snow code; keep first
   // encountered status. Iteration order is JSON document order so the
   // result is deterministic.
   final byCode = <String, JmaWarningRecord>{};
@@ -517,8 +409,8 @@ List<JmaWarningRecord> parseJmaWarningJson(
           final status = w['status'];
           if (code is! String || status is! String) continue;
           if (status == kJmaWarningStatusCancelled) continue;
-          final eventName = kJmaWarningCodes[code];
-          if (eventName == null) continue; // not a surfaced class
+          final eventName = kJmaSnowWarningCodes[code];
+          if (eventName == null) continue; // not a snow class
           byCode.putIfAbsent(
             code,
             () => JmaWarningRecord(
@@ -542,9 +434,8 @@ List<JmaWarningRecord> parseJmaWarningJson(
 ///
 /// - `source` ← `AdvisorySource.jmaJapan`
 /// - `eventClass` ← `JmaWarningRecord.eventName` verbatim
-/// - `severity` ← derived from name suffix, in check order
-///   (特別警報 → extreme; 危険警報 → extreme; 警報 → severe;
-///   注意報 → moderate; otherwise unknown)
+/// - `severity` ← derived from name suffix (警報 → severe;
+///   注意報 → moderate; 特別警報 → extreme; otherwise unknown)
 /// - `certainty` / `urgency` ← `unknown` (CAP-class mapping deferred)
 /// - `areaDescription` ← `JmaWarningRecord.areaName` (prefecture label)
 /// - `headline` / `description` ← `JmaWarningRecord.headline` verbatim
@@ -568,13 +459,6 @@ Advisory mapJmaWarningToAdvisory(JmaWarningRecord record) {
 
 AdvisorySeverity _severityForEventName(String name) {
   if (name.endsWith('特別警報')) return AdvisorySeverity.extreme;
-  // 危険警報 (JMA level 40 — 警戒レベル4相当; e.g. 大雨危険警報, code 43)
-  // is checked BEFORE the bare 警報 suffix, which it also ends with —
-  // falling through to 警報 would under-grade a JMA level-40 to severe.
-  // [AdvisorySeverity] has no rung between severe and extreme, so
-  // level 40 maps UP to extreme alongside 特別警報 (level 50): the
-  // caution-add-only direction.
-  if (name.endsWith('危険警報')) return AdvisorySeverity.extreme;
   if (name.endsWith('警報')) return AdvisorySeverity.severe;
   if (name.endsWith('注意報')) return AdvisorySeverity.moderate;
   return AdvisorySeverity.unknown;
@@ -602,9 +486,9 @@ AdvisorySeverity _severityForEventName(String name) {
 ///
 /// The notice is built so it can never masquerade as a weather warning:
 ///   * `severity` = [AdvisorySeverity.minor] — the lowest impact rung; **no**
-///     real JMA advisory this adapter surfaces maps to `minor` (警報→severe /
-///     注意報→moderate / 危険警報・特別警報→extreme), and `minor` is below the
-///     `Advisory.isHighImpact` (severe / extreme) threshold;
+///     real JMA snow advisory maps to `minor` (警報→severe / 注意報→moderate /
+///     特別警報→extreme), and `minor` is below the `Advisory.isHighImpact`
+///     (severe / extreme) threshold;
 ///   * `certainty` / `urgency` = `unknown` — it is not a weather event, so a
 ///     CAP certainty / urgency does not apply;
 ///   * `eventClass` = [kJmaIncompleteReadEventClass] — a distinct identity that

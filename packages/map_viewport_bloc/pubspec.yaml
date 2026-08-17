@@ -2,7 +2,7 @@ name: map_viewport_bloc
 description: >-
   Declarative camera state machine (follow / free look / route
   overview) for navigation maps with six-layer composition.
-version: 0.4.6
+version: 0.4.3
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -21,7 +21,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
-  navigation_safety_core: '>=0.10.0 <0.12.0'
+  navigation_safety_core: ^0.10.0
 
 dev_dependencies:
   flutter_test:

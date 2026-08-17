@@ -44,19 +44,5 @@ export 'src/advisory.dart'
         AdvisoryDeserializationException;
 export 'src/advisory_provider.dart'
     show AdvisoryProvider, AdvisoryProviderInitException;
-export 'src/advisory_absence.dart' show AdvisoryUnavailableReason;
-export 'src/advisory_feed_freshness.dart'
-    show AdvisoryFeedStaleness, AdvisoryFeedFreshnessReporting;
-export 'src/advisory_lookup.dart'
-    show
-        AdvisoryLookup,
-        AdvisoryLookupComplete,
-        AdvisoryLookupPartial,
-        AdvisoryLookupUnavailable,
-        AdvisorySourceFailure;
 export 'src/advisory_aggregator.dart'
-    show
-        AdvisoryAggregator,
-        AdvisoryAggregateResult,
-        AdvisoryProviderError,
-        AdvisoryLookupIncompleteException;
+    show AdvisoryAggregator, AdvisoryAggregateResult, AdvisoryProviderError;

@@ -41,14 +41,9 @@ Nothing here depends on the SNGNav app, and the render path runs **offline and
 deterministic** — no network, no LLM, no Google Maps, no GPS. That is the
 point: when all of that has gone away, this still helps her decide.
 
-**Maturity, stated plainly:** this document ships with **v0.2.3** of
-`pretrip_source_met_norway` — pre-1.0, early and evolving, published by an
-*unverified uploader*.
-It is honest and tested, but treat the API as still settling. If you pin, pin
-the current version or a `^0.2.x` range — **do not pin 0.1.x**: that line's
-example crashes on an unhandled HTTP 403 with the placeholder User-Agent, and
-its `pretrip_decision_advisor` constraint cannot resolve `briefOrNull()`, which
-the snippets below call.
+**Maturity, stated plainly:** `pretrip_source_met_norway` is published at
+**0.1.1** — pre-1.0, early and evolving, published by an *unverified uploader*.
+It is honest and tested, but treat the API as still settling; pin a version.
 
 **Prerequisites:** Flutter 3.10+ (`flutter --version`). ~10 minutes.
 
@@ -135,14 +130,7 @@ Future<PretripBriefing?> assembleMetNorwayBriefing({
     }
 
     const advisor = SnowAwarePretripAdvisor();
-    // briefOrNull(), NOT brief(). From pretrip_decision_advisor 0.5.3 the
-    // advisor THROWS PretripAssessmentIncompleteException rather than report
-    // an all-clear it did not measure — and it fires on the COMMON path here,
-    // including a calm forecast. This product carries neither visibility nor
-    // road surface (honesty rule, Step 3), so a MET-Norway-only input can
-    // never earn "no hazard". briefOrNull() returns null instead of throwing;
-    // render that as "not assessed", never as "clear".
-    return advisor.briefOrNull(
+    return advisor.brief(
       forecast: forecast,
       commute: CommuteShape(
         plannedDeparture: DateTime.now().add(const Duration(minutes: 30)),
@@ -228,11 +216,7 @@ Future<PretripBriefing?> assembleAkitaWhiteoutBriefing() async {
         : mergeObservedVisibility(forecast, visibility, commute.plannedDeparture);
 
     const advisor = SnowAwarePretripAdvisor();
-    // briefOrNull() here too. Merging a measured visibility closes ONE of the
-    // two gaps; road surface is still unmeasured, so an all-clear can still
-    // be unearnable and brief() would throw. A hazard, by contrast, still
-    // reports from whatever WAS measured — the asymmetry is deliberate.
-    return advisor.briefOrNull(
+    return advisor.brief(
       forecast: merged,
       commute: commute,
       profile: const DriverProfileSpec(
@@ -406,8 +390,8 @@ chips themselves, with every measured number passed through verbatim). That
 work is staged on the `feat/ja-pretrip-briefing` branch and is render-verified
 in Japanese; English is always the present fallback for any unsupported locale,
 so an unsupported language degrades to the English **reason**, never to no
-reason. (It is not yet in any published version as of this one —
-`localizeHeadline` is the part that works today.)
+reason. (At the time of writing it is not yet in the 0.1.1 / 0.2.1 published
+packages — `localizeHeadline` is the part that works today.)
 
 ---
 

@@ -9,13 +9,8 @@ dependencies:
     sdk: flutter
   routing_bloc:
     path: ../
-  navigation_safety: ^0.9.0
-  # The example targets the PUBLISHED routing_engine line (0.5.x today),
-  # where RouteManeuver.position is non-nullable; 0.5.1 skips maneuvers whose
-  # location cannot be parsed. The 0.6.x line (nullable position) is not yet
-  # on pub.dev, so pinning to it would make this example unresolvable. An
-  # example app may pin narrower than the package (which spans <0.7.0).
-  routing_engine: '>=0.4.0 <0.6.0'
+  navigation_safety: ^0.5.0
+  routing_engine: ^0.4.0
   flutter_bloc: ^9.1.0
   latlong2: ^0.9.1
 
@@ -28,6 +23,62 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-# Local-path overrides for monorepo development live in pubspec_overrides.yaml
-# (not published) so the example resolves the 3.10-floored sibling SOURCES
+# Local-path overrides so the example resolves the 3.10-floored sibling SOURCES
 # (not the stale ^3.11.0-published artifacts) on the embedded target Dart 3.10.1.
+dependency_overrides:
+  adaptive_reroute:
+    path: ../../adaptive_reroute
+  condition_aggregator:
+    path: ../../condition_aggregator
+  condition_aggregator_digitraffic:
+    path: ../../condition_aggregator_digitraffic
+  condition_aggregator_jma:
+    path: ../../condition_aggregator_jma
+  condition_aggregator_met_norway:
+    path: ../../condition_aggregator_met_norway
+  condition_aggregator_nws:
+    path: ../../condition_aggregator_nws
+  condition_aggregator_owm_road_risk:
+    path: ../../condition_aggregator_owm_road_risk
+  driving_conditions:
+    path: ../../driving_conditions
+  driving_consent:
+    path: ../../driving_consent
+  driving_weather:
+    path: ../../driving_weather
+  fleet_hazard:
+    path: ../../fleet_hazard
+  japanese_snow_vocabulary:
+    path: ../../japanese_snow_vocabulary
+  kalman_dr:
+    path: ../../kalman_dr
+  map_viewport_bloc:
+    path: ../../map_viewport_bloc
+  nav2_safety_layer:
+    path: ../../nav2_safety_layer
+  navigation_lend_mode_experiment:
+    path: ../../navigation_lend_mode_experiment
+  navigation_safety:
+    path: ../../navigation_safety
+  navigation_safety_calibration:
+    path: ../../navigation_safety_calibration
+  navigation_safety_core:
+    path: ../../navigation_safety_core
+  navigation_safety_enums:
+    path: ../../navigation_safety_enums
+  noaa_nws_adapter:
+    path: ../../noaa_nws_adapter
+  offline_tiles:
+    path: ../../offline_tiles
+  pretrip_decision_advisor:
+    path: ../../pretrip_decision_advisor
+  rosbridge_dart_client:
+    path: ../../rosbridge_dart_client
+  route_condition_forecast:
+    path: ../../route_condition_forecast
+  routing_engine:
+    path: ../../routing_engine
+  snow_rendering:
+    path: ../../snow_rendering
+  voice_guidance:
+    path: ../../voice_guidance

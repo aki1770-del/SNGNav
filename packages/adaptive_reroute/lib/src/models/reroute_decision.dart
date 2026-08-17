@@ -43,25 +43,6 @@ class RerouteDecision extends Equatable {
         detourWaypoints = const [],
         confidence = 1.0;
 
-  /// Convenience constructor: the route could not be assessed.
-  ///
-  /// Returned when segment geometry (or the current position) carries a
-  /// placeholder or corrupt coordinate — latitude/longitude (0, 0) or a
-  /// non-finite value — so neither a detour bearing nor a clear verdict can
-  /// honestly be computed. Absence of usable data is not safety:
-  /// [shouldReroute] is false, [confidence] is 0.0, [detourWaypoints] is
-  /// empty, and [reason] names the unassessable segment.
-  ///
-  /// Distinguish this from [RerouteDecision.clear] before telling a driver
-  /// anything: `clear` means "assessed and no hazard found";
-  /// `cannotAssess` means "we do not know".
-  const RerouteDecision.cannotAssess({
-    required this.reason,
-    this.triggerSegment,
-  })  : shouldReroute = false,
-        detourWaypoints = const [],
-        confidence = 0.0;
-
   @override
   List<Object?> get props =>
       [shouldReroute, reason, triggerSegment, detourWaypoints, confidence];

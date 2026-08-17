@@ -1,23 +1,5 @@
 # Changelog
 
-## 0.1.3 — 2026-07-11 — navigation_safety_core 0.11 compatibility (constraint widen)
-
-- **Constraint widen (no source change):** `navigation_safety_core:
-  ">=0.10.0 <0.12.0"` (was `^0.10.0`). The published `^0.10.0` constraint
-  made this package a version-conflict blocker for any consumer taking the
-  core 0.11 line (graded ja announcements, finite-position safety); the
-  full test suite passes unchanged at BOTH bounds of the range — 12/12
-  against 0.11.1 and 12/12 against the 0.10.0 floor (each resolved and run,
-  not argued from source reading); the `AlertExplainer` / `DriverProfile` /
-  `RoadSurfaceCondition` surface this package consumes is source-compatible
-  across 0.10 → 0.11.
-- **Mapping unchanged:** obstacle-class monitor events still map to the
-  conservative `RoadSurfaceCondition.ice` advisory shape (caution-add-only).
-  Core 0.11 introduces no obstacle-class vocabulary (`RoadSurfaceCondition`
-  is VSS road-surface state by design), so the documented shim remains the
-  closest available semantic; a dedicated obstacle-class advisory vocabulary
-  in core remains the tracked future work that would retire the shim.
-
 ## 0.1.2
 
 - Republish from the embedded-target Dart 3.10.1 SDK (Flutter 3.38.3) to correct a stale

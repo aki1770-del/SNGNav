@@ -1,8 +1,0 @@
-# Monorepo development: use local path for sibling packages. This file is
-# excluded from the published archive; published releases resolve against
-# pub.dev via the caret constraints in pubspec.yaml.
-dependency_overrides:
-  navigation_safety:
-    path: ../navigation_safety
-  navigation_safety_core:
-    path: ../navigation_safety_core

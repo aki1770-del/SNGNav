@@ -42,26 +42,19 @@ void main() {
 
   // 3. Merge the NOW measurement into the DEPARTURE-HOUR slot only (never
   //    projected forward), then brief.
-  final merged = mergeObservedVisibility(
-    forecast,
-    observed,
-    commute.plannedDeparture,
-  );
+  final merged =
+      mergeObservedVisibility(forecast, observed, commute.plannedDeparture);
   final briefing = const SnowAwarePretripAdvisor().brief(
     forecast: merged,
     commute: commute,
     profile: const DriverProfileSpec(
-      profileTag: 'akitaRural',
-      reactionTimeSeconds: 1.5,
-    ),
+        profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
   );
 
   // 4. Read the typed result out — this is what an edge dev renders in their UI.
   print('Verdict : ${briefing.verdict.name}');
   print('Strength: ${briefing.recommendation?.strength.name ?? "(none)"}');
-  print(
-    'Delay   : ${briefing.recommendation?.suggestedDelay ?? Duration.zero}',
-  );
+  print('Delay   : ${briefing.recommendation?.suggestedDelay ?? Duration.zero}');
   print('Chips   :');
   for (final c in briefing.chips) {
     print('  - $c');
@@ -70,21 +63,17 @@ void main() {
   // The SAME deterministic logic, in Japanese — for a driver who reads
   // Japanese. The measured numbers (80 m, 07:00, 08:15) survive translation
   // verbatim; only the surrounding words change.
-  final jaBriefing = const SnowAwarePretripAdvisor(messages: PretripMessages.ja)
-      .brief(
-        forecast: merged,
-        commute: commute,
-        profile: const DriverProfileSpec(
-          profileTag: 'akitaRural',
-          reactionTimeSeconds: 1.5,
-        ),
-      );
+  final jaBriefing =
+      const SnowAwarePretripAdvisor(messages: PretripMessages.ja).brief(
+    forecast: merged,
+    commute: commute,
+    profile: const DriverProfileSpec(
+        profileTag: 'akitaRural', reactionTimeSeconds: 1.5),
+  );
   print('Chips (ja):');
   for (final c in jaBriefing.chips) {
     print('  - $c');
   }
-  print(
-    'Measured: ${observed.meters} m at ${observed.stationName} '
-    '(${observed.distanceKm.toStringAsFixed(1)} km away)',
-  );
+  print('Measured: ${observed.meters} m at ${observed.stationName} '
+      '(${observed.distanceKm.toStringAsFixed(1)} km away)');
 }

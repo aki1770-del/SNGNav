@@ -6,7 +6,7 @@ library;
 /// This is the UNFILTERED input. It carries no judgement about whether it can
 /// be trusted — that judgement is supplied separately as a [trust] signal when
 /// the fix is fed to the controller (the caller maps it from a position-trust
-/// verdict you compute yourself — see [TrustSignal]).
+/// verdict such as `position_integrity`).
 class RawFix {
   /// Latitude in decimal degrees (WGS-84).
   final double latitude;
@@ -50,7 +50,6 @@ class RawFix {
       accuracyMeters >= 0;
 
   @override
-  String toString() =>
-      'RawFix(lat: $latitude, lon: $longitude, '
+  String toString() => 'RawFix(lat: $latitude, lon: $longitude, '
       'acc: ${accuracyMeters}m, t: $timestamp)';
 }

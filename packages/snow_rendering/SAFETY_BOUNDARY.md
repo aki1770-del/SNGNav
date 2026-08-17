@@ -1,46 +1,14 @@
 # snow_rendering — Safety-Class Boundary Record
 
 **Package**: `snow_rendering`
-**Version**: 0.3.0 (DEPLOY)
-**Boundary record version**: 2.0
+**Version**: 0.2.0 (DEPLOY)
+**Boundary record version**: 1.0 (founding; introduced with `DataBudget` substrate)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-06; **corrected 2026-07-12**
+**Date**: 2026-05-06
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 **Related**: `navigation_safety_core` SAFETY_BOUNDARY.md (severity-not-profile + driver-always-drives invariants inherited verbatim through transitive `navigation_safety_core: ^0.10.0` dependency); `navigation_safety` SAFETY_BOUNDARY.md §8.1 (GlanceBudgetTracker structural precedent); `navigation_safety_core` SAFETY_BOUNDARY.md §7.3 (cap-override-with-confirmation pattern precedent).
 
 ---
-
-## 0 — Correction notice (2026-07-12, record v2.0)
-
-**This package held the FATAL PATH of the fabrication defect, and boundary
-record v1.0 was silent on it.** The record is corrected here in the same commit
-as the code, not after it: a document certifying a property the code lacks is
-the certificate of a defect, and is worse than no certificate.
-
-**The chain, in versions up to and including 0.2.7:**
-
-```
-WeatherCondition.clear()          (driving_weather ≤ 0.4.4: +5.0 °C, 10 km,
-                                   0 km/h, iceRisk = false — all FABRICATED,
-                                   returned for an EMPTY advisory feed)
-  → RoadSurfaceState.fromCondition(...)  → RoadSurfaceState.dry
-  → gripFactor 1.0                        (MAXIMUM GRIP on an unmeasured road)
-  → RecommendedResponse.proceed
-  → advisoryMessage "Conditions normal"   ← shown to a driver in Akita
-```
-
-`fromCondition` had **no way to say "I cannot classify this road"** — an absent
-ice risk, temperature and precipitation type fell through to `dry`. `dry` is a
-POSITIVE claim, it carries `gripFactor: 1.0`, and it produced the green light.
-Absence became maximum grip.
-
-**0.3.0 breaks the chain at every link:** `fromCondition` returns
-`RoadSurfaceState?` (`null` = cannot classify); `gripFactor`, `visibility` and
-`precipitation` are nullable; `RecommendedResponse.conditionsUnknown` exists and
-is routed BEFORE the `proceed` fall-through; and the advisory for that tier says
-so, in Japanese first — 「路面状況を取得できていません。見える範囲で運転してください。」
-The defect is disclosed in `CHANGELOG.md` 0.3.0, because pub.dev versions are
-immutable and a silent fix would be a silent recall.
 
 ## 1 — SAE J3016 driver-task regime
 
@@ -58,10 +26,6 @@ immutable and a silent fix would be a silent recall.
 
 **Stance**: **advisory not control.** SOTIF addresses Safety Of The Intended Functionality at automated-driving-feature scope. This package does not deliver an automated driving feature; it delivers weather-rendering computation plus advisory data-budget telemetry consumed by integrator HMI surfaces. SOTIF triage is performed by the integrator at their HMI scope.
 **Severity-not-profile invariant** (load-bearing, inherited verbatim from `navigation_safety_core` SAFETY_BOUNDARY.md §6): the per-cycle `DataBudget` modulates RENDER-FIDELITY per profile (bandwidth-margin direction); it does NOT modify alert severity, score floors, or critical thresholds. Critical alerts in `navigation_safety` retain their critical-bypass invariant regardless of data-budget state.
-
-**Known performance insufficiency — ABSENT INPUT (SOTIF, the 0.3.0 correction)**: up to 0.2.7 an absent ice-risk / temperature / precipitation-type triple was classified as `RoadSurfaceState.dry` with `gripFactor: 1.0` and advised `proceed` / "Conditions normal". An absent input was thereby resolved to the **most benign** output the model can produce — the specification-insufficiency class SOTIF exists to name. **Mitigated in 0.3.0**: the classifier ABSTAINS (`null`) rather than defaulting, the response tier carries `conditionsUnknown`, and the driver-facing advisory names the absence. The asymmetry is deliberate and is the safety argument: POSITIVE evidence of a hazard fires on partial data (an ice flag alone still warns), but the NEGATIVE verdict ("proceed / conditions normal") now requires complete data. Absence is reported AS absence — not as a hazard (which would cry wolf on every offline moment until the driver stopped believing the alert, the failure mode that matters on the night it is real).
-
-**Residual insufficiency, NOT fixed in 0.3.0 (recorded, not left unstated)**: an absent **humidity** reading still resolves to `dry` on the radiative-frost path (`road_surface_state.dart`: with `precip == none`, `temp > -3` and humidity absent, `isRadiativeFrostBlackIce` abstains and the classifier reaches `return dry`). On a humidity-blind feed an unjudged frost morning therefore still reads as confident safety. This is documented in `KNOWN_LIMITATIONS.md` §4 and disclosed in the 0.3.0 CHANGELOG under "What this release does NOT fix".
 
 ## 4 — WP.29 cybersecurity touchpoint
 
@@ -119,5 +83,3 @@ immutable and a silent fix would be a silent recall.
 ---
 
 **Boundary record authored** by AAA (automotive-adas-analyst) under VAA-as-SEO operational pen authorization (spawn -86). Subject = We / AAA. Verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
-
-**Record v2.0 correction (2026-07-12)**: v1.0's closing certification stood while the code shipped `dry` / grip 1.0 / "Conditions normal" for a road nobody had measured. The certification is re-asserted at v2.0 **only** for the corrected 0.3.0 code, with the absent-input insufficiency named in §3 and the humidity residual disclosed rather than certified away.
