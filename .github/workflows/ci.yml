@@ -45,6 +45,9 @@ jobs:
       - name: Analyze
         run: dart analyze lib test
 
+      - name: Live-source guard
+        run: bash scripts/live_source_guard.sh
+
   test:
     name: Test
     runs-on: ubuntu-24.04
