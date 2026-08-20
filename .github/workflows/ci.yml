@@ -48,6 +48,9 @@ jobs:
       - name: Live-source guard
         run: bash scripts/live_source_guard.sh
 
+      - name: Sibling-constraint check
+        run: python3 scripts/sibling_constraint_check.py
+
   test:
     name: Test
     runs-on: ubuntu-24.04
