@@ -23,6 +23,14 @@ enum PositionSource {
   /// Filter output. A real sensor reading from this update was combined with
   /// the filter's prediction; the coordinate is neither the raw measurement nor
   /// pure invention.
+  ///
+  /// How much of each is not fixed. On the first fix after a GPS outage the
+  /// prediction can still dominate, and the estimate can sit several times its
+  /// own stated [GeoPosition.accuracy] from the true position. This label
+  /// stays truthful there — a real reading did contribute — so it is
+  /// [GeoPosition.extrapolatedFor], the elapsed time since that reading's
+  /// predecessor, that tells a consumer how far the blend has run from
+  /// evidence.
   fused,
 
   /// Pure prediction. **No sensor reading contributed to this update.** The
@@ -95,11 +103,29 @@ class GeoPosition extends Equatable {
   /// Where this coordinate came from. Defaults to [PositionSource.unknown].
   final PositionSource source;
 
-  /// How long this estimate has run without a sensor reading.
+  /// Elapsed time since the last sensor reading this estimate incorporated.
   ///
-  /// [Duration.zero] when a measurement contributed to this update
-  /// ([PositionSource.measured], [PositionSource.fused]). `null` when the
-  /// producer did not state it.
+  /// `null` when the producer did not state it. Otherwise it is the real gap,
+  /// with no threshold applied — including on a [PositionSource.fused]
+  /// position, where in steady state it is ordinary inter-fix spacing (~1 s at
+  /// 1 Hz) and after an outage it is the length of the outage.
+  ///
+  /// ⚑ **Changed in 0.6.0.** Through 0.5.1 this field was `Duration.zero` on
+  /// every `measured` and `fused` emit, so `== Duration.zero` read as "a
+  /// sensor contributed". It no longer does, and it never answered that
+  /// question well: use [source] / [isDeadReckoned] / [containsMeasurement],
+  /// which answer it exactly. This field answers the different question of how
+  /// far the estimate has run from evidence.
+  ///
+  /// **Why a `fused` position needs it.** The first fix back after a GPS
+  /// outage does not erase the outage: the filter blends the new reading with
+  /// a prediction that ran blind for the whole gap, and on a short tunnel that
+  /// prediction still dominates the result. [source] cannot carry that — a
+  /// real reading did contribute, so `fused` is truthful — and the provider's
+  /// `isDrActive` is already false by then. Measured at the shipped 3 s
+  /// `gpsTimeout`, a 2 s gap put the emitted coordinate 18.1 m from the true
+  /// position against a stated [accuracy] of 5.60 m. Read this field before
+  /// trusting that radius.
   ///
   /// This cannot be recovered from [accuracy]: the degradation model is
   /// `baseAccuracy + rate * elapsed`, and `baseAccuracy` is not carried on the

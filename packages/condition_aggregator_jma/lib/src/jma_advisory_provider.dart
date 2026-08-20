@@ -24,9 +24,11 @@
 /// false-negative**: the atom feed is a recent-publication *window*, so
 /// a still-in-force warning that was last re-issued before the window
 /// opens scrolls off and is silently missed — a false-negative for a
-/// snow-WARNING package. The windowless `warning/{areacode}.json`
-/// always reflects the *current in-force* state with no window to
-/// scroll off (and is ~7 KB vs ~0.6 MB for the atom feed).
+/// snow-WARNING package. The windowless `warning/{areacode}.json` has no
+/// window to scroll off (and is ~7 KB vs ~0.6 MB for the atom feed) — but
+/// windowless is NOT live: measured 2026-08-16 this path was frozen
+/// nationwide since late May. Feed liveness is surfaced separately, in band;
+/// see [JmaAdvisoryProvider.staleFeedThreshold].
 ///
 /// Construction discipline (per condition_aggregator interface
 /// contract):
@@ -48,9 +50,21 @@ import 'jma_advisory_mapper.dart';
 /// Base URL for the JMA windowless per-prefecture warning JSON. The
 /// provider appends `{areacode}.json` (e.g. `050000.json` for Akita).
 ///
-/// This endpoint always reflects the prefecture's CURRENT in-force
-/// warning state — there is no publication window to scroll off, which
-/// is the false-negative the 0.1.x atom-feed path could not avoid.
+/// This endpoint is **windowless** — there is no publication window to scroll
+/// off, which is the false-negative the 0.1.x atom-feed path could not avoid.
+///
+/// ⚑ **Windowless is not the same as live, and this note used to conflate
+/// them.** It previously read "always reflects the prefecture's CURRENT
+/// in-force warning state". Measured 2026-08-16: every document on this path
+/// was frozen nationwide in late May — Akita still serving a 2026-05-28
+/// 雷注意報 as `status=発表`, ~80 days on — while the sibling
+/// `bosai/forecast/` path on the same host and CDN was minutes old, and JMA's
+/// official developer feed (`www.data.jma.go.jp/developer/xml/feed/extra.xml`)
+/// carried 515 live 警報・注意報 entries the same minute. So the document has
+/// no scroll-off window AND can still be arbitrarily old. Callers MUST judge
+/// liveness from the document's own `reportDatetime` — see [parseJmaFeed] and
+/// [JmaAdvisoryProvider.staleFeedThreshold]. **A publisher path being
+/// windowless says nothing about whether anyone is still writing to it.**
 const String kJmaWarningJsonBaseUrl =
     'https://www.jma.go.jp/bosai/warning/data/warning/';
 
@@ -101,6 +115,15 @@ class JmaAdvisoryFetchException implements Exception {
   }
 }
 
+/// Default [JmaAdvisoryProvider.staleFeedThreshold] — six hours.
+///
+/// Chosen against the measurement that motivated it: on 2026-08-16 the JMA
+/// `bosai/warning/data/warning/` documents were frozen nationwide since late
+/// May, i.e. ~80 days, while the sibling `bosai/forecast/` path on the same
+/// host was minutes old. Six hours is far inside that, and matches the
+/// threshold this unit's winter instrument arrived at independently.
+const Duration kJmaDefaultStaleFeedThreshold = Duration(hours: 6);
+
 /// Adapter implementing [AdvisoryProvider] against the JMA windowless
 /// per-prefecture warning JSON.
 class JmaAdvisoryProvider implements AdvisoryProvider {
@@ -117,6 +140,34 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   /// HTTP client — injectable for testing.
   final http.Client _http;
 
+  /// Clock — injectable so feed-staleness is testable without waiting 80 days.
+  final DateTime Function() _now;
+
+  /// How old a JMA warning document may be before this adapter adds an in-band
+  /// [buildStaleFeedNotice] to the returned list.
+  ///
+  /// **Why there is a default at all**, when the parent package deliberately
+  /// declines to pick a staleness threshold and leaves that policy to the
+  /// integrator: the parent's position is right for *rendering* policy, and it
+  /// is what `Advisory.isStaleAt` implements — the integrator supplies the
+  /// threshold. But a policy an integrator must remember to apply is a policy
+  /// that will not be applied, and the failure mode here is silence: a feed
+  /// that has stopped moving produces an empty list, which is the same value a
+  /// clear sky produces. So this adapter ships a conservative default that
+  /// makes the fact *available in band*, at `minor` severity, filterable and
+  /// non-blocking. The integrator still owns what to render.
+  ///
+  /// The default is 6 hours, matching the threshold our own winter instrument
+  /// arrived at independently (`feedStaleThresholdHours: 6`). JMA rewrites a
+  /// prefecture's warning document many times a day in active weather; six
+  /// hours of silence is already anomalous, and the documents this default was
+  /// chosen against were **eighty days** old.
+  ///
+  /// Pass `Duration.zero` to have every read flagged, or a very large duration
+  /// to opt out of the notice entirely (the fact remains readable through
+  /// [JmaFeedSnapshot] via [parseJmaFeed]).
+  final Duration staleFeedThreshold;
+
   /// Whether [init] has been called.
   bool _initialized = false;
 
@@ -124,8 +175,11 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     this.warningJsonBaseUrl = kJmaWarningJsonBaseUrl,
     this.userAgent =
         '(sngnav-class app, https://github.com/aki1770-del/sngnav)',
+    this.staleFeedThreshold = kJmaDefaultStaleFeedThreshold,
     http.Client? client,
-  }) : _http = client ?? http.Client();
+    DateTime Function()? now,
+  }) : _http = client ?? http.Client(),
+       _now = now ?? DateTime.now;
 
   /// Releases the underlying HTTP client. Safe to call once after the
   /// provider's last fetch.
@@ -305,6 +359,30 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       );
     }
 
+    // FEED-LIVENESS. Every prefecture that ANSWERED is checked against its own
+    // document age. This is deliberately independent of whether `deduped` is
+    // empty: the two failure shapes of a frozen feed are (a) it keeps serving a
+    // warning that ended months ago, and (b) it serves nothing, which reads as
+    // a clear road. (b) is the worse one and it is invisible in an empty list,
+    // so the notice must be able to be the ONLY thing returned.
+    final staleCodes = <String>[];
+    Duration worstAge = Duration.zero;
+    for (final r in results) {
+      final snap = r.snapshot;
+      if (snap == null) continue; // failed fetch — already handled above
+      if (!snap.isStaleAt(_now(), staleFeedThreshold)) continue;
+      staleCodes.add(r.prefectureCode);
+      final age = snap.ageAt(_now());
+      if (age != null && age > worstAge) worstAge = age;
+    }
+    final staleNotice = staleCodes.isEmpty
+        ? null
+        : buildStaleFeedNotice(
+            prefectureCodes: staleCodes,
+            age: worstAge,
+            asOf: _now(),
+          );
+
     if (failedPrefectureCodes.isNotEmpty) {
       // Non-empty union with at least one unreachable containing prefecture:
       // return the real warnings AND a synthetic incomplete-read notice so the
@@ -316,7 +394,12 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       return <Advisory>[
         ...deduped,
         buildIncompleteReadNotice(failedPrefectureCodes),
+        if (staleNotice != null) staleNotice,
       ];
+    }
+
+    if (staleNotice != null) {
+      return <Advisory>[...deduped, staleNotice];
     }
 
     return deduped;
@@ -344,7 +427,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   Future<_PrefectureFetchResult> _fetchPrefecture(String prefectureCode) async {
     final uri = Uri.parse('$warningJsonBaseUrl$prefectureCode.json');
     try {
-      final advisories = await _fetchAndParse(uri, prefectureCode).timeout(
+      final snapshot = await _fetchAndParse(uri, prefectureCode).timeout(
         kJmaFetchWallClockBudget,
         onTimeout: () {
           final seconds = kJmaFetchWallClockBudget.inSeconds;
@@ -357,7 +440,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
           );
         },
       );
-      return _PrefectureFetchResult.success(prefectureCode, advisories);
+      return _PrefectureFetchResult.success(prefectureCode, snapshot);
     } on JmaAdvisoryFetchException catch (e) {
       return _PrefectureFetchResult.failure(prefectureCode, e);
     } catch (e) {
@@ -375,18 +458,16 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     }
   }
 
-  Future<List<Advisory>> _fetchAndParse(Uri uri, String prefectureCode) async {
+  Future<JmaFeedSnapshot> _fetchAndParse(Uri uri, String prefectureCode) async {
     final body = await _httpGet(uri, kJmaWarningJsonMaxBytes);
-    final List<JmaWarningRecord> records;
     try {
-      records = parseJmaWarningJson(body, prefectureCode: prefectureCode);
+      return parseJmaFeed(body, prefectureCode: prefectureCode);
     } on FormatException catch (e) {
       throw JmaAdvisoryFetchException(
         'JMA warning JSON parse failed: $e',
         uri: uri,
       );
     }
-    return records.map(mapJmaWarningToAdvisory).toList();
   }
 
   Future<String> _httpGet(Uri uri, int maxBytes) async {
@@ -442,21 +523,38 @@ class _PrefectureFetchResult {
   final List<Advisory> advisories;
   final JmaAdvisoryFetchException? failure;
 
+  /// The whole document read, including its own `reportDatetime` — carried
+  /// even when [advisories] is empty, which is the entire point: an empty
+  /// warning list from an 81-day-old document must not be indistinguishable
+  /// from an empty list from a document written this hour.
+  final JmaFeedSnapshot? snapshot;
+
   const _PrefectureFetchResult._(
     this.prefectureCode,
     this.advisories,
     this.failure,
+    this.snapshot,
   );
 
   factory _PrefectureFetchResult.success(
     String prefectureCode,
-    List<Advisory> advisories,
-  ) => _PrefectureFetchResult._(prefectureCode, advisories, null);
+    JmaFeedSnapshot snapshot,
+  ) => _PrefectureFetchResult._(
+    prefectureCode,
+    snapshot.advisories,
+    null,
+    snapshot,
+  );
 
   factory _PrefectureFetchResult.failure(
     String prefectureCode,
     JmaAdvisoryFetchException failure,
-  ) => _PrefectureFetchResult._(prefectureCode, const <Advisory>[], failure);
+  ) => _PrefectureFetchResult._(
+    prefectureCode,
+    const <Advisory>[],
+    failure,
+    null,
+  );
 }
 
 /// Merges advisories collected across one-or-more border prefectures into

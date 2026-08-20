@@ -21,9 +21,18 @@ Future<void> main() async {
     );
     print(jma.source.attributionString);
     if (advisories.isEmpty) {
-      print('No active JMA warnings for this point right now.');
+      // Reached only when the feed was READ and is FRESH. A stale feed
+      // appends a kJmaStaleFeedEventClass notice, so this branch would
+      // not run.
+      print('No active JMA warnings for this point, from a current feed.');
     }
     for (final a in advisories) {
+      if (a.eventClass == kJmaStaleFeedEventClass) {
+        // The feed answered, but nobody has written to it in a while.
+        // NOT weather, and NOT an all-clear.
+        print('FEED STALE — ${a.headline}');
+        continue;
+      }
       print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');
     }
   } on JmaAdvisoryFetchException catch (e) {

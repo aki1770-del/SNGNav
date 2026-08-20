@@ -258,21 +258,33 @@ const String _yamagataWarningJsonWithOoyukiKeihou = '''
 }
 ''';
 
+/// Opts a test OUT of the 0.5.0 feed-liveness check.
+///
+/// The fixtures in this file carry hard-coded `reportDatetime` values (Jan /
+/// May / Jul 2026). Evaluated against the real wall clock they are all stale,
+/// so [JmaAdvisoryProvider]'s in-band stale-feed notice would fire in every one
+/// of them and change the asserted advisory sets. These tests are about
+/// warning-class parsing, border unions and 解除 handling — not about feed
+/// liveness, which has its own suite in `frozen_feed_test.dart` and
+/// `defect_proof_current_api_test.dart`. Opting out keeps each test asserting
+/// exactly what it asserted before 0.5.0.
+const Duration _kNoStaleCheck = Duration(days: 36500);
+
 void main() {
   group('JmaAdvisoryProvider — interface compliance', () {
     test('source returns AdvisorySource.jmaJapan', () {
-      final provider = JmaAdvisoryProvider();
+      final provider = JmaAdvisoryProvider(staleFeedThreshold: _kNoStaleCheck);
       expect(provider.source, equals(AdvisorySource.jmaJapan));
     });
 
     test('init completes without throwing', () async {
-      final provider = JmaAdvisoryProvider();
+      final provider = JmaAdvisoryProvider(staleFeedThreshold: _kNoStaleCheck);
       await provider.init();
     });
 
     test('default warningJsonBaseUrl points at the public JMA bosai '
         'warning endpoint', () {
-      final provider = JmaAdvisoryProvider();
+      final provider = JmaAdvisoryProvider(staleFeedThreshold: _kNoStaleCheck);
       expect(provider.warningJsonBaseUrl, contains('jma.go.jp'));
       expect(
         provider.warningJsonBaseUrl,
@@ -287,14 +299,20 @@ void main() {
 
     test('warningJsonBaseUrl is constructor-injectable', () {
       const testUrl = 'https://test.fixture/jma/warning/';
-      final provider = JmaAdvisoryProvider(warningJsonBaseUrl: testUrl);
+      final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
+        warningJsonBaseUrl: testUrl,
+      );
       expect(provider.warningJsonBaseUrl, equals(testUrl));
     });
 
     test(
       'init rejects empty userAgent with AdvisoryProviderInitException',
       () async {
-        final provider = JmaAdvisoryProvider(userAgent: '   ');
+        final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
+          userAgent: '   ',
+        );
         expect(
           () => provider.init(),
           throwsA(isA<AdvisoryProviderInitException>()),
@@ -305,7 +323,7 @@ void main() {
 
   group('JmaAdvisoryProvider — fetch behavior', () {
     test('fetch without init throws AdvisoryProviderInitException', () async {
-      final provider = JmaAdvisoryProvider();
+      final provider = JmaAdvisoryProvider(staleFeedThreshold: _kNoStaleCheck);
       expect(
         () => provider.fetchActiveAdvisoriesAtPoint(
           latitude: 39.7186,
@@ -322,6 +340,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonThunderOnly, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -342,6 +361,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -376,6 +396,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonWithOoyukiTokubetsuKeihou, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -399,6 +420,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonThunderOnly, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -421,6 +443,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonRainstorm, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -450,6 +473,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonWithOoameKikenKeihou, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -473,6 +497,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonRainstormCancelled, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -491,6 +516,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonDryOnly, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -507,6 +533,7 @@ void main() {
         return _utf8Response(_akitaWarningJsonCancelled, 200);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -523,6 +550,7 @@ void main() {
         return http.Response('Service Unavailable', 503);
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -544,6 +572,7 @@ void main() {
           return http.Response(tooLarge, 200);
         });
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: mock,
         );
@@ -566,6 +595,7 @@ void main() {
         fail('HTTP fetch should not occur for points outside catalog');
       });
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: mock,
       );
@@ -788,7 +818,8 @@ void main() {
         expect(
           kJmaWarningCodes[entry.key],
           equals(entry.value),
-          reason: 'snow code ${entry.key} must be in the parse filter '
+          reason:
+              'snow code ${entry.key} must be in the parse filter '
               'with the identical verbatim name',
         );
       }
@@ -894,6 +925,7 @@ void main() {
         'their advisories (Akita 大雪警報 + Yamagata 暴風雪警報)', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -940,6 +972,7 @@ void main() {
         'warning is never hidden as a "duplicate"', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -967,6 +1000,7 @@ void main() {
         'withhold a successfully-fetched warning', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -997,6 +1031,7 @@ void main() {
       () async {
         final requested = <Uri>{};
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: borderMock(requested, {
             '050000': () => http.Response('Service Unavailable', 503),
@@ -1037,6 +1072,7 @@ void main() {
         '(no spurious border fetch)', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1065,6 +1101,7 @@ void main() {
         'hung sibling is signalled (not silently dropped)', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async {
             if (req.url.path.endsWith('060000.json')) {
@@ -1126,12 +1163,13 @@ void main() {
         'all-clear) — Akita succeeds-empty + Yamagata 503', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(
-                _akitaWarningJsonDryOnly,
-                200,
-              ), // no surfaced class (code 21 乾燥注意報; 雷注意報 surfaces from 0.4.0)
+            _akitaWarningJsonDryOnly,
+            200,
+          ), // no surfaced class (code 21 乾燥注意報; 雷注意報 surfaces from 0.4.0)
           '060000': () => http.Response('Service Unavailable', 503), // fails
         }),
       );
@@ -1171,6 +1209,7 @@ void main() {
         'returned, not thrown (Akita 大雪警報 + Yamagata 503)', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1198,6 +1237,7 @@ void main() {
         'unreachable prefecture (Akita 大雪警報 + 山形県 notice)', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1253,6 +1293,7 @@ void main() {
         'synthetic notice (Akita 大雪警報 + Yamagata 暴風雪警報)', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1287,6 +1328,7 @@ void main() {
         'captured, not escaped — Akita 大雪警報 still returned', () async {
       final requested = <Uri>{};
       final provider = JmaAdvisoryProvider(
+        staleFeedThreshold: _kNoStaleCheck,
         warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
         client: borderMock(requested, {
           '050000': () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1333,6 +1375,7 @@ void main() {
         'budget (~30 s), not ~2× (a sequential await-loop)', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async => Completer<http.Response>().future),
         );
@@ -1375,6 +1418,7 @@ void main() {
         'per-request timeout path no longer drops it)', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async => Completer<http.Response>().future),
         );
@@ -1412,6 +1456,7 @@ void main() {
         'per-request budget is the full 30 s wall-clock budget', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async {
             // The marginal snow-link answers Akita's 大雪警報 at ~20 s — inside
@@ -1481,6 +1526,7 @@ void main() {
         'preserves the near-side warning + signals the hung sibling', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async {
             if (req.url.path.endsWith('060000.json')) {
@@ -1530,6 +1576,7 @@ void main() {
         '(the other fast-empty) SERVES the warning — no false unavailable', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
+          staleFeedThreshold: _kNoStaleCheck,
           warningJsonBaseUrl: 'https://test.fixture/jma/warning/',
           client: MockClient((req) async {
             if (req.url.path.endsWith('060000.json')) {

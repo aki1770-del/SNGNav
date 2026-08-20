@@ -3,7 +3,7 @@ description: >-
   JMA (気象庁) adapter for the condition_aggregator interface. Maps the
   JMA windowless per-prefecture warning JSON to source-neutral Advisory
   typed events. Pure Dart.
-version: 0.4.0
+version: 0.5.0
 
 # Reads the windowless per-prefecture warning JSON
 # (bosai/warning/data/warning/{areacode}.json), which always reflects the

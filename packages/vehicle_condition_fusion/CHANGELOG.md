@@ -100,6 +100,28 @@ hazard; it now abstains to `null` rather than to a fabricated `dry`.)
   `iceRisk == false` for a vehicle with no friction sensor; one asserted a `dry`
   road for a vehicle with no precipitation signal.
 
+- **The shipped `example/` fell into the covariance trap this changelog warns
+  you about.** `bridgeVssFramesToFusion` declared its parameter as
+  `HysteresisFilter<RoadSurfaceState>`, and `example/test` constructed one. That
+  compiles, and then throws `type 'Null' is not a subtype of type
+  'RoadSurfaceState'` inside `HysteresisFilter.add` on the first frame with an
+  absent signal — the exact case this release exists to handle. Both are now
+  `RoadSurfaceState?`. It survived because `dart test` at the package root does
+  not run `example/`, which is a separate package root with its own pubspec.
+
+- A third example test **certified the defect**: it asserted
+  `surfaceState == RoadSurfaceState.dry` for a frame whose only real signals
+  were an above-freezing temperature and a speed. An unmeasured surface is now
+  asserted as `null`, which is what `DrivingConditionAssessment.fromCondition`
+  documents and returns.
+
+- `example/pubspec.yaml` required `driving_conditions: ^0.5.2`, which selects
+  0.5.7 and with it `driving_weather ^0.4.0` — the range this release exists to
+  leave. It is now `^0.6.0`, matching the parent. pub.dev strips
+  `dependency_overrides` from the published archive, so that constraint is what
+  a reader who runs `dart pub get` in `example/` actually resolves; at `^0.5.2`
+  it did not resolve against its own parent at all.
+
 ## 0.4.0
 
 - **Map `Vehicle.Exterior.Humidity` → `VehicleConditionSignals.humidityRH`**

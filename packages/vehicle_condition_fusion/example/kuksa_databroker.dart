@@ -77,9 +77,18 @@ Stream<Map<String, Object?>> kuksaVssFrames(KuksaClient client) {
 /// [surfaceFilter] is exposed only so the test can pin the debounce
 /// (threshold 1 = commit every frame) for deterministic assertions; production
 /// callers leave it null to get the realistic anti-flicker default.
+// The type argument MUST be nullable. `VehicleConditionFusion` debounces
+// `DrivingConditionAssessment.surfaceState`, which is `RoadSurfaceState?` since
+// snow_rendering 0.3.0 — `null` is the honest "not measured" state this release
+// exists to carry. Dart generics are covariant, so a
+// `HysteresisFilter<RoadSurfaceState>` is ACCEPTED here at compile time and
+// then throws `type 'Null' is not a subtype of type 'RoadSurfaceState'` inside
+// `HysteresisFilter.add` the first time a signal is absent. The analyzer cannot
+// see it; only running it can. It fired on exactly the silent-sensor frame this
+// package exists to survive.
 VehicleConditionFusion bridgeVssFramesToFusion(
   Stream<Map<String, Object?>> vssFrames, {
-  HysteresisFilter<RoadSurfaceState>? surfaceFilter,
+  HysteresisFilter<RoadSurfaceState?>? surfaceFilter,
 }) {
   return VehicleConditionFusion.fromPartialFrames(
     partialFrames: vssFrames.map(VehicleConditionSignals.fromVss),

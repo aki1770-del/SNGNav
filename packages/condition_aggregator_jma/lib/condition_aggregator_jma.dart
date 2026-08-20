@@ -80,13 +80,18 @@ export 'src/jma_advisory_provider.dart'
         JmaAdvisoryFetchException,
         kJmaWarningJsonBaseUrl,
         kJmaFetchWallClockBudget,
-        kJmaWarningJsonMaxBytes;
+        kJmaWarningJsonMaxBytes,
+        kJmaDefaultStaleFeedThreshold;
 export 'src/jma_advisory_mapper.dart'
     show
         JmaWarningRecord,
         mapJmaWarningToAdvisory,
         buildIncompleteReadNotice,
         kJmaIncompleteReadEventClass,
+        buildStaleFeedNotice,
+        kJmaStaleFeedEventClass,
+        JmaFeedSnapshot,
+        parseJmaFeed,
         parseJmaWarningJson,
         kJmaWarningCodes,
         kJmaSnowWarningCodes,

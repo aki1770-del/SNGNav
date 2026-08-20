@@ -87,6 +87,52 @@ class KalmanFilter {
   /// Metres per degree of latitude (WGS84 approximation).
   static const _metresPerDegreeLat = 111320.0;
 
+  /// What an accuracy of "not stated" is worth.
+  ///
+  /// A provider that could not measure its own accuracy has told us nothing,
+  /// and nothing is not a small number. `geolocator` sends `0.0` when
+  /// `Location.hasAccuracy()` is false, GeoClue2 can send 0, some providers
+  /// send -1, and a sensor fault can send NaN or infinity. Every one of those
+  /// is replaced by this value — the same ~5 m this filter already assumes for
+  /// an unmeasured GPS in [_defaultMeasurementNoise], so the two agree.
+  ///
+  /// It is deliberately larger than 1 m — a 1 m floor would still be a
+  /// precision claim, and a sharper one than most GPS can honestly make.
+  ///
+  /// ⚑ **What this does NOT fix, stated because it is measurable and would
+  /// otherwise read as fixed.** A sentinel now settles the reported radius at
+  /// about 3.2 m, and [GeoPosition.isHighAccuracy] is `accuracy <= 10.0`, so
+  /// **it still passes.** A consumer that gates only on `isHighAccuracy`
+  /// cannot distinguish a device that never states its accuracy from one that
+  /// states a good one. The number is our confidence, not the sensor's
+  /// precision, and with the sensor silent our confidence is this filter's
+  /// documented default — but the gate does not carry that distinction, and
+  /// this fix does not give it one.
+  static const _unstatedAccuracyMetres = 5.0;
+
+  /// Numerical conditioning floor — one millimetre. Not a precision claim.
+  ///
+  /// R must stay strictly positive. At R = 0 the innovation covariance
+  /// S = P + R goes singular, [_invertMat] returns null, and [update] returns
+  /// early — the reading is discarded with no error and no trace, while
+  /// `DeadReckoningProvider` still emits the untouched state labelled `fused`.
+  /// One millimetre is three orders of magnitude below anything GNSS can
+  /// deliver, so it bounds nothing a real receiver reports.
+  static const _minMeasurementAccuracyMetres = 1e-3;
+
+  /// The accuracy this filter will actually act on, in metres.
+  ///
+  /// Sentinels ("not stated") become [_unstatedAccuracyMetres]. A genuinely
+  /// stated accuracy is honoured, including sub-metre RTK, subject only to the
+  /// conditioning floor. This is the single place the rule lives, so the first
+  /// fix and every later fix cannot disagree — in 0.5.1 they did.
+  static double _effectiveAccuracyMetres(double accuracy) {
+    if (!accuracy.isFinite || accuracy <= 0) return _unstatedAccuracyMetres;
+    return accuracy < _minMeasurementAccuracyMetres
+        ? _minMeasurementAccuracyMetres
+        : accuracy;
+  }
+
   /// Maximum covariance before the filter declares "position lost".
   /// Corresponds to ~500m accuracy — matches DeadReckoningState.maxAccuracy.
   static const maxCovarianceThreshold = 2e-5; // ~500m in degrees²
@@ -224,7 +270,36 @@ class KalmanFilter {
     final z = [lat, lon, speed, heading];
 
     // --- Measurement noise R (scaled by GPS accuracy) ---
-    final accuracyDeg = accuracy / _metresPerDegreeLat;
+    //
+    // The `accuracy` field is not always a measurement. `geolocator` reports
+    // `0.0` when `Location.hasAccuracy()` is false, GeoClue2 can report 0, and
+    // some providers use -1; a sensor error can deliver NaN or infinity. Those
+    // are sentinels meaning "not stated", and reading a sentinel as a precision
+    // claim is the one thing this package exists not to do. Measured on the
+    // 0.5.1 tree: five fixes at `accuracy: 0` drove the reported radius to
+    // exactly 0.000 m with `isHighAccuracy` passing, and a NaN accuracy made
+    // S non-invertible so the reading was dropped in silence while
+    // `DeadReckoningProvider` still emitted the untouched state as `fused`.
+    // Two zero-accuracy fixes collapse P to exactly zero, after which every
+    // further reading at that timestamp is discarded the same way.
+    //
+    // So a sentinel is replaced — not floored — by this filter's own documented
+    // reading of an unmeasured GPS, `_defaultMeasurementNoise` (~5 m); see
+    // `_unstatedAccuracyMetres`, which also records what that still does not
+    // fix (`isHighAccuracy` continues to pass on it).
+    //
+    // A stated sub-metre accuracy is NOT a sentinel and is honoured. RTK and
+    // dual-frequency receivers really do deliver 0.02-0.5 m, and 0.5.1 did
+    // honour them: measured on that tree, inbound 0.05 m reported 0.063 m,
+    // 0.1 reported 0.126, 0.5 reported 0.589. Censoring the whole sub-metre
+    // band at 1 m would have degraded a genuine 0.05 m source 16.7x to buy a
+    // fix for a defect that lives entirely in the sentinel values. The only
+    // bound kept on the honoured band is `_minMeasurementAccuracyMetres`, one
+    // millimetre, three orders of magnitude below any GNSS: it is a
+    // conditioning guard that keeps R strictly positive so S = P + R stays
+    // invertible, not a precision claim.
+    final accuracyDeg =
+        _effectiveAccuracyMetres(accuracy) / _metresPerDegreeLat;
     final r = _diag([
       accuracyDeg * accuracyDeg, // lat
       accuracyDeg * accuracyDeg, // lon
@@ -374,16 +449,14 @@ class KalmanFilter {
   /// zero-covariance matrix, causing the filter to reject all future
   /// measurements (infinite Kalman gain trust in a zero-noise GPS).
   static Mat4 _diagFromAccuracy(double accuracyMetres) {
-    // Floor to 1m AND reject non-finite input — prevents a zero/negative OR a
-    // NaN/±infinity accuracy from producing a degenerate or poisoned
-    // covariance. The original `accuracyMetres < 1.0 ? 1.0 : accuracyMetres`
-    // floor is FALSE for NaN (NaN < 1.0 is false), so a NaN accuracy would
-    // pass through and make the whole covariance NaN, poisoning every later
-    // fix. A non-finite accuracy (unknown / sensor error) is treated as the 1m
-    // floor so the init covariance stays finite and well-conditioned.
-    final safeAccuracy =
-        (accuracyMetres.isFinite && accuracyMetres >= 1.0) ? accuracyMetres : 1.0;
-    final accDeg = safeAccuracy / _metresPerDegreeLat;
+    // Same rule as every later fix, from the same helper — see
+    // [_effectiveAccuracyMetres]. Through 0.5.1 this path floored at 1 m while
+    // `update()` applied no floor at all, so the first fix and the second
+    // disagreed about what an unstated accuracy was worth and the disagreement
+    // compounded. The bare `accuracyMetres < 1.0 ? 1.0 : accuracyMetres` floor
+    // that used to live here was also FALSE for NaN (`NaN < 1.0` is false), so
+    // a NaN walked straight through and poisoned the whole covariance.
+    final accDeg = _effectiveAccuracyMetres(accuracyMetres) / _metresPerDegreeLat;
     return _diag([
       accDeg * accDeg, // lat variance
       accDeg * accDeg, // lon variance

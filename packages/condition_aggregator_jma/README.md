@@ -33,9 +33,18 @@ Future<void> main() async {
     );
     print(jma.source.attributionString);
     if (advisories.isEmpty) {
-      print('No active JMA warnings for this point right now.');
+      // Reached only when the feed was READ and is FRESH. If the JMA
+      // document were stale, a `kJmaStaleFeedEventClass` notice would be
+      // in the list and this branch would not run.
+      print('No active JMA warnings for this point, from a current feed.');
     }
     for (final a in advisories) {
+      if (a.eventClass == kJmaStaleFeedEventClass) {
+        // The feed answered, but nobody has written to it in a while.
+        // This is NOT weather and NOT an all-clear.
+        print('FEED STALE — ${a.headline}');
+        continue;
+      }
       print('${a.eventClass} (${a.severity.name}) — ${a.areaDescription}');
     }
   } on JmaAdvisoryFetchException catch (e) {
@@ -48,8 +57,25 @@ Future<void> main() async {
 
 You get back a `List<Advisory>` — each record carries JMA's verbatim
 event name (`eventClass`, e.g. `大雪警報`), a normalized `severity`, and
-the area name (`areaDescription`). An empty list means no active
-surfaced-class warning for that point. The provider does real HTTPS I/O against the
+the area name (`areaDescription`).
+
+**An empty list means: the feed was read, it is fresh, and no surfaced-class
+warning is in force.** It does *not* mean "nothing to worry about" in any
+other circumstance — because from 0.5.0 the other circumstances are no longer
+silent. If the feed could not be fully read you get an in-band
+`kJmaIncompleteReadEventClass` notice; if it was read but has stopped being
+updated you get a `kJmaStaleFeedEventClass` notice. Both are
+`AdvisorySeverity.minor`, below `Advisory.isHighImpact`, so they never
+masquerade as weather — but they mean the list is **not** an all-clear.
+
+> ⚑ **This sentence was wrong before 0.5.0.** It read "An empty list means no
+> active surfaced-class warning for that point", and that was false in the
+> exact case that matters: a JMA document that has stopped being updated
+> returns an empty list identical to a clear sky. Measured 2026-08-16, the
+> whole `bosai/warning/` path was frozen since late May, so this README was
+> telling readers that an 81-day-old silence was an all-clear. The quick-start
+> above uses Akita city — the prefecture that, at the time of writing, was
+> still serving a 2026-05-28 雷注意報 as in force. The provider does real HTTPS I/O against the
 public JMA feed, so it can fail offline — handle
 `JmaAdvisoryFetchException` as shown. The same snippet is in
 [`example/main.dart`](example/main.dart); run it with
@@ -130,8 +156,8 @@ recent-publication *window*, so a warning that is still in force but
 was last re-issued before the window opens scrolls off the feed and is
 silently missed — exactly the wrong failure for a snow-WARNING
 package, where a stale-but-active 大雪警報 is what the driver must
-still see. The windowless `warning/{areacode}.json` always reflects
-the *current in-force* state with no window to scroll off (and is
+still see. The windowless `warning/{areacode}.json` has no window to
+scroll off (and is
 ~7 KB per prefecture vs ~0.6 MB for the national atom feed). See
 CHANGELOG 0.2.0.
 

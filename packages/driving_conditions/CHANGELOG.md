@@ -122,6 +122,23 @@ consumer cannot name is a contract that does not reach them. Now exported.
 
 ### Also
 
+- **`navigation_safety_core` is `>=0.10.0 <0.12.0`, not `^0.10.0`.** The
+  published 0.5.5 (2026-07-12) already widened this to admit the 0.11.x line;
+  that widening lived only in the published artifact and never came back to this
+  repository, so the tree still carried the pre-0.5.5 `^0.10.0`. Shipped as-is,
+  0.6.0 would have been the only package in this catalog to *exclude*
+  `navigation_safety_core` 0.11.0–0.11.4 — narrower than the 0.5.7 it replaces,
+  and narrower than the six siblings (`snow_rendering`, `offline_tiles`,
+  `map_viewport_bloc`, `voice_guidance`, `navigation_safety`,
+  `nav2_safety_layer`) that all declare `>=0.10.0 <0.12.0`. An upgrade that
+  *removes* resolvable versions is a downgrade for the integrator holding both.
+  Nothing in 0.11.x required the narrowing: 0.11.0 and 0.11.1 record themselves
+  as additive (0.11.0 *adds* re-exports; no existing symbol changed or was
+  removed) and 0.11.2, 0.11.3 and 0.11.4 each record "no API changes". Read as
+  a claim that needed checking rather than a promise: this package's suite is
+  green on both ends of the range — 0.10.5 and 0.11.4 — from a hosted,
+  override-free resolution carrying no path dependency.
+
 - Behaviour on **fully measured** data is unchanged — all pre-existing tests
   still pass. The break reaches only the code paths where data was absent, which
   is exactly where the old behaviour was wrong.

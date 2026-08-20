@@ -12,7 +12,13 @@ dependencies:
   # Direct: the demo re-derives the FRESH candidate assessment (to mark
   # debounce-held steps) via DrivingConditionAssessment.fromCondition, and
   # reads RoadSurfaceState for the printed verdict.
-  driving_conditions: ^0.5.2
+  # Must track the parent package's own floor (^0.6.0). pub.dev STRIPS
+  # dependency_overrides from the published archive, so this constraint is what
+  # a reader who runs `dart pub get` in example/ actually resolves against. At
+  # ^0.5.2 it selected driving_conditions 0.5.7, which requires
+  # driving_weather ^0.4.0 — the range this release exists to leave — and it
+  # made the example unresolvable against its own parent.
+  driving_conditions: ^0.6.0
   vehicle_condition_fusion:
     path: ../
 

@@ -1,5 +1,170 @@
 # Changelog
 
+## 0.6.0
+
+**Two things the object told you that it could not support. Both are behaviour
+changes with no compiler warning — read the first one before upgrading.**
+
+**How the numbers below were produced**, so you can check them rather than take
+them: every figure was measured on the published `0.5.1` archive and on this
+release, through `DeadReckoningProvider(mode: DeadReckoningMode.kalman)` wrapped
+around a stub inner provider, fixes at 35.1709 N 136.8815 E on heading 90
+degrees, timestamps one second apart, and `.accuracy` read off the emitted
+position; speed is 12.5 m/s and there is no outage except where a figure states
+otherwise. Change the cadence or the prior and
+the absolute numbers change; the differences between the two releases do not.
+
+### ⚑ BREAKING (behaviour, not API): `extrapolatedFor` is now the real gap, always
+
+Through `0.5.1` this field was `Duration.zero` on every `measured` and `fused`
+emit, so `extrapolatedFor == Duration.zero` read as *"a sensor contributed"*.
+**It no longer does.** On a `fused` position it is now the actual elapsed time
+since the last reading the filter accepted — ordinary inter-fix spacing in
+steady state (~1 s at 1 Hz), and the length of the outage after one.
+
+**If you gate on `extrapolatedFor == Duration.zero` to mean "fresh", that gate
+now never fires.** Nothing throws and the analyzer says nothing. Use
+`source` / `isDeadReckoned` / `containsMeasurement` for the *"was a sensor
+involved"* question — they answer it exactly, and always did.
+
+**What the clock measures from.** It is the provider's own wall clock — the
+moment a reading arrived — not the timestamp the reading carries. On a live
+stream those agree. On a replayed or simulated trajectory they do not: fixes fed
+faster than real time report a near-zero gap however far apart their timestamps
+are. This is not new in `0.6.0`; the dead-reckoning path measured the same way
+in `0.5.1`.
+
+**Why it changed.** The first fix back after a GPS outage is not the
+measurement: the filter blends it with a prediction that ran blind for the
+whole gap, and on a short outage the prediction still dominates. `source` is
+truthfully `fused` there, `isDrActive` is already false, and every quality
+getter reads clean — so this field was the only thing left that could disclose
+the gap, and it was stamped zero in the same breath.
+
+A first attempt disclosed the gap only when it reached `gpsTimeout`. That was
+wrong, and measured wrong on this tree: **`gpsTimeout` decides when dead
+reckoning takes over, and says nothing about whether an estimate is stale.** It
+is also a constructor parameter you can set to anything, so the number would
+have meant *"the gap, if it happened to exceed a value you chose"*. At the
+shipped default of **3 s**, gaps below it never start dead reckoning at all —
+measured on the `0.5.1` archive, a **2 s gap at 20 m/s reported
+`extrapolatedFor` of zero while the emitted coordinate sat 13.0 m from the true
+position against a reported radius of 3.92 m**, 3.3× its own claimed accuracy,
+disclosed nowhere. At 12.5 m/s the same gap gave 8.1 m against 3.71 m, 2.2×.
+The same code measured at a 200 ms timeout disclosed every band, which is
+exactly how the threshold looked correct. The field is now threshold-free and monotonic in the
+gap; under the threshold it was 0, 0, 0, then jumped.
+
+### FIXED: an accuracy the sensor never stated was read as a precision claim
+
+`geolocator` reports `accuracy: 0.0` when `Location.hasAccuracy()` is false,
+GeoClue2 can report `0`, and some providers use `-1`. Those are sentinels
+meaning *"not stated"* — and `0.5.1` read them as measurements.
+
+Measured on the `0.5.1` tree, four fixes at `accuracy: 0` through
+`DeadReckoningProvider`: **the reported radius was 0.0000 m**, and
+`isHighAccuracy` passed on it. `-1` squared back to a 1 m claim and reported
+1.0861 m, exactly what a stated 1 m fix reports — so the two spellings of
+*"unavailable"* did not even agree with each other. In `0.6.0` both report
+**3.6246 m**, the same figure a stated 5 m fix gets, because that is what this
+filter already assumes for an unmeasured GPS.
+
+Two zero-accuracy fixes collapse the position covariance to exactly zero, after
+which `S = P + R` is singular, `_invertMat` returns `null`, and
+**every further reading at that timestamp is discarded in silence while
+`DeadReckoningProvider` still emits the untouched state labelled `fused`** — a
+coordinate no sensor contributed to, wearing the label that says one did.
+Measured directly: a third fix 92 km away left the state unchanged.
+
+The root of it is that `_diagFromAccuracy` floored the *initial* covariance at
+1 m while `update()` floored nothing, so the first fix and every later fix
+disagreed about what an unstated accuracy was worth, and the disagreement
+compounded. Both paths now go through one rule.
+
+A sentinel is now **replaced** — not floored — by this filter's own documented
+reading of an unmeasured GPS, ~5 m, the same figure already in
+`_defaultMeasurementNoise`. All of `0`, `-1`, `NaN` and `+infinity` land on the
+same answer.
+
+**A stated sub-metre accuracy is honoured, and deliberately so.** `0.5.1` did
+honour RTK from the second fix onward, and every one of those numbers is
+unchanged here: measured on both releases, a stated 0.05 m fix settles at
+0.0645 m, 0.1 m at 0.1287 m, 0.5 m at 0.6039 m, 1 m at 1.0795 m and 5 m at
+3.3519 m — identical to four decimals. **On the `update()` path nothing moved.**
+
+**⚑ The FIRST fix did move, and only the first.** Through `0.5.1` the
+initialisation path floored the initial covariance at 1 m while `update()`
+floored nothing, so a receiver stating 0.05 m had its first emitted position
+reported as 1.2916 m no matter what it said, and only the second fix honoured
+it. `0.6.0` puts both paths through one rule, so the first fix is honoured too.
+First emitted position, measured on both:
+
+| stated accuracy | `0.5.1` | `0.6.0` |
+|---|---|---|
+| 0.02 m | 1.2916 m | 0.0258 m |
+| 0.05 m | 1.2916 m | 0.0646 m |
+| 0.10 m | 1.2916 m | 0.1292 m |
+| 0.50 m | 1.2916 m | 0.6458 m |
+| 1.00 m | 1.2916 m | 1.2916 m |
+| 5.00 m | 6.4579 m | 6.4579 m |
+
+From the second fix onward the two releases agree to four decimals, and at a
+stated 1 m or worse nothing changes at all. The same path serves
+`KalmanFilter.withState(initialAccuracy:)` and a first `update()` on a fresh
+`KalmanFilter`, and both move with it.
+
+**The direction is worth stating plainly: on that first fix `0.6.0` reports a
+tighter radius than `0.5.1` did** — 20× tighter at a stated 0.05 m, 50× at
+0.02 m — because it now reports what the receiver stated instead of a 1 m floor.
+If you read the first emitted position and your source states sub-metre
+accuracy, that number changed under you. An earlier draft of this entry claimed
+nothing on the stated-accuracy path had moved. That was measured false before
+publish, and this is the correction.
+
+A hard 1 m floor was written, tested and **rejected**: it would have degraded a
+genuine 0.05 m source **16.7×** to buy a fix for a defect that lives entirely
+in the sentinel values, and it was justified in the source by a sentence that
+measurement showed to be false (*"no source was ever honoured below it"* — three
+were). The only bound kept on the honoured band is a **1 mm** conditioning
+floor, three orders of magnitude below anything GNSS delivers, present solely
+to keep `R` strictly positive so `S` stays invertible.
+
+**⚑ What this does NOT fix.** A sentinel now settles a few metres out —
+**3.6246 m** under the harness above, drifting toward 3.2 m as more fixes
+arrive — and `isHighAccuracy` is `accuracy <= 10.0`, **so it still passes.** A consumer
+gating only on `isHighAccuracy` still cannot tell a device that never states
+its accuracy from one that states a good one. Separately, `DeadReckoningProvider`
+gates its filter feed on `pos.accuracy.isFinite`, so a `NaN` or `+infinity` fix
+never becomes `fused` at all — it is forwarded raw as `unknown`. Through the
+provider, only `0` and `-1` ever reached the filter; the `NaN` path matters for
+consumers driving `KalmanFilter` directly.
+
+### Why `0.6.0` and not `0.5.2`
+
+`^0.5.0` resolves `>=0.5.0 <0.6.0`, so a `0.5.2` would have been carried
+silently by `pub upgrade` — and the `extrapolatedFor` change is exactly the
+shape that hurts when it arrives unannounced: compile-compatible, no analyzer
+warning, no exception, a freshness gate that quietly stops firing. `0.5.0` set
+this package's own precedent by calling a silent equality change **BREAKING**
+and taking the minor position for it. This follows it.
+
+### ⚑ Who this release reaches
+
+**No reader we can see receives it.** The only dependency on this package we
+have been able to find is an **exact version pin**, not a range, on the branch
+that project builds from. **An exact pin is not crossed by any release we make**
+— not this one, and not a patch either. Only an edit to that project's own
+manifest moves it, and that edit is theirs to make or not to make.
+
+Older branches in that project do carry a range, and it would be easy to quote
+one and call this release reachable. It is not: they are not what the project
+builds from, and reading a branch a project does not build from is a mistake
+this unit has already made once and written down.
+
+No package on pub.dev depends on `kalman_dr`. **This release is for the future
+stranger**, not for the reader we already have. Saying otherwise would repeat
+the mistake the `0.5.1` note below was written to record.
+
 ## 0.5.1
 
 **A documentation patch, and one line of it is a real defect that could crash your app.**
@@ -37,6 +202,36 @@ It is disclosed here.
 **Nothing in this release changes runtime behaviour, the public API, or the
 equality contract.** `0.5.0`'s breaking change stands as described below. This is
 in-range for any `^0.5.0` dependency: a `pub upgrade` carries it.
+
+**⚑ WHERE `0.5.0` AND `0.5.1` CAME FROM — added to this entry after `0.5.1` was
+published, so the `0.5.1` archive on pub.dev does not contain it.**
+
+**The defect `0.5.0` addresses was found by a consumer of this package, in live
+device and emulator testing, not by our own tests.** Their code — public, and
+written about three weeks before either release — records the dead-reckoning
+stream continuing to emit extrapolated positions indistinguishably from measured
+ones, so a stationary device accumulated distance it had not travelled. They
+diagnosed it, worked around it with the out-of-band `isDrActive` getter, and
+wrote a regression test for it, on hardware we do not own. `PositionSource`
+exists so that workaround is not needed.
+
+**They did not report it to us, and nothing here should be read as their having
+done so.** We found it by reading code they published. That same reading is how
+we found this release's defects: their subscriptions already registered
+`onError` against the terminal accuracy-cap error, which is precisely the
+handler every example we shipped through `0.5.0` left out.
+
+We also had the means to catch the documentation defects ourselves and did not
+use it — `tool/readme_api_check.dart`, in this package, fails against the
+`0.4.4` tree.
+
+**No name appears here because none is ours to publish.** A developer who never
+asked to be written about does not become an entry in a changelog on the
+strength of our having found their work useful.
+
+**What we could not establish:** what this cost them, and whether anything else
+in their code is still working around this package. Both live inside their
+project, and we did not ask.
 
 
 ## 0.5.0

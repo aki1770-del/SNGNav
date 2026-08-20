@@ -40,7 +40,10 @@ Future<List<VehicleConditionUpdate>> _run(
 
   final fusion = bridgeVssFramesToFusion(
     source(),
-    surfaceFilter: HysteresisFilter<RoadSurfaceState>(threshold: 1),
+    // Nullable type argument: `null` is the honest not-measured surface state,
+    // and a non-nullable filter throws inside `HysteresisFilter.add` when it
+    // arrives. See the note on `bridgeVssFramesToFusion`.
+    surfaceFilter: HysteresisFilter<RoadSurfaceState?>(threshold: 1),
   );
   final out = <VehicleConditionUpdate>[];
   final done = Completer<void>();
@@ -83,7 +86,17 @@ void main() {
     // under-warn. The guard degrades it to `null` instead. Temp is held above
     // freezing so the verdict comes ONLY from real signals (the classifier
     // independently calls a sub-−3°C dry road black ice, which is not what this
-    // test is about). With no real hazard signal, the honest verdict is `dry`.
+    // test is about).
+    //
+    // With the friction reading gone, the surface is NOT measured, and
+    // `DrivingConditionAssessment.fromCondition` documents its answer as `null`:
+    // "when [condition] carries too little to classify … [surfaceState] and
+    // [gripFactor] are null". An above-freezing air temperature does not
+    // establish a dry road — it is equally consistent with wet, slush or
+    // standing water. This test asserted `RoadSurfaceState.dry` until
+    // 2026-08-18, which is the same absence-becomes-a-benign-verdict fabrication
+    // the driving_weather 0.5.0 / snow_rendering 0.3.0 recall exists to end. The
+    // assertion contradicted this test's own name.
     final out = await _run([
       {_kFriction: double.nan, _kTemp: 5.0, _kSpeed: 30.0},
     ]);
@@ -91,8 +104,10 @@ void main() {
     expect(live, isNotEmpty);
     // No fabricated friction value reached the snapshot (NOT 1.0, NOT anything).
     expect(live.last.signals!.roadFriction, isNull);
-    // …so no ice verdict was invented from the garbage friction.
-    expect(live.last.assessment!.surfaceState, RoadSurfaceState.dry);
+    // …so no ice verdict was invented from the garbage friction — and no DRY
+    // verdict either. Unmeasured is reported as unmeasured.
+    expect(live.last.assessment!.surfaceState, isNull);
+    expect(live.last.assessment!.gripFactor, isNull);
   });
 
   test('garbage friction cannot ERASE a once-seen ice hazard', () async {

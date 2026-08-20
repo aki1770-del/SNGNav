@@ -24,8 +24,12 @@
 ///
 /// 0.2.0 reads the **windowless per-prefecture warning JSON**
 /// (`https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`),
-/// which always reflects the *current in-force* warning state for the
-/// prefecture with no window to scroll off. It is also tiny (~7 KB for
+/// which has no publication window to scroll off. **It is not, however,
+/// guaranteed to be current**: measured 2026-08-16 every document on this
+/// path was frozen nationwide since late May, so a windowless read can still
+/// be eighty days old. Feed age is exposed by [parseJmaFeed] /
+/// [JmaFeedSnapshot] and surfaced in band by the provider. It is also tiny
+/// (~7 KB for
 /// Akita vs ~0.6 MB for the atom feed) — lighter on constrained
 /// in-vehicle hardware.
 ///
@@ -416,8 +420,123 @@ class JmaWarningRecord {
   });
 }
 
+/// A whole read of one prefecture's warning document — the warnings AND the
+/// document's own timestamp, together.
+///
+/// **Why this type exists.** [parseJmaWarningJson] returns only the warnings.
+/// It parses `reportDatetime` and then loses it: when the document holds no
+/// in-force warning the timestamp is discarded entirely, and when it does hold
+/// one the timestamp survives only as each advisory's `effective`. So the
+/// single most important question about a feed — *how old is what it just told
+/// me?* — is unanswerable in exactly the case where the answer decides
+/// whether a road reads as clear.
+///
+/// That is not hypothetical. Measured 2026-08-16: the JMA
+/// `bosai/warning/data/warning/` documents were frozen nationwide in late May
+/// — Akita at 2026-05-28T06:11+09:00 still listing 雷注意報 `status=発表`,
+/// Niigata at 2026-05-26T15:45+09:00 listing nothing at all. The first shape
+/// renders as an 80-day-old thunderstorm advisory shown as in force. The
+/// second renders as a clear road. Both are the same defect: **absence of
+/// information rendering as absence of hazard.**
+///
+/// [reportDateTime] is the document's own `reportDatetime`, carried out
+/// whether or not any warning was in force.
+class JmaFeedSnapshot {
+  /// The prefecture office code this document was fetched for.
+  final String prefectureCode;
+
+  /// The document's own `reportDatetime`, or null when the field was absent
+  /// or unparseable. Survives an EMPTY [advisories] list — that is the point
+  /// of this type.
+  final DateTime? reportDateTime;
+
+  /// The publisher's `headlineText`, verbatim (may be empty).
+  final String headline;
+
+  /// The in-force surfaced-class advisories, mapped. Same content and order
+  /// as `parseJmaWarningJson(...).map(mapJmaWarningToAdvisory)`.
+  final List<Advisory> advisories;
+
+  /// The in-force surfaced-class records, unmapped.
+  final List<JmaWarningRecord> records;
+
+  const JmaFeedSnapshot({
+    required this.prefectureCode,
+    required this.reportDateTime,
+    required this.headline,
+    required this.advisories,
+    required this.records,
+  });
+
+  /// How long ago the publisher wrote this document, at [now]. Null when the
+  /// document declared no `reportDatetime` — unknown age, which the caller
+  /// MUST treat as a third case, never as fresh.
+  ///
+  /// Negative values are clamped to [Duration.zero] (publisher clock ahead of
+  /// ours), mirroring `Advisory.stalenessAt`.
+  Duration? ageAt(DateTime now) {
+    final r = reportDateTime;
+    if (r == null) return null;
+    final d = now.difference(r);
+    return d < Duration.zero ? Duration.zero : d;
+  }
+
+  /// True iff the document's age is known AND at least [threshold].
+  ///
+  /// False when the age is unknown — an unknown age is not asserted stale
+  /// here, exactly as `Advisory.isStaleAt` does not assert staleness on a null
+  /// `effective`. Callers that must not treat unknown as fresh should test
+  /// [ageAt] for null themselves.
+  bool isStaleAt(DateTime now, Duration threshold) {
+    final a = ageAt(now);
+    if (a == null) return false;
+    return a >= threshold;
+  }
+}
+
+/// Parses one per-prefecture warning JSON [body] into a whole
+/// [JmaFeedSnapshot] — the in-force warnings **and** the document's own
+/// timestamp, so the timestamp survives an empty warning list.
+///
+/// [parseJmaWarningJson] is the older, records-only view of the same parse and
+/// is unchanged; it now delegates here.
+JmaFeedSnapshot parseJmaFeed(
+  String body, {
+  required String prefectureCode,
+  String? prefectureName,
+}) {
+  final dynamic decoded = json.decode(body);
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('JMA warning JSON root is not a JSON object.');
+  }
+  final reportRaw = decoded['reportDatetime'];
+  final DateTime? reportDateTime = reportRaw is String && reportRaw.isNotEmpty
+      ? DateTime.tryParse(reportRaw)
+      : null;
+  final headlineRaw = decoded['headlineText'];
+  final String headline = headlineRaw is String ? headlineRaw : '';
+
+  final records = parseJmaWarningJson(
+    body,
+    prefectureCode: prefectureCode,
+    prefectureName: prefectureName,
+  );
+  return JmaFeedSnapshot(
+    prefectureCode: prefectureCode,
+    reportDateTime: reportDateTime,
+    headline: headline,
+    advisories: records.map(mapJmaWarningToAdvisory).toList(growable: false),
+    records: records,
+  );
+}
+
 /// Parses one per-prefecture warning JSON [body] into the in-force
 /// surfaced-class [JmaWarningRecord]s for [prefectureCode].
+///
+/// **Prefer [parseJmaFeed].** This function returns warnings only, so when the
+/// document holds none it returns `[]` and the document's `reportDatetime` is
+/// lost — an 81-day-old silence becomes indistinguishable from a calm day.
+/// Retained unchanged for back-compat.
 ///
 /// The JSON shape (verified live 2026-06-26 against
 /// `bosai/warning/data/warning/050000.json`):
@@ -518,8 +637,30 @@ List<JmaWarningRecord> parseJmaWarningJson(
 /// - `areaDescription` ← `JmaWarningRecord.areaName` (prefecture label)
 /// - `headline` / `description` ← `JmaWarningRecord.headline` verbatim
 /// - `effective` ← `reportDateTime`
-/// - `expires` ← null (the windowless feed declares no explicit
-///   expiry; the next fetch reflects the then-current in-force state)
+/// - `expires` ← null — **and this stays null on purpose.** JMA's warning
+///   JSON carries no machine-readable expiry field, and we will not write our
+///   own inference into a field the consumer reads as the publisher's word.
+///   (The payload is not truly windowless: Akita's own `headlineText` names
+///   「２８日昼過ぎから２８日夜のはじめ頃まで」. That window is Japanese prose
+///   with no month and a JMA-defined time band, and parsing it into a typed
+///   expiry would manufacture a false publisher declaration — a worse defect
+///   than the one this note corrects.)
+///
+///   ⚑ **The sentence that used to stand here was false and is withdrawn.**
+///   It read: *"the windowless feed declares no explicit expiry; the next
+///   fetch reflects the then-current in-force state."* The second half is not
+///   true. Measured 2026-08-16, the JMA `bosai/warning/data/warning/`
+///   documents were frozen nationwide since late May — 80 days of "next
+///   fetches" reflected nothing, while Akita kept reporting a 雷注意報 as
+///   `status=発表`. A null `expires` therefore does NOT mean "valid until the
+///   next fetch corrects it"; it means **the publisher declared no expiry, and
+///   you must judge validity from the feed's own age.**
+///
+///   Use [JmaFeedSnapshot.ageAt] / [JmaFeedSnapshot.isStaleAt] for the feed's
+///   age, or `Advisory.stalenessAt` / `Advisory.isStaleAt` for this
+///   advisory's, which is derived from the same `reportDatetime`. An advisory
+///   from this source is never self-expiring; **`Advisory.isExpiredAt` returns
+///   false for it forever.**
 Advisory mapJmaWarningToAdvisory(JmaWarningRecord record) {
   return Advisory(
     source: AdvisorySource.jmaJapan,
@@ -602,6 +743,85 @@ Advisory buildIncompleteReadNotice(List<String> failedPrefectureCodes) {
     urgency: AdvisoryUrgency.unknown,
     areaDescription: joined,
     effective: null,
+    expires: null,
+    headline: text,
+    description: text,
+  );
+}
+
+/// Identity for the synthetic **stale-feed** meta-advisory built by
+/// [buildStaleFeedNotice].
+///
+/// Carries no 警報 / 注意報 suffix, so `_severityForEventName` can never grade
+/// it as a hazard, and is distinct from [kJmaIncompleteReadEventClass] so the
+/// full-identity dedup keeps the two apart. An integrator filtering on
+/// `Advisory.eventClass == kJmaStaleFeedEventClass` can render it as a
+/// feed-health banner rather than as weather.
+const String kJmaStaleFeedEventClass = '気象情報の更新停止';
+
+/// Builds the synthetic, clearly-marked, LOW-severity **stale-feed**
+/// meta-advisory stating that the JMA warning document for
+/// [prefectureCodes] has not been updated for [age].
+///
+/// **Why this exists (HER-trace, one hop).** A JMA warning document that stops
+/// being rewritten fails in two directions and the package could express
+/// neither:
+///
+///   * it keeps reporting a warning that ended months ago as `status=発表` —
+///     measured 2026-08-16, Akita served a 2026-05-28 雷注意報 as in force,
+///     and our own winter instrument recorded that dead advisory as an ACTIVE
+///     hazard 230 times over HER mother's prefecture;
+///   * or it reports **nothing**, and an empty list is the identical value a
+///     genuinely clear sky produces — measured the same day, Niigata's
+///     document was 81 days old and carried no warnings at all.
+///
+/// The second is the worse of the two. A false alarm is contradicted by the
+/// windscreen; a false all-clear removes the prompt to look out of it. That
+/// ranking is this package's settled position, already load-bearing in
+/// [buildIncompleteReadNotice].
+///
+/// This notice is the same instrument as [buildIncompleteReadNotice], pointed
+/// at a different absence: that one says *"we could not look"*, this one says
+/// *"we looked, and what answered is stale"*. Carried IN-BAND in the returned
+/// list for the same reason — a successful fetch of a dead document records no
+/// provider error, so the aggregator has no error channel to carry it, and a
+/// field the caller can ignore will be ignored.
+///
+/// It is built so it can never masquerade as a weather warning:
+///   * `severity` = [AdvisorySeverity.minor] — below `Advisory.isHighImpact`,
+///     and no real JMA advisory this adapter surfaces maps to `minor`;
+///   * `certainty` / `urgency` = `unknown` — it is not a weather event;
+///   * `eventClass` = [kJmaStaleFeedEventClass] — no warning suffix.
+///
+/// `effective` is the [asOf] instant this staleness was determined (defaulting
+/// to now), so the notice itself carries a real timestamp and a downstream TTL
+/// can bound it. `expires` is null: the notice is true until the feed moves,
+/// and we do not know when that will be.
+Advisory buildStaleFeedNotice({
+  required List<String> prefectureCodes,
+  required Duration age,
+  DateTime? asOf,
+}) {
+  final names = <String>[
+    for (final code in prefectureCodes)
+      jmaPrefectureNameJa(code) ?? jmaPrefectureName(code) ?? code,
+  ];
+  final joined = names.join('・');
+  final days = age.inDays;
+  final hours = age.inHours;
+  final ageText = days >= 1 ? '約$days日' : '約$hours時間';
+  final text =
+      '$joined の気象警報・注意報の情報が$ageText更新されていません。'
+      'ここに表示されている内容は最新ではない可能性があり、'
+      '警報が出ていない場合でも安全とは限りません。';
+  return Advisory(
+    source: AdvisorySource.jmaJapan,
+    eventClass: kJmaStaleFeedEventClass,
+    severity: AdvisorySeverity.minor,
+    certainty: AdvisoryCertainty.unknown,
+    urgency: AdvisoryUrgency.unknown,
+    areaDescription: joined,
+    effective: asOf ?? DateTime.now(),
     expires: null,
     headline: text,
     description: text,

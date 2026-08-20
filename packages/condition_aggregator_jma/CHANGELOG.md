@@ -1,5 +1,122 @@
 # Changelog
 
+## 0.5.0 — 2026-08-16 — A frozen feed can no longer read as a clear road
+
+**Safety fix.** This adapter could not tell the difference between a publisher
+that says "no warnings" and a publisher that has stopped saying anything. Both
+produced an empty list. It now says which.
+
+### What was measured (all live, 2026-08-16 JST)
+
+* `bosai/warning/data/warning/050000.json` (Akita) — `reportDatetime`
+  **2026-05-28T06:11+09:00**, still listing 雷注意報 `status=発表`. ~80 days.
+* `150000.json` (Niigata) — **2026-05-26T15:45+09:00**, zero warnings. ~81 days.
+  This one rendered as a **clear road**.
+* `060000.json` (Yamagata) — **2026-05-28T09:48+09:00**. The feeds did **not**
+  freeze in lockstep; any single "frozen at T" figure is wrong.
+* The freeze is **nationwide**, not regional: Tokyo, Osaka, Fukuoka and the
+  58-entry `map.json` are all frozen in a late-May window.
+* **Not a cache artifact.** The origin objects carry
+  `last-modified: Wed, 27 May 2026 21:11:58 GMT` behind a `max-age=60`
+  CloudFront object with `age: 4` — the current object is 80 days old at
+  origin. The sibling `bosai/forecast/` path on the same host was minutes old
+  the same second.
+* **JMA is not down.** Its official developer feed
+  `www.data.jma.go.jp/developer/xml/feed/extra.xml` was **updated one minute
+  before the measurement and carried 515 警報・注意報 entries.** The path this
+  adapter reads is the website's internal JSON, and it has gone dark while the
+  official channel stayed live. **See "Known limitation" below — this release
+  does not fix that, and it is the larger defect.**
+* Consequence in our own winter instrument: **307 advisories served across 624
+  hourly records, 100% with `expires: null`** — 230 from the Akita feed and 77
+  from the Yamagata border feed, over HER mother's prefecture.
+
+### ⚑ BEHAVIOUR CHANGE — read this before upgrading
+
+**A returned `List<Advisory>` may now contain a non-weather notice, so
+`advisories.isEmpty` is no longer equivalent to "no warnings".**
+
+When a prefecture's document has not been updated for
+`staleFeedThreshold` (**default 6 hours**), the provider appends an in-band
+`kJmaStaleFeedEventClass` (`気象情報の更新停止`) advisory. It is
+`AdvisorySeverity.minor`, below `Advisory.isHighImpact`, with an event class
+carrying no 警報/注意報 suffix, so it can never be graded or deduped as
+weather. But it **does** flip `isEmpty`, and code shaped like
+
+```dart
+if (advisories.isEmpty) showAllClear();   // <-- no longer fires on a dead feed
+```
+
+changes behaviour — deliberately, because that branch firing on an 81-day-old
+document is the defect. Filter on `eventClass`, or pass a very large
+`staleFeedThreshold` to opt out entirely (the fact stays readable via
+`parseJmaFeed`). Our own 34 pre-existing provider tests hit this flip and were
+updated to opt out; that is disclosed here rather than left for you to find.
+
+*The same property already existed undocumented for
+`kJmaIncompleteReadEventClass` since 0.3.0. It is disclosed here too.*
+
+### Added
+
+* **`JmaFeedSnapshot`** + **`parseJmaFeed`** — the whole read, warnings **and**
+  the document's own `reportDatetime`, with `ageAt(now)` / `isStaleAt(now, t)`.
+  The timestamp now **survives an empty warning list**, which is the entire
+  point: `parseJmaWarningJson` parsed `reportDatetime` and discarded it in
+  exactly the case where it decides whether a road reads as clear.
+* **`buildStaleFeedNotice` / `kJmaStaleFeedEventClass`** — the in-band signal,
+  built as the deliberate sibling of `buildIncompleteReadNotice`: that one says
+  *"we could not look"*, this one says *"we looked, and what answered is
+  stale"*. Carried in band for the same reason — a successful fetch of a dead
+  document records no provider error, so there is no error channel to use.
+* **`JmaAdvisoryProvider.staleFeedThreshold`** (default
+  `kJmaDefaultStaleFeedThreshold` = 6 h) and an injectable `now` clock.
+
+### Deliberately NOT changed — `expires` stays `null`
+
+`expires` means *"the publisher declared it expires at T"*. JMA declares no
+machine-readable expiry, so we write none. **We considered and rejected**
+deriving one, from either a fixed TTL or the headline's own
+「２８日昼過ぎから２８日夜のはじめ頃まで」 — that text has no month and uses a
+JMA-defined time band, and parsing it would write **our inference into a field
+consumers read as JMA's word**. A fabricated publisher declaration is a worse
+defect than the one being fixed. `Advisory.isExpiredAt` therefore still returns
+`false` forever for this source, **and that is correct** — judge validity from
+feed age, via `JmaFeedSnapshot` or the long-standing `Advisory.stalenessAt`.
+
+### Corrected documentation — statements that were false
+
+* `jma_advisory_mapper.dart` said `expires` was null because *"the next fetch
+  reflects the then-current in-force state"*. **Not true.** 80 days of next
+  fetches reflected nothing. Withdrawn in place, not quietly deleted.
+* Both library headers and the README said the windowless endpoint *"always
+  reflects the current in-force state"*. **Windowless is not live.** Corrected.
+* The README said *"An empty list means no active surfaced-class warning for
+  that point."* **False in the exact case that matters.** Corrected — and note
+  its quick-start uses Akita city, the prefecture that was serving the dead
+  雷注意報 while that sentence stood.
+
+### Known limitation — NOT fixed here, and it is the bigger one
+
+**This release makes a dead feed self-declaring. It does not make the feed
+live.** The `bosai/warning/` path appears abandoned while JMA's official
+developer XML feed is current. Migrating this adapter to the official feed is a
+larger change (different schema, different area-code space, and it reintroduces
+the publication-window problem 0.2.0 moved away from — so it needs a windowless
+strategy of its own, not a straight swap). It is recorded as the next work, with
+the measurement above as its basis. Until then this adapter will, correctly,
+tell you its source is stale.
+
+### Reach — stated plainly
+
+`condition_aggregator_jma` has **0 dependents on pub.dev**; its 30-day download
+count sits inside the range our packages register with no human attached. The
+known holders of the defective 0.3.1 are **our own** shadow-watch instrument
+(`^0.3.1`) and **our own app** (`^0.3.0`). Under Dart's caret rule for
+`0.x`, `^0.3.0` and `^0.3.1` both mean `>=x <0.4.0`, so **neither admits 0.4.0
+or this 0.5.0.** A `0.3.2` backport is the only vehicle that reaches either.
+That decision, and any publish, is the Chair's.
+
+
 ## 0.4.0 — 2026-07-11 — Surfaced warning classes widened: downpour / typhoon-wind / thunder / fog turmoil classes added (snow-only → all-season)
 
 **Warning-class widening (minor bump).** The surfaced warning-class table
