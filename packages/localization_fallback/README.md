@@ -65,10 +65,12 @@ A small, synchronous state machine. You give it:
 - a stream of **raw fixes** (`RawFix`: lat, lon, accuracyMeters, timestamp,
   optional speed/heading), and
 - per fix, a **trust signal** (`TrustSignal.trusted/suspect/failed`) that you
-  map from a position-trust verdict such as
-  [`position_integrity`](../position_integrity), and
+  either compute — see [Computing the trust signal](#computing-the-trust-signal)
+  below — or take from
+  [`position_integrity`](https://pub.dev/packages/position_integrity), and
 - optionally a **dead-reckoning seam** (`DeadReckoningSeam`) that you back with a
-  dead-reckoning engine such as [`kalman_dr`](../kalman_dr), and
+  dead-reckoning engine such as
+  [`kalman_dr`](https://pub.dev/packages/kalman_dr), and
 - optionally vehicle speed/heading on the fix.
 
 It hands back exactly one `LocalizationEstimate` per input:
@@ -166,20 +168,106 @@ These are enforced in code and proven in
 
 - **Pure Dart, zero runtime dependencies, no FFI, no Flutter.** The core runs on
   32-bit ARM (`armv7`) car-class hardware.
-- **Decoupled by seams.** It does not depend on `position_integrity` or
-  `kalman_dr` — you wire those in via the trust signal and the dead-reckoning
-  seam. Same pattern as `pretrip_decision_advisor`.
+- **Decoupled by seams.** It computes neither position trust nor dead reckoning
+  — you wire those in via the trust signal and the dead-reckoning seam. A
+  dead-reckoning engine such as [`kalman_dr`](https://pub.dev/packages/kalman_dr)
+  fits the DR seam directly. The trust verdict you compute yourself (below).
 
 ### Why this exists
 
 In the compound-failure worst case — GPS fails, maps fail, whiteout, "the driver
 does not see where she is" — an app must still show a position and decide
 guidance **after GPS becomes untrustworthy**. A confidently-wrong dot sends the
-driver off a snowy road. The catalog had a position-trust verdict
-(`position_integrity`) and a dead-reckoning stream (`kalman_dr`), but nothing
+driver off a snowy road. A dead-reckoning stream
+([`kalman_dr`](https://pub.dev/packages/kalman_dr)) existed, but nothing
 orchestrated the handoff with honest, growing uncertainty. This package is that
 handoff: one estimate, degrading truthfully, that would rather say "lost" than
 lie.
+
+## Computing the trust signal
+
+This package does **not** compute trust. You can either compute it yourself from
+the worked assessment below, or take it from
+[`position_integrity`](https://pub.dev/packages/position_integrity), which is on
+pub.dev and does exactly this job.
+
+Its `PositionIntegrityMonitor.update(fix)` returns an `IntegrityVerdict` whose
+`.status` is an `IntegrityStatus` — `trusted` / `suspect` / `failed` — the same
+three cases, by the same names, as our [`TrustSignal`]:
+
+```dart
+final verdict = monitor.update(fix);
+final trust = switch (verdict.status) {
+  IntegrityStatus.trusted => TrustSignal.trusted,
+  IntegrityStatus.suspect => TrustSignal.suspect,
+  IntegrityStatus.failed  => TrustSignal.failed,
+};
+controller.onFix(rawFix, trust: trust);
+```
+
+**Read its `KNOWN_LIMITATIONS.md` before you rely on it.** It is honest about a
+real bound that matters here: a moderate multipath offset can still read
+`trusted`. `trusted` means *no gate fired*, not *this position is correct*.
+
+> **Corrected in 0.1.4.** Up to and including 0.1.3 this section told you no such
+> published package existed. That was **true when 0.1.3 was published on
+> 2026-07-14** and stopped being true on **2026-07-23**, when `position_integrity`
+> was published — and we left the stale sentence standing for sixteen days. If you
+> read 0.1.3 and wrote your own trust computation because we told you there was
+> nothing to use, that cost was ours.
+
+`onFix` therefore defaults to `TrustSignal.trusted`: **it believes the fix.** That
+default is usable (a controller that trusted nothing could never anchor) but it is
+not safe — a multipath or teleported fix becomes a confident dot, and guidance is
+spoken from it. Compute a verdict from what your locator already reports:
+
+```dart
+// oracle:placeholders controller, fix, lastFix
+import 'dart:math' as math;
+
+/// Decide whether a raw fix can be believed. Copy this, then tune the numbers
+/// to your receiver and vehicle.
+TrustSignal assess(RawFix fix, RawFix? previous) {
+  // 1. Geometry that cannot be true.
+  if (!fix.hasFiniteGeometry) return TrustSignal.failed;
+
+  // 2. Accuracy the receiver itself does not believe.
+  final acc = fix.accuracyMeters;
+  if (acc == null || acc > 100) return TrustSignal.suspect;
+
+  // 3. A jump no vehicle could have made (multipath / teleport).
+  if (previous != null) {
+    final seconds =
+        fix.timestamp.difference(previous.timestamp).inMilliseconds / 1000.0;
+    if (seconds > 0) {
+      final impliedKmh = _metresBetween(previous, fix) / seconds * 3.6;
+      if (impliedKmh > 250) return TrustSignal.suspect;
+    }
+  }
+  return TrustSignal.trusted;
+}
+
+/// Great-circle distance in metres.
+double _metresBetween(RawFix a, RawFix b) {
+  const earthRadiusM = 6371000.0;
+  double rad(double d) => d * math.pi / 180.0;
+  final dLat = rad(b.latitude - a.latitude);
+  final dLon = rad(b.longitude - a.longitude);
+  final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(rad(a.latitude)) *
+          math.cos(rad(b.latitude)) *
+          math.sin(dLon / 2) *
+          math.sin(dLon / 2);
+  return 2 * earthRadiusM * math.asin(math.min(1.0, math.sqrt(h)));
+}
+
+// Then pass the verdict with every fix:
+controller.onFix(fix, trust: assess(fix, lastFix));
+```
+
+Tune the thresholds to your receiver and vehicle. The point is that *some* verdict
+is computed — the failure this package exists to prevent begins with believing a
+fix you never checked.
 
 ## License
 

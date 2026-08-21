@@ -13,6 +13,7 @@
 /// them to [Nav2SafetyMapper].
 library;
 
+import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:equatable/equatable.dart';
 
 /// Action codes published by the nav2 Collision Monitor on the
@@ -127,4 +128,38 @@ class Nav2CollisionDetectorState extends Equatable {
 
   @override
   List<Object?> get props => [polygons, detections];
+}
+
+/// An advisory this layer declined to emit, and why.
+///
+/// ⚑ Exists because until 2026-08-21 a suppressed alert produced nothing an
+/// integrator could observe. A dropped stop-warning and a quiet robot were the
+/// same event: silence.
+class Nav2SuppressedAdvisory {
+  const Nav2SuppressedAdvisory({
+    required this.severity,
+    required this.action,
+    required this.where,
+    required this.at,
+    required this.outcome,
+  });
+
+  /// The tier the suppressed event carried.
+  final AlertSeverity severity;
+
+  /// The nav2 action name, or `'detection'` for the detector path.
+  final String action;
+
+  /// Polygon name, or the joined triggered-polygon list.
+  final String where;
+
+  final DateTime at;
+
+  /// Always [LoomFitOutcome.droppedByThrottle] today; the field exists so a
+  /// future outcome does not require a breaking change.
+  final LoomFitOutcome outcome;
+
+  @override
+  String toString() =>
+      'Nav2SuppressedAdvisory(${severity.name}, $action, $where, ${outcome.name})';
 }

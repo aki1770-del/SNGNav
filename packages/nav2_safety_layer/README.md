@@ -89,9 +89,11 @@ final advisory = Nav2SafetyMapper.toAdvisory(
 - **Caution-add-only invariant.** Unknown `action_type` integers
   degrade to `Nav2CollisionAction.doNothing` rather than asserting a
   specific behavior the publisher did not intend.
-- **Verbatim relay (Article 17 β).** Polygon names from the publisher
-  are surfaced verbatim in the advisory body so the driver-facing HMI
-  can display the publisher's exact polygon naming.
+- **Verbatim relay (Article 17 β), on the DETECTOR path only.** Polygon
+  names from the publisher are surfaced verbatim in the advisory body by
+  `onDetectorState`. ⚑ `onMonitorState` does **not** relay
+  `polygon_name`; corrected 2026-08-21, where this bullet had claimed
+  both paths without qualification.
 - **Profile-tuned density throttle.** The integrator chooses the
   throttle's cap class via `AlertDensityThrottle.forProfile(...)`; the
   default literature-anchored caps in `navigation_safety_core` apply.

@@ -34,13 +34,33 @@ class Nav2SafetyMapper {
         // All four non-doNothing actions denote that the monitor has
         // detected an obstacle inside a configured polygon. The
         // surface vocabulary `navigation_safety_core` ships maps this
-        // to `RoadSurfaceCondition.ice` — the closest existing
-        // semantic for "surface ahead requires caution-add-only
-        // attention from the driver." Future minor versions of this
-        // package may introduce a richer driver-cognition vocabulary
+        // ⚑ CORRECTED 2026-08-21. This previously mapped to
+        // `RoadSurfaceCondition.ice`, on a comment claiming it was "the
+        // closest existing semantic". That claim was refuted by the enum
+        // this file imports: `RoadSurfaceCondition.unknown` exists at
+        // road_surface_condition.dart:34 — "Sensor cannot determine
+        // current road-surface state" — and is nearer in every respect.
+        //
+        // What `.ice` produced, measured on a well-formed STOP:
+        //   「凍結路面です。気温0°C以下で薄氷ができています。
+        //     時速30km以下に減速し、急ブレーキは避けてください」
+        // nav2 said an OBJECT is inside a configured polygon. That text
+        // fabricates a temperature reading from a message carrying no
+        // temperature, and tells the driver to AVOID BRAKING HARD while
+        // the monitor is commanding a stop. It is false about a road she
+        // is on, and it inverts the instruction.
+        //
+        // `.unknown` yields 「路面状況不明。慎重に運転してください」 —
+        // it claims nothing about the surface, because this message says
+        // nothing about the surface.
+        //
+        // ⚑ RESIDUAL, stated not hidden: `.unknown` is honest and still
+        // wrong in DOMAIN. nav2 reported an obstacle; RoadSurfaceCondition
+        // has no obstacle member, so no value in this enum can say what
+        // actually happened. That vocabulary gap is recorded, not closed.
         // dedicated to obstacle-class advisories.
         return AlertExplainer.forConditionAndProfile(
-          RoadSurfaceCondition.ice,
+          RoadSurfaceCondition.unknown,
           profile,
         );
     }

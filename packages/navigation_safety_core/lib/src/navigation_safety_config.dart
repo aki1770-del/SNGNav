@@ -152,7 +152,12 @@ class NavigationSafetyConfig extends Equatable {
   /// - If `context.timeSincePrecipitation` is non-null, the warning
   ///   visibility additionally raises by a residual-moisture margin
   ///   proportional to the surface-moisture fraction (longer
-  ///   visibility floor while the road is still drying).
+  ///   visibility floor while the road is still drying). This margin
+  ///   does NOT require `context.ambientTempCelsius`, and when ambient
+  ///   is absent no temperature is substituted for it: the margin
+  ///   applies only while the surface-moisture calibration is shown to
+  ///   ignore ambient, and otherwise the per-profile baseline stands.
+  ///   See [_residualMoistureFractionOrNull].
   ///
   /// The factory respects the per-profile baseline as a floor for
   /// every threshold: context can only add caution, not remove it.
@@ -201,19 +206,25 @@ class NavigationSafetyConfig extends Equatable {
 
     // Precipitation-history surface-moisture margin.
     if (context.timeSincePrecipitation != null) {
-      final ambient = context.ambientTempCelsius ?? 5.0;
-      final fraction = computeSurfaceMoistureFraction(
+      final fraction = _residualMoistureFractionOrNull(
         timeSincePrecipitation: context.timeSincePrecipitation!,
-        ambientCelsius: ambient,
+        measuredAmbientCelsius: context.ambientTempCelsius,
       );
-      // Conservative add-on: residual-moisture margin scales with the
-      // moisture fraction times the per-profile baseline, capped at
-      // the baseline (i.e. up to 100% additional headroom while the
-      // surface is still fully wet, decaying with moisture).
-      final margin = (base.warningVisibilityMeters * fraction).round();
-      final candidate = base.warningVisibilityMeters + margin;
-      if (candidate > warningVisibility) {
-        warningVisibility = candidate;
+      // `null` means the fraction could not be obtained without a
+      // measurement this context does not carry. The margin is an
+      // add-on; withholding it leaves the per-profile baseline, which
+      // is what every other absent field of DrivingContext falls back
+      // to. No temperature is invented to keep the add-on alive.
+      if (fraction != null) {
+        // Conservative add-on: residual-moisture margin scales with the
+        // moisture fraction times the per-profile baseline, capped at
+        // the baseline (i.e. up to 100% additional headroom while the
+        // surface is still fully wet, decaying with moisture).
+        final margin = (base.warningVisibilityMeters * fraction).round();
+        final candidate = base.warningVisibilityMeters + margin;
+        if (candidate > warningVisibility) {
+          warningVisibility = candidate;
+        }
       }
     }
 
@@ -262,6 +273,76 @@ class NavigationSafetyConfig extends Equatable {
       context.vehicleClassToken,
       postContext,
     );
+  }
+
+  /// Ambient temperatures spanning the range a road vehicle meets,
+  /// used ONLY to ask the surface-moisture calibration whether its
+  /// answer depends on ambient at all.
+  ///
+  /// These are probes, never stand-ins for a reading. Nothing computed
+  /// from an individual entry reaches a threshold: a value is used only
+  /// when every entry produces the same one.
+  static const List<double> _ambientProbesCelsius = <double>[-40.0, 0.0, 40.0];
+
+  /// The residual surface-moisture fraction behind the
+  /// precipitation-history visibility margin, or `null` when it cannot
+  /// be obtained without an ambient temperature nobody measured.
+  ///
+  /// [measuredAmbientCelsius] is `null` when ambient was not measured.
+  /// Through 0.11.3 this branch answered that absence with `5.0` — a
+  /// plausible mild afternoon, indistinguishable inside the calculation
+  /// from a reading actually taken, and the only place in this factory
+  /// where an absent field was filled in rather than skipped. The
+  /// black-ice branch seventeen lines below refused to proceed at all
+  /// without the same field.
+  ///
+  /// No temperature is substituted now. `computeSurfaceMoistureFraction`
+  /// declares `ambientCelsius` required, so this package still has to
+  /// pass doubles; it passes [_ambientProbesCelsius] and uses the result
+  /// only if every probe agrees. Agreement means the answer does not
+  /// depend on the missing measurement, so the absence costs the driver
+  /// nothing. Disagreement means ambient has become load-bearing — this
+  /// context cannot answer, and `null` withholds the add-on rather than
+  /// invent an input for it.
+  ///
+  /// The calibration ignores `ambientCelsius` today (its own docs say it
+  /// is accepted "for forward-compatible API shape"), so every probe
+  /// agrees and the returned fraction is bit-identical to 0.11.3's. What
+  /// changes is only what happens if that stops being true — which its
+  /// docs say may happen "without an API break", behind the caret range
+  /// this package depends through.
+  ///
+  /// **Honest bounds.** Agreement across [_ambientProbesCelsius] is
+  /// evidence of independence, not proof of it: a calibration that
+  /// modulated the half-life while returning identical values at exactly
+  /// these three temperatures would pass. And the durable fix is not
+  /// here — it is a calibration signature that can express "not
+  /// measured" (widening `ambientCelsius` to `double?` is
+  /// source-compatible for every existing caller). That is a change in a
+  /// package this one does not own.
+  static double? _residualMoistureFractionOrNull({
+    required Duration timeSincePrecipitation,
+    required double? measuredAmbientCelsius,
+  }) {
+    if (measuredAmbientCelsius != null) {
+      return computeSurfaceMoistureFraction(
+        timeSincePrecipitation: timeSincePrecipitation,
+        ambientCelsius: measuredAmbientCelsius,
+      );
+    }
+    double? agreed;
+    for (final probeCelsius in _ambientProbesCelsius) {
+      final probed = computeSurfaceMoistureFraction(
+        timeSincePrecipitation: timeSincePrecipitation,
+        ambientCelsius: probeCelsius,
+      );
+      if (agreed == null) {
+        agreed = probed;
+      } else if (probed != agreed) {
+        return null;
+      }
+    }
+    return agreed;
   }
 
   /// Per-profile reaction-time defaults in seconds. See
@@ -574,15 +655,24 @@ class NavigationSafetyConfig extends Equatable {
     // programming error, not uncertain runtime data.
     if (!safeScoreFloor.isFinite) {
       throw ArgumentError.value(
-        safeScoreFloor, 'safeScoreFloor', 'must be finite');
+        safeScoreFloor,
+        'safeScoreFloor',
+        'must be finite',
+      );
     }
     if (!infoScoreFloor.isFinite) {
       throw ArgumentError.value(
-        infoScoreFloor, 'infoScoreFloor', 'must be finite');
+        infoScoreFloor,
+        'infoScoreFloor',
+        'must be finite',
+      );
     }
     if (!warningScoreFloor.isFinite) {
       throw ArgumentError.value(
-        warningScoreFloor, 'warningScoreFloor', 'must be finite');
+        warningScoreFloor,
+        'warningScoreFloor',
+        'must be finite',
+      );
     }
     if (safeScoreFloor < 0 || safeScoreFloor > 1) {
       throw RangeError.range(safeScoreFloor, 0, 1, 'safeScoreFloor');

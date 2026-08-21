@@ -1,24 +1,59 @@
-# Changelog
+## 0.7.4
+
+Removes build artifacts that 0.7.3 published by mistake. No API or behaviour
+change: every file under `lib/` is byte-identical to 0.7.3.
+
+**What 0.7.3 contained, and what you already have.** The 0.7.3 archive was
+16,023,777 bytes, of which about 99.9% was a `build/` directory that should
+never have been in a published package. It held nine files, the largest a
+Flutter kernel cache (`build/test_cache/build/*.cache.dill.track.dill`,
+49,014,912 bytes uncompressed) that embedded 1,323 absolute filesystem paths
+from the machine that published it, of the form
+`/home/<user>/.pub-cache/hosted/pub.dev/<package>-<version>/...`, plus 24
+references to the temporary directory the release was staged in.
+
+If you pulled 0.7.3, those bytes are in your pub cache. They disclose the
+publishing machine's account name, its pub-cache and staging-directory
+locations, and the exact set and versions of the 45 packages resolved there at
+build time. We checked for credentials and found none — no private keys, SSH
+keys, or API tokens; the payload is a compiler cache and dependency source, not
+configuration. Nothing about *consumers* of this package was included, and the
+files were inert: no code under `lib/` reads anything in `build/`, so nothing
+you ran was affected.
+
+Upgrading to 0.7.4 (in range for any `^0.7.x` constraint) replaces the archive.
+Removing `.pub-cache/hosted/pub.dev/voice_guidance-0.7.3/` clears the old copy.
+**0.7.3 remains downloadable from pub.dev — published versions are immutable and
+cannot be withdrawn**; this release supersedes it, it does not recall it.
+
+**Cause, and why it should not recur.** `build/` has been ignored by the
+repository's root `.gitignore` since 2026-03-04, and `pub publish` honours that
+when run from inside the work tree. 0.7.3 was published from a staging copy
+*outside* the work tree, where a repo-root `.gitignore` does not apply; pub then
+included every file on disk and reported "0 warnings". This release adds a
+`.pubignore` to the package itself, so the exclusion travels with the package
+directory wherever it is copied or staged. Verified by reproducing the fault:
+with `build/` present on disk, the publish dry-run produced 15 MB without the
+`.pubignore` and 40 KB with it.
 
 ## 0.7.3
 
-- Widen the `routing_engine` constraint to `>=0.4.0 <0.7.0` so this package can
-  resolve alongside `routing_engine` 0.6.0 and `route_condition_forecast` 0.2.0.
+Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
 
-  `routing_engine` 0.6.0 fixes a safety defect: `RouteManeuver.position` was
-  silently returning `const LatLng(0, 0)` — Null Island, a real coordinate in
-  the Gulf of Guinea — for a maneuver whose location failed to parse. It is now
-  nullable. **This package's `lib/` reads no maneuver position**, so 0.6.0 is
-  source-compatible and this is a PATCH release, not a breaking one.
+The previous `^0.10.0` constraint excluded core 0.11.x, so a project that asked
+for the current core could not also take this package at its current version.
+The resolver silently selected an older release of this package instead, with no
+error and no warning. Core 0.11.0 and 0.11.1 are additive (a re-export, and a
+percent-to-fraction humidity factory); this package compiles and its full test
+suite passes against 0.11.1.
 
-  The widen is not cosmetic: for a 0.x package a caret does not admit the next
-  minor, so without it `route_condition_forecast` 0.2.0 (which pins
-  `>=0.6.0`) and this package had an EMPTY intersection — a consumer combining
-  voice guidance with route condition forecasting would have hit a hard
-  `version solving failed`.
+Also removes a `dependency_overrides` block that referenced sibling packages by
+relative path. It was inert for consumers, but it prevented this package from
+resolving standalone from its published archive.
 
-- The example app now guards the nullable position: a maneuver with no location
-  is not given a substitute coordinate.
+No API or behaviour change.
+
+# Changelog
 
 ## 0.7.2
 

@@ -28,7 +28,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  condition_aggregator: ^0.0.5
+  condition_aggregator: '>=0.0.5 <0.2.0'
   # http is used to fetch the per-prefecture warning JSON. Parsing is
   # via dart:convert (no third-party XML/JSON dependency needed).
   http: ^1.0.0

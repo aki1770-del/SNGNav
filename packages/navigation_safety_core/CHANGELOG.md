@@ -1,5 +1,182 @@
 # Changelog
 
+## 0.11.4
+
+An absent ambient temperature is no longer answered with a temperature.
+
+**What you already have, and what it does.** In 0.11.3 and every release
+before it, `NavigationSafetyConfig.forProfileWithContext` read an absent
+`context.ambientTempCelsius` as `5.0` on one path — the residual-moisture
+visibility margin taken when `context.timeSincePrecipitation` is set:
+
+```dart
+final ambient = context.ambientTempCelsius ?? 5.0; // 0.11.3
+```
+
+Seventeen lines below, the black-ice branch of the same function refused to
+proceed at all without that field (`context.ambientTempCelsius != null`). One
+function, two opposite treatments of one missing input, and the substituted
+`5.0` was indistinguishable inside the calculation from a reading actually
+taken. It was also the only place in that factory where an absent field was
+filled in rather than skipped — `DrivingContext` documents that every absent
+field falls back to the per-profile baseline.
+
+**Your numbers do not change.** `computeSurfaceMoistureFraction` accepts
+`ambientCelsius` "for forward-compatible API shape" and does not read it, so
+the substituted `5.0` never reached a threshold. If you are on 0.11.3 today,
+nothing you are seeing is wrong and there is nothing to undo. A test in this
+release pins that parity: every profile, elapsed time, and ambient value —
+present or absent — produces exactly the 0.11.3 result while the calibration
+stays temperature-independent.
+
+**What changes is what happens if that stops being true.** The calibration's
+own documentation says a future revision "may modulate the half-life by
+temperature *without an API break*", and this package depends on it through
+`^0.1.2`. Such a release could arrive on your next `pub upgrade` with no
+change here and no action by you — and the inert `5.0` would quietly become
+load-bearing, deriving a driver-facing visibility floor from a temperature
+nobody measured. To see what that would cost, the calibration was mutated to
+lengthen the evaporation half-life in the cold — `90 min × (1 + (20 − T)/40)`,
+a shape its own docs permit — and this package was run against it with
+ambient absent, 30 minutes after precipitation ended:
+
+| profile | baseline | 0.11.3 | 0.11.4 | honest, ambient −5 °C |
+|---|---|---|---|---|
+| `ageingRural` | 300 m | 554 m | **300 m** | **560 m** |
+| `noviceUrban` | 320 m | 591 m | **320 m** | **598 m** |
+| `foreignTouristSnowZone` | 400 m | 738 m | **400 m** | **747 m** |
+
+From 0.11.4 the branch passes no invented temperature. When ambient is
+absent it asks the calibration the same question at −40 °C, 0 °C and 40 °C
+and uses the answer only if all three agree — agreement meaning the answer
+does not depend on the missing measurement, so the absence costs nothing.
+If they ever disagree, the margin is withheld and the per-profile baseline
+stands, which is what every other absent field of `DrivingContext` already
+does.
+
+**Read the last two columns before you upgrade, because they do not say what
+a release note usually says.** On a cold road — this package's entire
+subject — withholding is *further* from the truth than the fabricated value
+it replaces. For `ageingRural` at −5 °C the honest floor is 560 m; 0.11.3's
+invented `5.0` reached 554 m, six metres short, and 0.11.4 returns the
+300 m baseline, **260 m short**. Closer to the rain it is worse, not better:
+one minute after precipitation ends the honest floor is 599 m and 0.11.4
+still returns 300 m. Nor is this an artifact of one formula: under a steeper
+Q10 mutation — half-life doubling per 10 °C of cooling,
+`90 min × 2^((T_ref − T)/10)` — the same cell reads honest 576 m, 0.11.3
+555 m, 0.11.4 300 m at **T_ref = 10 °C**, and honest 588 m, 0.11.3 576 m,
+0.11.4 300 m at the 20 °C reference the linear shape above is written
+around; the ranking is the same either way. The arithmetic is exact and
+shape-independent: **withholding is short by the whole margin, while
+inventing was short only by the difference between the temperature it
+invented and the one that was real.** 0.11.4 buys an honest *input* at the
+price of a less accurate *answer*, and on a cold road much less accurate.
+The per-profile floor is never lowered below baseline — but that is a
+smaller promise than it sounds, because on the day this branch diverges the
+baseline is not the honest answer.
+
+**None of this reaches you if you pass an ambient reading.** The divergence
+lives only on the path where `timeSincePrecipitation` is set and
+`ambientTempCelsius` is not. Set it and the margin is computed from your
+measurement, unchanged. If you cannot measure it, commit `pubspec.lock` —
+the pin this package's pubspec already asks for is what stops a calibration
+revision arriving unannounced.
+
+**The alternative that was considered and not taken: take the most adverse
+probe instead of withholding** — absence assumes the worse road. It was
+implemented and measured, not argued: it lands within about 20 m of the
+honest answer in every cell above and never below it (`ageingRural`, 30 min:
+574 m against an honest 560 m), and it is bit-identical to this release on
+both calibrations in the `^0.1.2` range (0.1.2 and 0.1.3), with the full
+319-test suite green. It is also the shape the sibling package ratified the
+same day — *positive evidence fires on partial knowledge; negative
+conclusions require whole knowledge* — and withholding a
+hazard margin because a field is absent is a negative conclusion drawn from
+absence. That inversion is sharper here than the general rule, because the
+caller has *positively reported the hazard*: `timeSincePrecipitation` is
+set, so we have been told the road is wet, and what is missing is only a
+modifier of how fast it dried.
+
+Two reasons it is not in 0.11.4, both stated so you can disagree with them.
+It moves a driver-facing threshold, which is a decision for this family's
+safety owner and not for the package author. And it costs the return type
+its ability to say *"I could not look"*: a worst-case bound handed back as a
+plain `double` is indistinguishable from a reading — the very defect this
+release exists to remove, one level up. So the open question is not
+withhold-or-not; it is whether the bound can be returned **as a bound**, and
+that is an API change. It is recorded, and it is not settled here.
+
+- No API changes. No behaviour change on any calibration published to date.
+  The divergent cells in the table above are produced by a **mutated**
+  calibration that has not been published. Run those same scenarios — each
+  profile, ambient absent, 30 minutes after precipitation — against the two
+  calibrations actually inside this package's `^0.1.2` range (0.1.2 and
+  0.1.3, whose decay module is byte-identical), and 0.11.3 and 0.11.4 return
+  the same warning-visibility floor in every one: 538 m, 574 m and 717 m for
+  the three profiles, under both releases alike. This package's full
+  319-test suite passes.
+- **The tripwire, and its window.** The guard is not a runtime check, it is a
+  test: `absent_ambient_not_invented_test.dart` asserts
+  *"computeSurfaceMoistureFraction ignores ambientCelsius — if this fails,
+  the residual-moisture branch must be rewritten"*. Run against the mutated
+  calibration it goes red, printing the eight per-temperature fractions it
+  expected to be one. The alarm therefore rings in **our** CI, where the
+  author can act, and not in yours, where you could not. The exposure you
+  are carrying is the gap between a calibration release and this package's
+  next CI run: in that window your `pub upgrade` can pick the new
+  calibration up and nobody is watching.
+- Honest bounds: agreement across three probes is evidence of independence,
+  not proof of it. The durable fix is a calibration signature that can
+  express "not measured" — widening `ambientCelsius` to `double?` would be
+  source-compatible for every existing caller — and that is a change in
+  `navigation_safety_calibration`, which this package does not own.
+
+## 0.11.3
+
+One Japanese explainer string corrected — a caution the driver could not hear.
+
+- **Fixed the `professional` WET explainer, which was spoken as silence.**
+  The string was 「濡路、注意」. Measured through open_jtalk, 濡路 renders as
+  SILENCE, so a professional-profile driver hears 「（無音）、注意」 — a caution
+  with no hazard named at all. It was also the single outlier among six
+  profiles that otherwise all say 「濡れた路面」. Terseness is right for this
+  profile; an unpronounceable term is not. Now 「濡れた路面、注意」, which keeps
+  the profile's brevity and names the hazard aloud. Terminology per 表記規準 v1
+  (2026-07-21) §V2 — do not put a term in a spoken string whose reading is not
+  certain. A regression test pins it.
+- No API changes; only this one string changed.
+
+**Note on provenance.** 0.11.2 was published from a working tree that never
+reached git, so this repository's copy sat at 0.11.1 and carried the false
+「気温0°C以下で薄氷ができています」 string that 0.11.2 had already corrected on
+pub.dev. The 0.11.2 sources were reconstructed here from the published archive
+and proven byte-identical to it before this change was applied on top, so
+0.11.3 supersedes 0.11.2 rather than reverting it.
+
+## 0.11.2
+
+Two Japanese explainer strings corrected — ice does not need sub-zero air.
+
+- **Fixed a false claim in the `ageingRural` ICE explainer.** The previous
+  string said 「気温0°C以下で薄氷ができています」 — that ice forms only when
+  the air temperature is at or below 0°C. That is wrong: road surfaces
+  radiate heat and can drop below the air temperature, so thin ice forms
+  while the air is above zero — bridges and tunnel exits first (JAF
+  snow-driving guidance). The old wording taught a driver checking the
+  thermometer on a clear cold morning that above-zero air means no ice —
+  the exact misjudgement this package exists to prevent, and it
+  contradicted the above-zero black-ice classification that
+  `snow_rendering` 0.2.7+ already ships. The corrected string states that
+  the surface can freeze even when the air is above 0°C and keeps the
+  30 km/h speed advisory unchanged.
+- **Fixed the `ageingRural` WET explainer** the same way (the road can
+  freeze with above-zero air; bridge/tunnel-exit guidance kept) and aligned
+  its terminology to the JAF authoritative term ブラックアイスバーン
+  (previously bare ブラックアイス), matching `japanese_snow_vocabulary` and
+  `snow_rendering` so the driver hears one consistent hazard name.
+- Regression tests pin both corrections. No API changes; only these two
+  strings changed.
+
 ## 0.11.1
 
 The percent door — a correct home for percent-sourced humidity readings.

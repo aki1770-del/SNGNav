@@ -20,7 +20,7 @@ environment:
 dependencies:
   compound_failure_advisor: ^0.1.1
   localization_fallback: ^0.1.1
-  condition_aggregator: ^0.0.7
+  condition_aggregator: '>=0.0.7 <0.2.0'
 
 dev_dependencies:
   test: ^1.25.0
