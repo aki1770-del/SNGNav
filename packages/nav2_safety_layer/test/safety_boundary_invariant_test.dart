@@ -275,21 +275,26 @@ void main() {
   // ---------------------------------------------------------------------------
   // BI-9 — the severe one. A nav2 STOP is the most droppable signal in the package.
   // ---------------------------------------------------------------------------
-  group('BI-9 — D-07: a nav2 STOP is silently discarded under advisory load', () {
-    test('the core critical-bypass works — this package simply never asks for it', () {
+  group('BI-9 — D-07 REPAIRED: a nav2 STOP survives advisory load', () {
+    test('the core critical-bypass works, and this package NOW asks for it', () {
       final t = AlertDensityThrottle(alertsPerMinuteCap: 1);
       final now = DateTime(2026, 8, 21, 5, 0, 0);
       expect(t.shouldFire(now, AlertSeverity.warning), isTrue);
       expect(t.shouldFire(now, AlertSeverity.warning), isFalse,
           reason: 'cap consumed');
       expect(t.shouldFire(now, AlertSeverity.critical), isTrue,
-          reason: 'navigation_safety_core SAFETY_BOUNDARY.md:41-50 critical-bypass '
-              'is intact in the dependency. nav2_safety_layer.dart:47 and :59 pass '
+          reason: '⚑ CORRECTED 2026-08-21. navigation_safety_core '
+              'SAFETY_BOUNDARY.md:41-50 critical-bypass is intact in the dependency, '
+              'and it is now REACHABLE from this package: nav2_safety_layer.dart:84 '
+              'passes severityOf(state.actionType), which maps stop/approach to '
+              'AlertSeverity.critical. The previous text — "…:47 and :59 pass '
               'AlertSeverity.warning hardcoded for EVERY event, so this bypass is '
-              'never reachable from this package.');
+              'never reachable from this package" — described a package that no '
+              'longer exists, and it said so from inside a GREEN test, where nobody '
+              'reads it.');
     });
 
-    test('a burst of LIMIT consumes the cap and the following STOP never reaches the driver',
+    test('a burst of LIMIT consumes the cap and the following STOP STILL reaches the driver',
         () async {
       final layer = Nav2SafetyLayer(
         profile: DriverProfile.snowZoneExperienced,
@@ -311,12 +316,17 @@ void main() {
           actionType: Nav2CollisionAction.stop, polygonName: 'IMMINENT_FRONT'));
       await settle();
 
-      expect(got.length, equals(afterBurst),
-          reason: 'D-07 pinned, and this is the finding that matters most. The most '
-              'severe action nav2 can publish was dropped by a throttle whose stated '
-              'purpose is preventing advisory-tier desensitization. The failure is '
-              'worst exactly when the monitor is busiest. AoU-5: do not route a '
-              'reflexive-stop signal through this package alone.');
+      expect(got.length, equals(afterBurst + 1),
+          reason: '⚑ D-07 REPAIRED 2026-08-21 — this assertion is INVERTED from a pin '
+              'into a live regression guard. It previously demanded that the STOP be '
+              'DROPPED, and it went stale the moment the defect was fixed: '
+              'Nav2SafetyLayer.severityOf now maps stop/approach to '
+              'AlertSeverity.critical, and AlertDensityThrottle holds a non-negotiable '
+              'invariant that critical always fires regardless of in-window count '
+              '(alert_density_throttle.dart:18). The most severe action nav2 can '
+              'publish now reaches the driver exactly when the monitor is busiest. '
+              'If this ever fails again, the critical-bypass has been broken and a '
+              'reflexive-stop signal is being swallowed under load.');
       await sub.cancel();
       await layer.dispose();
     });

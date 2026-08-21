@@ -84,15 +84,43 @@ jobs:
       - name: Run app tests with coverage
         run: flutter test --coverage --exclude-tags=probe
 
+      - name: "REPORT (non-gating): pinned-live defect-proof suites"
+        if: always()
+        run: |
+          # These tests assert the FIX for defects that are still live. They FAIL by design.
+          # They are reported, never skipped: an absent verdict reads exactly like a pass.
+          # ⚑ A load error here also shows as a failure — that hole was found on 2026-08-21
+          # when an excluded file that could not COMPILE let the gate report "All tests passed".
+          for pkg in nav2_safety_layer; do
+            echo "=== packages/$pkg — LIVE DEFECTS (non-gating) ==="
+            ( cd "packages/$pkg" && dart test -t pinned-live ) || true
+          done
+
+      - name: "REPORT (non-gating): stale-pin check"
+        if: always()
+        run: |
+          # A repaired defect must not leave its warning standing. Reporting, NOT a gate —
+          # it has a known false-positive mode on assert-the-defect-style tests, measured at
+          # 4-in-5 on first run. See the header of scripts/stale-pin-check.py.
+          python3 scripts/stale-pin-check.py packages/nav2_safety_layer || true
+
       - name: Run pure Dart package tests with coverage
         run: |
           export PATH="$HOME/.pub-cache/bin:$PATH"
-          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine; do
+          # ⚑ nav2_safety_layer ADDED 2026-08-21. Measured that day: this package's tests
+          # had NEVER run in CI — it was in neither allow-list — which is why four live
+          # defects and one STALE pin sat unreported since publication. A package whose
+          # tests never run is not passing; it is unmeasured.
+          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr nav2_safety_layer routing_engine; do
             echo "--- packages/$pkg ---"
             (
               cd "packages/$pkg"
               rm -rf coverage
-              dart test --coverage=coverage/raw
+              # -x pinned-live: gate on REGRESSIONS. The pinned-live suite asserts fixes
+              # for defects that are still live, so it fails by design; it is RUN AND
+              # REPORTED in the next step, never skipped. A gate that can never pass is a
+              # gate that gets routed around (Sakichi Vision #20).
+              dart test -x pinned-live --coverage=coverage/raw
               dart pub global run coverage:format_coverage \
                 --packages=.dart_tool/package_config.json \
                 --report-on=lib \

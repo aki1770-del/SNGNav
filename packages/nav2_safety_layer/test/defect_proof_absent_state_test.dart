@@ -1,3 +1,4 @@
+@Tags(['pinned-live'])
 /// Prove-it-fails-first evidence for the four sites where this package renders
 /// the SAFE answer from a message it could not read.
 ///
