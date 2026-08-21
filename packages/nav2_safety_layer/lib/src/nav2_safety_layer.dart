@@ -132,13 +132,15 @@ class Nav2SafetyLayer {
 
   void _announceDrop(AlertSeverity severity, String action, String where) {
     if (_suppressedController.isClosed) return;
-    _suppressedController.add(Nav2SuppressedAdvisory(
-      severity: severity,
-      action: action,
-      where: where,
-      at: DateTime.now(),
-      outcome: LoomFitOutcome.droppedByThrottle,
-    ));
+    _suppressedController.add(
+      Nav2SuppressedAdvisory(
+        severity: severity,
+        action: action,
+        where: where,
+        at: DateTime.now(),
+        outcome: LoomFitOutcome.droppedByThrottle,
+      ),
+    );
   }
 
   /// Dispose the layer and close the advisory stream. Idempotent.

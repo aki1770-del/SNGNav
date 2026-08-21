@@ -30,32 +30,54 @@ const _actions = [
 ];
 
 void main() {
-  group('a well-formed obstacle event must not claim anything about the surface', () {
-    for (final profile in DriverProfile.values) {
-      for (final a in _actions) {
-        test('${a.name} / ${profile.name} invents no weather', () {
-          final e = Nav2SafetyMapper.toAdvisory(
+  group(
+    'a well-formed obstacle event must not claim anything about the surface',
+    () {
+      for (final profile in DriverProfile.values) {
+        for (final a in _actions) {
+          test('${a.name} / ${profile.name} invents no weather', () {
+            final e = Nav2SafetyMapper.toAdvisory(
               Nav2CollisionMonitorState(actionType: a, polygonName: 'ZONE_A'),
-              profile);
-          expect(e, isNotNull);
-          final text = e!.action;
-          expect(text, isNot(contains('凍結')),
-              reason: 'nav2 reported an obstacle, not ice.');
-          expect(text, isNot(contains('薄氷')),
-              reason: 'no thin-ice claim from a message with no surface data.');
-          expect(text, isNot(contains('0°C')),
-              reason: 'no temperature claim from a message with no temperature.');
-        });
+              profile,
+            );
+            expect(e, isNotNull);
+            final text = e!.action;
+            expect(
+              text,
+              isNot(contains('凍結')),
+              reason: 'nav2 reported an obstacle, not ice.',
+            );
+            expect(
+              text,
+              isNot(contains('薄氷')),
+              reason: 'no thin-ice claim from a message with no surface data.',
+            );
+            expect(
+              text,
+              isNot(contains('0°C')),
+              reason:
+                  'no temperature claim from a message with no temperature.',
+            );
+          });
 
-        test('${a.name} / ${profile.name} does not tell her to avoid braking', () {
-          final e = Nav2SafetyMapper.toAdvisory(
-              Nav2CollisionMonitorState(actionType: a, polygonName: 'ZONE_A'),
-              profile);
-          expect(e!.action, isNot(contains('急ブレーキは避けて')),
-              reason: 'the monitor is constraining motion; instructing her to '
-                  'avoid hard braking inverts what nav2 asked for.');
-        });
+          test(
+            '${a.name} / ${profile.name} does not tell her to avoid braking',
+            () {
+              final e = Nav2SafetyMapper.toAdvisory(
+                Nav2CollisionMonitorState(actionType: a, polygonName: 'ZONE_A'),
+                profile,
+              );
+              expect(
+                e!.action,
+                isNot(contains('急ブレーキは避けて')),
+                reason:
+                    'the monitor is constraining motion; instructing her to '
+                    'avoid hard braking inverts what nav2 asked for.',
+              );
+            },
+          );
+        }
       }
-    }
-  });
+    },
+  );
 }
