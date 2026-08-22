@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.5.2
+
+### Backport: an absent distance was rendered as a measured zero
+
+Up to and including 0.5.1, **both engines could hand you a route summary that
+was never in the routing response**. When the server omitted the distance or
+duration we substituted `0` and rendered **`"0.0 km, 0 min"`** — a figure the
+server never sent, and the most benign answer available, on a road the driver
+is still on.
+
+* `OsrmRoutingEngine`: an absent `routes[0].distance` or `.duration`.
+* `ValhallaRoutingEngine`: an absent `summary.length` / `summary.time`.
+
+Both now throw `RoutingException`, exactly as an absent `routes` / `trip` /
+`legs` already did in the same functions.
+
+**Why a silent zero is worse than an error.** `0.0 km` leaves the result
+non-null, so a consumer's own `try/catch` fallback never fires and the
+narration speaks the fabricated figure. The throw restores a recovery path
+consumers have already written.
+
+**This is a backport.** The fix shipped first in 0.6.1. It is repeated here
+because 0.6.x is closed to anyone pinned `^0.5.x` — our own 0.6.0 nullable-
+position change is a compile break — and leaving a consumer on a defective
+0.5.1 while we take the corrected version for ourselves is not a fix, it is a
+fix for us. This release is pure runtime: no signature and no type changed.
+
+**Note on 0.5.1's provenance.** 0.5.1 was published without a corresponding
+commit in our repository. This 0.5.2 was reconstructed from the published
+0.5.1 archive on pub.dev, and its source is committed.
+
 ## 0.5.1
 
 Unlocatable maneuvers are skipped — never placed at Null Island.

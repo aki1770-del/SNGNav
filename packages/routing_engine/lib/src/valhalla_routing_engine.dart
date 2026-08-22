@@ -129,8 +129,18 @@ class ValhallaRoutingEngine implements RoutingEngine {
     }
 
     final summaryData = trip['summary'] as Map<String, dynamic>? ?? {};
-    final totalDistanceKm = (summaryData['length'] as num?)?.toDouble() ?? 0;
-    final totalTimeSeconds = (summaryData['time'] as num?)?.toDouble() ?? 0;
+    // Absence of a length is absence of a measurement — never a measured zero.
+    // Backported from 0.6.1 so consumers pinned to ^0.5.x receive it too.
+    final lengthRaw = summaryData['length'] as num?;
+    final timeRaw = summaryData['time'] as num?;
+    if (lengthRaw == null) {
+      throw RoutingException('Valhalla trip summary carried no length');
+    }
+    if (timeRaw == null) {
+      throw RoutingException('Valhalla trip summary carried no time');
+    }
+    final totalDistanceKm = lengthRaw.toDouble();
+    final totalTimeSeconds = timeRaw.toDouble();
 
     final allPoints = <LatLng>[];
     final allManeuvers = <RouteManeuver>[];

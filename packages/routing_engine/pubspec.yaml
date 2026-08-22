@@ -3,7 +3,7 @@ description: >-
   One routing API, multiple backends. Engine-agnostic interface with OSRM
   and Valhalla implementations. Switch between local and public servers
   without rewriting app logic.
-version: 0.5.1
+version: 0.5.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
