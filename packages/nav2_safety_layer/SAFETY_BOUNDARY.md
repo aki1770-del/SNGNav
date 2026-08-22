@@ -114,10 +114,10 @@ specification that exists).
 
 | ID | Class | Triggering condition | Insufficiency | Observable effect at the HMI | Correct disposition |
 |---|---|---|---|---|---|
-| **PI-01** | PI | Truncated/partial frame drops `action_type` | `(json['action_type'] as int?) ?? 0` → `DO_NOTHING` (`nav2_collision_msgs.dart:81`) | **Nothing.** Identical to a quiet monitor. | **fail-safe** — surface "unreadable". Currently **fail-silent**. |
-| **PI-02** | PI | nav2 adds a 6th action code; or a bridge emits an out-of-range value | `default: return doNothing` (`:55-56`), documented as a *"caution-add-only invariant"* | **Nothing**, on every deployment, forever, after an upstream change nobody here observes. | **fail-safe** — surface "unknown code N". Currently **fail-silent**. |
-| **PI-03** | PI | `detections` array absent from the detector message | `?? []` (`:110`) → `anyDetection == false` (`:117`) | **Nothing.** Reads as "no polygon detects anything". | **fail-safe** — surface "unreadable". Currently **fail-silent**. |
-| **PI-04** | PI | `polygons` and `detections` lengths disagree (5 vs 2) | `i < polygons.length && i < detections.length` (`:122`) silently truncates to `min()` | **Partial advisory** naming only the polygons that fit. Corruption is invisible. | **fail-safe** — a length mismatch is proof of corruption. Currently **fail-silent**. |
+| **PI-01** | PI | Truncated/partial frame drops `action_type` | ⚑ **REPAIRED 0.2.0 (2026-08-23)** — absent `action_type` → **`Nav2CollisionAction.unreadable`**, severity **critical**. The pre-repair text follows, kept per the D-07 convention because a consumer may have built on it: `(json['action_type'] as int?) ?? 0` → `DO_NOTHING` (`nav2_collision_msgs.dart:81`) | **Nothing.** Identical to a quiet monitor. | **fail-safe** — surface "unreadable". Currently **fail-silent**. |
+| **PI-02** | PI | nav2 adds a 6th action code; or a bridge emits an out-of-range value | ⚑ **REPAIRED 0.2.0 (2026-08-23)** — unknown code → **`unreadable`** (never `doNothing`), severity **critical**. The pre-repair text follows, kept per the D-07 convention because a consumer may have built on it: `default: return doNothing` (`:55-56`), documented as a *"caution-add-only invariant"* | **Nothing**, on every deployment, forever, after an upstream change nobody here observes. | **fail-safe** — surface "unknown code N". Currently **fail-silent**. |
+| **PI-03** | PI | `detections` array absent from the detector message | ⚑ **REPAIRED 0.2.0 (2026-08-23)** — absent `detections` → **`anyDetection == null`** (NOT KNOWN), `isReadable == false`. The pre-repair text follows, kept per the D-07 convention because a consumer may have built on it: `?? []` (`:110`) → `anyDetection == false` (`:117`) | **Nothing.** Reads as "no polygon detects anything". | **fail-safe** — surface "unreadable". Currently **fail-silent**. |
+| **PI-04** | PI | `polygons` and `detections` lengths disagree (5 vs 2) | ⚑ **REPAIRED 0.2.0 (2026-08-23)** — length mismatch → **unreadable state holding NO pairs**; `triggeredPolygons` empty. The pre-repair text follows, kept per the D-07 convention because a consumer may have built on it: `i < polygons.length && i < detections.length` (`:122`) silently truncates to `min()` | **Partial advisory** naming only the polygons that fit. Corruption is invisible. | **fail-safe** — a length mismatch is proof of corruption. Currently **fail-silent**. |
 | **PI-05** | PI | Any non-`DO_NOTHING` action | All four map to one `RoadSurfaceCondition.ice` advisory (`nav2_safety_mapper.dart:30-45`) | `STOP` and `LIMIT` produce **byte-identical** text (measured). Severity is unrecoverable downstream. | **fail-safe** — carry the action class. Currently **information-destroying**. |
 | **PI-06** | PI | Any non-`DO_NOTHING` action | Obstacle-in-polygon rendered as a **road-ice claim** the message never made | Driver is told 「凍結路面です。気温0°C以下で薄氷ができています…急ブレーキは避けてください」 — *frozen surface, thin ice, avoid sudden braking* — **in response to an obstacle**. | ⚑ **LIVE (published 0.1.3). CORRECTED IN WORKING TREE 2026-08-21** → `RoadSurfaceCondition.unknown`, 「路面状況不明。慎重に運転してください」. Found by WDA. **Not released — consumers still receive the ice text.** |
 | **PI-06-R** | PI | Any non-`DO_NOTHING` action, **after** the in-tree correction | `RoadSurfaceCondition` has **no obstacle member**; the honest value available says the *surface* is unknown | Driver is told the **surface** is unknown when the actual event was **an object in a collision polygon**. Honest, still wrong in domain. | **Residual, recorded not closed.** The vocabulary gap belongs to `navigation_safety_core`, not to this package. |
@@ -125,10 +125,11 @@ specification that exists).
 | **D-07** | **D** | Advisory burst consumes the throttle cap, then a nav2 `STOP` arrives | ⚑ **REPAIRED 2026-08-21 — the row below is the pre-repair text, kept because a consumer may have built on it.** It read: *"Severity is **hardcoded** `AlertSeverity.warning` (`nav2_safety_layer.dart:47`, `:59`); the core critical-bypass is never reached."* `nav2_safety_layer.dart:84` now passes `severityOf(state.actionType)`, mapping `stop`/`approach` to `AlertSeverity.critical`, which takes the throttle's non-negotiable critical-bypass (`alert_density_throttle.dart:18`). **A STOP after a cap-consuming burst reaches the driver.** Guarded by BI-9, which was INVERTED from a pin into a live regression guard the same day. **Caught by `scripts/stale-pin-check.py`, not by the pen that amended AoU-5 an hour earlier and missed this row.** |
 | **D-08** | **D** | Any monitor-path advisory | Source comment claims `polygon_name` is relayed verbatim into advisory `areaDescription`; `toAdvisory` never reads `state.polygonName`, and **`areaDescription` does not exist** in resolved `navigation_safety_core` 0.11.1 | Polygon name absent from monitor-path advisories, contrary to the package's own documented Article 17 (β) discipline. | **README corrected in working tree 2026-08-21** (path-specific). ⚑ **The source comment at `nav2_safety_mapper.dart:7-10` is UNCORRECTED and still names a field that does not exist.** |
 
-**Eight insufficiency rows (PI-01..PI-07, plus the PI-06-R residual) and two defects.** The
+**Eight insufficiency rows (PI-01..PI-07, plus the PI-06-R residual) and two defects.** ⚑ **PI-01..PI-04 are REPAIRED in 0.2.0 and are no longer open insufficiencies; four rows remain open (PI-05, PI-06, PI-06-R, PI-07).** The
 distinction is load-bearing and is not a matter of taste:
 
-- **PI-01, PI-02, PI-04 are enshrined by passing tests.** `test/nav2_safety_layer_test.dart:21`
+- ⚑ **REPAIRED 0.2.0.** The three tests named below were rewritten to assert the repair; the paragraph is kept because *how* the hazard was enshrined is the lesson. **The specification was the hazard, and the tests were the specification** — which is why fixing the code required rewriting seven tests that pinned the defect, including one asserting the whole channel stayed silent.
+- **PI-01, PI-02, PI-04 WERE enshrined by passing tests.** `test/nav2_safety_layer_test.dart:21`
   (*"fromInt degrades unknown to doNothing (caution-add-only)"*), `:37` (*"tolerates missing
   fields"*), `:56` (*"triggeredPolygons handles length mismatch defensively"*). The suite is
   **green on all twelve**. The implementation matches its specification exactly. **The
@@ -256,7 +257,7 @@ invalidating this file**. It locks:
 - **BI-1** — no transport dependency (`pubspec.yaml` deps == exactly `equatable`,
   `navigation_safety_core`). This is what makes §7's *"cannot actuate"* **provable** rather than
   asserted. Adding any ROS/HTTP/socket dependency fails the test and forces a boundary re-audit.
-- **BI-2..BI-5** — the four silence-on-unreadable-input insufficiencies (PI-01..PI-04), pinned
+- **BI-2..BI-5** — ⚑ REPAIRED 0.2.0. Formerly the four silence-on-unreadable-input insufficiencies (PI-01..PI-04), pinned
   as **known-unsafe current behaviour**, each naming its table row. If any is fixed, the test
   fails — deliberately — and the fixer must update this record in the same change.
 - **BI-6** — the severity collapse (PI-05): `STOP` and `LIMIT` advisory text byte-identical.
@@ -284,7 +285,7 @@ delivery decision (PDS/WDA), not a producer's.
   (four-actions-to-one mapping — PI-05)
 - `test/nav2_safety_layer_test.dart:21`, `:37`, `:56` — the three green tests that enshrine
   PI-02, PI-01, PI-04
-- `test/defect_proof_absent_state_test.dart` — prove-it-fails evidence, re-run 2026-08-21 by FSE: **+0 -4** (PI-01..PI-04 all still live)
+- `test/defect_proof_absent_state_test.dart` — ⚑ re-run 2026-08-23 after the 0.2.0 repair: **+4 -0** (PI-01..PI-04 all REPAIRED). It read **+0 -4** on 2026-08-21, and that failure WAS the evidence; the same four tests are now the guard that the collapse cannot return.
 - `test/well_formed_advisory_test.dart` — the concurrent seat's success-path suite (+48), which
   found PI-06 by feeding **well-formed** input where the four prove-it-fails tests fed only
   malformed input and were structurally incapable of catching it

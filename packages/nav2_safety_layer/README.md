@@ -1,5 +1,29 @@
 # nav2_safety_layer
 
+> ## ⚠️ READ THIS FIRST — what this package could not tell you, until 0.2.0
+>
+> Up to **0.1.4**, when the nav2 Collision Monitor sent this package a message it could not
+> read, it told you **nothing** — byte-identical to what a quiet, healthy monitor produces.
+> An absent `action_type`, an action code newer than this package, an absent `detections`
+> array, or a `polygons`/`detections` length mismatch each resolved to the benign answer.
+> **You could not distinguish "all clear" from "I could not read the message."**
+>
+> ⚑ **`0.1.0`, `0.1.2` and `0.1.3` shipped with no `SAFETY_BOUNDARY.md` and no defect-proof
+> test at all.** The disclosure landed in `0.1.4`, on 2026-08-21 — months after the defect.
+> If you installed before that, nothing in the package told you. That is on us, and it is
+> why this banner is on the README rather than in a file pub.dev does not render.
+>
+> **0.2.0 repairs all four** (PI-01..PI-04). Migrating:
+>
+> * `Nav2CollisionAction` gains `unreadable`. **A `switch` with `default:` still compiles**
+>   and will silently route it into that branch — check every one.
+> * `anyDetection` is now `bool?`. Use **`anyDetection == true`**, never `?? false`; `?? false`
+>   re-creates the defect in your code.
+>
+> **This package is still an advisory formatter, not a safety component.** It has no failure
+> channel of its own, and silence on `advisories` is still not an all-clear — the detector
+> path emits no advisory by construction (`SAFETY_BOUNDARY.md`, BI-8 / AoU-1).
+
 [![pub package](https://img.shields.io/pub/v/nav2_safety_layer.svg)](https://pub.dev/packages/nav2_safety_layer)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/aki1770-del/SNGNav/blob/main/LICENSE)
 
@@ -40,7 +64,7 @@ Four hops, with the driver as the terminal beneficiary.
 
 ```yaml
 dependencies:
-  nav2_safety_layer: ^0.1.3
+  nav2_safety_layer: ^0.2.0
   navigation_safety_core: ^0.11.0  # 0.10.x also supported (>=0.10.0 <0.12.0)
   # plus the ROS-Dart bridge of your choice
 ```
@@ -78,6 +102,10 @@ If the integrator already has its own throttle / dedup pipeline, the
 mapper can be used statically without a layer:
 
 ```dart
+// oracle:placeholders state
+// `state` is the Nav2CollisionMonitorState you decoded from your own rosbridge
+// / roslibdart subscription — the transport this package deliberately does not
+// own (SAFETY_BOUNDARY BI-1).
 final advisory = Nav2SafetyMapper.toAdvisory(
   state,
   DriverProfile.snowZoneExperienced,

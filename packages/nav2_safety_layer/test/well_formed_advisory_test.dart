@@ -19,7 +19,6 @@
 library;
 
 import 'package:nav2_safety_layer/nav2_safety_layer.dart';
-import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
 const _actions = [

@@ -5,7 +5,6 @@
 library;
 
 import 'package:nav2_safety_layer/nav2_safety_layer.dart';
-import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -18,9 +17,14 @@ void main() {
       expect(Nav2CollisionAction.fromInt(4), Nav2CollisionAction.limit);
     });
 
-    test('fromInt degrades unknown to doNothing (caution-add-only)', () {
-      expect(Nav2CollisionAction.fromInt(99), Nav2CollisionAction.doNothing);
-      expect(Nav2CollisionAction.fromInt(-1), Nav2CollisionAction.doNothing);
+    test('fromInt maps an unknown code to unreadable, never doNothing', () {
+      // REPAIRED 0.2.0 (was: "degrades unknown to doNothing (caution-add-only)").
+      // doNothing is a value nav2 actively publishes; synthesising it for a
+      // code we cannot read made a sixth upstream action arrive here as
+      // "the monitor wants nothing done".
+      expect(Nav2CollisionAction.fromInt(99), Nav2CollisionAction.unreadable);
+      expect(Nav2CollisionAction.fromInt(-1), Nav2CollisionAction.unreadable);
+      expect(Nav2CollisionAction.fromInt(99), isNot(Nav2CollisionAction.doNothing));
     });
   });
 
@@ -34,9 +38,14 @@ void main() {
       expect(s.polygonName, 'forward_safety');
     });
 
-    test('tolerates missing fields', () {
+    test('an absent action_type is unreadable, not doNothing', () {
+      // REPAIRED 0.2.0 (was: "tolerates missing fields"). Tolerating a missing
+      // action_type meant manufacturing DO_NOTHING for a frame the monitor may
+      // have published as STOP. polygon_name '' stays: an absent NAME is
+      // genuinely empty, and carries no safety meaning of its own.
       final s = Nav2CollisionMonitorState.fromJson(const <String, dynamic>{});
-      expect(s.actionType, Nav2CollisionAction.doNothing);
+      expect(s.actionType, Nav2CollisionAction.unreadable);
+      expect(s.actionType, isNot(Nav2CollisionAction.doNothing));
       expect(s.polygonName, '');
     });
   });

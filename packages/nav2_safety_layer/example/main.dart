@@ -11,7 +11,6 @@
 // the layer. Here we feed two synthetic events to show the loop.
 
 import 'package:nav2_safety_layer/nav2_safety_layer.dart';
-import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 Future<void> main() async {
   final layer = Nav2SafetyLayer(

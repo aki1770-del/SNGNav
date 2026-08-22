@@ -88,60 +88,66 @@ void main() {
 
   // ---------------------------------------------------------------------------
   // BI-2..BI-5 — the four silence-on-unreadable-input insufficiencies.
-  // Each is CURRENT SHIPPED BEHAVIOUR and each is UNSAFE. Pinned, not endorsed.
+  // ⚑ REPAIRED IN 0.2.0. PI-01..PI-04 were CURRENT SHIPPED BEHAVIOUR up to
+  // 0.1.4 and each was UNSAFE. These tests now pin the REPAIR, so the old
+  // behaviour cannot return unnoticed. The SOTIF table must be updated to
+  // move PI-01..PI-04 out of the open-insufficiency list.
   // ---------------------------------------------------------------------------
   group(
-    'BI-2..BI-5 — unreadable input renders as "no hazard" (KNOWN-UNSAFE, pinned)',
+    'BI-2..BI-5 — unreadable input no longer renders as "no hazard" (REPAIRED 0.2.0)',
     () {
-      test('PI-01: absent action_type still reads as DO_NOTHING', () {
+      test('PI-01 REPAIRED: absent action_type reads as unreadable', () {
         final s = Nav2CollisionMonitorState.fromJson({'polygon_name': 'front'});
         expect(
           s.actionType,
-          Nav2CollisionAction.doNothing,
+          Nav2CollisionAction.unreadable,
           reason:
-              'PI-01 pinned. A truncated frame is indistinguishable from a '
-              'quiet monitor. If this now differs, PI-01 is fixed — update the table.',
+              'PI-01 REPAIRED 0.2.0. A truncated frame is no longer '
+              'indistinguishable from a quiet monitor.',
         );
       });
 
-      test('PI-02: unknown action code still reads as DO_NOTHING', () {
+      test('PI-02 REPAIRED: unknown action code reads as unreadable', () {
         final s = Nav2CollisionMonitorState.fromJson({
           'action_type': 5,
           'polygon_name': 'front',
         });
         expect(
           s.actionType,
-          Nav2CollisionAction.doNothing,
+          Nav2CollisionAction.unreadable,
           reason:
-              'PI-02 pinned. See AoU-9: nav2 declares ActionType twice with '
-              'nothing linking the C++ enum to the .msg constants, so an upstream '
-              'addition arrives here silently.',
+              'PI-02 REPAIRED 0.2.0. AoU-9 still holds — nav2 declares '
+              'ActionType twice with nothing linking the C++ enum to the .msg '
+              'constants — but a sixth code now arrives as unreadable, loudly, '
+              'instead of as DO_NOTHING, silently.',
         );
       });
 
       test(
-        'PI-03: absent detections array still reports anyDetection == false',
+        'PI-03 REPAIRED: absent detections reports null, not false',
         () {
           final d = Nav2CollisionDetectorState.fromJson({
             'polygons': ['front', 'rear'],
           });
           expect(
             d.anyDetection,
-            isFalse,
+            isNull,
             reason:
-                'PI-03 pinned. "detections absent" is unreadable, and is '
-                'currently rendered as "nothing detected".',
+                'PI-03 REPAIRED 0.2.0. "detections absent" is unreadable; null '
+                'means NOT KNOWN and is no longer rendered as "nothing detected".',
           );
         },
       );
 
-      test('PI-04: length mismatch is still absorbed as a shorter loop', () {
+      test('PI-04 REPAIRED: length mismatch yields an unreadable state', () {
         final d = Nav2CollisionDetectorState.fromJson({
           'polygons': ['a', 'b', 'c', 'd', 'e'],
           'detections': [false, false],
         });
-        expect(d.polygons.length, 5);
-        expect(d.detections.length, 2);
+        // An unreadable state holds NO pairs — not a shorter, confident subset.
+        expect(d.isReadable, isFalse);
+        expect(d.polygons.length, d.detections.length);
+        expect(d.anyDetection, isNull);
         expect(
           d.triggeredPolygons,
           isEmpty,
@@ -153,7 +159,7 @@ void main() {
       });
 
       test(
-        'the whole channel is silent on all four — nothing reaches the HMI',
+        'the channel now SPEAKS on unreadable input — silence no longer hides it',
         () async {
           final layer = Nav2SafetyLayer(
             profile: DriverProfile.snowZoneExperienced,
@@ -179,14 +185,26 @@ void main() {
           ); // PI-03
           await settle();
 
+          // ⚑ REPAIRED 0.2.0. Up to 0.1.4 this asserted `isEmpty`: four distinct
+          // unreadable-message conditions produced exactly what a quiet, healthy
+          // monitor produces, and an integrator could not tell them apart.
+          //
+          // PI-01 and PI-02 now reach the HMI as unreadable → critical. PI-03 is
+          // a DETECTOR-path message and this layer emits no advisory for the
+          // detector path at all (see BI-8: the divergence is path-specific), so
+          // it contributes nothing here — its repair is observable on
+          // `anyDetection == null`, not on this stream.
+          //
+          // AoU-1 STILL HOLDS and is not discharged by this repair: silence on
+          // `advisories` is still not an all-clear, because the detector path
+          // remains silent by construction. The assumption survives; what
+          // changed is that the MONITOR path no longer contributes to it.
           expect(
             got,
-            isEmpty,
+            hasLength(2),
             reason:
-                'AoU-1 is the assumption this proves necessary: an integrator '
-                'CANNOT read silence on `advisories` as an all-clear. Four distinct '
-                'unreadable-message conditions produce exactly what a quiet, healthy '
-                'monitor produces.',
+                'PI-01 and PI-02 must now SPEAK. If this returns to isEmpty, '
+                'the unreadable→doNothing collapse has come back.',
           );
           await sub.cancel();
           await layer.dispose();

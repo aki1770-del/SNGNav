@@ -39,6 +39,14 @@
 ///   throttles the advisory stream the integrator's HMI surfaces.
 library;
 
+// DriverProfile is not an implementation detail: it is a REQUIRED constructor
+// parameter of Nav2SafetyLayer (src/nav2_safety_layer.dart:26) and an argument
+// of Nav2SafetyMapper.toAdvisory. Up to 0.1.4 this library exported everything
+// except the type a reader needs to call it — so the first example in our own
+// README did not compile for anyone who copied it (L35 snippet oracle,
+// 2026-08-23). AlertSeverity travels with it: severityOf returns one.
+export 'package:navigation_safety_core/navigation_safety_core.dart'
+    show DriverProfile, AlertSeverity, AlertDensityThrottle, AlertExplainer;
 export 'src/nav2_collision_msgs.dart';
 export 'src/nav2_safety_layer.dart';
 export 'src/nav2_safety_mapper.dart';

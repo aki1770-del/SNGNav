@@ -75,6 +75,13 @@ class Nav2SafetyLayer {
         return AlertSeverity.warning;
       case Nav2CollisionAction.doNothing:
         return AlertSeverity.info;
+      case Nav2CollisionAction.unreadable:
+        // An unreadable action_type may be a STOP we could not parse. The
+        // same bound this file already states for APPROACH applies with more
+        // force: a faithful relay CANNOT tier what it could not read, so it
+        // fails toward the severe reading — never toward `info`, which is the
+        // tier `doNothing` occupies.
+        return AlertSeverity.critical;
     }
   }
 

@@ -29,8 +29,18 @@
 # DIFFERENT pins across its 17 branches (exact on 15 incl. default `master`,
 # caret on the two oldest). HEAD resolves to `master` = the exact pin. Do not
 # "fix" this to `main` — that would read the stale caret and overstate our reach.
+#
+# LEDGER NOTE 2026-08-22 — jitreq-drunkenv2 RETIRED (row removed, not edited to
+# look live). `github:Jitreq/drunkenv2:pubspec.yaml` returned HTTP 404 on
+# 2026-08-14 (PDS) and again on 2026-08-22 (G8, twice). Two independent reads,
+# eight days apart, both 404: this is a gone repository, not a transient outage,
+# and the row was making G8 print a hard failure at every publish for a consumer
+# who cannot be served. It was the unit's FIRST verified external adoption
+# (routing_engine ^0.3.0, lockfile-proven, unsolicited) and its loss is recorded
+# here rather than quietly dropped. If it returns, re-add it by verification,
+# never from this note.
+#
 example-app	local:example/pubspec.yaml
-jitreq-drunkenv2	github:Jitreq/drunkenv2:pubspec.yaml
 sngnav-app	github:aki1770-del/sngnav-app:pubspec.yaml
 # Verified live by PDS 2026-08-10, re-verified from each manifest 2026-08-14.
 # Neither is a payer; both are weavers carrying full D4 dignity.

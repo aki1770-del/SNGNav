@@ -1,11 +1,19 @@
 # Tag definitions for nav2_safety_layer.
 #
-# `pinned-live` marks defect-proof tests that ASSERT THE FIX and therefore FAIL while the
-# defect is still live. They are the record that the defect exists. They are NOT skipped —
-# skipping makes a defect invisible, and an absent verdict reads exactly like a pass.
+# `pinned-live` marks defect-proof tests that ASSERT THE FIX. They are the record that a
+# defect existed and the guard that it cannot return. They are NOT skipped — skipping makes
+# a defect invisible, and an absent verdict reads exactly like a pass.
+#
+# ⚑ AS OF 0.2.0 ALL FOUR PASS. PI-01..PI-04 are REPAIRED. Up to 0.1.4 this file read "…and
+# therefore FAIL while the defect is still live… so the four live defects stay loud", which
+# was true then and is false now. The tag is retained deliberately: these tests are the
+# highest-value guards in the package, and the day one of them goes red again is the day the
+# unreadable→"no hazard" collapse has returned.
 #
 # CI gates on `dart test -x pinned-live` (regressions) and separately RUNS AND REPORTS
-# `dart test -t pinned-live` as a non-gating job, so the four live defects stay loud.
+# `dart test -t pinned-live`. That second job is no longer non-gating by necessity — it now
+# passes — but it stays a separate, named job so a future failure is unmissable rather than
+# buried in a suite total.
 # Sakichi Vision #20: a gate that can never pass is a gate that gets routed around.
 tags:
   pinned-live:

@@ -27,6 +27,17 @@ class Nav2SafetyMapper {
     switch (state.actionType) {
       case Nav2CollisionAction.doNothing:
         return null;
+      case Nav2CollisionAction.unreadable:
+        // NOT null. Returning null here would reproduce the defect this case
+        // exists to close: an unreadable frame producing silence, which the
+        // driver cannot distinguish from "the monitor wants nothing done".
+        // `.unknown` claims nothing about the surface — correct, because an
+        // unreadable message says nothing about anything — while still
+        // surfacing that the channel spoke and we could not read it.
+        return AlertExplainer.forConditionAndProfile(
+          RoadSurfaceCondition.unknown,
+          profile,
+        );
       case Nav2CollisionAction.stop:
       case Nav2CollisionAction.approach:
       case Nav2CollisionAction.limit:

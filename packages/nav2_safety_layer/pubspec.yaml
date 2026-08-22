@@ -3,7 +3,7 @@ description: >-
   Pure-Dart bridge composing navigation_safety_core primitives over
   ROS 2 Navigation Stack (nav2) Collision Monitor / Detector state
   messages.
-version: 0.1.4
+version: 0.2.0
 
 # Default publish target = https://pub.dev (no `publish_to:` line).
 

@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.2.0 — 2026-08-23 — unreadable input stops reading as "no hazard"
+
+**BREAKING.** Two API changes, both deliberate, both on the safety path.
+
+### What 0.1.4 and earlier did, in plain words
+
+When the nav2 Collision Monitor sent this package a message it could not read, the package
+told the driver **nothing** — the same thing it does when the monitor is quiet and healthy.
+Four distinct unreadable-message conditions produced silence at the HMI, and an integrator
+could not tell them apart from an all-clear.
+
+| was | now |
+|---|---|
+| absent `action_type` → `DO_NOTHING` | → `Nav2CollisionAction.unreadable`, severity **critical** |
+| unknown action code (nav2 adds a 6th) → `DO_NOTHING` | → `unreadable`, **critical** |
+| absent `detections` → `anyDetection == false` | → `anyDetection == null` (**NOT KNOWN**) |
+| `polygons`/`detections` length mismatch → silently truncated to `min(len)` | → unreadable state holding **no pairs** |
+
+`unreadable` **fails toward the severe reading** — the bound this package already stated for
+`APPROACH`: *a faithful relay cannot tier what it could not read.* An unreadable
+`action_type` may be a `STOP` we failed to parse, so it must not land in the tier
+`doNothing` occupies.
+
+### Breaking changes
+
+* **`Nav2CollisionAction` gains `unreadable`.** Exhaustive `switch` statements over this
+  enum will no longer compile until they handle it — **if your switch is exhaustive.**
+  ⚑ **A `switch` with a `default:` clause still compiles, and will route `unreadable` into
+  whatever branch `default:` leads to.** If that branch is your benign one, this release
+  changes nothing for you and the defect survives in your code with a green build. Our own
+  pre-0.2.0 documentation taught exactly that pattern (*"caution-add-only invariant"*), so
+  this warning is owed. **Check every `switch` over `Nav2CollisionAction` for a `default:`.**
+* **`Nav2CollisionDetectorState.anyDetection` is now `bool?`** — `null` when the message was
+  unreadable. `null` means NOT KNOWN; it never means "nothing detected". Unlike the enum
+  there is no escape hatch: every read site must be visited. **Migrate with
+  `anyDetection == true`, NOT `anyDetection ?? false`** — `?? false` re-creates the exact
+  defect this release closes, in your code, in one keystroke.
+* New field `Nav2CollisionDetectorState.isReadable`.
+
+### Why this was shipped broken, recorded rather than hidden
+
+The four defects were **documented, tested and deliberately red** since the package shipped:
+`test/defect_proof_absent_state_test.dart` asserted the fix and failed, `SAFETY_BOUNDARY.md`
+tabulated them as PI-01..PI-04, and `dart_test.yaml` explained that a `pinned-live` failure
+*is* the record that a defect exists. The honesty machinery worked; the repair had not been
+done.
+
+⚑ **Fixing the code required rewriting seven passing tests that pinned the defect** — among
+them one named *"fromInt degrades unknown to doNothing (caution-add-only)"* and one
+asserting *"the whole channel is silent on all four — nothing reaches the HMI"*. **The
+specification was the hazard, and the tests were the specification.** That is the shape of a
+SOTIF insufficiency, and it is why a green suite proved nothing here.
+
+### Not discharged by this release
+
+**AoU-1 still holds.** Silence on `advisories` is still not an all-clear: the **detector
+path emits no advisory at all** by construction (see BI-8 — the divergence is path-specific).
+PI-03's repair is observable on `anyDetection == null`, not on the advisory stream. What
+changed is that the **monitor** path no longer contributes to that silence.
+
+**PI-05, PI-06, PI-06-R and PI-07 remain open**, unchanged and still tabulated.
+
 ## 0.1.4 — 2026-08-21 — an obstacle is no longer announced as road ice
 
 **What 0.1.3 did, in plain words.** When the nav2 Collision Monitor reported that an
