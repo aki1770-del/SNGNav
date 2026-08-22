@@ -25,6 +25,13 @@
 /// ```
 library;
 
+// latlong2's LatLng is not an implementation detail: RouteRequest.origin,
+// RouteRequest.destination, RouteResult.shape and RouteManeuver.position are
+// all typed LatLng, so a reader cannot construct a request without it. Up to
+// 0.6.0 this library exported everything EXCEPT the one type its own first
+// doc snippet uses — so the first example on our pub.dev page did not compile
+// for anyone who copied it (L35 snippet oracle, 2026-08-22).
+export 'package:latlong2/latlong.dart' show LatLng;
 export 'src/exceptions.dart';
 // NOTE: src/maneuver_localizer.dart is deliberately NOT exported — it is an
 // internal product piece (§9: no pub.dev-facing API without edge-developer

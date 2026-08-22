@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.6.1
+
+### Safety defect in 0.6.0 and earlier — an absent distance was rendered as a measured zero
+
+Up to and including 0.6.0, **both engines could hand you a route summary that
+was never in the routing response**. When the server omitted the distance or
+duration, we substituted `0` and rendered it to the driver as
+**`"0.0 km, 0 min"`** — a figure the server never sent, and the most benign
+answer available, on a road she is still driving.
+
+* `OsrmRoutingEngine`: an absent `routes[0].distance` or `.duration`.
+* `ValhallaRoutingEngine`: an absent `trip.summary` object entirely, or an
+  absent `summary.length` / `summary.time` inside it.
+
+Both now throw `RoutingException`, exactly as an absent `routes` / `trip` /
+`legs` already did in the same functions — the contract this package has
+enforced for maneuver *positions* since 0.5.0 ("never Null Island"), finally
+reaching the two numbers the driver actually hears.
+
+**Why this matters more than a wrong number.** A silent `0.0 km` sets
+`_route != null`, so a consumer's own `try/catch` fallback never fires and the
+narration speaks the fabricated figure. We measured this in a real consumer's
+source: the zero *suppressed a recovery path the developer had already
+written*. The throw restores it.
+
+**If you catch `RoutingException` you already handle this.** No signature and
+no type changed; `calculateRoute` has always thrown on network errors, non-2xx
+status and empty `routes`.
+
+### Also in this release
+
+* **`LatLng` is now exported.** `RouteRequest.origin`, `.destination`,
+  `RouteResult.shape` and `RouteManeuver.position` are all typed `LatLng`, but
+  up to 0.6.0 this library exported everything except that type — so the first
+  example on our own pub.dev page did not compile for anyone who copied it.
+* README maneuver snippet declares its reader-supplied symbols.
+
+### reach-disposition
+
+* **`reach-disposition(paila-offline-gps)`: BACKPORTED to 0.5.2.** This
+  consumer pins `^0.5.1`, which our own 0.6.0 nullable-position break walls out
+  of 0.6.x. The fix above is pure runtime and backports without touching their
+  compile, so it ships to them as **0.5.2** rather than leaving them on a
+  defective 0.5.1 while we take the correct version for ourselves.
+* **`reach-disposition(sngnav-app)`: first-party**, pinned `^0.5.0`; the app's
+  own dependency currency is tracked separately (12 packages behind as of
+  2026-08-22) and is not gated on this release.
+* **`reach-disposition(example-app)`: first-party example**, pinned `^0.5.0`;
+  moves with the app.
+* **`reach-disposition(jitreq-drunkenv2)`: GONE.** `Jitreq/drunkenv2/pubspec.yaml`
+  returns HTTP 404 (verified 2026-08-22). Recorded as retired rather than left
+  reading as a transient outage.
+
 ## 0.6.0
 
 ### Safety defect in 0.5.0 and earlier — please read

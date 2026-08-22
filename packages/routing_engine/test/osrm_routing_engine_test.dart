@@ -609,4 +609,80 @@ void main() {
       await engine.dispose();
     });
   });
+
+  group('OsrmRoutingEngine — absent summary is not a measured zero', () {
+    // Absence of a distance is absence of a measurement — never "0.0 km, 0 min".
+    // The same contract this file already enforces for maneuver positions
+    // ("missing maneuver location yields NO position (never 0,0)") had never
+    // been extended to the two numbers the driver actually hears. A response
+    // that omits `distance`/`duration` is malformed exactly as one that omits
+    // `routes` is malformed — and that case, twelve lines earlier in the same
+    // function, already throws.
+    MockClient osrmWithoutSummary(List<String> omit) => MockClient(
+      (_) async {
+        final route = <String, dynamic>{
+          'geometry': '_p~iF~ps|U',
+          'distance': 100,
+          'duration': 10,
+          'legs': [
+            {
+              'steps': [
+                {
+                  'name': 'Test',
+                  'distance': 100,
+                  'duration': 10,
+                  'maneuver': {'type': 'depart', 'location': [136.9, 35.1]},
+                },
+              ],
+            },
+          ],
+        };
+        for (final k in omit) {
+          route.remove(k);
+        }
+        return http.Response(
+          jsonEncode({'code': 'Ok', 'routes': [route]}),
+          200,
+        );
+      },
+    );
+
+    test('absent distance is refused, never rendered as 0.0 km', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithoutSummary(['distance']),
+      );
+      await expectLater(
+        () => engine.calculateRoute(_request),
+        throwsA(isA<RoutingException>()),
+      );
+      await engine.dispose();
+    });
+
+    test('absent duration is refused, never rendered as 0 min', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithoutSummary(['duration']),
+      );
+      await expectLater(
+        () => engine.calculateRoute(_request),
+        throwsA(isA<RoutingException>()),
+      );
+      await engine.dispose();
+    });
+
+    // The loom refuses the FALSE thread, not the whole cloth: a complete
+    // summary must still pass untouched.
+    test('a present summary is unaffected', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: osrmWithoutSummary(const []),
+      );
+      final result = await engine.calculateRoute(_request);
+      expect(result.totalDistanceKm, closeTo(0.1, 0.001));
+      expect(result.totalTimeSeconds, closeTo(10, 0.001));
+      await engine.dispose();
+    });
+  });
+
 }

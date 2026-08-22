@@ -666,4 +666,80 @@ void main() {
       await engine.dispose();
     });
   });
+
+  group('ValhallaRoutingEngine — absent summary is not a measured zero', () {
+    // Absence of a length is absence of a measurement — never "0.0 km, 0 min".
+    // This file already enforces that contract for maneuver positions
+    // ("missing begin_shape_index yields NO position"); it had never been
+    // carried across to the two numbers the driver actually hears. Worse than
+    // the OSRM twin: an entirely absent `summary` object coalesced to `{}`,
+    // so a response carrying no summary at all produced a zero-length route —
+    // while a missing `trip` and missing `legs` both throw, two lines above.
+    MockClient valhallaWithoutSummary({bool dropSummary = false, List<String> omit = const []}) =>
+        MockClient((_) async {
+      final summary = <String, dynamic>{'length': 1.0, 'time': 60};
+      for (final k in omit) {
+        summary.remove(k);
+      }
+      final trip = <String, dynamic>{
+        'legs': [
+          {
+            'shape': 'o}@o}@o}@o}@',
+            'maneuvers': <Map<String, dynamic>>[],
+          },
+        ],
+      };
+      if (!dropSummary) trip['summary'] = summary;
+      return http.Response(jsonEncode({'trip': trip}), 200);
+    });
+
+    test('absent length is refused, never rendered as 0.0 km', () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaWithoutSummary(omit: ['length']),
+      );
+      await expectLater(
+        () => engine.calculateRoute(_request),
+        throwsA(isA<RoutingException>()),
+      );
+      await engine.dispose();
+    });
+
+    test('absent time is refused, never rendered as 0 min', () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaWithoutSummary(omit: ['time']),
+      );
+      await expectLater(
+        () => engine.calculateRoute(_request),
+        throwsA(isA<RoutingException>()),
+      );
+      await engine.dispose();
+    });
+
+    test('an entirely absent summary object is refused', () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaWithoutSummary(dropSummary: true),
+      );
+      await expectLater(
+        () => engine.calculateRoute(_request),
+        throwsA(isA<RoutingException>()),
+      );
+      await engine.dispose();
+    });
+
+    // The loom refuses the FALSE thread, not the whole cloth.
+    test('a present summary is unaffected', () async {
+      final engine = ValhallaRoutingEngine(
+        baseUrl: 'http://test',
+        client: valhallaWithoutSummary(),
+      );
+      final result = await engine.calculateRoute(_request);
+      expect(result.totalDistanceKm, closeTo(1.0, 0.001));
+      expect(result.totalTimeSeconds, closeTo(60, 0.001));
+      await engine.dispose();
+    });
+  });
+
 }

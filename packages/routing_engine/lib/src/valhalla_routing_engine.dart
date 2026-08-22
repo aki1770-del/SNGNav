@@ -128,9 +128,26 @@ class ValhallaRoutingEngine implements RoutingEngine {
       throw RoutingException('Invalid response: no route legs');
     }
 
-    final summaryData = trip['summary'] as Map<String, dynamic>? ?? {};
-    final totalDistanceKm = (summaryData['length'] as num?)?.toDouble() ?? 0;
-    final totalTimeSeconds = (summaryData['time'] as num?)?.toDouble() ?? 0;
+    // Absence of a length is absence of a measurement — never a measured zero.
+    // Up to 0.6.0 an absent `summary` object coalesced to `{}` and its missing
+    // `length`/`time` to 0, rendering "0.0 km, 0 min" to the driver for figures
+    // Valhalla never sent — the most benign answer available, on a road she is
+    // still driving. A response missing these is malformed exactly as one
+    // missing `trip` or `legs` is malformed, and both already throw above.
+    final summaryData = trip['summary'] as Map<String, dynamic>?;
+    if (summaryData == null) {
+      throw RoutingException('Invalid response: missing "summary" field');
+    }
+    final lengthRaw = summaryData['length'] as num?;
+    final timeRaw = summaryData['time'] as num?;
+    if (lengthRaw == null) {
+      throw RoutingException('Valhalla trip summary carried no length');
+    }
+    if (timeRaw == null) {
+      throw RoutingException('Valhalla trip summary carried no time');
+    }
+    final totalDistanceKm = lengthRaw.toDouble();
+    final totalTimeSeconds = timeRaw.toDouble();
 
     final allPoints = <LatLng>[];
     final allManeuvers = <RouteManeuver>[];

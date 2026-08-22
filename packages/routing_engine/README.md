@@ -190,6 +190,10 @@ polyline (Valhalla). It never means "the origin", and it is never
 `LatLng(0, 0)`.
 
 ```dart
+// oracle:placeholders result, map, speak
+// `result` is the RouteResult from calculateRoute above; `map` is your own map
+// widget and `speak` your own TTS — the two things this package deliberately
+// does not own. Declared so the oracle checks the symbols we DO ship.
 for (final m in result.maneuvers) {
   if (m.hasPosition) {
     map.addMarker(m.position!);

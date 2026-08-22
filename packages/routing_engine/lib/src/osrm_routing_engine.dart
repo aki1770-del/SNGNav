@@ -100,8 +100,22 @@ class OsrmRoutingEngine implements RoutingEngine {
 
     final route = routes[0] as Map<String, dynamic>;
     final geometry = route['geometry'] as String? ?? '';
-    final distanceMeters = (route['distance'] as num?)?.toDouble() ?? 0;
-    final durationSeconds = (route['duration'] as num?)?.toDouble() ?? 0;
+    // Absence of a distance is absence of a measurement — never a measured
+    // zero. Up to 0.6.0 an omitted `distance`/`duration` coalesced to 0 and
+    // was rendered to the driver as "0.0 km, 0 min": a figure OSRM never sent,
+    // and the most benign answer available, on a road she is still driving.
+    // A response missing these is malformed exactly as one missing `routes`
+    // is malformed — and that case already throws, twelve lines above.
+    final distanceRaw = route['distance'] as num?;
+    final durationRaw = route['duration'] as num?;
+    if (distanceRaw == null) {
+      throw RoutingException('OSRM route carried no distance');
+    }
+    if (durationRaw == null) {
+      throw RoutingException('OSRM route carried no duration');
+    }
+    final distanceMeters = distanceRaw.toDouble();
+    final durationSeconds = durationRaw.toDouble();
 
     final shape = geometry.isNotEmpty ? _decodePolyline5(geometry) : <LatLng>[];
 
