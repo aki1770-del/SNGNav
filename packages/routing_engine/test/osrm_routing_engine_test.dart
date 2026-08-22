@@ -466,7 +466,11 @@ void main() {
       await engine.dispose();
     });
 
-    test('missing maneuver location defaults to (0, 0)', () async {
+    // Absence of a location is absence of a maneuver position — never Null
+    // Island. Up to 0.5.0 the case below silently produced LatLng(0, 0), a
+    // real coordinate in the Gulf of Guinea, presented as the maneuver's
+    // place. 0.5.1 skips the unlocatable maneuver instead.
+    test('missing maneuver location SKIPS the maneuver (never 0,0)', () async {
       final engine = OsrmRoutingEngine(
         baseUrl: 'http://test',
         client: MockClient(
@@ -499,7 +503,100 @@ void main() {
       );
 
       final result = await engine.calculateRoute(_request);
-      expect(result.maneuvers.first.position, const LatLng(0, 0));
+
+      // The unlocatable maneuver is dropped, not given a fabricated position.
+      expect(result.maneuvers, isEmpty);
+      expect(
+        result.maneuvers.map((m) => m.position),
+        isNot(contains(const LatLng(0, 0))),
+      );
+      // Route-level fields are unaffected by the skip.
+      expect(result.totalDistanceKm, closeTo(0.1, 0.001));
+      expect(result.totalTimeSeconds, closeTo(10, 0.001));
+      expect(result.shape, isNotEmpty);
+
+      await engine.dispose();
+    });
+
+    test(
+      'one located and one unlocated maneuver yields only the located one',
+      () async {
+        final engine = OsrmRoutingEngine(
+          baseUrl: 'http://test',
+          client: _osrmClient(
+            steps: [
+              // Unlocated: no 'location' in the maneuver.
+              {
+                'name': 'Ghost',
+                'distance': 50,
+                'duration': 5,
+                'maneuver': {'type': 'depart'},
+              },
+              // Located: real coordinate.
+              _step(name: 'Real', type: 'arrive', location: [136.88, 35.17]),
+            ],
+          ),
+        );
+
+        final result = await engine.calculateRoute(_request);
+
+        expect(result.maneuvers, hasLength(1));
+        expect(result.maneuvers.single.position, const LatLng(35.17, 136.88));
+        // NO maneuver sits at Null Island.
+        expect(
+          result.maneuvers.map((m) => m.position),
+          isNot(contains(const LatLng(0, 0))),
+        );
+
+        await engine.dispose();
+      },
+    );
+
+    test('short maneuver location ([lon] only) skips the maneuver', () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: _osrmClient(
+          steps: [
+            {
+              'name': 'Test',
+              'distance': 100,
+              'duration': 10,
+              'maneuver': {
+                'type': 'depart',
+                'location': [140.1],
+              },
+            },
+          ],
+        ),
+      );
+
+      final result = await engine.calculateRoute(_request);
+      expect(result.maneuvers, isEmpty);
+
+      await engine.dispose();
+    });
+
+    test('non-numeric maneuver location skips the maneuver (never throws)',
+        () async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: _osrmClient(
+          steps: [
+            {
+              'name': 'Test',
+              'distance': 100,
+              'duration': 10,
+              'maneuver': {
+                'type': 'depart',
+                'location': ['nan', null],
+              },
+            },
+          ],
+        ),
+      );
+
+      final result = await engine.calculateRoute(_request);
+      expect(result.maneuvers, isEmpty);
 
       await engine.dispose();
     });
