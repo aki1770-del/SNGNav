@@ -33,7 +33,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'app_support_dir.dart';
 
 /// One destination AREA the driver chose: a geographic POINT plus a readable
 /// place LABEL she types. It is a PLACE — never a person, never an arrival or
@@ -152,7 +152,9 @@ class SavedPlaceStore {
 /// `sngnav/saved_place.json`. This is the ONLY place `path_provider`/`path` is
 /// used; the rest of the store is pure `dart:io`.
 Future<SavedPlaceStore> openDefaultSavedPlaceStore() async {
-  final appDir = await getApplicationSupportDirectory();
-  final file = File(p.join(appDir.path, 'sngnav', 'saved_place.json'));
+  // Same platform absence as main(): see app_support_dir.dart.
+  final appSupport = await resolveAppSupportDir();
+  final file =
+      File(p.join(appSupport.directory.path, 'sngnav', 'saved_place.json'));
   return SavedPlaceStore(file);
 }

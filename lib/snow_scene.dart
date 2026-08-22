@@ -43,7 +43,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:map_viewport_bloc/map_viewport_bloc.dart';
 import 'package:offline_tiles/offline_tiles.dart' as offline_tiles;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'services/app_support_dir.dart';
 import 'package:snow_rendering/snow_rendering.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -150,8 +150,12 @@ Future<void> main() async {
 
   // Open persistent consent database.
   // Data survives app restart — consent state is durable across sessions.
-  final appDir = await getApplicationSupportDirectory();
-  final dbDir = Directory(p.join(appDir.path, 'sngnav'));
+  // path_provider has no implementation on the Toyota Connected ivi-homescreen
+  // embedder (measured 2026-08-23). Calling it unguarded here killed main()
+  // before the first frame. resolveAppSupportDir falls back to XDG, which is
+  // durable — the consent DB below promises data survives restart.
+  final appSupport = await resolveAppSupportDir();
+  final dbDir = Directory(p.join(appSupport.directory.path, 'sngnav'));
   if (!dbDir.existsSync()) {
     dbDir.createSync(recursive: true);
   }
