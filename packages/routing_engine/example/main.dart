@@ -8,15 +8,21 @@ void main() async {
     destination: LatLng(34.9551, 137.1771),
   );
 
-  if (await engine.isAvailable()) {
-    final route = await engine.calculateRoute(request);
-    print(route.summary);
-    print('distance: ${route.totalDistanceKm}km');
-    print('maneuvers: ${route.maneuvers.length}');
-    print('engine: ${route.engineInfo.name}');
+  try {
+    if (await engine.isAvailable()) {
+      final route = await engine.calculateRoute(request);
+      print(route.summary);
+      print('distance: ${route.totalDistanceKm}km');
+      print('maneuvers: ${route.maneuvers.length}');
+      print('engine: ${route.engineInfo.name}');
+    }
+  } on RoutingException catch (e) {
+    // An absent distance is an absent measurement, never a measured zero.
+    // Handle it here rather than letting a fabricated 0.0 km reach a screen.
+    print('no route: ${e.message}');
+  } finally {
+    await engine.dispose();
   }
-
-  await engine.dispose();
 }
 
 class ExampleRoutingEngine implements RoutingEngine {
