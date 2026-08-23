@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.6.1
+
+**The 500-metre accuracy cap was never 500 metres except at the Equator, and the
+further north you drove the earlier dead reckoning gave up on you.**
+
+**Who is affected.** Anyone reading `isAccuracyExceeded`, or catching
+`DeadReckoningAccuracyExceededException`, above or below roughly 35 degrees
+latitude. Everyone else sees no change. No API is added or removed and nothing
+throws that did not throw before — **the threshold simply moves to where the
+documentation always said it was.**
+
+### What was wrong
+
+`isAccuracyExceeded` compared the position covariance trace against a constant:
+
+```dart
+// 0.6.0 and earlier
+bool get isAccuracyExceeded => _p[0][0] + _p[1][1] > maxCovarianceThreshold;
+```
+
+`_p[0][0]` and `_p[1][1]` are variances in **degrees squared** — of latitude and
+of longitude. A degree of longitude is not a fixed distance: it is about 111 km
+at the Equator and shrinks by `cos(latitude)`. So a fixed threshold in degrees
+squared is a **different distance at every latitude**, and it tightens as you go
+north. The package documented, and the app displayed, a cap of **500 m**. What
+the code enforced was 500 m only where `cos(latitude) = 1`.
+
+**Akita in February is at 39.7 N.** `cos(39.7 deg) = 0.769`. The cap there fired
+meaningfully earlier than the number we printed — dead reckoning withdrawing
+while a driver was still inside the accuracy she had been promised, in the exact
+conditions the withdrawal exists to survive.
+
+### What it is now
+
+```dart
+/// The safety cap, in METRES — the number the package documents and the app
+/// displays. Compared against [accuracyMetres], which is latitude-correct.
+static const maxAccuracyMetres = 500.0;
+
+bool get isAccuracyExceeded => accuracyMetres > maxAccuracyMetres;
+```
+
+`accuracyMetres` already applied the `cos(latitude)` weighting to the longitude
+term. The cap now uses it, so **500 m means 500 m at every latitude.**
+
+`maxCovarianceThreshold` is kept and `@Deprecated`; it is removed in 1.0.0.
+
+### How this is proven, and it is proven the awkward way round
+
+`test/accuracy_cap_latitude_test.dart` was written **before** the fix and run
+against the old code, where **4 of its 5 cases failed**. It asserts two things:
+the cap never fires before the documented distance, and the stop radius is the
+same at the Equator, Nagoya, Akita, Sapporo and Tromso — spread under one metre.
+A test that had passed against the defect would have proven nothing. 122 tests
+pass.
+
+### ⚑ Why this is 0.6.1 and not 0.6.0
+
+The fix was committed to the working tree while `pubspec.yaml` still read
+`version: 0.6.0` — **a version already published, immutably, with the old cap in
+it.** For a period, two different behaviours of a safety threshold answered to
+one version string, and this changelog had no entry for the change at all. That
+is recorded here rather than quietly renumbered, because a reader comparing
+`0.6.0` on pub.dev against `0.6.0` in our git history would otherwise find two
+different safety caps and no explanation.
+
 ## 0.6.0
 
 **Two things the object told you that it could not support. Both are behaviour
