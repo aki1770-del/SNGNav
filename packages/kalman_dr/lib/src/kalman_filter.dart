@@ -135,7 +135,19 @@ class KalmanFilter {
 
   /// Maximum covariance before the filter declares "position lost".
   /// Corresponds to ~500m accuracy — matches DeadReckoningState.maxAccuracy.
-  static const maxCovarianceThreshold = 2e-5; // ~500m in degrees²
+  /// The safety cap, in METRES — the number the package documents and the app
+  /// displays. Compared against [accuracyMetres], which is latitude-correct.
+  static const maxAccuracyMetres = 500.0;
+
+  /// Legacy degrees² threshold.
+  ///
+  /// ⚑ DO NOT USE for a cap decision. It was calibrated at the equator and
+  /// compared against an UNWEIGHTED `P[0][0] + P[1][1]`, while real distance
+  /// weights longitude by `cos(lat)`. The two agree only at lat 0, so a cap
+  /// built on it fired at a latitude-dependent radius — progressively earlier
+  /// the further north, i.e. worst exactly where snow is.
+  @Deprecated('Use maxAccuracyMetres with accuracyMetres. Removed in 1.0.0.')
+  static const maxCovarianceThreshold = 2e-5;
 
   // -----------------------------------------------------------------------
   // Constructor
@@ -191,8 +203,9 @@ class KalmanFilter {
     );
   }
 
-  /// Whether position uncertainty has exceeded the safety cap (~500m).
-  bool get isAccuracyExceeded => _p[0][0] + _p[1][1] > maxCovarianceThreshold;
+  /// Whether position uncertainty has exceeded the [maxAccuracyMetres] safety
+  /// cap, measured in real metres at the filter's current latitude.
+  bool get isAccuracyExceeded => accuracyMetres > maxAccuracyMetres;
 
   /// Predict the state forward by [dt] without a GPS measurement.
   ///
