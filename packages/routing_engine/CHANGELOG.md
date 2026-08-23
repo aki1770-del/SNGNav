@@ -2,34 +2,50 @@
 
 ## 0.5.2
 
-### Backport: an absent distance was rendered as a measured zero
+### ⚠️ Behaviour change in a patch release — please read this one
 
-Up to and including 0.5.1, **both engines could hand you a route summary that
-was never in the routing response**. When the server omitted the distance or
-duration we substituted `0` and rendered **`"0.0 km, 0 min"`** — a figure the
-server never sent, and the most benign answer available, on a road the driver
-is still on.
+**What changed for you:** when the routing server returns a route but omits its
+distance or duration, `calculateRoute` now **throws `RoutingException`**. Up to
+and including 0.5.1 it returned a route with those fields set to `0`.
+
+**Do you need to do anything?** Only if you call `calculateRoute` without a
+`catch`. One command tells you:
+
+```sh
+grep -rn -A6 'calculateRoute' lib/
+```
+
+If every call site sits inside a `try { … } catch` — a bare `catch (e)` is
+enough; `RoutingException` is a plain exception and is exported from
+`package:routing_engine/routing_engine.dart` if you prefer to name it —
+**this release asks nothing of you.** If any call site is not, that site can now
+throw where 0.5.1 returned a route reading `0.0 km / 0 min`.
+
+**Why we changed it.** Both engines could hand you a route summary that was never
+in the routing response. When the server omitted the distance or duration we
+substituted `0` and reported `"0.0 km, 0 min"` — a figure the server never sent,
+on a road the driver is still on. A zero leaves the result non-null, so an error
+path never runs and the fabricated figure reaches the screen as if it were a
+measurement. An absent measurement is not a measurement of zero.
 
 * `OsrmRoutingEngine`: an absent `routes[0].distance` or `.duration`.
-* `ValhallaRoutingEngine`: an absent `summary.length` / `summary.time`.
+* `ValhallaRoutingEngine`: an absent `summary.length` / `summary.time`, or an
+  absent `summary` object entirely.
 
 Both now throw `RoutingException`, exactly as an absent `routes` / `trip` /
 `legs` already did in the same functions.
 
-**Why a silent zero is worse than an error.** `0.0 km` leaves the result
-non-null, so a consumer's own `try/catch` fallback never fires and the
-narration speaks the fabricated figure. The throw restores a recovery path
-consumers have already written.
+**Why this is a patch number.** It is a behaviour change and a patch release
+conventionally promises none — we know. `0.6.x` carries a compile-breaking
+nullable-position change, so it cannot reach anyone pinned `^0.5.x`, and a
+`0.5.2` is the only version that can. Leaving you on a release that reports
+numbers the server never sent, while we take the corrected code for ourselves,
+is not a fix — it is a fix for us. **No signature, type, dependency or SDK
+constraint changed in this release. The throw above is the only difference.**
 
-**This is a backport.** The fix shipped first in 0.6.1. It is repeated here
-because 0.6.x is closed to anyone pinned `^0.5.x` — our own 0.6.0 nullable-
-position change is a compile break — and leaving a consumer on a defective
-0.5.1 while we take the corrected version for ourselves is not a fix, it is a
-fix for us. This release is pure runtime: no signature and no type changed.
-
-**Note on 0.5.1's provenance.** 0.5.1 was published without a corresponding
-commit in our repository. This 0.5.2 was reconstructed from the published
-0.5.1 archive on pub.dev, and its source is committed.
+**Note on 0.5.1’s provenance.** 0.5.1 was published without a corresponding
+commit in our repository. This 0.5.2 was reconstructed from the published 0.5.1
+archive on pub.dev, and its source is committed.
 
 ## 0.5.1
 

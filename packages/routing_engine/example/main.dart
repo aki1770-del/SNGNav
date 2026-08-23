@@ -8,15 +8,21 @@ void main() async {
     destination: LatLng(34.9551, 137.1771),
   );
 
-  if (await engine.isAvailable()) {
-    final route = await engine.calculateRoute(request);
-    print(route.summary);
-    print('distance: ${route.totalDistanceKm}km');
-    print('maneuvers: ${route.maneuvers.length}');
-    print('engine: ${route.engineInfo.name}');
+  try {
+    if (await engine.isAvailable()) {
+      final route = await engine.calculateRoute(request);
+      print(route.summary);
+      print('distance: ${route.totalDistanceKm}km');
+      print('maneuvers: ${route.maneuvers.length}');
+      print('engine: ${route.engineInfo.name}');
+    }
+  } on RoutingException catch (e) {
+    // calculateRoute throws when the server returns no usable route —
+    // including a route whose distance or duration it omitted.
+    print('no route: ${e.message}');
+  } finally {
+    await engine.dispose();
   }
-
-  await engine.dispose();
 }
 
 class ExampleRoutingEngine implements RoutingEngine {

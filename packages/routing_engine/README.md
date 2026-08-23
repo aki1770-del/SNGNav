@@ -25,7 +25,7 @@ server today and a local server tomorrow — same code, same interface.
 
 ```yaml
 dependencies:
-  routing_engine: ^0.5.0
+  routing_engine: ^0.5.2
   latlong2: ^0.9.1          # for LatLng coordinates
 ```
 
@@ -34,24 +34,26 @@ dependencies:
 ```dart
 import 'package:routing_engine/routing_engine.dart';
 
-// Create an engine
 final engine = OsrmRoutingEngine(baseUrl: 'http://localhost:5000');
 
-// Check availability
-if (await engine.isAvailable()) {
-  // Calculate a route
-  final result = await engine.calculateRoute(RouteRequest(
-    origin: LatLng(35.1709, 136.9066),   // Sakae Station
-    destination: LatLng(34.9551, 137.1771), // Higashiokazaki Station
-  ));
+try {
+  if (await engine.isAvailable()) {
+    final result = await engine.calculateRoute(RouteRequest(
+      origin: LatLng(35.1709, 136.9066),      // Sakae Station
+      destination: LatLng(34.9551, 137.1771), // Higashiokazaki Station
+    ));
 
-  print('${result.totalDistanceKm} km, ${result.maneuvers.length} turns');
-  print('Engine: ${result.engineInfo.name} '
-      '(${result.engineInfo.queryLatency.inMilliseconds}ms)');
+    print('${result.totalDistanceKm} km, ${result.maneuvers.length} turns');
+    print('Engine: ${result.engineInfo.name} '
+        '(${result.engineInfo.queryLatency.inMilliseconds}ms)');
+  }
+} on RoutingException catch (e) {
+  // No usable route came back. Fall back, or tell the user plainly —
+  // never present a default number as though it were a measurement.
+  print('no route: ${e.message}');
+} finally {
+  await engine.dispose();
 }
-
-// Clean up
-await engine.dispose();
 ```
 
 ### Local Valhalla
@@ -59,18 +61,39 @@ await engine.dispose();
 ```dart
 final engine = ValhallaRoutingEngine.local();
 
-if (await engine.isAvailable()) {
-  final route = await engine.calculateRoute(const RouteRequest(
-    origin: LatLng(35.1709, 136.9066),
-    destination: LatLng(34.9551, 137.1771),
-  ));
+try {
+  if (await engine.isAvailable()) {
+    final route = await engine.calculateRoute(const RouteRequest(
+      origin: LatLng(35.1709, 136.9066),
+      destination: LatLng(34.9551, 137.1771),
+    ));
 
-  print('Local Valhalla: ${route.engineInfo.queryLatency.inMilliseconds}ms');
+    print('Local Valhalla: ${route.engineInfo.queryLatency.inMilliseconds}ms');
+  }
+} on RoutingException catch (e) {
+  print('no route: ${e.message}');
+} finally {
+  await engine.dispose();
 }
 ```
 
 `ValhallaRoutingEngine.local()` targets `http://localhost:8005`. Override
 `host`, `port`, `availabilityTimeout`, or `routeTimeout` when needed.
+
+## Errors
+
+`calculateRoute` throws `RoutingException` when the server does not return a
+usable route:
+
+- a transport or parse failure;
+- a response with no `routes` (OSRM) or no `trip` / `legs` (Valhalla);
+- **a route whose distance or duration the server omitted** (since 0.5.2).
+
+**It never substitutes a default.** An absent distance is an absent measurement,
+not a measurement of zero — a `0.0 km` would leave your error path unrun and put
+a number on screen the routing server never sent. Wrap every `calculateRoute`
+call in a `try` / `catch` and decide in your own code what a user should see when
+no route is available.
 
 ## Integration Pattern
 
