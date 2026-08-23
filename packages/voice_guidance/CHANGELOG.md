@@ -1,3 +1,41 @@
+## 0.7.5
+
+**Unblocks `routing_engine 0.6.0` for every consumer of this package.** No API,
+no behaviour and no code change: every file under `lib/` is byte-identical to
+0.7.4.
+
+**What was wrong.** This package declared `routing_engine: '>=0.4.0 <0.6.0'` as a
+runtime dependency **and never imported it.** Measured before the change: the 19
+Dart files under `lib/` import exactly six packages — `equatable`, `flutter`,
+`flutter_bloc`, `flutter_tts`, `navigation_safety`, `navigation_safety_enums`.
+`routing_engine` appears in **zero** of them. This package speaks
+`NavigationManeuver` from `navigation_safety`; `RouteManeuver` from
+`routing_engine` is a type it has never touched. Only the *example* used it, and
+an example is not a dependency of the library.
+
+**Why an unused line mattered.** `routing_engine 0.6.0` carries a *safety* fix — a
+route point that failed to parse no longer silently becomes `LatLng(0, 0)`, ten
+degrees off the coast of Ghana, rendered to a driver as a confident position.
+Because of the cap above, **no application that used `voice_guidance` was allowed
+to take that fix.** The resolver said so in its own words:
+
+```
+Because vg_cap_proof depends on voice_guidance 0.7.4 which depends on
+routing_engine >=0.4.0 <0.6.0, routing_engine >=0.4.0 <0.6.0 is required.
+So, because vg_cap_proof depends on routing_engine 0.6.0, version solving failed.
+```
+
+**The fix, and it is a removal, not a widening.** The unused `routing_engine`
+line is gone. A cap widened to `<0.7.0` would have unblocked today's release and
+re-blocked the next one, for a package that is still not imported. The same
+proof after the change resolves `routing_engine 0.6.0 (source: hosted)`, and the
+86-test suite passes unchanged.
+
+**Nothing you depend on is removed.** In Dart you cannot import a package you do
+not declare, so no consumer was ever able to reach `routing_engine` through this
+one. If your app uses `routing_engine`, declare it directly — you almost
+certainly already do.
+
 ## 0.7.4
 
 Removes build artifacts that 0.7.3 published by mistake. No API or behaviour

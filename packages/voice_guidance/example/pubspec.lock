@@ -86,7 +86,7 @@ packages:
       path: "../../condition_aggregator"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.10"
   condition_aggregator_digitraffic:
     dependency: "direct overridden"
     description:
@@ -100,7 +100,7 @@ packages:
       path: "../../condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.4.0"
+    version: "0.5.0"
   condition_aggregator_met_norway:
     dependency: "direct overridden"
     description:
@@ -213,7 +213,7 @@ packages:
       path: "../../fleet_hazard"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -322,7 +322,7 @@ packages:
       path: "../../kalman_dr"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.6.0"
   latlong2:
     dependency: "direct main"
     description:
@@ -369,7 +369,7 @@ packages:
       path: "../../map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.6"
   matcher:
     dependency: transitive
     description:
@@ -424,7 +424,7 @@ packages:
       path: "../../nav2_safety_layer"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.2.0"
   navigation_lend_mode_experiment:
     dependency: "direct overridden"
     description:
@@ -438,7 +438,7 @@ packages:
       path: "../../navigation_safety"
       relative: true
     source: path
-    version: "0.9.3"
+    version: "0.9.5"
   navigation_safety_calibration:
     dependency: "direct overridden"
     description:
@@ -452,7 +452,7 @@ packages:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.1"
+    version: "0.11.4"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
@@ -489,7 +489,7 @@ packages:
       path: "../../offline_tiles"
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.5.6"
   package_config:
     dependency: transitive
     description:
@@ -644,7 +644,7 @@ packages:
       path: "../../routing_engine"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.1"
   simple_sparse_list:
     dependency: transitive
     description:
@@ -767,7 +767,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.7.3"
+    version: "0.7.5"
   web:
     dependency: transitive
     description:
