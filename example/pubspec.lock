@@ -279,7 +279,7 @@ packages:
       path: "../packages/kalman_dr"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.6.1"
   latlong2:
     dependency: "direct main"
     description:

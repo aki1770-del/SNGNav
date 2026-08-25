@@ -39,7 +39,7 @@ void main() {
   group('vehicleSignalsFromDatapoints (KUKSA decode adapter)', () {
     test('decodes mock Datapoints to typed fields', () {
       final signals = vehicleSignalsFromDatapoints({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
         kTcsIsEngaged: _boolDp(kTcsIsEngaged, true),
         kAbsIsEngaged: _boolDp(kAbsIsEngaged, false),
         kWiperFrontIntensity: _intDp(kWiperFrontIntensity, 5),
@@ -48,6 +48,7 @@ void main() {
         kVehicleSpeed: _floatDp(kVehicleSpeed, 42.0),
       });
 
+      // VSS ships friction as PERCENT (0-100); the field is 0.0-1.0.
       expect(signals.roadFriction, closeTo(0.2, 1e-4));
       expect(signals.tcsEngaged, isTrue);
       expect(signals.absEngaged, isFalse);
@@ -56,6 +57,19 @@ void main() {
       expect(signals.airTempC, closeTo(-6.0, 1e-4));
       expect(signals.speedKmh, closeTo(42.0, 1e-4));
       expect(signals.hasAnySignal, isTrue);
+    });
+
+    test('a real ESC black-ice reading crosses the icy threshold', () {
+      // An ESC on black ice emits about 18 PERCENT. Decoded without the unit
+      // conversion that is 18.0, and 18.0 < 0.3 is false, so the friction limb
+      // never fires.
+      final signals = vehicleSignalsFromDatapoints({
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 18.0),
+      });
+
+      expect(signals.roadFriction, closeTo(0.18, 1e-4));
+      expect(signals.roadFriction! < 0.3, isTrue,
+          reason: 'black ice at 18 percent must read as icy');
     });
 
     test('absent / value-less signals decode to null (never guessed)', () {
@@ -152,7 +166,7 @@ void main() {
       final sub = provider.conditions.listen(results.add);
 
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0),
         kAirTemperature: _floatDp(kAirTemperature, -5.0),
       });
       await pumpEventQueue();
@@ -186,7 +200,7 @@ void main() {
 
       // First: friction + temp.
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.5),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 50.0),
         kAirTemperature: _floatDp(kAirTemperature, -5.0),
       });
       await pumpEventQueue();
@@ -216,15 +230,15 @@ void main() {
 
       // dry baseline
       source.add({
-        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.95),
+        kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 95.0),
         kAirTemperature: _floatDp(kAirTemperature, 5.0),
       });
       await pumpEventQueue();
       // one icy reading (should be HELD — below the hysteresis threshold)
-      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2)});
+      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0)});
       await pumpEventQueue();
       // a second icy reading (now persists → flip allowed)
-      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 0.2)});
+      source.add({kRoadFrictionMostProbable: _floatDp(kRoadFrictionMostProbable, 20.0)});
       await pumpEventQueue();
 
       // dry, then HELD dry (flicker suppressed), then black ice.
