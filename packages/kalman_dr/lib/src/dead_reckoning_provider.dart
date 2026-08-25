@@ -262,6 +262,37 @@ class DeadReckoningProvider implements LocationProvider {
         timestamp: pos.timestamp,
       );
 
+      // How long the estimate ran without evidence before this reading
+      // arrived. Computed BEFORE `_lastMeasurementAt` is overwritten on the
+      // next line, because that field is the only record of the gap and the
+      // assignment destroys it.
+      //
+      // This is the whole gap, always — it is NOT gated on `gpsTimeout`. The
+      // gate was tried and it was wrong. `gpsTimeout` decides when dead
+      // reckoning takes over; it says nothing about whether the estimate this
+      // fix re-anchors is stale, and it is a constructor parameter the
+      // consumer can set to anything. Gating on it made the number mean
+      // "the gap, if it happened to exceed a value you chose", which is a
+      // trap: measured on this tree at the shipped default of 3 s, a 2 s
+      // outage reported `extrapolatedFor` of ZERO while the emitted
+      // coordinate sat 18.1 m from the true position against a stated radius
+      // of 5.60 m — 3.2x its own claimed accuracy, disclosed nowhere. The
+      // same code measured at a 200 ms timeout disclosed every band, which is
+      // how the gate looked correct.
+      //
+      // So the field now means exactly what its name and its first doc line
+      // always said: elapsed time since the last reading this filter accepted.
+      // In steady state that is ordinary inter-fix spacing, ~1 s at 1 Hz, and
+      // it is honest to say so. A consumer asking "was this invented?" has
+      // `source`/`isDeadReckoned` for that question and always did; this field
+      // answers the different question of how far the estimate is from
+      // evidence, and on the first fix out of a tunnel the prediction can
+      // still dominate the blend even though `source` is truthfully `fused`
+      // and `isDrActive` is already false.
+      final unresolvedFor = _lastMeasurementAt == null
+          ? Duration.zero
+          : DateTime.now().difference(_lastMeasurementAt!);
+
       // A real reading was just incorporated. This is the clock
       // `extrapolatedFor` measures from — advanced ONLY here, because this is
       // the only Kalman path where a sensor actually contributes. A fix
@@ -285,7 +316,7 @@ class DeadReckoningProvider implements LocationProvider {
           heading: s.heading,
           timestamp: pos.timestamp,
           source: PositionSource.fused,
-          extrapolatedFor: Duration.zero,
+          extrapolatedFor: unresolvedFor,
         ),
       );
     } else {

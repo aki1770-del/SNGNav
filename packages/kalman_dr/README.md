@@ -34,7 +34,7 @@ Pure Dart, no native dependencies.
 
 ```yaml
 dependencies:
-  kalman_dr: ^0.5.0
+  kalman_dr: ^0.6.0
 ```
 
 ## Quick Start
@@ -157,6 +157,16 @@ class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
         // ~13 m, which reads *better* than a genuine 40 m fix under tree
         // cover. Accuracy answers "how confident", never "is this real".
         final predicted = position.isDeadReckoned;
+
+        // Provenance is not the whole story, and `false` here is not the same
+        // as "fresh". The first fix back out of a tunnel is `fused` — a real
+        // reading DID contribute — while the prediction it was blended with
+        // ran blind for the whole outage and can still dominate the result.
+        // `extrapolatedFor` is the only field that carries that, so read it on
+        // this branch too. Since 0.6.0 it is the real gap on every emit, so
+        // compare it against a threshold you choose; do not test it for zero.
+        final stale = (position.extrapolatedFor ?? Duration.zero) >
+            const Duration(seconds: 2);
         return ListTile(
           title: Text(
             '${position.latitude.toStringAsFixed(5)}, '
@@ -167,8 +177,14 @@ class _DeadReckoningStatusCardState extends State<DeadReckoningStatusCard> {
                 ? 'Predicted path — no fix for '
                     '${position.extrapolatedFor?.inSeconds ?? 0}s, accuracy '
                     '${position.accuracy.toStringAsFixed(0)}m'
-                : 'Live GPS lock — accuracy '
-                    '${position.accuracy.toStringAsFixed(0)}m',
+                : stale
+                    ? 'Re-acquiring — first fix after '
+                        '${position.extrapolatedFor?.inSeconds ?? 0}s without '
+                        'one; accuracy '
+                        '${position.accuracy.toStringAsFixed(0)}m is not yet '
+                        'settled'
+                    : 'Live GPS lock — accuracy '
+                        '${position.accuracy.toStringAsFixed(0)}m',
           ),
         );
       },
