@@ -1,0 +1,73 @@
+{
+  "_provenance": {
+    "upstream": "https://github.com/COVESA/vehicle_signal_specification",
+    "tag": "v6.0",
+    "commit": "20c609bf95c73b51d483fb8f81a099d1d5b73066",
+    "derived_by": "tool/kuksa_e2e/refresh_vss_authority.py",
+    "population": "the leaves declared by snow_safety_vss.json, read from disk"
+  },
+  "leaves": {
+    "Vehicle.ADAS.ABS.IsEngaged": {
+      "source": "spec/ADAS/ADAS.vspec:ABS.IsEngaged",
+      "datatype": "boolean",
+      "type": "sensor"
+    },
+    "Vehicle.ADAS.ESC.RoadFriction.LowerBound": {
+      "source": "spec/ADAS/ADAS.vspec:ESC.RoadFriction.LowerBound",
+      "datatype": "float",
+      "type": "sensor",
+      "unit": "percent",
+      "min": "0",
+      "max": "100"
+    },
+    "Vehicle.ADAS.ESC.RoadFriction.MostProbable": {
+      "source": "spec/ADAS/ADAS.vspec:ESC.RoadFriction.MostProbable",
+      "datatype": "float",
+      "type": "sensor",
+      "unit": "percent",
+      "min": "0",
+      "max": "100"
+    },
+    "Vehicle.ADAS.TCS.IsEngaged": {
+      "source": "spec/ADAS/ADAS.vspec:TCS.IsEngaged",
+      "datatype": "boolean",
+      "type": "sensor"
+    },
+    "Vehicle.Body.Raindetection.Intensity": {
+      "source": "spec/Body/Body.vspec:Raindetection.Intensity",
+      "datatype": "uint8",
+      "type": "sensor",
+      "unit": "percent",
+      "max": "100"
+    },
+    "Vehicle.Body.Windshield.Front.Wiping.Intensity": {
+      "source": "spec/Body/Body.vspec:Windshield.Wiping.Intensity",
+      "datatype": "uint8",
+      "type": "actuator"
+    },
+    "Vehicle.Chassis.Axle.Row1.Wheel.Left.Tire.Pressure": {
+      "source": "spec/Chassis/Wheel.vspec:Tire.Pressure",
+      "datatype": "uint16",
+      "type": "sensor",
+      "unit": "kPa"
+    },
+    "Vehicle.Chassis.Axle.Row1.Wheel.Right.Tire.Pressure": {
+      "source": "spec/Chassis/Wheel.vspec:Tire.Pressure",
+      "datatype": "uint16",
+      "type": "sensor",
+      "unit": "kPa"
+    },
+    "Vehicle.Exterior.AirTemperature": {
+      "source": "spec/Vehicle/Exterior.vspec:AirTemperature",
+      "datatype": "float",
+      "type": "sensor",
+      "unit": "Celsius"
+    },
+    "Vehicle.Speed": {
+      "source": "spec/Vehicle/Vehicle.vspec:Speed",
+      "datatype": "float",
+      "type": "sensor",
+      "unit": "km/h"
+    }
+  }
+}
