@@ -136,8 +136,9 @@ class PretripBriefingCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           v.headline,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(color: v.foreground),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: v.foreground,
+                          ),
                         ),
                       ),
                     ],
@@ -203,8 +204,9 @@ class PretripBriefingCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               strings.sourceLine(sourceCaption, _hhmm(forecastIssuedAt)),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),
@@ -219,8 +221,7 @@ class PretripBriefingCard extends StatelessWidget {
   List<Widget> _buildWinterCard(ThemeData theme, WinterCard card) {
     final actions = _actionLines(card.guidance);
     return [
-      Text(strings.winterHeader(card.state),
-          style: theme.textTheme.titleSmall),
+      Text(strings.winterHeader(card.state), style: theme.textTheme.titleSmall),
       const SizedBox(height: 6),
       for (final line in actions)
         Padding(
@@ -233,17 +234,16 @@ class PretripBriefingCard extends StatelessWidget {
                 child: Icon(Icons.snowing, size: 14),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(line, style: theme.textTheme.bodySmall),
-              ),
+              Expanded(child: Text(line, style: theme.textTheme.bodySmall)),
             ],
           ),
         ),
       const SizedBox(height: 2),
       Text(
         strings.winterFooter,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: theme.colorScheme.outline),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.outline,
+        ),
       ),
     ];
   }
@@ -314,17 +314,20 @@ class PretripBriefingCard extends StatelessWidget {
           severity: strings.severityCaution,
         );
       case PretripVerdict.waitAdvised:
-        final strong =
-            rec?.strength == RecommendationStrength.advisoryStrong;
+        final strong = rec?.strength == RecommendationStrength.advisoryStrong;
         final delay = rec?.suggestedDelay ?? Duration.zero;
         return _VerdictStyle(
-          headline:
-              strings.headlineWaitAdvised(strings.delayText(delay), strong),
+          headline: strings.headlineWaitAdvised(
+            strings.delayText(delay),
+            strong,
+          ),
           icon: Icons.schedule,
-          background:
-              strong ? const Color(0xFFFFE0D6) : const Color(0xFFFFF3E0),
-          foreground:
-              strong ? const Color(0xFF8B2500) : const Color(0xFF8A4B00),
+          background: strong
+              ? const Color(0xFFFFE0D6)
+              : const Color(0xFFFFF3E0),
+          foreground: strong
+              ? const Color(0xFF8B2500)
+              : const Color(0xFF8A4B00),
           severity: strong ? strings.severityHazard : strings.severityCaution,
         );
       case PretripVerdict.hazardPersists:
