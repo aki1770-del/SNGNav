@@ -57,6 +57,20 @@ abstract class PretripMessages {
   /// No winter hazard signal across the whole trip window.
   String noWinterHazard();
 
+  /// The trip window WAS forecast, but the fields deciding the winter-hazard
+  /// ladder were not all measured, so the affirmative all-clear was not earned.
+  ///
+  /// Deliberately NOT [areaForecastNotCovered]: that says we had no data for
+  /// these hours, and here we had data — it simply did not measure what
+  /// decides. Reusing that string would be a new false statement of the same
+  /// class as the one this release fixes.
+  ///
+  /// Concrete, not abstract, so adding it does not break an existing
+  /// implementer of this class; [_JaPretripMessages] overrides it.
+  String assessmentIncomplete() =>
+      'Winter hazard could not be assessed for your trip window — some '
+      'conditions were not measured. This is not an all-clear.';
+
   /// Caution band: allow extra time and keep distance, no delay suggested.
   String allowExtraTime();
 
@@ -220,8 +234,7 @@ class _EnPretripMessages extends PretripMessages {
   String slushPossible(String at) => 'Slush possible around $at.';
 
   @override
-  String coldRain(String at) =>
-      'Cold rain around $at — surfaces may be slick.';
+  String coldRain(String at) => 'Cold rain around $at — surfaces may be slick.';
 
   @override
   String reducedVisibility(int meters, String at) =>
@@ -257,9 +270,9 @@ class _EnPretripMessages extends PretripMessages {
       case DaylightPhase.polarNight:
         return d.deepDark
             ? 'The sun does not rise here today — '
-                'the whole trip is in darkness.'
+                  'the whole trip is in darkness.'
             : 'The sun does not rise here today — '
-                'only brief twilight around midday.';
+                  'only brief twilight around midday.';
       case DaylightPhase.daylight:
       case DaylightPhase.polarDay:
         return 'Daylight for your whole trip.';
@@ -338,8 +351,12 @@ class _JaPretripMessages extends PretripMessages {
   String noWinterHazard() => '出発時間帯に冬季の危険を示す兆候はありません。';
 
   @override
-  String allowExtraTime() =>
-      '時間に余裕をもち、車間距離を保ってください — 出発を遅らせる必要はありません。';
+  String assessmentIncomplete() =>
+      '出発時間帯の冬季の危険は判定できませんでした — 一部の条件が'
+      '観測されていません。危険がないという意味ではありません。';
+
+  @override
+  String allowExtraTime() => '時間に余裕をもち、車間距離を保ってください — 出発を遅らせる必要はありません。';
 
   @override
   String conditionsLookBetterIfAllows(String hhmm) =>
@@ -354,8 +371,7 @@ class _JaPretripMessages extends PretripMessages {
   String conditionsImproveBy(String hhmm) => '$hhmm頃までに状況は改善します。';
 
   @override
-  String reactionMargin(int minutes) =>
-      '反応にかかる時間に合わせて、$minutes分の余裕を追加しました。';
+  String reactionMargin(int minutes) => '反応にかかる時間に合わせて、$minutes分の余裕を追加しました。';
 
   @override
   String noBetterWindow(int horizonHours) =>
@@ -373,8 +389,7 @@ class _JaPretripMessages extends PretripMessages {
   String packedSnow(String at) => '$at頃、圧雪が予想されます。';
 
   @override
-  String precipNearFreezing(String at) =>
-      '$at頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。';
+  String precipNearFreezing(String at) => '$at頃、氷点付近での降水 — 部分的な路面凍結の可能性が高いです。';
 
   @override
   String visibilityReducedNearWhiteout(int meters, String at) =>
@@ -384,12 +399,10 @@ class _JaPretripMessages extends PretripMessages {
   String slushPossible(String at) => '$at頃、シャーベット状の雪の可能性があります。';
 
   @override
-  String coldRain(String at) =>
-      '$at頃、冷たい雨 — 路面が滑りやすくなる可能性があります。';
+  String coldRain(String at) => '$at頃、冷たい雨 — 路面が滑りやすくなる可能性があります。';
 
   @override
-  String reducedVisibility(int meters, String at) =>
-      '$at頃、視界不良(約${meters}m)。';
+  String reducedVisibility(int meters, String at) => '$at頃、視界不良(約${meters}m)。';
 
   @override
   String freezingAir(int tempCelsius, String at) =>
@@ -402,8 +415,7 @@ class _JaPretripMessages extends PretripMessages {
       '放射冷却で路面だけが凍ることがあります(ブラックアイス)。';
 
   @override
-  String winterConditionsPossible(String at) =>
-      '$at頃、冬季の気象条件となる可能性があります。';
+  String winterConditionsPossible(String at) => '$at頃、冬季の気象条件となる可能性があります。';
 
   @override
   String daylightChip(TripDaylight d) {
@@ -432,8 +444,7 @@ class _JaPretripMessages extends PretripMessages {
       'この地域で発表中の警報・注意報: $eventVerbatim。';
 
   @override
-  String areaNoOfficialWarning() =>
-      'この地域に発表中の雪の警報・注意報はありません。';
+  String areaNoOfficialWarning() => 'この地域に発表中の雪の警報・注意報はありません。';
 
   @override
   String areaWarningCheckUnavailable() =>
@@ -461,8 +472,7 @@ class _JaPretripMessages extends PretripMessages {
   }
 
   @override
-  String areaForecastNotCovered() =>
-      'この先の時間帯について、この地域の予報データはありません。';
+  String areaForecastNotCovered() => 'この先の時間帯について、この地域の予報データはありません。';
 
   @override
   String areaMeasuredVisibility(int meters, String? station, int? km) {
@@ -479,6 +489,5 @@ class _JaPretripMessages extends PretripMessages {
   }
 
   @override
-  String areaNoMeasuredVisibility() =>
-      'この地域の計測視程データはありません。';
+  String areaNoMeasuredVisibility() => 'この地域の計測視程データはありません。';
 }

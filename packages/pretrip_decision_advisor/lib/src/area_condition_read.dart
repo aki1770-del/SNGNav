@@ -51,6 +51,15 @@ class AreaConditionRead {
   /// [HourHazard.clear], which read as good news about hours nobody forecast.
   final HourHazard areaHazard;
 
+  /// [areaHazard], but `null` instead of [HourHazard.unknown] when the forecast
+  /// does not cover the window. A `null` here means "we do not know", never
+  /// "clear".
+  ///
+  /// Restored in 0.6.1: it was public in 0.5.2–0.5.3 and removed in 0.6.0. The
+  /// `unknown` member 0.6.0 introduced is the better default for this field and
+  /// stays; this is for callers who would rather branch on null.
+  HourHazard? areaHazardOrNull() => forecastCovered ? areaHazard : null;
+
   /// False ⇒ the forecast does not cover the window; the band is NOT asserted.
   final bool forecastCovered;
 
@@ -91,15 +100,15 @@ class AreaConditionRead {
 
   @override
   int get hashCode => Object.hash(
-        areaHazard,
-        forecastCovered,
-        officialWarningVerbatim,
-        warningCheckAvailable,
-        measuredVisibilityMeters,
-        visibilityStationName,
-        visibilityDistanceKm,
-        areaLabel,
-      );
+    areaHazard,
+    forecastCovered,
+    officialWarningVerbatim,
+    warningCheckAvailable,
+    measuredVisibilityMeters,
+    visibilityStationName,
+    visibilityDistanceKm,
+    areaLabel,
+  );
 }
 
 /// Summarises the conditions in a destination AREA over [lookAhead] starting at
@@ -152,15 +161,39 @@ AreaConditionRead summarizeAreaConditions({
       // checking `forecastCovered` can no longer print "clear".
       : HourHazard.unknown;
 
+  // A NON-FINITE reading (`NaN`, `±Infinity`) counts as ABSENT: it is not a
+  // number, so it cannot be a measurement. `VisibilityObservation` is public
+  // and unvalidated, so this is the seam that enforces it. Up to 0.6.0 such a
+  // reading reached `.round()` and threw an untyped `UnsupportedError:
+  // Infinity or NaN toInt` out of `summarizeAreaConditions` — untyped, so the
+  // `on PretripDataAbsentException` clause integrators were asked to write did
+  // not catch it. Reachable from publisher JSON: `double.tryParse('1e400')`
+  // is `Infinity`.
+  //
+  // Non-finite is treated exactly as absent — the same equivalence
+  // `SnowAwarePretripAdvisor.evidenceGaps` makes. These three fields are ONE
+  // composite claim ("visibility M, measured at station S, D km away"), so a
+  // non-finite `meters` withdraws all three, which is what their own field
+  // docs already require. The hazard BAND is untouched: this is the chip's
+  // arithmetic, not the ladder's judgement.
+  final double? metersRaw = observed?.meters;
+  final bool haveMeasurement = metersRaw != null && metersRaw.isFinite;
+  final double? distanceRaw = observed?.distanceKm;
+
   return AreaConditionRead(
     areaHazard: areaHazard,
     forecastCovered: forecastCovered,
     officialWarningVerbatim: warningEventVerbatim,
     warningCheckAvailable: warningCheckAvailable,
     // Real-sensor-or-nothing: only ever from the passed observation.
-    measuredVisibilityMeters: observed?.meters.round(),
-    visibilityStationName: observed?.stationName,
-    visibilityDistanceKm: observed?.distanceKm.round(),
+    measuredVisibilityMeters: haveMeasurement ? metersRaw.round() : null,
+    visibilityStationName: haveMeasurement ? observed!.stationName : null,
+    // A null distance is never rendered as `0`, and survives only ever from a
+    // finite reading.
+    visibilityDistanceKm:
+        haveMeasurement && distanceRaw != null && distanceRaw.isFinite
+        ? distanceRaw.round()
+        : null,
     areaLabel: areaLabel,
   );
 }
@@ -186,20 +219,24 @@ List<String> areaConditionChips(AreaConditionRead r, PretripMessages m) {
   }
 
   // 2. Forecast hazard band (or honest "not covered").
-  chips.add(r.forecastCovered
-      ? m.areaHazardChip(r.areaHazard)
-      : m.areaForecastNotCovered());
+  chips.add(
+    r.forecastCovered
+        ? m.areaHazardChip(r.areaHazard)
+        : m.areaForecastNotCovered(),
+  );
 
   // 3. Measured visibility (real sensor or honest "none").
-  chips.add(r.measuredVisibilityMeters != null
-      ? m.areaMeasuredVisibility(
-          r.measuredVisibilityMeters!,
-          // Nullable through: an unknown station distance is NOT 0 km ("taken
-          // at your location"), and an unnamed station is NOT ''.
-          r.visibilityStationName,
-          r.visibilityDistanceKm,
-        )
-      : m.areaNoMeasuredVisibility());
+  chips.add(
+    r.measuredVisibilityMeters != null
+        ? m.areaMeasuredVisibility(
+            r.measuredVisibilityMeters!,
+            // Nullable through: an unknown station distance is NOT 0 km ("taken
+            // at your location"), and an unnamed station is NOT ''.
+            r.visibilityStationName,
+            r.visibilityDistanceKm,
+          )
+        : m.areaNoMeasuredVisibility(),
+  );
 
   return chips;
 }

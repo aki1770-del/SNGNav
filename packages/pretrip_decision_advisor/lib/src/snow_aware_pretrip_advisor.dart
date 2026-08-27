@@ -27,6 +27,7 @@ import 'package:navigation_safety_calibration/navigation_safety_calibration.dart
 import 'commute_shape.dart';
 import 'daylight.dart';
 import 'driver_profile_spec.dart';
+import 'pretrip_absence.dart';
 import 'pretrip_advisor.dart';
 import 'pretrip_messages.dart';
 import 'pretrip_recommendation.dart';
@@ -69,7 +70,64 @@ enum HourHazard {
   /// `briefing.peakHazard` — as this catalog's own example does — printed
   /// "clear" for a trip with ZERO forecast data. Absence of a forecast is not
   /// a clear morning.
+  ///
+  /// 0.6.1 keeps this member OUT of [SnowAwarePretripAdvisor.hazardOf], as the
+  /// paragraph above always promised. Driven and confirmed 2026-08-28: routing
+  /// unmeasured slots to `unknown` inside `hazardOf` makes it win the
+  /// `index`-ordered peak reduce over [severe], and a MEASURED 40 m whiteout
+  /// beside one unmeasured hour reduced to `verdict: noData, chips: []`. The
+  /// driver would lose a warning we had actually measured. Absence is reported
+  /// beside the ladder instead — see [HazardEvidenceGap].
   unknown,
+}
+
+/// A hazard family [SnowAwarePretripAdvisor.hazardOf] could NOT decide for a
+/// slot, because the field it reads was absent or non-finite.
+///
+/// This is absence reported BESIDE the hazard ladder, never on it. A gap NEVER
+/// raises or lowers [HourHazard] — at the benign end absence would invent
+/// safety, at the adverse end it would invent danger. It withholds only the
+/// affirmative all-clear.
+///
+/// A family is reported only where the missing field could ACTUALLY have
+/// changed the verdict at that slot's temperature, so the gate is exactly as
+/// tight as the ladder and no tighter.
+enum HazardEvidenceGap {
+  /// [HourlyForecast.visibilityMeters] absent or non-finite. Any value below
+  /// 500 m produces at least caution and below 100 m produces severe, at ANY
+  /// temperature — so absent visibility is always undecided.
+  visibility,
+
+  /// [HourlyForecast.precipitationMmPerHour] absent or non-finite while the
+  /// temperature is at or below [SnowAwarePretripAdvisor.coldRainTempCelsius].
+  /// Above that band no precipitation figure can produce a hazard, so its
+  /// absence is not a gap.
+  precipitation,
+
+  /// [HourlyForecast.estimatedRoadCondition] absent, or explicitly
+  /// [RoadConditionEstimate.unknown] — the caller telling us, honestly, that
+  /// it could not look. Ice, packed snow and slush each produce a hazard at
+  /// ANY temperature, so an unknown road surface is always undecided.
+  ///
+  /// The explicit-`unknown` case is the one that matters most: a caller who
+  /// honestly declared the road unknown got the SAME answer as one who
+  /// reported a dry road.
+  roadSurface,
+
+  /// [HourlyForecast.humidityRH] absent or non-finite while the temperature is
+  /// at or below
+  /// [SnowAwarePretripAdvisor.radiativeFrostAmbientCeilingCelsius] — the band
+  /// where clear-sky radiative cooling can take the road surface below
+  /// freezing while the air reads above it. Above that ceiling the calibration
+  /// cannot fire, so absent humidity is not a gap.
+  radiativeFrostHumidity,
+
+  /// [HourlyForecast.tempCelsius] is non-finite (NaN or infinite). It is a
+  /// required, non-nullable field, so it can never be absent — but a NaN makes
+  /// every `<=` comparison in the ladder false, and the calibration rejects it
+  /// too, so the slot slides silently to [HourHazard.clear] with nothing
+  /// having been decided at all.
+  temperature,
 }
 
 /// One verdict shape the app UI renders directly. The contract's
@@ -145,6 +203,12 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// surface (freezing rain / refreeze band).
   static const double icingTempCelsius = 0.5;
 
+  /// At or below this air temperature a precipitation figure is cold-rain
+  /// class. Named so [evidenceGaps] can ask "could an absent precipitation
+  /// figure have mattered here?" without guessing, and so the gate and the
+  /// ladder cannot drift apart silently — [hazardOf] reads this same constant.
+  static const double coldRainTempCelsius = 2.0;
+
   /// At or below this air temperature, even a dry forecast is caution class
   /// (frost / black-ice risk). Matches the in-trip MET Norway adapter's
   /// "Subzero forecast" moderate-advisory threshold so pre-trip and in-trip
@@ -170,12 +234,156 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     required WeatherForecast forecast,
     required CommuteShape commute,
     required DriverProfileSpec profile,
-  }) =>
-      brief(forecast: forecast, commute: commute, profile: profile)
-          .recommendation;
+  }) => briefOrNull(
+    forecast: forecast,
+    commute: commute,
+    profile: profile,
+  )?.recommendation;
 
   /// The richer briefing the app UI consumes; [advise] derives from it.
+  ///
+  /// Throws [PretripAssessmentIncompleteException] (a
+  /// [PretripDataAbsentException]) in exactly ONE case: a forecast DOES cover
+  /// the window, but the fields deciding the ladder were never measured, so the
+  /// affirmative all-clear was not earned. Up to 0.6.0 a slot carrying a
+  /// temperature and nothing else reported "No winter hazard signals in your
+  /// trip window."
+  ///
+  /// A window with NO forecast coverage does NOT throw: it returns
+  /// `peakHazard: HourHazard.unknown`, exactly as 0.6.0 did.
+  ///
+  /// A MEASURED hazard is never withheld — it reports from partial data as it
+  /// always has. Only the affirmative all-clear needs whole knowledge.
+  ///
+  /// If you would rather branch than catch: [allClearEarned] answers the
+  /// question first, [briefOrNull] returns `null`, and [briefOrUnassessed]
+  /// returns a briefing carrying [HourHazard.unknown] — which is precisely
+  /// what 0.6.0's `brief` returned, for callers written against it.
   PretripBriefing brief({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) {
+    final window = _slotsCovering(
+      forecast.hourly,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    // Zero coverage is NOT a stop on this line: 0.6.0 made it
+    // `peakHazard: HourHazard.unknown`, which is honest, is asserted by this
+    // package's own tests, and is better than an exception for a case the
+    // caller can render. That behaviour is kept exactly.
+    if (window.isNotEmpty) {
+      final peak = window.map(hazardOf).reduce(_worse);
+
+      // 0.6.1 — the affirmative all-clear must be EARNED. A `clear` peak means
+      // "nothing fired", which is not the same as "nothing is there": every
+      // hazard test in `hazardOf` is guarded `field != null && ...`, so a slot
+      // carrying a temperature and nothing else lands here having decided
+      // nothing. Reporting that as "No winter hazard signals in your trip
+      // window" is the per-slot twin of the no-forecast fabrication 0.5.2 fixed.
+      //
+      // ONLY the affirmative is gated. A measured hazard still reports from
+      // partial data, exactly as before — positive evidence fires on partial
+      // knowledge, negative conclusions require whole knowledge.
+      if (peak == HourHazard.clear) {
+        final unearned = _unearnedReason(window, commute);
+        if (unearned != null) throw unearned;
+      }
+    }
+    return _buildBriefing(
+      forecast: forecast,
+      commute: commute,
+      profile: profile,
+    );
+  }
+
+  /// [brief], but `null` instead of throwing. A `null` means "we could not
+  /// honestly assess this", never "clear".
+  PretripBriefing? briefOrNull({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) {
+    final window = _slotsCovering(
+      forecast.hourly,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    if (window.isEmpty) return null;
+
+    final peak = window.map(hazardOf).reduce(_worse);
+
+    // 0.6.1 — the affirmative all-clear must be EARNED. A `clear` peak means
+    // "nothing fired", which is not the same as "nothing is there": every
+    // hazard test in `hazardOf` is guarded `field != null && ...`, so a slot
+    // carrying a temperature and nothing else lands here having decided
+    // nothing. Reporting that as "No winter hazard signals in your trip
+    // window" is the per-slot twin of the no-forecast fabrication 0.5.2 fixed.
+    //
+    // ONLY the affirmative is gated. A measured hazard still reports from
+    // partial data, exactly as before — positive evidence fires on partial
+    // knowledge, negative conclusions require whole knowledge.
+    if (peak == HourHazard.clear && _unearnedReason(window, commute) != null) {
+      return null;
+    }
+    return _buildBriefing(
+      forecast: forecast,
+      commute: commute,
+      profile: profile,
+    );
+  }
+
+  /// [brief], but never throwing and never `null`: an unassessable trip comes
+  /// back as a real [PretripBriefing] whose `peakHazard` is
+  /// [HourHazard.unknown] and whose verdict is [PretripVerdict.noData].
+  ///
+  /// This is the 0.6.x shape, and it exists for callers written against 0.6.0,
+  /// whose `brief` never threw. Migrating from 0.6.0 without changing your
+  /// error handling is one method name.
+  ///
+  /// It is NOT the safer default and it is not what [brief] does, for one
+  /// reason: `HourHazard.unknown` is a value a caller can ignore, while an
+  /// exception is one they must handle. 0.6.0 shipped this shape alone and an
+  /// integrator rendering `briefing.chips` saw an empty list rather than a
+  /// warning. Prefer [brief] or [allClearEarned] in new code.
+  PretripBriefing briefOrUnassessed({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) {
+    final window = _slotsCovering(
+      forecast.hourly,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    if (window.isNotEmpty) {
+      final peak = window.map(hazardOf).reduce(_worse);
+      if (peak == HourHazard.clear &&
+          _unearnedReason(window, commute) != null) {
+        return PretripBriefing(
+          verdict: PretripVerdict.noData,
+          // NOT an empty chip list. 0.6.0 returned `chips: []` for its own
+          // unassessable case, so an integrator rendering `briefing.chips`
+          // showed the driver nothing at all. And NOT
+          // `messages.areaForecastNotCovered()` — that says we had no data for
+          // these hours; here we HAD data, it just did not measure what
+          // decides. Saying so would be a new false statement of the same
+          // class as the one this release fixes.
+          chips: List.unmodifiable([messages.assessmentIncomplete()]),
+          recommendation: null,
+          peakHazard: HourHazard.unknown,
+        );
+      }
+    }
+    return _buildBriefing(
+      forecast: forecast,
+      commute: commute,
+      profile: profile,
+    );
+  }
+
+  PretripBriefing _buildBriefing({
     required WeatherForecast forecast,
     required CommuteShape commute,
     required DriverProfileSpec profile,
@@ -196,8 +404,10 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     }
 
     final peak = window.map(hazardOf).reduce(_worse);
-    final worstSlot =
-        window.firstWhere((s) => hazardOf(s) == peak, orElse: () => window.first);
+    final worstSlot = window.firstWhere(
+      (s) => hazardOf(s) == peak,
+      orElse: () => window.first,
+    );
     final chips = <String>[];
 
     final staleness = commute.plannedDeparture.difference(forecast.issuedAt);
@@ -279,9 +489,11 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         if (!delayUrgeable) {
           // Honesty rule: required (or unknown) commute — never urge a delay.
           if (betterDelay != null) {
-            chips.add(messages.conditionsLookBetterIfAllows(
-              _hhmm(commute.plannedDeparture.add(betterDelay)),
-            ));
+            chips.add(
+              messages.conditionsLookBetterIfAllows(
+                _hhmm(commute.plannedDeparture.add(betterDelay)),
+              ),
+            );
           }
           chips.add(messages.requiredNoDelayUrged());
           addStalenessChip();
@@ -301,9 +513,11 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
 
         if (betterDelay != null) {
           final delay = betterDelay + margin;
-          chips.add(messages.conditionsImproveBy(
-            _hhmm(commute.plannedDeparture.add(betterDelay)),
-          ));
+          chips.add(
+            messages.conditionsImproveBy(
+              _hhmm(commute.plannedDeparture.add(betterDelay)),
+            ),
+          );
           if (margin > Duration.zero) {
             chips.add(messages.reactionMargin(margin.inMinutes));
           }
@@ -355,15 +569,15 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
         (vis != null && vis < whiteoutVisibilityMeters)) {
       return HourHazard.severe;
     }
-    final icing = precip != null &&
-        precip > 0 &&
-        slot.tempCelsius <= icingTempCelsius;
+    final icing =
+        precip != null && precip > 0 && slot.tempCelsius <= icingTempCelsius;
     if (road == RoadConditionEstimate.packedSnow ||
         icing ||
         (vis != null && vis < nearWhiteoutVisibilityMeters)) {
       return HourHazard.elevated;
     }
-    final coldRain = precip != null && precip > 0 && slot.tempCelsius <= 2.0;
+    final coldRain =
+        precip != null && precip > 0 && slot.tempCelsius <= coldRainTempCelsius;
     if (road == RoadConditionEstimate.slush ||
         coldRain ||
         (vis != null && vis < 500) ||
@@ -372,6 +586,104 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       return HourHazard.caution;
     }
     return HourHazard.clear;
+  }
+
+  /// The hazard families [hazardOf] could not decide for [slot], because the
+  /// field each one reads was absent or non-finite. Empty means every family
+  /// that could still have fired at this slot's temperature was measured — and
+  /// only then is the affirmative "no winter hazard" claim earned.
+  ///
+  /// Deliberately public and deliberately per-slot: the advisor stops
+  /// asserting what it did not measure, but it does not decide FOR you what an
+  /// acceptable gap is. A caller who knows its own region — one whose roads are
+  /// salted and monitored, or who has a road model of its own — can read the
+  /// gaps and apply its own policy. What the advisor will not do is print
+  /// "No winter hazard signals in your trip window" over them.
+  ///
+  /// Absence is never a hazard: a gap NEVER raises the hazard band. It only
+  /// withholds the affirmative all-clear. [hazardOf] is unchanged.
+  Set<HazardEvidenceGap> evidenceGaps(HourlyForecast slot) {
+    final gaps = <HazardEvidenceGap>{};
+    final t = slot.tempCelsius;
+
+    // A non-finite temperature decides nothing: every `<=` below is false and
+    // the radiative-frost calibration rejects it outright.
+    if (!t.isFinite) gaps.add(HazardEvidenceGap.temperature);
+
+    // Visibility: a value < 500 fires at any temperature, so absence always
+    // leaves the whiteout / reduced-visibility families undecided.
+    final vis = slot.visibilityMeters;
+    if (vis == null || !vis.isFinite) gaps.add(HazardEvidenceGap.visibility);
+
+    // Road surface: ice / packed snow / slush fire at any temperature. An
+    // explicit `unknown` is the caller saying it could not look — which is
+    // exactly the case this gap exists to stop being read as "dry".
+    final road = slot.estimatedRoadCondition;
+    if (road == null || road == RoadConditionEstimate.unknown) {
+      gaps.add(HazardEvidenceGap.roadSurface);
+    }
+
+    // Precipitation: can only produce a hazard at or below the cold-rain band.
+    // Warmer than that, an absent figure could not have changed any verdict.
+    final precip = slot.precipitationMmPerHour;
+    if ((precip == null || !precip.isFinite) &&
+        (!t.isFinite || t <= coldRainTempCelsius)) {
+      gaps.add(HazardEvidenceGap.precipitation);
+    }
+
+    // Humidity: only decides inside the radiative-frost ambient ceiling.
+    final rh = slot.humidityRH;
+    if ((rh == null || !rh.isFinite) &&
+        (!t.isFinite || t <= radiativeFrostAmbientCeilingCelsius)) {
+      gaps.add(HazardEvidenceGap.radiativeFrostHumidity);
+    }
+
+    return gaps;
+  }
+
+  /// Whether the affirmative "no winter hazard signals in your trip window"
+  /// claim is EARNED for this trip — i.e. every hour of the window has a
+  /// forecast slot, and every one of those slots left no [evidenceGaps].
+  ///
+  /// Ask this to branch BEFORE calling [brief] rather than catch afterwards.
+  /// It answers only whether the all-clear COULD be earned; a window full of
+  /// measured hazard is not "earned" territory at all and reports its hazard
+  /// normally through [brief].
+  bool allClearEarned({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+  }) {
+    final window = _slotsCovering(
+      forecast.hourly,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    if (window.isEmpty) return false;
+    return _unearnedReason(window, commute) == null;
+  }
+
+  /// Null when the all-clear is earned; otherwise the reason, ready to throw.
+  PretripAssessmentIncompleteException? _unearnedReason(
+    List<HourlyForecast> window,
+    CommuteShape commute,
+  ) {
+    final covered = _coversWhole(
+      window,
+      commute.plannedDeparture,
+      commute.plannedDuration,
+    );
+    final gapsByHour = <DateTime, Set<HazardEvidenceGap>>{};
+    for (final s in window) {
+      final g = evidenceGaps(s);
+      if (g.isNotEmpty) gapsByHour[s.hour] = g;
+    }
+    if (covered && gapsByHour.isEmpty) return null;
+    return PretripAssessmentIncompleteException(
+      plannedDeparture: commute.plannedDeparture,
+      plannedDuration: commute.plannedDuration,
+      gapsByHour: Map.unmodifiable(gapsByHour),
+      windowFullyCovered: covered,
+    );
   }
 
   /// Ambient ceiling for the radiative-frost condition, °C.
@@ -414,7 +726,16 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       if (slots.isEmpty) return null; // forecast ran out — stop searching
       if (!_coversWhole(slots, dep, c.plannedDuration)) return null;
       final peak = slots.map(hazardOf).reduce(_worse);
-      if (peak.index <= HourHazard.caution.index) return delay;
+      if (peak.index <= HourHazard.caution.index) {
+        // "Conditions improve by 08:00" is an AFFIRMATIVE claim about an hour
+        // she is not in yet, and acting on it PUTS her there. An hour with no
+        // visibility and no road data scores `clear` and was offered as the
+        // better window: the advisor sent her into the one hour it knew least
+        // about. An unassessable hour is skipped, not offered — a later,
+        // fully-measured hour can still win.
+        if (slots.any((s) => evidenceGaps(s).isNotEmpty)) continue;
+        return delay;
+      }
     }
     return null;
   }
@@ -455,12 +776,23 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// Peak reduce over classified slots. [HourHazard.unknown] is declared last
   /// and is NEVER produced by [hazardOf], so it cannot enter this comparison;
   /// it is not a rung on this ladder.
-  HourHazard _worse(HourHazard a, HourHazard b) =>
-      a.index >= b.index ? a : b;
+  HourHazard _worse(HourHazard a, HourHazard b) => a.index >= b.index ? a : b;
 
   String _describe(HourlyForecast slot) {
     final at = _hhmm(slot.hour);
-    final vis = slot.visibilityMeters;
+    // A non-finite visibility or temperature reached `.round()` here and threw
+    // an untyped `UnsupportedError: Infinity or NaN toInt` out of a pure,
+    // offline advisor — and NOT one of this package's typed absence stops, so
+    // the `on PretripDataAbsentException` clause integrators were asked to
+    // write did not catch it and the app went down. Reachable from publisher
+    // JSON: `double.tryParse('1e400')` is `Infinity`. The number-bearing
+    // branches below now require `isFinite`; a non-finite field falls through
+    // to the defensive fallback at the end, which needs no number. The hazard
+    // BAND is unchanged: this is the chip's arithmetic, not the ladder's
+    // judgement.
+    final visRaw = slot.visibilityMeters;
+    final vis = (visRaw != null && visRaw.isFinite) ? visRaw : null;
+    final tempFinite = slot.tempCelsius.isFinite;
     if (vis != null && vis < whiteoutVisibilityMeters) {
       return messages.visibilityWhiteout(vis.round(), at);
     }
@@ -486,7 +818,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     if (vis != null && vis < 500) {
       return messages.reducedVisibility(vis.round(), at);
     }
-    if (slot.tempCelsius <= frostTempCelsius) {
+    if (tempFinite && slot.tempCelsius <= frostTempCelsius) {
       return messages.freezingAir(slot.tempCelsius.round(), at);
     }
     // Above-zero ambient but the humidity-aware surface estimate crosses

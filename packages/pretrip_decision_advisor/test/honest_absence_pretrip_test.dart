@@ -25,11 +25,11 @@ void main() {
   );
 
   CommuteShape commute() => CommuteShape(
-        plannedDuration: const Duration(minutes: 30),
-        routeIdentifiers: const ['route-a'],
-        flexibility: CommuteFlexibility.discretionary,
-        plannedDeparture: base,
-      );
+    plannedDuration: const Duration(minutes: 30),
+    routeIdentifiers: const ['route-a'],
+    flexibility: CommuteFlexibility.discretionary,
+    plannedDeparture: base,
+  );
 
   group('an unforecast morning is not a clear morning', () {
     test('an EMPTY forecast yields peakHazard unknown, never clear', () {
@@ -77,6 +77,12 @@ void main() {
       );
     });
 
+    // AMENDED in 0.6.1. This test previously omitted `visibilityMeters` and
+    // still asserted `clear` — i.e. it asserted the defect 0.6.1 fixes. At
+    // +6 C with a dry road, fog can still take visibility under 500 m
+    // (caution) or under 100 m (severe), so an absent visibility leaves the
+    // ladder undecided and the all-clear unearned. A "REAL forecast" has to
+    // carry the fields that decide.
     test('a REAL forecast still resolves to a real band', () {
       final b = const SnowAwarePretripAdvisor().brief(
         forecast: WeatherForecast(
@@ -85,11 +91,13 @@ void main() {
             HourlyForecast(
               hour: base,
               tempCelsius: 6.0,
+              visibilityMeters: 20000,
               estimatedRoadCondition: RoadConditionEstimate.dry,
             ),
             HourlyForecast(
               hour: base.add(const Duration(hours: 1)),
               tempCelsius: 6.0,
+              visibilityMeters: 20000,
               estimatedRoadCondition: RoadConditionEstimate.dry,
             ),
           ],
@@ -100,6 +108,28 @@ void main() {
 
       expect(b.peakHazard, HourHazard.clear);
       expect(b.verdict, PretripVerdict.clear);
+    });
+
+    test('the SAME forecast minus visibility no longer earns that band', () {
+      // One field removed from the test above. Nothing else differs.
+      HourlyForecast at(DateTime h) => HourlyForecast(
+        hour: h,
+        tempCelsius: 6.0,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
+      );
+      final forecast = WeatherForecast(
+        issuedAt: base,
+        hourly: [at(base), at(base.add(const Duration(hours: 1)))],
+      );
+
+      expect(
+        () => const SnowAwarePretripAdvisor().brief(
+          forecast: forecast,
+          commute: commute(),
+          profile: profile,
+        ),
+        throwsA(isA<PretripAssessmentIncompleteException>()),
+      );
     });
   });
 
