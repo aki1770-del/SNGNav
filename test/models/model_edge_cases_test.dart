@@ -380,7 +380,13 @@ void main() {
         expect(zone.averageConfidence, closeTo(0.8, 0.001));
       });
 
-      test('empty reports → 0', () {
+      // INVERTED by fleet_hazard 0.6.0 (bbe62e0, 2026-07-12). The name of this
+      // test used to be `empty reports → 0` and it asserted exactly that — the
+      // behaviour the package shipped a BREAKING change to remove, still being
+      // defended here, red, for 47 days. An empty zone has nothing to tell the
+      // driver; saying `0` tells her the road was measured and found hopeless.
+      // See packages/fleet_hazard/CHANGELOG.md 0.6.0.
+      test('empty reports → null (NOT 0 — absence is not a measurement)', () {
         const zone = HazardZone(
           center: _nagoya,
           radiusMeters: 500,
@@ -388,7 +394,7 @@ void main() {
           reports: [],
           vehicleCount: 0,
         );
-        expect(zone.averageConfidence, 0);
+        expect(zone.averageConfidence, isNull);
       });
 
       test('single report → its confidence', () {

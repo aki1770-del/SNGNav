@@ -57,7 +57,28 @@ void main() {
       // Open the prefecture dropdown and select Akita.
       await tester.tap(find.byType(DropdownButton<String>));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(akitaLabel).last);
+
+      // The curated JMA prefecture list is NOT a fixed length. It grew from 6
+      // entries to 13 when Hokkaido's single '010000' office was split into its
+      // 8 sub-offices, which moved Akita ('050000') from the 4th row to the
+      // 11th — past the bottom of the opened menu's first screenful. A bare
+      // `tap(find.text(akitaLabel).last)` then landed on the dropdown route's
+      // modal barrier instead of the row, and the dialog never received a
+      // selection.
+      //
+      // That made this test assert "Akita happens to sit near the top of the
+      // list", which is not what its name claims. Scroll the menu to the row
+      // first, so what is asserted is the thing that matters to the driver:
+      // she CAN reach Akita and select it, wherever the list has grown to.
+      final menu = find
+          .byType(Scrollable)
+          .last; // the just-opened dropdown menu
+      final akitaRow = find.text(akitaLabel).last;
+      await tester.scrollUntilVisible(akitaRow, 120, scrollable: menu);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(akitaRow);
+      await tester.pumpAndSettle();
+      await tester.tap(akitaRow);
       await tester.pumpAndSettle();
 
       // Save.

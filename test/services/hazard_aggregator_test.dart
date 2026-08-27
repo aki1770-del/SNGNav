@@ -239,7 +239,16 @@ void main() {
       expect(zone.vehicleCount, 2);
     });
 
-    test('averageConfidence handles empty reports', () {
+    // INVERTED by fleet_hazard 0.6.0 (bbe62e0, 2026-07-12). This assertion read
+    // `expect(zone.averageConfidence, 0)` and was RED from that commit until
+    // 2026-08-28 — it was asserting, in the app, the exact behaviour the package
+    // shipped a BREAKING change to remove. `0` is a NUMBER: a consumer holding it
+    // cannot tell "nobody has driven this road" apart from "everyone who drove it
+    // was certain of nothing", and those are opposite facts for a driver.
+    // `null` means NOT KNOWN and never means zero.
+    // See packages/fleet_hazard/CHANGELOG.md 0.6.0. Do not re-assert 0 here, and
+    // do not coalesce with `?? 0` at any call site.
+    test('averageConfidence is NULL, not 0, when there are no reports', () {
       const zone = HazardZone(
         center: LatLng(35.05, 137.25),
         radiusMeters: 500,
@@ -247,7 +256,7 @@ void main() {
         severity: HazardSeverity.snowy,
         vehicleCount: 0,
       );
-      expect(zone.averageConfidence, 0);
+      expect(zone.averageConfidence, isNull);
     });
 
     test('toString contains severity and report count', () {
