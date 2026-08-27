@@ -35,4 +35,5 @@ export 'src/dead_reckoning_provider.dart';
 export 'src/dead_reckoning_state.dart';
 export 'src/geo_position.dart';
 export 'src/kalman_filter.dart';
+export 'src/motion_profile.dart';
 export 'src/location_provider.dart';
