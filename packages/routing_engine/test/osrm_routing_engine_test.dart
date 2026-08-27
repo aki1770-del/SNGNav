@@ -708,4 +708,55 @@ void main() {
     });
   });
 
+
+  group('absent maneuver distance is not a measured zero (0.5.3 backport)', () {
+    // Through 0.5.2 both engines applied `?? 0` to a missing distance/duration,
+    // so an unmeasured maneuver was indistinguishable from one the driver is
+    // standing on — the shape of "in 0.0 km, turn left". Backported to the
+    // 0.5.x line because ^0.5.1 consumers cannot receive 0.6.x at all.
+
+    Future<RouteManeuver> firstFrom(Map<String, dynamic> step) async {
+      final engine = OsrmRoutingEngine(
+        baseUrl: 'http://test',
+        client: _osrmClient(steps: [step]),
+      );
+      final result = await engine.calculateRoute(_request);
+      await engine.dispose();
+      return result.maneuvers.first;
+    }
+
+    test('a step with NO distance reports absent, not 0 km', () async {
+      final m = await firstFrom(_step()..remove('distance'));
+      expect(m.hasMeasuredLength, isFalse);
+      expect(m.lengthKmOrNull, isNull);
+      expect(m.lengthKm, 0, reason: 'legacy getter stays non-breaking');
+      expect(m.toString(), contains('length unknown'));
+    });
+
+    test('a step with NO duration reports absent, not 0 s', () async {
+      final m = await firstFrom(_step()..remove('duration'));
+      expect(m.hasMeasuredTime, isFalse);
+      expect(m.timeSecondsOrNull, isNull);
+      expect(m.timeSeconds, 0);
+    });
+
+    test('CONTROL: a real 1000 m step still measures 1.0 km', () async {
+      // If this failed too, the tests above would prove nothing.
+      final m = await firstFrom(_step(distance: 1000, duration: 60));
+      expect(m.hasMeasuredLength, isTrue);
+      expect(m.lengthKmOrNull, 1.0);
+      expect(m.timeSecondsOrNull, 60);
+    });
+
+    test('CONTROL: a genuine zero-length step is DISTINGUISHABLE from absent',
+        () async {
+      final measuredZero = await firstFrom(_step(distance: 0));
+      final absent = await firstFrom(_step()..remove('distance'));
+      expect(measuredZero.lengthKm, absent.lengthKm);
+      expect(measuredZero.hasMeasuredLength, isTrue);
+      expect(absent.hasMeasuredLength, isFalse);
+      expect(measuredZero, isNot(equals(absent)),
+          reason: 'equality must not collapse absent onto a real zero');
+    });
+  });
 }

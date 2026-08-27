@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.5.3
+
+**Backport: an absent maneuver distance is no longer a measured zero.**
+
+Four sites, two engines, all `?? 0` on a value the server may simply not have
+sent:
+
+```
+osrm_routing_engine.dart:147-148      distance, duration
+valhalla_routing_engine.dart:176-177  length, time
+```
+
+A missing value became `0` — the shape of *"in 0.0 km, turn left"*, where the
+driver is told to turn NOW because the routing server said nothing at all.
+
+**Why this exists on the 0.5.x line at all.** The fix shipped on the mainline as
+`0.6.3`. Consumers pinning `^0.5.0` or `^0.5.1` resolve `>=0.5.x <0.6.0` and
+**cannot receive any 0.6.x release.** Per OPS-RULE-069(B), the in-range patch is
+the only recall vehicle, so the fix is backported rather than announced.
+
+**Who is affected.** Anyone reading `RouteManeuver.lengthKm` or `.timeSeconds`.
+**No API is removed and nothing changes type** — both getters still return
+non-nullable doubles and still return `0` for an absent value. Added:
+`lengthKmOrNull`, `timeSecondsOrNull`, `hasMeasuredLength`, `hasMeasuredTime`.
+Equality now uses the nullable fields, so **an absent value no longer compares
+equal to a real zero.**
+
+**Non-breaking by construction, deliberately.** The correct fix is nullable
+public fields. That is breaking, which forces a major bump, which is exactly
+what a caret-pinned consumer cannot receive — the additive shape was chosen for
+reach, not for elegance.
+
+**Verified.** `dart test` 155/155 ~1. Proven fail-then-pass: reverting only the
+engines' `?? 0` (keeping the model, so the tests still compile) takes the suite
+to **-3**. Two of the four new tests are controls — a real 1000 m step still
+measures 1.0 km, and a genuine zero-length step stays distinguishable from an
+absent one — and both pass under the reverted code too, so the tests
+discriminate absent-from-zero rather than merely agreeing with the change.
+`dart analyze`: no issues.
+
+**Not covered, checked rather than assumed:** `valhalla_routing_engine.dart:175`
+still reads `mMap['type'] as int? ?? 0`. That one is benign — Valhalla type `0`
+maps to `'none'`, its own absent-type value, so it does not fabricate a turn.
+
+
 ## 0.5.2
 
 ### ⚠️ Behaviour change in a patch release — please read this one

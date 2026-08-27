@@ -144,15 +144,16 @@ class OsrmRoutingEngine implements RoutingEngine {
           (location[0] as num).toDouble(),
         );
 
-        final stepDistanceM = (stepMap['distance'] as num?)?.toDouble() ?? 0;
-        final stepDurationS = (stepMap['duration'] as num?)?.toDouble() ?? 0;
+        // Absent stays absent — see RouteManeuver.lengthKmOrNull.
+        final stepDistanceM = (stepMap['distance'] as num?)?.toDouble();
+        final stepDurationS = (stepMap['duration'] as num?)?.toDouble();
 
         allManeuvers.add(
           RouteManeuver(
             index: maneuverIndex++,
             instruction: _localizedInstruction(stepMap, maneuver, language),
             type: _mapModifierToType(maneuver),
-            lengthKm: stepDistanceM / 1000,
+            lengthKm: stepDistanceM == null ? null : stepDistanceM / 1000,
             timeSeconds: stepDurationS,
             position: position,
           ),

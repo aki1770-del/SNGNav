@@ -173,8 +173,8 @@ class ValhallaRoutingEngine implements RoutingEngine {
             index: maneuverIndex++,
             instruction: mMap['instruction'] as String? ?? '',
             type: _maneuverTypeString(mMap['type'] as int? ?? 0),
-            lengthKm: (mMap['length'] as num?)?.toDouble() ?? 0,
-            timeSeconds: (mMap['time'] as num?)?.toDouble() ?? 0,
+            lengthKm: (mMap['length'] as num?)?.toDouble(),
+            timeSeconds: (mMap['time'] as num?)?.toDouble(),
             position: allPoints[shapeIdx],
           ),
         );
