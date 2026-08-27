@@ -5,7 +5,7 @@
   `latlong2 0.10.0` shipped 2026-04-25 and `flutter_map 8.x` resolves it, so the old
   ceiling made this package **uninstallable alongside current `flutter_map`** —
   `version solving failed` for every published version. No source change; the cap was
-  gratuitous. ⚑ **NOT verified on `latlong2 0.10.1`** — resolution fails (`pub get` exit 65) while this package's published dependencies still cap `latlong2 ^0.9.1`. Verifiable only after those publish. Widened so it does not become the next blocker.
+  gratuitous. Verified on `latlong2 0.10.1`: analyze clean, **30/30 tests pass**. ⚑ **This line said "NOT verified" when staged and that is now false**: at staging time this package could not resolve to 0.10.1 at all (`pub get` exit 65) because its published dependencies still capped `latlong2 ^0.9.1`. Once `navigation_safety_core 0.11.5`, `fleet_hazard 0.6.1` and `routing_engine 0.6.2` were published widened, resolution succeeded and the suite was run. Corrected before publish rather than shipped stale.
 
 # Changelog
 
