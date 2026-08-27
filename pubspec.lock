@@ -422,15 +422,15 @@ packages:
       path: "packages/kalman_dr"
       relative: true
     source: path
-    version: "0.4.4"
+    version: "0.6.1"
   kuksa_dart_sdk:
     dependency: "direct main"
     description:
       name: kuksa_dart_sdk
-      sha256: "017dd3d753664b32a9e79694b75a468ebaaf1f16ec457ea38bd239d5aa2eb740"
+      sha256: "593fd640427689ba41442548c85e9944b56a6d5a917d54ffb0c454dd7e2bc5fd"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.3"
+    version: "0.2.6"
   latlong2:
     dependency: "direct main"
     description:
@@ -735,21 +735,21 @@ packages:
       path: "packages/pretrip_source_digitraffic"
       relative: true
     source: path
-    version: "0.2.2"
+    version: "0.2.3"
   pretrip_source_jma:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_jma"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.2.1"
   pretrip_source_met_norway:
     dependency: "direct main"
     description:
       path: "packages/pretrip_source_met_norway"
       relative: true
     source: path
-    version: "0.2.1"
+    version: "0.2.2"
   proj4dart:
     dependency: transitive
     description:
