@@ -15,10 +15,28 @@
 name: CI
 
 on:
+  # ⚑ push: ALL branches, deliberately. This was `branches: [main]`, and on
+  # 2026-08-28 the turn-close gate measured the consequence: eleven packages had
+  # been published that day from two branches CI had never run on --
+  # `fix/latlong2-widen-0.10` (10 packages) and `backport/routing_engine-0.5.x`
+  # (routing_engine 0.5.3). No pipeline claimed either ref.
+  #
+  # Merging to main does not fix this in general. `backport/**` is a maintenance
+  # line that by design never merges to main, so a main-only trigger can NEVER
+  # cover the branch we cut in-range patches from -- the ones that reach a
+  # consumer who cannot take a major bump. The branch we are most careful about
+  # was the branch with no gate at all.
+  #
+  # We publish from feature and backport branches. Anything we publish from must
+  # be covered.
   push:
-    branches: [main]
   pull_request:
     branches: [main]
+  # ⚑ Added 2026-08-28: without this there was NO way to run CI on an existing
+  # ref. Two branches were found carrying published packages and no pipeline
+  # run, and nothing could be done about it except push again -- which rewrites
+  # nothing and proves nothing about the ref that actually shipped.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -44,6 +62,12 @@ jobs:
 
       - name: Analyze
         run: dart analyze lib test
+
+      - name: Live-source guard
+        run: bash scripts/live_source_guard.sh
+
+      - name: Sibling-constraint check
+        run: python3 scripts/sibling_constraint_check.py
 
   test:
     name: Test
@@ -78,30 +102,41 @@ jobs:
       - name: Run app tests with coverage
         run: flutter test --coverage --exclude-tags=probe
 
-      - name: Run pure Dart package tests with coverage
+      - name: "REPORT (non-gating): pinned-live defect-proof suites"
+        if: always()
         run: |
-          export PATH="$HOME/.pub-cache/bin:$PATH"
-          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr routing_engine; do
-            echo "--- packages/$pkg ---"
-            (
-              cd "packages/$pkg"
-              rm -rf coverage
-              dart test --coverage=coverage/raw
-              dart pub global run coverage:format_coverage \
-                --packages=.dart_tool/package_config.json \
-                --report-on=lib \
-                --in=coverage/raw \
-                --out=coverage/lcov.info \
-                --lcov
-            )
+          # These tests assert the FIX for defects that are still live. They FAIL by design.
+          # They are reported, never skipped: an absent verdict reads exactly like a pass.
+          # ⚑ A load error here also shows as a failure — that hole was found on 2026-08-21
+          # when an excluded file that could not COMPILE let the gate report "All tests passed".
+          for pkg in nav2_safety_layer; do
+            echo "=== packages/$pkg — LIVE DEFECTS (non-gating) ==="
+            ( cd "packages/$pkg" && dart test -t pinned-live ) || true
           done
 
-      - name: Run Flutter package tests with coverage
+      - name: "REPORT (non-gating): stale-pin check"
+        if: always()
         run: |
-          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc voice_guidance; do
-            echo "--- packages/$pkg ---"
-            (cd "packages/$pkg" && flutter test --coverage)
-          done
+          # A repaired defect must not leave its warning standing. Reporting, NOT a gate —
+          # it has a known false-positive mode on assert-the-defect-style tests, measured at
+          # 4-in-5 on first run. See the header of scripts/stale-pin-check.py.
+          python3 scripts/stale-pin-check.py packages/nav2_safety_layer || true
+
+      - name: Run every package's test suite
+        # Was TWO hardcoded allow-lists -- 7 names for `dart test`, 5 for
+        # `flutter test` -- covering 12 of 35 publishable packages. The other 23
+        # had test/ directories that never once executed.
+        #
+        # This workflow already knew that failure mode, in its own words:
+        #   "nav2_safety_layer ADDED 2026-08-21 ... this package's tests had
+        #    NEVER run in CI -- it was in neither allow-list -- which is why four
+        #    live defects and one STALE pin sat unreported since publication. A
+        #    package whose tests never run is not passing; it is unmeasured."
+        # The remedy applied then was to add ONE NAME. The list was the defect.
+        #
+        # Measured before this change, 2026-08-28: all 36 packages with a test/
+        # directory pass. Enabling them costs runtime, not triage.
+        run: ./scripts/ci_package_tests.sh
 
       - name: Merge coverage reports
         run: ./scripts/coverage_report.sh
