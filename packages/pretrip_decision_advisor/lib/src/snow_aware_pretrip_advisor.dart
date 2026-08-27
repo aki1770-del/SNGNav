@@ -659,9 +659,46 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// forecast slot, and every one of those slots left no [evidenceGaps].
   ///
   /// Ask this to branch BEFORE calling [brief] rather than catch afterwards.
-  /// It answers only whether the all-clear COULD be earned; a window full of
-  /// measured hazard is not "earned" territory at all and reports its hazard
-  /// normally through [brief].
+  ///
+  /// ⚑ `false` DOES NOT MEAN "we do not know". It means "no affirmative
+  /// all-clear is available", and that is true in two opposite situations:
+  ///
+  /// - the window could not be assessed (an unmeasured morning), and
+  /// - the window WAS assessed and carries a measured hazard.
+  ///
+  /// Measured on this version: a temperature-only window at **5 °C** makes
+  /// [brief] throw [PretripAssessmentIncompleteException] and this method
+  /// return `false`; the same window at **-6 °C** makes [brief] RETURN
+  /// `verdict: caution, peakHazard: caution` with two chips — and this method
+  /// still returns `false`, because a cold-enough temperature is itself a
+  /// measurement and the all-clear gate never engages.
+  ///
+  /// So this is WRONG, and it hides a frost warning behind an "unknown" card
+  /// on exactly the morning the driver needed it:
+  ///
+  /// ```dart
+  /// // WRONG — suppresses a MEASURED caution.
+  /// if (!advisor.allClearEarned(forecast: f, commute: c)) {
+  ///   renderUnknownCard();
+  /// }
+  /// ```
+  ///
+  /// Use it only to decide whether the affirmative sentence may be shown, and
+  /// render the briefing itself for everything else:
+  ///
+  /// ```dart
+  /// if (advisor.allClearEarned(forecast: f, commute: c)) {
+  ///   renderAllClear();          // the affirmative is earned
+  /// } else {
+  ///   renderBriefing(advisor.briefOrUnassessed(
+  ///     forecast: f, commute: c, profile: p));   // hazard OR unassessed, as measured
+  /// }
+  /// ```
+  ///
+  /// To separate the two absences, catch
+  /// [PretripAssessmentIncompleteException] from [brief]. That throw is the
+  /// only discriminator on this surface; see the CHANGELOG, *Migrating from
+  /// 0.6.0*.
   bool allClearEarned({
     required WeatherForecast forecast,
     required CommuteShape commute,
