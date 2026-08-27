@@ -102,7 +102,10 @@ void main() {
       expect(result.score.overall, inInclusiveRange(0.0, 1.0));
       expect(result.score.gripScore, inInclusiveRange(0.0, 1.0));
       expect(result.score.visibilityScore, inInclusiveRange(0.0, 1.0));
-      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      // 0.6.1: the default provider is unavailable(), so there is no fleet
+      // term. Up to 0.6.0 this asserted 0.8.
+      expect(result.score.fleetConfidenceScore, isNull);
+      expect(result.score.hasFleetData, isFalse);
       expect(result.variance, isNonNegative);
       expect(result.incidentCount, greaterThanOrEqualTo(0));
     });

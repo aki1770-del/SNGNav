@@ -21,12 +21,20 @@ import 'simulation_result.dart';
 /// `simulation_run_batch` function through `dart:ffi`.
 ///
 /// Inject a [FleetConfidenceProvider] to supply real fleet data to the
-/// native engine. Defaults to [ConstantFleetConfidenceProvider] (0.8).
+/// native engine. Defaults to [ConstantFleetConfidenceProvider.unavailable] —
+/// NO fleet data.
+///
+/// **With the default, [simulate] takes the honest CPU path and never enters
+/// the FFI kernel** (and [SimulationResult.executionMs] is therefore `null`).
+/// The native kernel's weighted mean takes a non-nullable fleet term, so it
+/// cannot express an absent one; it is skipped rather than fed a number nobody
+/// measured. Inject a provider that returns a value to reach the kernel.
 class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates an engine backed by [bindings] (defaults to platform library).
   NativeSafetyScoreSimulationEngine({
     NativeSimulationBindings? bindings,
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+    FleetConfidenceProvider provider =
+        const ConstantFleetConfidenceProvider.unavailable(),
   }) : _bindings = bindings ?? NativeSimulationBindings(),
        _provider = provider;
 

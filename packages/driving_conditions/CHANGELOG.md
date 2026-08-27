@@ -1,5 +1,147 @@
 # Changelog
 
+## 0.6.1
+
+### The 0.6.0 recall was handed back through three default constructor arguments
+
+0.6.0 removed the fabricated fleet term from the MODEL. It did not remove it
+from the CONSTRUCTORS. Three default arguments still read:
+
+```dart
+// 0.6.0 — cpu_safety_score_simulation_engine.dart:38
+//         safety_score_simulator.dart:29
+//         native_safety_score_simulation_engine.dart:29
+FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+//                                                                    ^ value defaults to 0.8
+```
+
+So a consumer who wired **no fleet source at all** received
+`fleetConfidenceScore == 0.8`, `hasFleetData == true`, and a `toString()`
+printing `fleet: 0.80` where a real absence prints `fleet: not measured`. The
+honest-absence flag this package introduced was made to report a fleet that had
+never spoken. `FleetHazardConfidenceAdapter([]).confidence` was correctly
+`null` the whole time — the defect was that nothing reached it unless you asked.
+
+**Fixed**: those three defaults are now
+`const ConstantFleetConfidenceProvider.unavailable()`. No signature changed, so
+this ships in range for `^0.6.0`.
+
+`ConstantFleetConfidenceProvider(0.8)` is unchanged and still means exactly what
+it always honestly meant: a caller **asserting** a fleet confidence — a fixture,
+a scenario, a simulator input. Only the DEFAULT changed. Asserting a scenario is
+honest; laundering an absence into an assertion is not.
+
+### What it cost the driver — measured, not asserted
+
+Swept 22,932 input points (speed 0–130 km/h x gripFactor 0.00–1.00 x visibility
+0–1000 m x 3 seeds, 48 Monte Carlo runs each), comparing the shipped default
+against the honest absence at each of the six `DriverProfile` threshold sets.
+
+The defaulted 0.8 **raised** the overall score at 97.48% of points and lowered
+it at 2.52%; it was never identical.
+
+| `DriverProfile` floors (safe/info/warn) | severity changed | -> LESS severe | -> MORE severe |
+|---|---:|---:|---:|
+| 0.80 / 0.50 / 0.30 (default; `snowZoneExperienced`, `professional`, `agriculturalForestry`) | 30.32% | 100.00% | 0.00% |
+| 0.85 / 0.55 / 0.35 (`ageingRural`) | 28.76% | 99.12% | 0.88% |
+| 0.85 / 0.55 / 0.32 (`noviceUrban`) | 27.83% | 99.09% | 0.91% |
+| 0.90 / 0.60 / 0.40 (`foreignTouristSnowZone`) | 25.58% | 99.47% | 0.53% |
+
+At the default floors, **15.38% of the whole grid moved `critical` to
+`warning`** and 14.95% moved `warning` to `info`.
+
+**The counter-direction cases are real and are named here rather than rounded
+away.** In three of the six profiles a small share of points moved the other
+way. Every one of them is the same shape — `none` -> `info`, in the region where
+the honest score is already 0.85-0.92 — because an asserted 0.8 drags a
+*better-than-0.8* score down. **In no profile, at any point in the grid, did the
+defaulted term ever produce a `warning` or a `critical` that honesty would not.**
+The defect only ever removed warnings; it never added one.
+
+A worked case, black ice / 300 m visibility / 40 km/h, standard floors:
+
+| | overall | severity | rendered |
+|---|---:|---|---|
+| honest (0.6.1) | 0.207 | `critical` | `fleet: not measured` |
+| defaulted (0.6.0) | 0.326 | `warning` | `fleet: 0.80` |
+
+She was told to reduce speed where the measured terms alone say turn back, on
+the strength of a fleet that reported nothing.
+
+### The default changed — three shipped tests changed with it
+
+This was deliberate back-compatibility in 0.6.0, not an oversight, so the tests
+that pinned it were **re-authored to assert the honest behaviour, not deleted**:
+
+- `safety_score_simulator_test.dart` — `expect(score.fleetConfidenceScore, 0.8)`
+  is now `isNull` + `hasFleetData` `isFalse`; a new case asserts that an
+  explicitly asserted `0.8` is still honoured.
+- `safety_score_simulator_test.dart` — `closeTo(0.8, 1e-9)` on the default run
+  count is now `isNull`.
+- `simulation_engine_test.dart` — the default simulator's
+  `closeTo(0.8, 1e-9)` is now `isNull` + `hasFleetData` `isFalse`.
+
+A **fourth** test also depended on the default and was not in the original
+finding: `fleet_confidence_provider_test.dart`'s *"simulator with icy adapter
+produces lower score than constant 0.8"* used a bare `const
+SafetyScoreSimulator()` as its "constant 0.8" comparand. It now passes
+`ConstantFleetConfidenceProvider(0.8)` explicitly, which is what the test's own
+name always claimed it was doing.
+
+New guard: `test/simulation/default_provider_absence_test.dart`. Five of its
+seven cases fail against 0.6.0's defaults (verified by reverting the fix); the
+two that pass are the ones asserting behaviour that correctly did not change.
+
+### Behaviour change worth knowing: the native engine's default path
+
+`NativeSafetyScoreSimulationEngine()` **constructed with no provider now takes
+the CPU path and never enters the FFI kernel**, so `SimulationResult.executionMs`
+is `null`. The native kernel's weighted mean takes a non-nullable fleet term and
+cannot express an absent one, so it is skipped rather than fed a number nobody
+measured. Correctness before throughput. Pass a provider that returns a value to
+reach the kernel; the FFI parity test now does exactly that.
+
+### Documentation that taught the defect
+
+- `constant_fleet_confidence_provider.dart` said *"Use it when no fleet data is
+  available"* — the precise wrong instruction, and it contradicted the same
+  file's own constructor doc. It now says: use it to ASSERT a value; use
+  `.unavailable()` for no fleet data.
+- `fleet_confidence_provider.dart` documented the default as
+  `ConstantFleetConfidenceProvider` (0.8).
+- `fleet_hazard_confidence_adapter.dart` still documented `unknown -> 0.8` and
+  *"returns 0.8 — the neutral baseline"* **against its own corrected code**,
+  which has returned `null` on all three absence paths since 0.6.0.
+- `README.md` shipped the pre-0.6.0 non-renormalised `overall` formula and an
+  API table describing the 0.8 default.
+- `SAFETY_BOUNDARY.md` claimed *"a consumer cannot render a fleet number that
+  does not exist"*, which was false while the defaults stood. The residual
+  insufficiency is now recorded there and marked closed in 0.6.1.
+- `example/main.dart` framed a bare `const SafetyScoreSimulator()` as
+  *"constant 0.8 — an ASSERTED value"*. It was not asserted; it was defaulted.
+
+### Also fixed, found while correcting the above
+
+- **`example/main.dart` did not compile.** `fleet_hazard` 0.6.0 made
+  `FleetReport.confidence` **required** — removing its own defaulted `0.8` for
+  exactly the reason this package removed its — and this package's constraint
+  (`fleet_hazard: '>=0.5.0 <0.8.0'`) admits it. The shipped example therefore
+  failed to analyze against any in-range `fleet_hazard >= 0.6.0`, and
+  `dart analyze` was red on 0.6.0 with 2 errors. Both call sites now state
+  `confidence` explicitly. `dart analyze` is clean.
+- **`NativeSimulationBindings.runBatch` had `double fleetConfidence = 0.8`** —
+  the same laundering one level lower. It is unreachable today (the class is not
+  exported, and its only call site always passes the value), so this changes no
+  behaviour; the parameter is now `required` so the defect cannot re-enter
+  through it.
+
+### Reach — this fix does not arrive on its own
+
+`vehicle_condition_fusion` 0.3.4, the only published dependent, pins
+`driving_conditions: ^0.5.2` and cannot resolve 0.6.x at all. Publishing 0.6.1
+does not deliver it to that consumer. Reach is tracked separately; this entry
+does not claim delivery.
+
 ## 0.6.0
 
 ### Safety defect in 0.5.4 and earlier — please read

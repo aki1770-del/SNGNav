@@ -168,7 +168,13 @@ void main() {
 
       final icyAdapter = FleetHazardConfidenceAdapter(icyReports);
       final icySimulator = SafetyScoreSimulator(provider: icyAdapter);
-      final defaultSimulator = const SafetyScoreSimulator();
+      // 0.6.1: the comparand is now an EXPLICITLY asserted 0.8, which is what
+      // this test's name always said it was. Up to 0.6.0 it was
+      // `const SafetyScoreSimulator()` — the bare default — and the test
+      // silently depended on that default being 0.8 rather than absent.
+      const constantSimulator = SafetyScoreSimulator(
+        provider: ConstantFleetConfidenceProvider(0.8),
+      );
 
       final icyResult = icySimulator.simulate(
         runs: 200,
@@ -178,7 +184,7 @@ void main() {
         visibilityMeters: 500,
         seed: 42,
       );
-      final defaultResult = defaultSimulator.simulate(
+      final constantResult = constantSimulator.simulate(
         runs: 200,
         speed: 60,
         gripFactor: 0.7,
@@ -189,9 +195,9 @@ void main() {
 
       expect(
         icyResult.score.fleetConfidenceScore!,
-        lessThan(defaultResult.score.fleetConfidenceScore!),
+        lessThan(constantResult.score.fleetConfidenceScore!),
       );
-      expect(icyResult.score.overall, lessThan(defaultResult.score.overall));
+      expect(icyResult.score.overall, lessThan(constantResult.score.overall));
     });
 
     test('simulator with dry fleet reports produces higher fleet score', () {

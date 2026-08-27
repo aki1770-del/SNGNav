@@ -24,9 +24,15 @@ import 'simulation_options.dart';
 import 'simulation_result.dart';
 
 class SafetyScoreSimulator {
+  /// Creates a simulator.
+  ///
+  /// [provider] defaults to [ConstantFleetConfidenceProvider.unavailable] —
+  /// NO fleet data. Wiring no fleet source is not a fleet reporting 0.8. To
+  /// ASSERT a fleet confidence, pass `const ConstantFleetConfidenceProvider(0.8)`.
   const SafetyScoreSimulator({
     SafetyScoreSimulationEngine? engine,
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+    FleetConfidenceProvider provider =
+        const ConstantFleetConfidenceProvider.unavailable(),
   }) : _engine = engine,
        _provider = provider;
 

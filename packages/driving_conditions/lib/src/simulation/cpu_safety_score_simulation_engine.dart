@@ -23,19 +23,22 @@ import 'simulation_result.dart';
 /// Runs N stochastic simulations with jittered inputs to produce
 /// a probabilistic [SafetyScore]. Deterministic seeding for tests.
 ///
-/// Inject a [FleetConfidenceProvider] to replace the pre-Sprint 91
-/// hardcoded 0.8 fleet confidence baseline. Defaults to
-/// [ConstantFleetConfidenceProvider] (0.8) — behavior unchanged for
-/// existing call sites.
+/// Inject a [FleetConfidenceProvider] to supply real fleet data. When none is
+/// injected the fleet term is **ABSENT**, not 0.8: wiring no fleet source is
+/// not a fleet reporting 0.8, and 0.6.0 shipped it as one.
 ///
 /// Performance gate: 1,000 runs < 200ms in `dart test`.
 class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates a CPU simulation engine.
   ///
   /// [provider] supplies the fleet confidence score for each simulation.
-  /// Defaults to [ConstantFleetConfidenceProvider] (0.8).
+  /// Defaults to [ConstantFleetConfidenceProvider.unavailable] — NO fleet
+  /// data, so the fleet term is left out of the score entirely. To ASSERT a
+  /// fleet confidence deliberately (a fixture, a scenario), pass
+  /// `const ConstantFleetConfidenceProvider(0.8)` explicitly.
   const CpuSafetyScoreSimulationEngine({
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+    FleetConfidenceProvider provider =
+        const ConstantFleetConfidenceProvider.unavailable(),
   }) : _provider = provider;
 
   final FleetConfidenceProvider _provider;

@@ -31,8 +31,12 @@ void main() {
     return;
   }
 
-  // --- CPU path: constant provider (default 0.8 baseline) ---
-  final defaultResult = const SafetyScoreSimulator().simulate(
+  // --- CPU path: no fleet source wired at all ---
+  // The default provider is ConstantFleetConfidenceProvider.unavailable(), so
+  // fleetConfidenceScore is null and the grip/visibility weights are
+  // re-normalised over what was actually measured. Up to 0.6.0 this default
+  // was 0.8, and this run silently reported a fleet that never spoke.
+  final noFleetResult = const SafetyScoreSimulator().simulate(
     speed: 50,
     gripFactor: grip,
     surface: surface,
@@ -47,12 +51,17 @@ void main() {
       position: const LatLng(35.1, 136.9),
       timestamp: DateTime.now(),
       condition: RoadCondition.icy,
+      // ASSERTED observation confidence — this is a scenario we are declaring,
+      // not a measurement. Required since fleet_hazard 0.6.0, which removed
+      // its own defaulted 0.8 for the same reason this package removed its.
+      confidence: 0.9,
     ),
     FleetReport(
       vehicleId: 'v2',
       position: const LatLng(35.1, 136.9),
       timestamp: DateTime.now(),
       condition: RoadCondition.snowy,
+      confidence: 0.9,
     ),
   ];
 
@@ -69,14 +78,15 @@ void main() {
   print('surfaceState: ${surface.name}');
   print('advisory:     ${assessment.advisoryMessage}');
   print('');
-  print('--- default (constant 0.8 — an ASSERTED value, not a measurement) ---');
-  final defaultFleet = defaultResult.score.fleetConfidenceScore;
+  print('--- no fleet source wired (the default) ---');
+  final noFleet = noFleetResult.score.fleetConfidenceScore;
   print(
     'fleet confidence: '
-    '${defaultFleet == null ? 'no fleet data' : defaultFleet.toStringAsFixed(2)}',
+    '${noFleet == null ? 'no fleet data' : noFleet.toStringAsFixed(2)}',
   );
-  print('overall safety:   ${defaultResult.score.overall.toStringAsFixed(2)}');
-  print('incident count:   ${defaultResult.incidentCount}');
+  print('hasFleetData:     ${noFleetResult.score.hasFleetData}');
+  print('overall safety:   ${noFleetResult.score.overall.toStringAsFixed(2)}');
+  print('incident count:   ${noFleetResult.incidentCount}');
   print('');
   print('--- fleet adapter (icy + snowy reports) ---');
   final fleet = fleetResult.score.fleetConfidenceScore;

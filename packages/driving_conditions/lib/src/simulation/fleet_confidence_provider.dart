@@ -8,8 +8,10 @@ library;
 /// 1.0 = fleet reports consistently safe conditions, 0.0 = fleet reports danger.
 ///
 /// Inject an implementation into [CpuSafetyScoreSimulationEngine],
-/// [NativeSafetyScoreSimulationEngine], or [SafetyScoreSimulator].
-/// The default is [ConstantFleetConfidenceProvider] (0.8) — the L1 baseline.
+/// [NativeSafetyScoreSimulationEngine], or [SafetyScoreSimulator]. Their
+/// default is [ConstantFleetConfidenceProvider.unavailable] — NO fleet data.
+/// Up to 0.6.0 the default was `ConstantFleetConfidenceProvider()` (0.8),
+/// which reported an absence as a measurement.
 abstract interface class FleetConfidenceProvider {
   /// Fleet-derived safety confidence in the inclusive range `[0.0, 1.0]`, or
   /// **`null` when there is NO fleet data**.

@@ -10,8 +10,17 @@ void main() {
   final shouldSkip = !Platform.isLinux || !nativeLibrary.existsSync();
 
   test('native engine matches cpu engine within epsilon', skip: shouldSkip, () {
-    const cpuEngine = CpuSafetyScoreSimulationEngine();
-    final nativeEngine = NativeSafetyScoreSimulationEngine();
+    // 0.6.1: both engines take an EXPLICITLY asserted fleet confidence. The
+    // default is now unavailable(), and with an absent fleet term the native
+    // engine deliberately delegates to the CPU path (its kernel cannot express
+    // absence) — which would make this a CPU-vs-CPU comparison and stop
+    // exercising the FFI kernel this test exists to check.
+    const cpuEngine = CpuSafetyScoreSimulationEngine(
+      provider: ConstantFleetConfidenceProvider(0.8),
+    );
+    final nativeEngine = NativeSafetyScoreSimulationEngine(
+      provider: const ConstantFleetConfidenceProvider(0.8),
+    );
     const options = SimulationOptions(runs: 5000, seed: 42);
 
     final cpu = cpuEngine.simulate(

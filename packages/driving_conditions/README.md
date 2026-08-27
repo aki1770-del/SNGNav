@@ -125,13 +125,23 @@ Monte Carlo scoring model:
 ```text
 gripScore = gripFactor * (1 - gripJitter) * (1 - speedFactor * 0.3)
 visibilityScore = clamp(visibilityMeters / 1000.0, 0, 1) * (1 - visJitter)
-fleetConfidenceScore = FleetConfidenceProvider.confidence  // injectable; default 0.8
-overall = gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2
+fleetConfidenceScore = FleetConfidenceProvider.confidence  // double? — null = NO fleet data
+
+// The weights are re-normalised over the terms actually MEASURED. An absent
+// term is not folded in at any value, so fleet silence neither raises nor
+// lowers the score:
+overall = fleetConfidenceScore == null
+    ? (gripScore * 0.4 + visibilityScore * 0.4) / 0.8
+    :  gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2
 ```
 
 Jitter is random `0.0..0.1` per run. Use `seed` for deterministic tests.
 
-Inject a `FleetHazardConfidenceAdapter` to replace the 0.8 baseline with real fleet data.
+**The default provider is `ConstantFleetConfidenceProvider.unavailable()` — no
+fleet data.** If you wire no fleet source, `fleetConfidenceScore` is `null` and
+`hasFleetData` is `false`. Inject a `FleetHazardConfidenceAdapter` to supply
+real fleet reports, or `ConstantFleetConfidenceProvider(0.8)` to assert a
+constant deliberately.
 
 ## Quick Start
 
@@ -249,8 +259,8 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 | `VisibilityDegradation` | UI-facing opacity and blur values derived from visibility distance. |
 | `SafetyScoreSimulator` | Monte Carlo simulator for advisory safety scoring under uncertain conditions. |
 | `SimulationResult` | Full output of a simulation run: mean `SafetyScore`, variance, incident count, and (native engine) execution time. |
-| `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. Inject to replace the 0.8 baseline. |
-| `ConstantFleetConfidenceProvider` | Returns a fixed confidence value. Default (0.8) preserves pre-Sprint-91 behaviour. |
+| `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. `confidence` is `double?`; `null` means the fleet said NOTHING. |
+| `ConstantFleetConfidenceProvider` | Returns a fixed confidence value you ASSERT. `.unavailable()` is the no-fleet-data form (`confidence == null`) and is the engines' default from 0.6.1. |
 | `FleetHazardConfidenceAdapter` | Derives confidence from `List<FleetReport>` — dry 1.0, wet 0.7, snowy 0.4, icy 0.1. |
 | `CpuSafetyScoreSimulationEngine` | **Default** pure-Dart Monte Carlo engine. Always available regardless of platform; no build step required. |
 | `NativeSafetyScoreSimulationEngine` | **Optional** C FFI engine for higher throughput. **Not the default and not usable out of the box** — see the note below. |

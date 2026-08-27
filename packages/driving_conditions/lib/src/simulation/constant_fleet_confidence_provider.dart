@@ -6,16 +6,23 @@ import 'fleet_confidence_provider.dart';
 /// A [FleetConfidenceProvider] that returns a fixed confidence value.
 ///
 /// This is the explicit, named form of the `0.8` placeholder that was
-/// hardcoded before Sprint 91. Use it when no fleet data is available,
-/// or in tests that need a deterministic input.
+/// hardcoded before Sprint 91. Use it to ASSERT a fleet confidence you
+/// actually mean — a test fixture, a scenario, a simulator input.
+///
+/// **Do NOT use it for "no fleet data".** That is
+/// [ConstantFleetConfidenceProvider.unavailable], whose [confidence] is
+/// `null`. Asserting a scenario is honest; laundering an ABSENCE into an
+/// assertion is the defect 0.6.0 removed from the score — and then shipped
+/// anyway through three default constructor arguments, until 0.6.1.
 ///
 /// ```dart
-/// // Before Sprint 91 — implicit:
-/// const fleetConfidenceScore = 0.8;
+/// // An ASSERTED confidence — you mean this number:
+/// const asserted = ConstantFleetConfidenceProvider(0.8);
+/// asserted.confidence; // 0.8
 ///
-/// // After Sprint 91 — explicit:
-/// const provider = ConstantFleetConfidenceProvider(); // default 0.8
-/// final score = provider.confidence;
+/// // NO fleet data — the honest form, and the engines' default:
+/// const absent = ConstantFleetConfidenceProvider.unavailable();
+/// absent.confidence; // null
 /// ```
 class ConstantFleetConfidenceProvider implements FleetConfidenceProvider {
   /// Creates a constant provider with the given [value].

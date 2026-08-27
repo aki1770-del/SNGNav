@@ -11,16 +11,18 @@ import 'fleet_confidence_provider.dart';
 /// and returns a weighted average by per-report observation confidence.
 ///
 /// Safety factor mapping:
-/// | Condition | Factor |
-/// |-----------|:------:|
-/// | dry       | 1.0    |
-/// | wet       | 0.7    |
-/// | snowy     | 0.4    |
-/// | icy       | 0.1    |
-/// | unknown   | 0.8    |
+/// | Condition | Factor       |
+/// |-----------|:------------:|
+/// | dry       | 1.0          |
+/// | wet       | 0.7          |
+/// | snowy     | 0.4          |
+/// | icy       | 0.1          |
+/// | unknown   | *no weight*  |
 ///
-/// When no recent reports exist the adapter returns 0.8 — the neutral
-/// baseline. Absence of data is not evidence of danger.
+/// [confidence] is `null` — NOT a number — on all three absence paths: no
+/// recent reports, every recent report `unknown`, or zero total weight.
+/// Absence of data is not evidence of danger, and it is not evidence of
+/// safety either; it is left out of the score rather than scored.
 ///
 /// ```dart
 /// final adapter = FleetHazardConfidenceAdapter(reports);

@@ -19,7 +19,27 @@ void main() {
       expect(score.overall, inInclusiveRange(0.0, 1.0));
       expect(score.gripScore, inInclusiveRange(0.0, 1.0));
       expect(score.visibilityScore, inInclusiveRange(0.0, 1.0));
-      expect(score.fleetConfidenceScore, 0.8);
+      // 0.6.1: no fleet source was wired, so there is NO fleet term. Up to
+      // 0.6.0 this asserted 0.8 — a fleet that never spoke, reported as one
+      // that did.
+      expect(score.fleetConfidenceScore, isNull);
+      expect(score.hasFleetData, isFalse);
+    });
+
+    test('an ASSERTED constant is still honoured', () {
+      const asserted = SafetyScoreSimulator(
+        provider: ConstantFleetConfidenceProvider(0.8),
+      );
+      final score = asserted.runOnce(
+        speed: 60,
+        gripFactor: 0.7,
+        surface: RoadSurfaceState.wet,
+        visibilityMeters: 800,
+        random: Random(1),
+      );
+
+      expect(score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      expect(score.hasFleetData, isTrue);
     });
 
     test('higher speed reduces overall score', () {
@@ -113,7 +133,9 @@ void main() {
       );
 
       expect(result.score.overall, inInclusiveRange(0.0, 1.0));
-      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      // 0.6.1: absent, not 0.8. See the runOnce case above.
+      expect(result.score.fleetConfidenceScore, isNull);
+      expect(result.score.hasFleetData, isFalse);
     });
 
     test('returns variance and incident count', () {

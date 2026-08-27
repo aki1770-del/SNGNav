@@ -79,7 +79,11 @@ class NativeSimulationBindings {
     required double gripFactor,
     required int surfaceCode,
     required double visibilityMeters,
-    double fleetConfidence = 0.8,
+    // REQUIRED, not defaulted. This is the last 0.8 in the fleet path: a
+    // caller who omitted it fed the native kernel a fleet confidence nobody
+    // measured. The only call site (NativeSafetyScoreSimulationEngine) always
+    // passed it, so requiring it changes no behaviour — it closes the re-entry.
+    required double fleetConfidence,
   }) {
     final function = _library.lookupFunction<_RunBatchNative, _RunBatchDart>(
       'simulation_run_batch',
