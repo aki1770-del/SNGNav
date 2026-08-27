@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.0.8
+
+**The hazard box was a third of its documented width across the only country
+this package serves, and announcements beside the driver were dropped.**
+
+`kDefaultDigitrafficBoundingBoxHalfDegrees` (0.5) was applied to BOTH axes.
+A degree of longitude shrinks as `cos(latitude)`, and Digitraffic serves
+Finland only (~60 N to ~70 N):
+
+| place | E-W box as % of the documented 55 km |
+|---|---|
+| Helsinki 60.2 N | 50% |
+| Rovaniemi 66.5 N | 40% |
+| Utsjoki 69.9 N | 34% |
+
+The package never once operated near the equator, the only latitude where the
+symmetric box is correct. **The doc comment above the constant already stated
+"longitude varies with latitude" and then called the result "Conservative" —
+it was the inverse: a conservative hazard filter surfaces more, this surfaced
+34-50% fewer to the driver's east and west.**
+
+**Who is affected.** Anyone calling `fetchActiveAdvisoriesAtPoint`. A traffic
+announcement beside the driver, inside the documented ~55 km box, could be
+silently filtered out. Nothing marked the omission. No API changes.
+
+**Fixed.** The longitude half-width is now derived via `cos(latitude)` with a
+pole guard, mirroring the correct pattern already in `offline_tiles`
+(`offline_tile_manager.dart:243-251`). Two regression tests added, proven
+fail-then-pass against the 0.0.7 code; the second is an instrument control
+that a hazard genuinely beyond the box is still filtered.
+
+**How it survived.** The pre-existing bounding-box test moved its out-of-range
+feature NORTH only. The longitude axis was never exercised.
+
+
 ## 0.0.7
 
 ### Changed (behaviour): an unclassifiable announcement is no longer "minor"

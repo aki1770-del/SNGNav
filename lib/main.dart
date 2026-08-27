@@ -103,7 +103,15 @@ class OfflineMapPage extends StatefulWidget {
 
 class _OfflineMapPageState extends State<OfflineMapPage> {
   offline_tiles.OfflineTileManager? _offlineTileManager;
-  bool _isOffline = false;
+  /// Whether a local MBTiles map was found and loaded.
+  ///
+  /// **This measures the TILE SOURCE, never the network.** The old name and
+  /// its "ONLINE"/"OFFLINE" badge asserted a connectivity state nothing here
+  /// ever measured: with no MBTiles the badge read "ONLINE" even in a dead
+  /// zone with no signal and a blank map. Absence of a measurement is not a
+  /// measurement — the same defect family as the `?? 0` maneuver distances
+  /// and the old `LatLng(0, 0)` positions.
+  bool _hasOfflineMap = false;
   String _statusMessage = 'Initializing...';
 
   // Default view is the existing 2D map — the toggle is opt-in, the app's
@@ -362,21 +370,27 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
         );
         setState(() {
           _offlineTileManager = manager;
-          _isOffline = true;
+          _hasOfflineMap = true;
           _statusMessage =
               'Offline — MBTiles loaded (${_formatSize(file.lengthSync())})';
         });
       } else {
         setState(() {
           _offlineTileManager = null;
-          _isOffline = false;
+          _hasOfflineMap = false;
           _statusMessage =
-              'No MBTiles file at $_mbtilesPath — using online fallback';
+              'No MBTiles file at $_mbtilesPath — no offline map';
         });
       }
     } catch (e) {
       setState(() {
-        _statusMessage = 'MBTiles error: $e — using online fallback';
+        // Reset BOTH, not just the message. Leaving the flag true here would
+        // keep the badge reading "OFFLINE MAP" while the manager is null and
+        // tiles come from the network. Latent while _initTileProvider has one
+        // call site; live the moment a retry or reload is added.
+        _offlineTileManager = null;
+        _hasOfflineMap = false;
+        _statusMessage = 'MBTiles error: $e — no offline map';
       });
     }
   }
@@ -475,17 +489,20 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _isOffline ? Icons.wifi_off : Icons.wifi,
+                    _hasOfflineMap ? Icons.map : Icons.cloud_queue,
                     size: 16,
-                    color: _isOffline ? Colors.green : Colors.orange,
+                    color: _hasOfflineMap ? Colors.green : Colors.orange,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _isOffline ? 'OFFLINE' : 'ONLINE',
+                    // What we measured: do we hold a local map? NOT whether a
+                    // network exists — we never asked, and in the dead zone the
+                    // old 'ONLINE' label was actively false.
+                    _hasOfflineMap ? 'OFFLINE MAP' : 'NO OFFLINE MAP',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: _isOffline ? Colors.green : Colors.orange,
+                      color: _hasOfflineMap ? Colors.green : Colors.orange,
                     ),
                   ),
                 ],

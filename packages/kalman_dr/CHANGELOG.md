@@ -1,5 +1,61 @@
 # Changelog
 
+## 0.6.2
+
+**The filter can now be tuned for what is actually carrying the device. Until
+this version, forking was the only way.**
+
+A verified external consumer pinned this package to an exact version and wrote a
+fork plan into their own documentation — *"pin an exact version and be prepared
+to vendor/fork it… Alternative: EKF is ~200 lines to own outright."* Their app
+tracks **runners closing a geographic loop**, and loop closure is its core
+mechanic.
+
+**The cause was ours, not their distrust.** `_processNoise` was a private
+`static const`, documented *"tuned for road driving at ~1 Hz GPS updates"*, with
+entries annotated *"driver brakes/accelerates"* and *"driver turns"*. The
+constructor took no arguments and there was no injection point anywhere. **There
+was no supported way to tune this for a pedestrian**, and a heading noise
+modelling a turning car smooths through a corner a runner actually took.
+
+**Added: `MotionProfile`.** `KalmanFilter({MotionProfile profile})`, defaulting
+to `MotionProfile.roadVehicle`.
+
+**Nothing changes for any existing caller.** `roadVehicle` carries the 0.6.1
+constants byte-for-byte and a test asserts that, because silent drift there
+would change behaviour on upgrade — the one thing an additive parameter exists
+to prevent. `KalmanFilter()` is unchanged in behaviour and signature.
+
+### ⚑ `MotionProfile.pedestrian` is DERIVED, NOT MEASURED
+
+Stated in the API, in its own `name` field, and asserted by a test — because a
+reasoned guess presented as a calibration would read as a warrant this package
+cannot issue. **`test/` contains zero recorded trajectory fixtures**, so nothing
+here is fitted against real pedestrian traces.
+
+The derivation is shown so you can disagree with it:
+
+- **Heading 1.0 → 100.0.** A car at 50 km/h needs several seconds to turn 90
+  degrees; a runner rounding a corner takes about one. A ~10x faster achievable
+  turn rate scales as roughly the square.
+- **Speed 0.5 → 0.1.** Running speed varies gently around 3–5 m/s with no
+  equivalent of a hard brake, so trusting the constant-velocity model *more* is
+  correct.
+- **Position terms unchanged** — they model process drift, not carrier dynamics.
+
+**If you have real traces, fit your own with the unnamed constructor and please
+tell us what you found.**
+
+### Verified
+
+`dart test` 129/129, `dart analyze` clean. The profile test proves the pedestrian
+profile **tracks a 90-degree corner the road profile smooths away**, with a
+control asserting the two profiles **agree on a straight run** — so the corner
+test demonstrates cornering, not merely that two constants differ. A
+non-positive or non-finite process-noise term is refused at construction rather
+than silently breaking the covariance update.
+
+
 ## 0.6.1
 
 **The 500-metre accuracy cap was never 500 metres except at the Equator, and the

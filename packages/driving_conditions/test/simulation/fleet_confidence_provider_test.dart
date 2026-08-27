@@ -155,6 +155,14 @@ void main() {
           position: position,
           timestamp: DateTime.now(),
           condition: RoadCondition.icy,
+          // STATED, not defaulted. fleet_hazard 0.6.0 made this REQUIRED
+          // because up to 0.5.0 it silently defaulted to 0.8, and that
+          // manufactured value was averaged into HazardZone.averageConfidence:
+          // "a confidence you did not state is not a confidence." 0.8 is chosen
+          // deliberately to preserve this test's baseline — its own name is
+          // "lower score than constant 0.8" — so the semantics are unchanged
+          // and now visible instead of implicit.
+          confidence: 0.8,
         ),
       ];
 
@@ -194,6 +202,8 @@ void main() {
           position: position,
           timestamp: DateTime.now(),
           condition: RoadCondition.dry,
+          // STATED, not defaulted — see the icy case above.
+          confidence: 0.8,
         ),
       ];
 

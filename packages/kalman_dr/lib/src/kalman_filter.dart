@@ -16,6 +16,7 @@
 /// A new developer should understand the predict/update cycle in 5 minutes.
 library;
 
+import 'motion_profile.dart';
 import 'dart:math' as math;
 
 /// 4×4 matrix type — small enough to inline, no library needed.
@@ -65,13 +66,13 @@ class KalmanFilter {
   /// Lower values = smoother but slower to respond to manoeuvres.
   ///
   /// Units: [lat²/s, lon²/s, (m/s)²/s, (°)²/s].
-  /// Tuned for road driving at ~1 Hz GPS updates.
-  static const _processNoise = [
-    1e-10, // lat variance growth per second (~0.01m)
-    1e-10, // lon variance growth per second (~0.01m)
-    0.5, // speed variance growth per second (driver brakes/accelerates)
-    1.0, // heading variance growth per second (driver turns)
-  ];
+  ///
+  /// **Supplied by [MotionProfile], not welded in.** Through 0.6.1 this was a
+  /// private `static const` tuned "for road driving", with no injection point —
+  /// which left forking as the only way to tune the filter for a device carried
+  /// by a pedestrian. [MotionProfile.roadVehicle] carries those exact values,
+  /// so nothing changes for an existing caller.
+  List<double> get _processNoise => profile.asVector;
 
   /// Measurement noise — how much we distrust the GPS.
   ///
@@ -153,14 +154,33 @@ class KalmanFilter {
   // Constructor
   // -----------------------------------------------------------------------
 
+  /// The dynamics this filter expects from whatever carries the device.
+  ///
+  /// Defaults to [MotionProfile.roadVehicle] — the 0.6.1 behaviour, unchanged.
+  final MotionProfile profile;
+
   /// Creates a Kalman filter. Uninitialised until first [update] call.
-  KalmanFilter()
-    : _x = [0, 0, 0, 0],
+  ///
+  /// [profile] tunes the process noise for the carrier. It defaults to
+  /// [MotionProfile.roadVehicle], so this constructor behaves exactly as it did
+  /// before the parameter existed.
+  KalmanFilter({this.profile = MotionProfile.roadVehicle})
+    : assert(
+        profile.latVariancePerSecond > 0 &&
+            profile.lonVariancePerSecond > 0 &&
+            profile.speedVariancePerSecond > 0 &&
+            profile.headingVariancePerSecond > 0,
+        'MotionProfile terms must all be finite and positive: a non-positive '
+        'process noise breaks the covariance update silently rather than '
+        'loudly. Got: \$profile',
+      ),
+      _x = [0, 0, 0, 0],
       _p = _identity(1e6), // large initial uncertainty
       _lastTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Creates a Kalman filter initialised to a known state (for testing).
   KalmanFilter.withState({
+    this.profile = MotionProfile.roadVehicle,
     required double latitude,
     required double longitude,
     required double speed,
@@ -449,7 +469,7 @@ class KalmanFilter {
   // -----------------------------------------------------------------------
 
   /// Process noise Q scaled by time step.
-  static Mat4 _processNoiseMatrix(double dt) => _diag([
+  Mat4 _processNoiseMatrix(double dt) => _diag([
     _processNoise[0] * dt,
     _processNoise[1] * dt,
     _processNoise[2] * dt,

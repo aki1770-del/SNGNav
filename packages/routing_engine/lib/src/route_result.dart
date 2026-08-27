@@ -12,8 +12,32 @@ class RouteManeuver extends Equatable {
   final int index;
   final String instruction;
   final String type; // engine-agnostic: 'depart', 'right', 'left', etc.
-  final double lengthKm;
-  final double timeSeconds;
+  final double? _lengthKm;
+  final double? _timeSeconds;
+
+  /// Distance of this maneuver in km, or `0` when the engine did not send one.
+  ///
+  /// **Read [lengthKmOrNull] if you need to tell an absent value from a real
+  /// zero.** Up to and including 0.6.2 both engines applied `?? 0` to a missing
+  /// `distance`/`length`, so an unmeasured maneuver was indistinguishable from
+  /// one the driver is standing on — the shape of *"in 0.0 km, turn left"*.
+  double get lengthKm => _lengthKm ?? 0;
+
+  /// Duration of this maneuver in seconds, or `0` when the engine did not send
+  /// one. See [timeSecondsOrNull].
+  double get timeSeconds => _timeSeconds ?? 0;
+
+  /// Distance in km, or **`null` when the engine did not measure it.**
+  double? get lengthKmOrNull => _lengthKm;
+
+  /// Duration in seconds, or **`null` when the engine did not measure it.**
+  double? get timeSecondsOrNull => _timeSeconds;
+
+  /// Whether the engine actually sent a distance for this maneuver.
+  bool get hasMeasuredLength => _lengthKm != null;
+
+  /// Whether the engine actually sent a duration for this maneuver.
+  bool get hasMeasuredTime => _timeSeconds != null;
 
   /// Where the maneuver happens — **`null` means the position is UNKNOWN.**
   ///
@@ -28,19 +52,25 @@ class RouteManeuver extends Equatable {
   /// Absence of a measurement is not a measurement. Read it through
   /// [hasPosition], and do not narrate or plot a maneuver that has none.
   ///
-  /// The rest of the maneuver ([instruction], [lengthKm], [timeSeconds]) is
-  /// still true and still useful when the position is absent — one unparseable
+  /// [instruction] is still true when the position is absent — one unparseable
   /// coordinate does not invalidate the route.
+  ///
+  /// **This comment used to vouch for [lengthKm] and [timeSeconds] as well.
+  /// That was wrong.** Through 0.6.2 both were produced with `?? 0`, so the
+  /// same "absence of a measurement is not a measurement" defect this field was
+  /// fixed for was live one layer down, certified as "still true" by the very
+  /// doc comment that states the rule. Use [lengthKmOrNull]/[timeSecondsOrNull].
   final LatLng? position;
 
   const RouteManeuver({
     required this.index,
     required this.instruction,
     required this.type,
-    required this.lengthKm,
-    required this.timeSeconds,
+    required double? lengthKm,
+    required double? timeSeconds,
     required this.position,
-  });
+  }) : _lengthKm = lengthKm,
+       _timeSeconds = timeSeconds;
 
   /// Whether this maneuver carries a known position.
   ///
@@ -53,14 +83,15 @@ class RouteManeuver extends Equatable {
     index,
     instruction,
     type,
-    lengthKm,
-    timeSeconds,
+    _lengthKm,
+    _timeSeconds,
     position,
   ];
 
   @override
   String toString() =>
-      'RouteManeuver($index: $type "$instruction" ${lengthKm}km'
+      'RouteManeuver($index: $type "$instruction" '
+      '${hasMeasuredLength ? '${lengthKm}km' : 'length unknown'}'
       '${hasPosition ? '' : ', position unknown'})';
 }
 

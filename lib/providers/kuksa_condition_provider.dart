@@ -63,33 +63,21 @@ typedef KuksaConditionUpdate = VehicleConditionUpdate;
 VehicleConditionSignals vehicleSignalsFromDatapoints(
   Map<String, Datapoint> datapoints,
 ) {
-  double? readDouble(String path) {
+  final leaves = <String, Object?>{};
+  for (final path in VehicleConditionSignals.recognizedVssPaths) {
     final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.floatValue ?? dp.doubleValue ?? dp.int32Value?.toDouble();
+    if (dp == null || !dp.hasValue) continue;
+    final Object? value = dp.floatValue ??
+        dp.doubleValue ??
+        dp.int32Value ??
+        dp.uint32Value ??
+        dp.int64Value ??
+        dp.boolValue;
+    if (value != null) {
+      leaves[path] = value;
+    }
   }
-
-  bool? readBool(String path) {
-    final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.boolValue;
-  }
-
-  int? readInt(String path) {
-    final dp = datapoints[path];
-    if (dp == null || !dp.hasValue) return null;
-    return dp.int32Value ?? dp.uint32Value ?? dp.int64Value;
-  }
-
-  return VehicleConditionSignals(
-    roadFriction: readDouble(kRoadFrictionMostProbable),
-    tcsEngaged: readBool(kTcsIsEngaged),
-    absEngaged: readBool(kAbsIsEngaged),
-    wiperIntensity: readInt(kWiperFrontIntensity),
-    rainIntensity: readInt(kRaindetectionIntensity),
-    airTempC: readDouble(kAirTemperature),
-    speedKmh: readDouble(kVehicleSpeed),
-  );
+  return VehicleConditionSignals.fromVss(leaves);
 }
 
 // ---------------------------------------------------------------------------

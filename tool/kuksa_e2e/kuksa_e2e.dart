@@ -81,7 +81,7 @@ Future<void> main(List<String> args) async {
   // PHASE 1 — severe: low friction + TCS + sub-zero + heavy wiper → black ice
   // ========================================================================
   stdout.writeln('\nPHASE 1 — severe winter (worst-case bus picture)');
-  await pub.publishValue(kRoadFrictionMostProbable, 0.18);
+  await pub.publishValue(kRoadFrictionMostProbable, 18.0); // percent, not 0.18
   await pub.publishValue(kTcsIsEngaged, true);
   await pub.publishValue(kAbsIsEngaged, false);
   await pub.publishValue(kWiperFrontIntensity, 5);
@@ -92,7 +92,8 @@ Future<void> main(List<String> args) async {
   final sawSevere = await waitFor((u) =>
       u.live &&
       u.assessment?.surfaceState == RoadSurfaceState.blackIce &&
-      (u.signals?.roadFriction ?? 1.0) < 0.3);
+      u.signals?.roadFriction != null &&
+      u.signals!.roadFriction! < 0.3);
   _check(sawSevere, 'live black-ice assessment from real broker signals',
       got: last == null
           ? 'no emission'
@@ -106,7 +107,7 @@ Future<void> main(List<String> args) async {
   // PHASE 2 — clear: high friction, no precip, warm → dry (assessment flips)
   // ========================================================================
   stdout.writeln('\nPHASE 2 — clear (assessment must flip off black ice)');
-  await pub.publishValue(kRoadFrictionMostProbable, 0.92);
+  await pub.publishValue(kRoadFrictionMostProbable, 92.0); // percent, not 0.92
   await pub.publishValue(kTcsIsEngaged, false);
   await pub.publishValue(kAbsIsEngaged, false);
   await pub.publishValue(kWiperFrontIntensity, 0);

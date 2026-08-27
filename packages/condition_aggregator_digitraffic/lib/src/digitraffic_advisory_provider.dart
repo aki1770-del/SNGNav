@@ -9,6 +9,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:convert';
 
 import 'package:condition_aggregator/condition_aggregator.dart';
@@ -22,8 +23,15 @@ const String kDefaultDigitrafficTrafficAnnouncementsUrl =
 
 /// Default bounding-box half-width in WGS84 degrees applied around a
 /// requested point when filtering Digitraffic features. ~0.5 degrees
-/// latitude ≈ 55 km, longitude varies with latitude. Conservative for
-/// driver-relevant nearby-announcement surfacing.
+/// latitude ≈ 55 km.
+///
+/// This is the LATITUDE half-width. The longitude half-width is derived
+/// from it by [_longitudeHalfDegrees] so the box is the same width in
+/// kilometres on both axes. Applying this constant symmetrically was a
+/// defect through 0.0.7: Digitraffic serves Finland only (~60°N–70°N),
+/// where a degree of longitude is 34–50% of a degree of latitude, so the
+/// east–west box was a third to a half of its documented width and
+/// hazard announcements beside the driver were silently dropped.
 const double kDefaultDigitrafficBoundingBoxHalfDegrees = 0.5;
 
 /// Wall-clock budget for the HTTP fetch. A runaway publisher response
@@ -368,8 +376,12 @@ bool _featureIntersectsBoundingBox({
   if (coords == null) return false;
   final minLat = centerLatitude - halfDegrees;
   final maxLat = centerLatitude + halfDegrees;
-  final minLng = centerLongitude - halfDegrees;
-  final maxLng = centerLongitude + halfDegrees;
+  // Longitude degrees are shorter than latitude degrees away from the
+  // equator; using halfDegrees on both axes narrowed the box to 34-50% of
+  // its documented width across Finland. See _longitudeHalfDegrees.
+  final lngHalfDegrees = _longitudeHalfDegrees(halfDegrees, centerLatitude);
+  final minLng = centerLongitude - lngHalfDegrees;
+  final maxLng = centerLongitude + lngHalfDegrees;
   return _anyCoordinateInBox(
     coords,
     minLat: minLat,
@@ -572,4 +584,19 @@ class DigitrafficParseException implements Exception {
 
   @override
   String toString() => 'DigitrafficParseException: $message';
+}
+
+/// Longitude half-width in degrees that spans the same ground distance as
+/// [halfDegrees] of latitude at [latitude].
+///
+/// A degree of longitude shrinks as `cos(latitude)`, so a box that uses the
+/// same degree count on both axes is narrower east–west everywhere except the
+/// equator. Digitraffic never operates near the equator. Mirrors the
+/// pole-guarded pattern already used in `offline_tiles`
+/// (`offline_tile_manager.dart:243-251`).
+double _longitudeHalfDegrees(double halfDegrees, double latitude) {
+  final cosLat = math.cos(latitude * math.pi / 180).abs();
+  // Pole guard: cos -> 0 at the poles would widen the box without bound.
+  if (cosLat < 0.001) return 180.0;
+  return math.min(180.0, halfDegrees / cosLat);
 }
