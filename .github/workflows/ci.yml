@@ -110,17 +110,17 @@ jobs:
       - name: Run app tests with coverage
         run: flutter test --coverage --exclude-tags=probe
 
-      - name: "REPORT (non-gating): pinned-live defect-proof suites"
+      - name: "GATE: pinned-live defect-proof suites"
         if: always()
-        run: |
-          # These tests assert the FIX for defects that are still live. They FAIL by design.
-          # They are reported, never skipped: an absent verdict reads exactly like a pass.
-          # ⚑ A load error here also shows as a failure — that hole was found on 2026-08-21
-          # when an excluded file that could not COMPILE let the gate report "All tests passed".
-          for pkg in nav2_safety_layer; do
-            echo "=== packages/$pkg — LIVE DEFECTS (non-gating) ==="
-            ( cd "packages/$pkg" && dart test -t pinned-live ) || true
-          done
+        # These are the highest-value guards we own: each is the record that a defect
+        # existed and the proof it cannot return. Until 2026-08-28 this step ended in
+        # `|| true`, so a REGRESSION in them could not turn CI red -- while the package's
+        # own dart_test.yaml said the job existed "so a future failure is unmissable".
+        # It also hardcoded `for pkg in nav2_safety_layer`, the same allow-list defect
+        # scripts/ci_package_tests.sh exists to kill, thirty lines away in this file.
+        # The script enumerates instead of remembering, and GATES. A deleted guard is a
+        # failure too: an absent verdict reads exactly like a pass.
+        run: bash scripts/ci_pinned_live.sh
 
       - name: "REPORT (non-gating): stale-pin check"
         if: always()
