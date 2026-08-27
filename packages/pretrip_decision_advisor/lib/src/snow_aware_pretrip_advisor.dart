@@ -339,8 +339,21 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// [HourHazard.unknown] and whose verdict is [PretripVerdict.noData].
   ///
   /// This is the 0.6.x shape, and it exists for callers written against 0.6.0,
-  /// whose `brief` never threw. Migrating from 0.6.0 without changing your
-  /// error handling is one method name.
+  /// whose `brief` never threw. It is a compatibility shim, NOT the migration
+  /// from 0.6.0 — that is a typed `catch` on
+  /// [PretripAssessmentIncompleteException], because this method collapses the
+  /// two absences that catch separates. A window a forecast COVERED but did
+  /// not measure, and a window nothing forecast at all, both come back here
+  /// with `verdict: noData` and `peakHazard: unknown`. Only
+  /// [PretripBriefing.chips] differ (the first carries
+  /// [PretripMessages.assessmentIncomplete], the second is empty), and
+  /// [allClearEarned] and [briefOrNull] do not separate them
+  /// either. So: fine for a caller that renders `chips` or does not
+  /// distinguish the two at all; wrong for any surface that derives a
+  /// headline, banner, colour band or spoken line from `verdict` alone —
+  /// that surface will say *there is no forecast for your departure window*
+  /// on a morning a forecast arrived. See the CHANGELOG, *Migrating from
+  /// 0.6.0*.
   ///
   /// It is NOT the safer default and it is not what [brief] does, for one
   /// reason: `HourHazard.unknown` is a value a caller can ignore, while an

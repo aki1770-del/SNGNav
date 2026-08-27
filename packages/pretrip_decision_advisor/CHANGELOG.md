@@ -57,11 +57,16 @@ exactly as before. **Only the affirmative all-clear is gated.**
   behavioural break from 0.6.0** and it is deliberate: a value a caller can
   ignore was not enough for a false all-clear about a winter road.
 - **`briefOrNull(...)`** (restored from 0.5.2) — returns `null` instead of
-  throwing. `null` means "we do not know", never "clear".
+  throwing. `null` means "we do not know", never "clear". **It returns `null`
+  for BOTH absences** — a window a forecast covered but did not measure, and a
+  window nothing forecast at all — so `null` alone cannot tell you which one
+  you have. See *Migrating from 0.6.0*.
 - **`briefOrUnassessed(...)`** (new) — returns a real `PretripBriefing` with
-  `peakHazard: HourHazard.unknown` and a chip that says so. **If you wrote
-  against 0.6.0 and do not want to add error handling, this is your migration:
-  change one identifier.**
+  `peakHazard: HourHazard.unknown` and a chip that says so. It is a
+  compatibility shim for a caller that needs a total function, **not the
+  migration**: its `verdict` and `peakHazard` are identical for both absences,
+  and only its `chips` differ. See *Migrating from 0.6.0* for where that is
+  fine and where it produces a new false sentence.
 - **`PretripDataAbsentException` / `PretripAssessmentIncompleteException`**
   restored to the public API (removed in 0.6.0).
   `PretripForecastCoverageException` is also restored but is **NOT thrown on
@@ -80,6 +85,89 @@ exactly as before. **Only the affirmative all-clear is gated.**
   and was offered as the better window — the advisor sent her into the hour it
   knew least about. Unassessable hours are now skipped; a later, fully-measured
   hour can still win.
+
+### Migrating from 0.6.0
+
+**The migration is a typed `catch`, not a method swap.**
+
+Until this correction the bullet above offered `briefOrUnassessed(...)` as
+"change one identifier". That is withdrawn. 0.6.1 has not been published, so
+no integrator ever acted on it — it is recorded here rather than quietly
+deleted because the reason it was wrong is the same reason this release
+exists.
+
+```dart
+PretripBriefing briefing;
+var assessmentIncomplete = false;
+try {
+  briefing = advisor.brief(forecast: f, commute: c, profile: p);
+} on PretripAssessmentIncompleteException {
+  assessmentIncomplete = true;
+  // Take this package's own briefing for the state rather than composing a
+  // second one that could drift from it.
+  briefing = advisor.briefOrUnassessed(forecast: f, commute: c, profile: p);
+}
+```
+
+That `assessmentIncomplete` flag is the whole point of the shape: **it is the
+only thing on the public surface that separates the two absences.** Measured
+against this release on 2026-08-28:
+
+| input | `brief()` | `briefOrUnassessed()` | `briefOrNull()` | `allClearEarned()` |
+|---|---|---|---|---|
+| **A** — a forecast covers the window and measured only temperature | **throws `PretripAssessmentIncompleteException`** | `verdict: noData`, `peakHazard: unknown`, `chips: [assessmentIncomplete()]` | `null` | `false` |
+| **B** — no forecast covers the window at all | **returns**, `verdict: noData`, `peakHazard: unknown`, `chips: []` | `verdict: noData`, `peakHazard: unknown`, `chips: []` | `null` | `false` |
+
+Read down the columns. `verdict` is `noData` and `peakHazard` is `unknown` in
+**both** rows; `briefOrNull` is `null` in both; `allClearEarned` is `false` in
+both — `window.isEmpty` returns `false` on the same line an unmeasured window
+does. **The throw is the discriminator.** Nothing else is.
+
+**Where `briefOrUnassessed(...)` is still the right call.** A consumer that
+needs a total function and either does not distinguish the two absences at
+all, or renders `chips` rather than a sentence keyed off `verdict`. The chip
+list *does* carry the difference — case A holds one chip naming what was not
+measured, case B holds none — so a chip-rendering surface stays truthful
+without the catch. Logging, telemetry, batch scoring, and any caller that
+treats `peakHazard: unknown` as "do not conclude" are all fine.
+
+**Where it is NOT appropriate.** Any surface that derives a headline, banner,
+colour band or spoken line from `briefing.verdict` (or `peakHazard`) alone.
+Both absences arrive as `PretripVerdict.noData`, so that surface will tell the
+driver *there is no forecast for your departure window* on a morning a
+forecast arrived. That is a false sentence produced by absence — the same
+defect class this release fixes, moved from a chip to the headline, where it
+is larger, is read first, and is announced first to assistive tech.
+
+This is not hypothetical: **our own integrator app did exactly that**, keyed
+its headline off `briefing.verdict` alone, and rendered the wrong absence for
+case A. On the MET Norway product, where every slot carries
+`visibilityMeters: null` and `estimatedRoadCondition: null` by that source's
+own honesty rule, case A is the *default* morning, not an edge case.
+
+**A worked reference, in this package's `repository:`.** The seam is
+`lib/widgets/pretrip_screen.dart` and the test that pins it is
+`test/widgets/pretrip_unmeasured_is_not_uncovered_test.dart` — **paths relative
+to the repository root, not to this package**, so they are not in the published
+archive. Both are pinned at commit
+[`ec89c33`](https://github.com/aki1770-del/SNGNav/commit/ec89c33e3c339de287224deffd57032a5bfff4ad)
+rather than cited on the default branch, because at the time of writing they
+live on this release's branch and the default branch does not carry them yet.
+That test is an opposed pair, which is what makes it worth copying rather than
+just reading:
+
+- **P3** asserts case A never renders the "no forecast" headline.
+- **C1** asserts case B still does — because there, that sentence is TRUE.
+
+Collapse A into B and C1 keeps passing while P3 fails; collapse B into A and
+C1 fails. Either direction is caught. A test that only asserted "the screen
+did not crash" would pass on both collapses — which is exactly what swapping
+the method name buys you.
+
+⚑ The restored `## 0.5.3` entry below closes with a two-line migration snippet
+ending `if (b == null) renderNoForecastCard();`. It carries the `briefOrNull`
+bound above and is left **unedited**, because that entry is a restored
+historical record; read it against this section.
 
 ### What did NOT change, deliberately
 
