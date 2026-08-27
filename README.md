@@ -17,14 +17,23 @@ Latest article: [Connecting Flutter to Vehicle Signals: Building a Dart SDK for 
 
 Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in templates so reports arrive with enough detail to act on.
 
-The CI badge tracks `main` only, and CI runs on pushes and pull requests to `main`.
+The CI badge tracks `main` only — that is a property of the badge, not of the pipeline:
+CI runs on a push to **any** branch, and on pull requests to `main`.
 Green on `main` at `6acd265`, 2026-08-28. Before that it had last run green on
 2026-07-23: work was being committed to feature branches and packages published from
 them, so nothing shipped in between passed through CI and the badge meant "main was
-green", not "everything shipped was gated". That gap is closed — the branches were
-merged to `main` — but the badge still only ever describes `main`, and **CI's test job
-covers 12 of the 35 publishable packages** (two hardcoded allow-lists). The other 23 have
-test suites that never run; all 23 pass locally.
+green", not "everything shipped was gated".
+
+Both halves of that gap are now closed, and the second was worse than the first. CI
+formerly ran only on `main`, so a branch could be pushed and packages published from it
+without any pipeline ever claiming the ref — measured on 2026-08-28: eleven packages had
+shipped that day from two such branches. Merging to `main` does not fix this in general,
+because `backport/**` is a maintenance line that by design never merges — meaning the
+branch we cut in-range patches from, for consumers who cannot take a major bump, was the
+one branch with no gate at all. **CI now runs on every branch.** And its test job now
+runs **every package's suite** (36 with tests), choosing `dart test` or `flutter test` by
+package type; it previously covered 12 of 35 across two hardcoded allow-lists, leaving 23
+suites that existed and never executed.
 
 ```
 Status:    packages version independently on pub.dev — the registry is current state.
