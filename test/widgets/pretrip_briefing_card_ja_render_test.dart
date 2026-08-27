@@ -70,15 +70,29 @@ void main() {
           precipitationMmPerHour: 1,
           visibilityMeters: 250,
         ),
+        // The LATER hours are fully measured, since 2026-08-28. 0.6.1 will not
+        // point a suggested delay into an hour it knows nothing about —
+        // 「約2時間待つことを検討」 is an affirmative claim about an hour SHE is
+        // not in yet, and acting on it PUTS her there. These two slots carried
+        // no road surface, no humidity and no precipitation, so the advisor
+        // correctly declined to offer them and this card lost its delay. The
+        // fixture's own premise — "a whiteout-now, CLEAR-LATER morning" — is
+        // what was untrue; measuring the later hours makes it true again.
         HourlyForecast(
           hour: DateTime(2026, 1, 1, 9),
           tempCelsius: -1,
+          humidityRH: 60,
+          precipitationMmPerHour: 0,
           visibilityMeters: 5000,
+          estimatedRoadCondition: RoadConditionEstimate.dry,
         ),
         HourlyForecast(
           hour: DateTime(2026, 1, 1, 10),
           tempCelsius: 0,
+          humidityRH: 60,
+          precipitationMmPerHour: 0,
           visibilityMeters: 8000,
+          estimatedRoadCondition: RoadConditionEstimate.dry,
         ),
       ],
       issuedAt: issued,

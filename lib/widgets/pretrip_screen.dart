@@ -928,14 +928,50 @@ class _PretripScreenState extends State<PretripScreen> {
           : CommuteFlexibility.discretionary,
       geo: geo,
     );
-    final briefing = advisor.brief(
-      forecast: forecast,
-      commute: commute,
-      profile: const DriverProfileSpec(
-        profileTag: 'demo',
-        reactionTimeSeconds: 1.5,
-      ),
+    const profile = DriverProfileSpec(
+      profileTag: 'demo',
+      reactionTimeSeconds: 1.5,
     );
+
+    // THE ALL-CLEAR MUST BE EARNED, AND THE TWO ABSENCES ARE NOT THE SAME.
+    //
+    // `pretrip_decision_advisor` 0.6.1 refuses the affirmative all-clear it did
+    // not measure: `brief` throws [PretripAssessmentIncompleteException] when a
+    // forecast DOES cover this window but the fields that decide the hazard
+    // ladder were never measured. Published 0.6.0 printed
+    // 「出発時間帯に冬季の危険を示す兆候はありません」 on exactly that morning —
+    // a sentence produced BY the absence of evidence. On the MET Norway product
+    // it was the DEFAULT: that source carries neither visibility nor road
+    // surface on any slot, by its own honesty rule.
+    //
+    // The catch is the ONLY thing that can tell that morning apart from one
+    // with no forecast at all. Both land as `PretripVerdict.noData`, and
+    // `allClearEarned` answers `false` to both — `window.isEmpty` returns
+    // `false` on the same line an unmeasured window does. Calling
+    // `briefOrUnassessed` instead of catching loses the distinction too, and
+    // the card would then tell HER 「出発時間帯の予報がありません」 — *there is
+    // no forecast* — on a morning a forecast arrived. That is the same defect
+    // 0.6.1 exists to close, moved into the headline, where it is larger and
+    // is read first, and is announced first to assistive tech.
+    PretripBriefing briefing;
+    var assessmentIncomplete = false;
+    try {
+      briefing = advisor.brief(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
+    } on PretripAssessmentIncompleteException {
+      assessmentIncomplete = true;
+      // The package already authored what this state SAYS — its
+      // `assessmentIncomplete()` chip, in both languages. Take its briefing
+      // rather than compose a second one here that could drift from it.
+      briefing = advisor.briefOrUnassessed(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
+    }
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -948,6 +984,7 @@ class _PretripScreenState extends State<PretripScreen> {
                 // HER mother in Akita — resolved once from the active locale above.
                 strings: strings,
                 briefing: briefing,
+                assessmentIncomplete: assessmentIncomplete,
                 commute: commute,
                 forecastIssuedAt: forecast.issuedAt,
                 tripRequired: _pretripTripRequired,

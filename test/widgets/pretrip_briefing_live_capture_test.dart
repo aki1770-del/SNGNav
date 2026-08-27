@@ -131,14 +131,34 @@ void main() {
         routeIdentifiers: const ['live-commute'],
         flexibility: CommuteFlexibility.discretionary,
       );
-      final briefing = advisor.brief(
-        forecast: forecast,
-        commute: commute,
-        profile: const DriverProfileSpec(
-          profileTag: 'demo',
-          reactionTimeSeconds: 1.5,
-        ),
+      // ⚑ `live_real_nagoya` is a CAPTURED REAL MET Norway response, and that
+      // product carries neither visibility nor road surface on any slot. The
+      // fixture is NOT completed here: writing those fields in would claim the
+      // product ships data it does not, which is a worse lie than the one this
+      // release fixes. This morning genuinely cannot be assessed, so the
+      // capture records what HER card genuinely shows — through the SAME seam
+      // `PretripScreen` uses, so the picture is of production, not of a
+      // test-only path.
+      const profile = DriverProfileSpec(
+        profileTag: 'demo',
+        reactionTimeSeconds: 1.5,
       );
+      PretripBriefing briefing;
+      var assessmentIncomplete = false;
+      try {
+        briefing = advisor.brief(
+          forecast: forecast,
+          commute: commute,
+          profile: profile,
+        );
+      } on PretripAssessmentIncompleteException {
+        assessmentIncomplete = true;
+        briefing = advisor.briefOrUnassessed(
+          forecast: forecast,
+          commute: commute,
+          profile: profile,
+        );
+      }
 
       final boundaryKey = GlobalKey();
       tester.view.physicalSize = const Size(620, 760);
@@ -157,6 +177,7 @@ void main() {
                   height: 740,
                   child: PretripBriefingCard(
                     briefing: briefing,
+                    assessmentIncomplete: assessmentIncomplete,
                     commute: commute,
                     forecastIssuedAt: forecast.issuedAt,
                     tripRequired: false,

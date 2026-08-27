@@ -39,16 +39,25 @@ void main() {
 
   // Hazard fixtures stay subzero; the clear fixture sits above the frost
   // band (subzero dry air is caution class since the 2026-06-12 quant fix).
+  // ⚑ A FULLY MEASURED slot, since 2026-08-28 — see
+  // `pretrip_briefing_card_test.dart` for the reasoning. These captures are a
+  // visual record of the shipped card, so their inputs must be states the
+  // advisor can actually decide; a captured all-clear that was never earned is
+  // a picture of the defect `pretrip_decision_advisor` 0.6.1 closes.
   HourlyForecast slot(
     int hour, {
     double temp = -3,
-    double? vis,
-    double? precip,
+    double vis = 8000,
+    double precip = 0,
+    double humidity = 60,
+    RoadConditionEstimate road = RoadConditionEstimate.dry,
   }) => HourlyForecast(
     hour: DateTime(2026, 1, 1, hour),
     tempCelsius: temp,
+    humidityRH: humidity,
     precipitationMmPerHour: precip,
     visibilityMeters: vis,
+    estimatedRoadCondition: road,
   );
 
   final whiteoutThenClear = [
@@ -57,7 +66,8 @@ void main() {
     slot(9, vis: 5000),
     slot(10, vis: 8000),
   ];
-  final clear = [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)];
+  // 4 C — above the radiative-frost ceiling (3 C), so the ladder decides it.
+  final clear = [slot(7, temp: 4), slot(8, temp: 4)];
   // Dry subzero air — caution class with the frost/black-ice chip (the
   // 2026-06-12 quant fix: 70/620 real winter slots used to render "clear").
   final frostDry = [slot(7, temp: -8), slot(8, temp: -8)];
