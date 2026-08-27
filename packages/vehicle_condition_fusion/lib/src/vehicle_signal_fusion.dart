@@ -6,9 +6,22 @@ import 'vehicle_condition_signals.dart';
 // Deterministic fusion thresholds (typed, named — no magic numbers inline).
 // ---------------------------------------------------------------------------
 
-/// Road-friction estimate (0.0–1.0) below which the surface is treated as
-/// icy/snowy. Matches the threshold documented on
-/// `kRoadFrictionMostProbable` in `kuksa_dart_sdk`.
+/// Road-friction estimate below which the surface is treated as icy/snowy.
+///
+/// ⚠️ THIS THRESHOLD IS IN THE NORMALIZED 0.0–1.0 SCALE of
+/// [VehicleConditionSignals.roadFriction] — **not** in the unit the vehicle
+/// bus carries. `Vehicle.ADAS.ESC.RoadFriction.MostProbable` is declared by
+/// VSS v6.0 (`spec/ADAS/ADAS.vspec`) as `unit: percent, min: 0, max: 100`,
+/// where 0 = no friction and 100 = maximum friction. An ESC on black ice
+/// reports about **18**, not 0.18. [VehicleConditionSignals.fromVss] performs
+/// the ÷100 conversion and the clamp; anything that decodes the wire value by
+/// hand must do the same or this threshold silently never fires.
+///
+/// The authority is the VSS specification, not this package and not the SDK
+/// README: `kuksa_dart_sdk` 0.2.3 documented the range as 0.0–1.0, which is
+/// how the app came to compare `18.0 < 0.3`, conclude the road was not icy,
+/// and leave the one limb that fires BEFORE a slip permanently dead.
+/// Corrected in the SDK from 0.2.4 onward.
 const double kIcyFrictionThreshold = 0.3;
 
 /// Ambient temperature (°C) at/below which a TCS/ABS traction-loss event is

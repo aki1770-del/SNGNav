@@ -6,7 +6,8 @@
       "Speed": {
         "type": "sensor",
         "datatype": "float",
-        "description": "Vehicle speed (km/h)."
+        "unit": "km/h",
+        "description": "Vehicle speed. VSS v6.0: float, unit km/h."
       },
       "Exterior": {
         "type": "branch",
@@ -15,7 +16,8 @@
           "AirTemperature": {
             "type": "sensor",
             "datatype": "float",
-            "description": "Ambient outside air temperature (degC)."
+            "unit": "Celsius",
+            "description": "Ambient outside air temperature. VSS v6.0: float, unit Celsius."
           }
         }
       },
@@ -34,12 +36,18 @@
                   "MostProbable": {
                     "type": "sensor",
                     "datatype": "float",
-                    "description": "Most-probable road friction (0.0-1.0)."
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "description": "Most probable road friction. VSS v6.0: unit percent, 0-100. 0 = no friction, 100 = maximum friction. NOT a 0.0-1.0 fraction."
                   },
                   "LowerBound": {
                     "type": "sensor",
                     "datatype": "float",
-                    "description": "Lower bound of friction confidence interval."
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "description": "Lower bound of the friction confidence interval. VSS v6.0: percent 0-100."
                   }
                 }
               }
@@ -86,9 +94,10 @@
                     "description": "Front wiping.",
                     "children": {
                       "Intensity": {
-                        "type": "sensor",
+                        "type": "actuator",
                         "datatype": "int32",
-                        "description": "Front wiper intensity level (0-5)."
+                        "_vssDeviation": "datatype: VSS v6.0 declares uint8. Our overlay declares int32 because kuksa_dart_sdk cannot publish an unsigned value through its public API: publishValue() maps every Dart int to Value(int32:), and the documented escape publishDatapoint() takes a generated proto type the package does not export. MEASURED 2026-08-26 against kuksa-databroker 0.7.0, which rejected the VSS-faithful declaration with 'INVALID_ARGUMENT: Wrong type provided'. This deviation is the SDK gap made visible; remove it when the SDK can express uint8.",
+                        "description": "Requested relative wiper intensity. VSS v6.0 declares this an ACTUATOR, uint8, with no maximum (\"vehicle specific\"). A weak precipitation proxy."
                       }
                     }
                   }
@@ -103,7 +112,10 @@
               "Intensity": {
                 "type": "sensor",
                 "datatype": "int32",
-                "description": "Rain sensor intensity (0-100%)."
+                "unit": "percent",
+                "max": 100,
+                "_vssDeviation": "datatype: VSS v6.0 declares uint8. Our overlay declares int32 because kuksa_dart_sdk cannot publish an unsigned value through its public API: publishValue() maps every Dart int to Value(int32:), and the documented escape publishDatapoint() takes a generated proto type the package does not export. MEASURED 2026-08-26 against kuksa-databroker 0.7.0, which rejected the VSS-faithful declaration with 'INVALID_ARGUMENT: Wrong type provided'. This deviation is the SDK gap made visible; remove it when the SDK can express uint8.",
+                "description": "Rain intensity. VSS v6.0: percent, max 100. 0 = dry, 100 = covered."
               }
             }
           }
@@ -135,8 +147,9 @@
                             "children": {
                               "Pressure": {
                                 "type": "sensor",
-                                "datatype": "float",
-                                "description": "Front-left tire pressure (kPa)."
+                                "datatype": "uint16",
+                                "unit": "kPa",
+                                "description": "Front-left tire pressure. VSS v6.0: uint16, unit kPa."
                               }
                             }
                           }
@@ -152,8 +165,9 @@
                             "children": {
                               "Pressure": {
                                 "type": "sensor",
-                                "datatype": "float",
-                                "description": "Front-right tire pressure (kPa)."
+                                "datatype": "uint16",
+                                "unit": "kPa",
+                                "description": "Front-right tire pressure. VSS v6.0: uint16, unit kPa."
                               }
                             }
                           }
