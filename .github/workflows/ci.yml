@@ -32,6 +32,11 @@ on:
   push:
   pull_request:
     branches: [main]
+  # ⚑ Added 2026-08-28: without this there was NO way to run CI on an existing
+  # ref. Two branches were found carrying published packages and no pipeline
+  # run, and nothing could be done about it except push again -- which rewrites
+  # nothing and proves nothing about the ref that actually shipped.
+  workflow_dispatch:
 
 permissions:
   contents: read
