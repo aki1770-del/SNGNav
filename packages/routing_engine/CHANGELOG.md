@@ -1,3 +1,12 @@
+## 0.6.2
+
+- Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.
+
+  `latlong2 0.10.0` shipped 2026-04-25 and `flutter_map 8.x` resolves it, so the old
+  ceiling made this package **uninstallable alongside current `flutter_map`** —
+  `version solving failed` for every published version. No source change; the cap was
+  gratuitous. Verified on `latlong2 0.10.1`: analyze clean, **151/151 tests pass**.
+
 # Changelog
 
 ## 0.6.1
