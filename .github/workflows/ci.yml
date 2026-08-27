@@ -15,8 +15,21 @@
 name: CI
 
 on:
+  # ⚑ push: ALL branches, deliberately. This was `branches: [main]`, and on
+  # 2026-08-28 the turn-close gate measured the consequence: eleven packages had
+  # been published that day from two branches CI had never run on --
+  # `fix/latlong2-widen-0.10` (10 packages) and `backport/routing_engine-0.5.x`
+  # (routing_engine 0.5.3). No pipeline claimed either ref.
+  #
+  # Merging to main does not fix this in general. `backport/**` is a maintenance
+  # line that by design never merges to main, so a main-only trigger can NEVER
+  # cover the branch we cut in-range patches from -- the ones that reach a
+  # consumer who cannot take a major bump. The branch we are most careful about
+  # was the branch with no gate at all.
+  #
+  # We publish from feature and backport branches. Anything we publish from must
+  # be covered.
   push:
-    branches: [main]
   pull_request:
     branches: [main]
 
