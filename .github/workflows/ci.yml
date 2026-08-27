@@ -66,6 +66,14 @@ jobs:
       - name: Live-source guard
         run: bash scripts/live_source_guard.sh
 
+      - name: Sibling-constraint check — prove the instrument first
+        # The guard shipped npm caret semantics 2026-08-21..08-28 and reported 8
+        # false FAILs in 16. A gate that over-reports gets routed around
+        # (Sakichi V20). The self-test is anchored to pub_semver and carries
+        # negative controls that go RED if either defect is reintroduced, so the
+        # instrument is proven on every push before its verdict is trusted.
+        run: python3 scripts/sibling_constraint_check.py --self-test
+
       - name: Sibling-constraint check
         run: python3 scripts/sibling_constraint_check.py
 
