@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.6.3
+
+**Reconciles a tree that had drifted behind its own registry, and carries two
+independent fixes that had been split across that gap.**
+
+`0.6.2` was published from the `latlong2`-widen branch and carried the widen but
+not the maneuver fix. This working tree carried the maneuver fix but still read
+`latlong2: ^0.9.1` and `version: 0.6.1` — **behind the registry it publishes to.**
+A stranger reading the repository saw 0.6.1 while pub.dev served 0.6.2, and
+publishing from the tree would have regressed the widen. Both halves ship here.
+
+**1. `latlong2` widened** to `">=0.9.1 <0.11.0"`, restating 0.6.2 so the
+constraint survives the reconciliation rather than being silently dropped.
+
+**2. An absent maneuver distance is no longer a measured zero.** Four sites, two
+engines, all `?? 0`:
+
+```
+osrm_routing_engine.dart:146-147      distance, duration
+valhalla_routing_engine.dart:182-183  length, time
+```
+
+A missing value became `0` — the shape of *"in 0.0 km, turn left"*, where the
+driver is told to turn NOW because the server said nothing at all.
+
+**Who is affected.** Anyone reading `RouteManeuver.lengthKm` or `.timeSeconds`.
+**No API is removed and nothing changes type**: those getters still return
+non-nullable doubles and still return `0` for an absent value. Added:
+`lengthKmOrNull`, `timeSecondsOrNull`, `hasMeasuredLength`, `hasMeasuredTime`.
+Equality now uses the nullable fields, so **an absent value no longer compares
+equal to a real zero.**
+
+**Non-breaking by construction, and deliberately so.** The correct fix is
+nullable public fields. That is breaking, which forces `0.7.0` under Dart 0.x,
+which `^0.5.1` will not admit — **it would not reach the one consumer we know
+holds this package.** The additive shape was chosen for reach, not for elegance.
+
+**What this fix does NOT cover, stated rather than left to be discovered.**
+`valhalla_routing_engine.dart:181` still reads `mMap['type'] as int? ?? 0`. That
+one is benign and was checked, not assumed: Valhalla type `0` maps to `'none'`,
+its own absent-type value, so it does not fabricate a turn instruction.
+
+**How it survived.** `route_result.dart` already stated the rule on the
+`position` field — *"Absence of a measurement is not a measurement"* — recorded
+that both engines used to substitute `LatLng(0, 0)`, "Null Island, a real
+coordinate in the Gulf of Guinea", **and then vouched by name for `lengthKm` and
+`timeSeconds` as "still true".** That sentence is corrected in place rather than
+deleted, so a reader can see what it used to certify.
+
+
 ## 0.6.1
 
 ### Safety defect in 0.6.0 and earlier — an absent distance was rendered as a measured zero
