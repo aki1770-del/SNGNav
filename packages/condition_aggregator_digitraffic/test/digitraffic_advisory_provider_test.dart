@@ -617,4 +617,75 @@ void main() {
       },
     );
   });
+
+  group('longitude half-width scales with latitude (0.0.8 regression)', () {
+    // Through 0.0.7 the same degree count was applied to BOTH axes. A degree
+    // of longitude at Rovaniemi (66.5 N) is ~40% of a degree of latitude, so
+    // the east-west box was ~40% of its documented 55 km and announcements
+    // beside the driver were silently dropped. The pre-existing bounding-box
+    // test only ever moved a feature NORTH, so it could not see this.
+    const driverLat = 66.5; // Rovaniemi
+    const driverLng = 25.7;
+
+    test('surfaces a hazard 40 km EAST that 0.0.7 dropped', () async {
+      // 0.9 deg lng at 66.5 N ~= 40 km: inside the documented 55 km box.
+      // 0.0.7 rejected it (0.9 > 0.5). 0.0.8 admits it (0.9 < 0.5/cos(66.5)).
+      final eastward = _feature(
+        trafficAnnouncementType: 'accident report',
+        lng: driverLng + 0.9,
+        lat: driverLat,
+        englishTitle: 'Hazard 40 km east',
+      );
+      final mock = MockClient((http.Request request) async => http.Response(
+            jsonEncode(_featureCollection([eastward])),
+            200,
+            headers: const <String, String>{
+              'Content-Type': 'application/json; charset=utf-8',
+            },
+          ));
+      final provider = DigitrafficAdvisoryProvider.withClient(mock);
+      await provider.init();
+      try {
+        final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+          latitude: driverLat,
+          longitude: driverLng,
+        );
+        expect(advisories, hasLength(1),
+            reason: 'a hazard 40 km east is inside the documented box');
+        expect(advisories.first.headline, 'Hazard 40 km east');
+      } finally {
+        provider.close();
+      }
+    });
+
+    test('still drops a hazard 165 km east — the widen is not unbounded',
+        () async {
+      // Instrument control. If this passed too, the test would prove nothing.
+      final tooFar = _feature(
+        trafficAnnouncementType: 'accident report',
+        lng: driverLng + 3.7,
+        lat: driverLat,
+        englishTitle: 'Hazard 165 km east',
+      );
+      final mock = MockClient((http.Request request) async => http.Response(
+            jsonEncode(_featureCollection([tooFar])),
+            200,
+            headers: const <String, String>{
+              'Content-Type': 'application/json; charset=utf-8',
+            },
+          ));
+      final provider = DigitrafficAdvisoryProvider.withClient(mock);
+      await provider.init();
+      try {
+        final advisories = await provider.fetchActiveAdvisoriesAtPoint(
+          latitude: driverLat,
+          longitude: driverLng,
+        );
+        expect(advisories, isEmpty,
+            reason: 'beyond the box it must still be filtered out');
+      } finally {
+        provider.close();
+      }
+    });
+  });
 }
