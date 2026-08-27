@@ -104,38 +104,21 @@ jobs:
           # 4-in-5 on first run. See the header of scripts/stale-pin-check.py.
           python3 scripts/stale-pin-check.py packages/nav2_safety_layer || true
 
-      - name: Run pure Dart package tests with coverage
-        run: |
-          export PATH="$HOME/.pub-cache/bin:$PATH"
-          # ⚑ nav2_safety_layer ADDED 2026-08-21. Measured that day: this package's tests
-          # had NEVER run in CI — it was in neither allow-list — which is why four live
-          # defects and one STALE pin sat unreported since publication. A package whose
-          # tests never run is not passing; it is unmeasured.
-          for pkg in driving_conditions driving_consent driving_weather fleet_hazard kalman_dr nav2_safety_layer routing_engine; do
-            echo "--- packages/$pkg ---"
-            (
-              cd "packages/$pkg"
-              rm -rf coverage
-              # -x pinned-live: gate on REGRESSIONS. The pinned-live suite asserts fixes
-              # for defects that are still live, so it fails by design; it is RUN AND
-              # REPORTED in the next step, never skipped. A gate that can never pass is a
-              # gate that gets routed around (Sakichi Vision #20).
-              dart test -x pinned-live --coverage=coverage/raw
-              dart pub global run coverage:format_coverage \
-                --packages=.dart_tool/package_config.json \
-                --report-on=lib \
-                --in=coverage/raw \
-                --out=coverage/lcov.info \
-                --lcov
-            )
-          done
-
-      - name: Run Flutter package tests with coverage
-        run: |
-          for pkg in map_viewport_bloc navigation_safety offline_tiles routing_bloc voice_guidance; do
-            echo "--- packages/$pkg ---"
-            (cd "packages/$pkg" && flutter test --coverage)
-          done
+      - name: Run every package's test suite
+        # Was TWO hardcoded allow-lists -- 7 names for `dart test`, 5 for
+        # `flutter test` -- covering 12 of 35 publishable packages. The other 23
+        # had test/ directories that never once executed.
+        #
+        # This workflow already knew that failure mode, in its own words:
+        #   "nav2_safety_layer ADDED 2026-08-21 ... this package's tests had
+        #    NEVER run in CI -- it was in neither allow-list -- which is why four
+        #    live defects and one STALE pin sat unreported since publication. A
+        #    package whose tests never run is not passing; it is unmeasured."
+        # The remedy applied then was to add ONE NAME. The list was the defect.
+        #
+        # Measured before this change, 2026-08-28: all 36 packages with a test/
+        # directory pass. Enabling them costs runtime, not triage.
+        run: ./scripts/ci_package_tests.sh
 
       - name: Merge coverage reports
         run: ./scripts/coverage_report.sh
