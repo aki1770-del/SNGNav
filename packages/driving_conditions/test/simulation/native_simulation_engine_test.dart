@@ -10,6 +10,12 @@ void main() {
   final shouldSkip = !Platform.isLinux || !nativeLibrary.existsSync();
 
   test('native engine matches cpu engine within epsilon', skip: shouldSkip, () {
+    // 0.7.0: neither engine takes a provider, and the native engine no longer
+    // has a CPU fallback — the kernel's 7th argument (fleet_confidence) and the
+    // struct's fleet_mean field are gone, so the FFI path is always taken and
+    // this test always exercises it. The C weights are 0.5/0.5, matching Dart.
+    // ⚑ This test compares a REBUILT libsimulation_engine.so; a 0.6.x binary is
+    // an ABI mismatch and would fail here rather than silently mis-read.
     const cpuEngine = CpuSafetyScoreSimulationEngine();
     final nativeEngine = NativeSafetyScoreSimulationEngine();
     const options = SimulationOptions(runs: 5000, seed: 42);
@@ -34,10 +40,6 @@ void main() {
     expect(
       native.score.visibilityScore,
       closeTo(cpu.score.visibilityScore, 0.005),
-    );
-    expect(
-      native.score.fleetConfidenceScore!,
-      closeTo(cpu.score.fleetConfidenceScore!, 0.0001),
     );
     expect(native.variance, isNonNegative);
     expect(native.executionMs, isNotNull);

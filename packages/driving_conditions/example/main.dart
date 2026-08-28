@@ -31,8 +31,11 @@ void main() {
     return;
   }
 
-  // --- CPU path: constant provider (default 0.8 baseline) ---
-  final defaultResult = const SafetyScoreSimulator().simulate(
+  // --- The safety score: grip and visibility, 0.5/0.5, always ---
+  // 0.7.0 removed the fleet term from the composite and with it the
+  // `provider:` parameter. The weights are stated in SimulatedSafetyScore and
+  // are never re-normalised, so `overall` means the same thing on every run.
+  final result = const SafetyScoreSimulator().simulate(
     speed: 50,
     gripFactor: grip,
     surface: surface,
@@ -40,50 +43,50 @@ void main() {
     seed: 42,
   );
 
-  // --- CPU path: fleet adapter (icy reports reduce confidence) ---
+  // --- Fleet telemetry, read SEPARATELY and on its own terms ---
+  // The adapter is still here and still supported. It is simply not laundered
+  // into the safety score above, because the fleet term never carried a real
+  // reading: see SimulatedSafetyScore for the four defects that came of
+  // pretending otherwise.
   final icyReports = [
     FleetReport(
       vehicleId: 'v1',
       position: const LatLng(35.1, 136.9),
       timestamp: DateTime.now(),
       condition: RoadCondition.icy,
+      // ASSERTED observation confidence — this is a scenario we are declaring,
+      // not a measurement. Required since fleet_hazard 0.6.0, which removed
+      // its own defaulted 0.8 for the same reason this package removed its.
+      confidence: 0.9,
     ),
     FleetReport(
       vehicleId: 'v2',
       position: const LatLng(35.1, 136.9),
       timestamp: DateTime.now(),
       condition: RoadCondition.snowy,
+      confidence: 0.9,
     ),
   ];
 
-  final fleetResult = SafetyScoreSimulator(
-    provider: FleetHazardConfidenceAdapter(icyReports),
-  ).simulate(
-    speed: 50,
-    gripFactor: grip,
-    surface: surface,
-    visibilityMeters: visibility,
-    seed: 42,
-  );
+  final fleet = FleetHazardConfidenceAdapter(icyReports).confidence;
+  final noFleet = const FleetHazardConfidenceAdapter([]).confidence;
 
   print('surfaceState: ${surface.name}');
   print('advisory:     ${assessment.advisoryMessage}');
   print('');
-  print('--- default (constant 0.8 — an ASSERTED value, not a measurement) ---');
-  final defaultFleet = defaultResult.score.fleetConfidenceScore;
-  print(
-    'fleet confidence: '
-    '${defaultFleet == null ? 'no fleet data' : defaultFleet.toStringAsFixed(2)}',
-  );
-  print('overall safety:   ${defaultResult.score.overall.toStringAsFixed(2)}');
-  print('incident count:   ${defaultResult.incidentCount}');
+  print('--- safety score (grip 0.5 + visibility 0.5) ---');
+  print('grip:             ${result.score.gripScore.toStringAsFixed(2)}');
+  print('visibility:       ${result.score.visibilityScore.toStringAsFixed(2)}');
+  print('overall safety:   ${result.score.overall.toStringAsFixed(2)}');
+  print('incident count:   ${result.incidentCount}');
   print('');
-  print('--- fleet adapter (icy + snowy reports) ---');
-  final fleet = fleetResult.score.fleetConfidenceScore;
+  print('--- fleet telemetry, read separately (NOT in the score) ---');
   print(
-    'fleet confidence: '
+    'icy + snowy reports: '
     '${fleet == null ? 'no fleet data' : fleet.toStringAsFixed(2)}',
   );
-  print('overall safety:   ${fleetResult.score.overall.toStringAsFixed(2)}');
-  print('incident count:   ${fleetResult.incidentCount}');
+  print(
+    'no reports at all:   '
+    '${noFleet == null ? 'no fleet data' : noFleet.toStringAsFixed(2)}',
+  );
 }

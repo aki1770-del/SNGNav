@@ -4,11 +4,8 @@
 /// for higher throughput than the pure-Dart [CpuSafetyScoreSimulationEngine].
 library;
 
-
 import '../models/road_surface_state.dart';
-import 'constant_fleet_confidence_provider.dart';
-import 'cpu_safety_score_simulation_engine.dart';
-import 'fleet_confidence_provider.dart';
+import 'measured_inputs.dart';
 import 'simulated_safety_score.dart';
 import 'native_simulation_bindings.dart';
 import 'safety_score_simulation_engine.dart';
@@ -20,19 +17,31 @@ import 'simulation_result.dart';
 /// Uses [NativeSimulationBindings] to call the compiled
 /// `simulation_run_batch` function through `dart:ffi`.
 ///
-/// Inject a [FleetConfidenceProvider] to supply real fleet data to the
-/// native engine. Defaults to [ConstantFleetConfidenceProvider] (0.8).
+/// **0.7.0 removed the `provider:` parameter, and with it the CPU fallback.**
+/// On 0.6.x this engine silently delegated to [CpuSafetyScoreSimulationEngine]
+/// whenever the fleet term was absent, because the C kernel's weighted mean
+/// took a non-nullable fleet confidence and could not express an absent one —
+/// so `SimulationResult.executionMs` came back `null` and the FFI kernel was
+/// never entered on the default path. The score no longer has a fleet term at
+/// all (see [SimulatedSafetyScore]), the kernel's signature no longer carries
+/// one, and this engine now always runs the native path.
+///
+/// ⚑ `native/native_simulation.c` changed in 0.7.0 — its weights are `0.5/0.5`
+/// and `simulation_run_batch` takes six arguments instead of seven. **Rebuild
+/// the shared library.** An `0.6.x` binary left in `native/build/` is an ABI
+/// mismatch, not a slightly-stale one.
 class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates an engine backed by [bindings] (defaults to platform library).
-  NativeSafetyScoreSimulationEngine({
-    NativeSimulationBindings? bindings,
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
-  }) : _bindings = bindings ?? NativeSimulationBindings(),
-       _provider = provider;
+  NativeSafetyScoreSimulationEngine({NativeSimulationBindings? bindings})
+    : _bindings = bindings ?? NativeSimulationBindings();
 
   final NativeSimulationBindings _bindings;
-  final FleetConfidenceProvider _provider;
 
+  /// Throws [ArgumentError] if [speed], [gripFactor] or [visibilityMeters] is
+  /// non-finite. Checked on the Dart side deliberately: the C kernel clamps
+  /// with `<` / `>` comparisons, and every comparison against a `NaN` is
+  /// false, so a non-finite value would pass straight through `clampf_range`
+  /// and poison the batch mean.
   @override
   SimulationResult simulate({
     required double speed,
@@ -41,22 +50,9 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     required double visibilityMeters,
     required SimulationOptions options,
   }) {
-    final fleetConfidence = _provider.confidence;
-
-    // The native kernel's weighted mean takes a NON-nullable fleet term: it has
-    // no way to express "no fleet data", and passing any number would fabricate
-    // one (0.8 up to 0.5.4 — which raised the score on fleet silence). When the
-    // fleet said nothing, we run the honest CPU path, which re-normalises the
-    // weights over the terms that were measured. Correctness before throughput.
-    if (fleetConfidence == null) {
-      return CpuSafetyScoreSimulationEngine(provider: _provider).simulate(
-        speed: speed,
-        gripFactor: gripFactor,
-        surface: surface,
-        visibilityMeters: visibilityMeters,
-        options: options,
-      );
-    }
+    requireMeasured(speed, 'speed');
+    requireMeasured(gripFactor, 'gripFactor');
+    requireMeasured(visibilityMeters, 'visibilityMeters');
 
     final response = _bindings.runBatch(
       runs: options.runs,
@@ -65,7 +61,6 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       gripFactor: gripFactor,
       surfaceCode: surface.index,
       visibilityMeters: visibilityMeters,
-      fleetConfidence: fleetConfidence,
     );
 
     return SimulationResult(
@@ -73,7 +68,6 @@ class NativeSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
         overall: response.overallMean,
         gripScore: response.gripMean,
         visibilityScore: response.visibilityMean,
-        fleetConfidenceScore: response.fleetMean,
       ),
       variance: response.overallVariance,
       incidentCount: response.incidentCount,

@@ -19,7 +19,15 @@ void main() {
       expect(score.overall, inInclusiveRange(0.0, 1.0));
       expect(score.gripScore, inInclusiveRange(0.0, 1.0));
       expect(score.visibilityScore, inInclusiveRange(0.0, 1.0));
-      expect(score.fleetConfidenceScore, 0.8);
+      // 0.7.0: there is no fleet term to assert. Up to 0.6.0 this asserted
+      // 0.8 — a fleet that never spoke, reported as one that did — and 0.6.1
+      // asserted `isNull`. The field itself is gone: `overall` is exactly
+      // 0.5*grip + 0.5*visibility, with the weights stated and never
+      // re-normalised.
+      expect(
+        score.overall,
+        closeTo(0.5 * score.gripScore + 0.5 * score.visibilityScore, 1e-12),
+      );
     });
 
     test('higher speed reduces overall score', () {
@@ -113,7 +121,14 @@ void main() {
       );
 
       expect(result.score.overall, inInclusiveRange(0.0, 1.0));
-      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      // 0.7.0: no fleet term exists to be absent. See the runOnce case above.
+      expect(
+        result.score.overall,
+        closeTo(
+          0.5 * result.score.gripScore + 0.5 * result.score.visibilityScore,
+          1e-12,
+        ),
+      );
     });
 
     test('returns variance and incident count', () {

@@ -7,11 +7,8 @@ library;
 
 import 'dart:math';
 
-import 'package:navigation_safety_core/navigation_safety_core.dart';
-
 import '../models/road_surface_state.dart';
-import 'constant_fleet_confidence_provider.dart';
-import 'fleet_confidence_provider.dart';
+import 'measured_inputs.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
@@ -21,29 +18,35 @@ import 'simulation_result.dart';
 /// CPU (pure Dart) Monte Carlo safety score engine.
 ///
 /// Runs N stochastic simulations with jittered inputs to produce
-/// a probabilistic [SafetyScore]. Deterministic seeding for tests.
+/// a probabilistic [SimulatedSafetyScore]. Deterministic seeding for tests.
 ///
-/// Inject a [FleetConfidenceProvider] to replace the pre-Sprint 91
-/// hardcoded 0.8 fleet confidence baseline. Defaults to
-/// [ConstantFleetConfidenceProvider] (0.8) — behavior unchanged for
-/// existing call sites.
+/// **0.7.0 removed the `provider:` parameter.** This engine no longer takes a
+/// [FleetConfidenceProvider], because the score no longer has a fleet term —
+/// see [SimulatedSafetyScore] for why. The parameter was removed rather than
+/// accepted-and-ignored: a constructor that takes a fleet source, discards it,
+/// and returns a safety score anyway is a worse lie than the 0.8 default it
+/// would be replacing. The compile error is the notification.
+///
+/// A consumer who has a real fleet source still reads it, directly:
+///
+/// ```dart
+/// final fleet = FleetHazardConfidenceAdapter(reports).confidence;
+/// // null == the fleet said nothing. Render it, act on it, log it —
+/// // it is simply not folded into `overall` by this package.
+/// ```
 ///
 /// Performance gate: 1,000 runs < 200ms in `dart test`.
 class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
   /// Creates a CPU simulation engine.
-  ///
-  /// [provider] supplies the fleet confidence score for each simulation.
-  /// Defaults to [ConstantFleetConfidenceProvider] (0.8).
-  const CpuSafetyScoreSimulationEngine({
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
-  }) : _provider = provider;
-
-  final FleetConfidenceProvider _provider;
+  const CpuSafetyScoreSimulationEngine();
 
   /// Run a single simulation with stochastic perturbation.
   ///
   /// Jitter (±10%) is applied to grip and visibility inputs
   /// to model real-world sensor noise.
+  ///
+  /// Throws [ArgumentError] if [speed], [gripFactor] or [visibilityMeters] is
+  /// non-finite — see `requireMeasured`.
   SimulatedSafetyScore runOnce({
     required double speed,
     required double gripFactor,
@@ -51,6 +54,12 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     required double visibilityMeters,
     required Random random,
   }) {
+    // Checked BEFORE any arithmetic. `nan.clamp(0, 1)` is 1.0, so every clamp
+    // below is a place an unreadable sensor could become a perfect reading.
+    requireMeasured(speed, 'speed');
+    requireMeasured(gripFactor, 'gripFactor');
+    requireMeasured(visibilityMeters, 'visibilityMeters');
+
     final gripJitter = random.nextDouble() * 0.1;
     final visJitter = random.nextDouble() * 0.1;
 
@@ -65,17 +74,9 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     final visNorm = (visibilityMeters / 1000.0).clamp(0.0, 1.0);
     final visibilityScore = (visNorm * (1.0 - visJitter)).clamp(0.0, 1.0);
 
-    // NULLABLE. `null` = the fleet said nothing. It is NOT folded into the
-    // overall score at any value: SimulatedSafetyScore re-normalises the
-    // weights over the terms that were actually measured. Up to 0.5.4 absence
-    // arrived here as 0.8 and was weighted at 0.2 — so fleet silence RAISED the
-    // score.
-    final fleetConfidenceScore = _provider.confidence;
-
     return SimulatedSafetyScore(
       gripScore: gripScore,
       visibilityScore: visibilityScore,
-      fleetConfidenceScore: fleetConfidenceScore,
     );
   }
 
@@ -99,8 +100,6 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
     var totalOverall = 0.0;
     var totalGrip = 0.0;
     var totalVis = 0.0;
-    var totalFleet = 0.0;
-    var fleetSamples = 0;
     var totalOverallSquared = 0.0;
     var incidentCount = 0;
 
@@ -115,11 +114,6 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
       totalOverall += score.overall;
       totalGrip += score.gripScore;
       totalVis += score.visibilityScore;
-      final fleet = score.fleetConfidenceScore;
-      if (fleet != null) {
-        totalFleet += fleet;
-        fleetSamples++;
-      }
       totalOverallSquared += score.overall * score.overall;
       if (score.overall < 0.4) incidentCount++;
     }
@@ -132,9 +126,6 @@ class CpuSafetyScoreSimulationEngine implements SafetyScoreSimulationEngine {
         overall: mean,
         gripScore: totalGrip / effectiveRuns,
         visibilityScore: totalVis / effectiveRuns,
-        // No fleet sample in ANY run => no fleet term. Never an averaged
-        // stand-in.
-        fleetConfidenceScore: fleetSamples == 0 ? null : totalFleet / fleetSamples,
       ),
       variance: variance,
       incidentCount: incidentCount,
