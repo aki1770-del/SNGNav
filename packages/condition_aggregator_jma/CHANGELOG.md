@@ -1,5 +1,284 @@
 # Changelog
 
+> ⚑ **Three entries below describe versions that were never published.**
+> Measured against the pub.dev API on 2026-08-28: **`0.1.6`, `0.4.0` and
+> `0.6.0` have no release.** Published versions are `0.1.0`–`0.1.5`, `0.2.0`,
+> `0.3.0`, `0.3.1`, `0.3.2`, `0.5.0`.
+>
+> Their entries are kept rather than deleted: the work described in them is real
+> and later versions build on it, and `0.7.0`'s own text refers to "the path this
+> package read from 0.2.0 through 0.6.0". **But you cannot install them, and a
+> CHANGELOG that reads like a release history when it is partly a development
+> log is its own defect.** Read a heading here as "this work happened", not as
+> "this version exists".
+
+## 0.7.0 — 2026-08-24 — The provider now reads the path JMA actually serves
+
+**STAGED, NOT PUBLISHED.** Publishing is Chair-only voice.
+
+**BREAKING.** The default feed path and its document schema both change, and a
+catalogue code is removed. Read "Migration" below before upgrading.
+
+### `AdvisoryFeedFreshnessReporting` is implemented again
+
+`JmaAdvisoryProvider` implements `AdvisoryFeedFreshnessReporting` and exposes
+`feedStaleness`. **0.3.2 implemented it; 0.5.0 and 0.6.0 silently dropped it**
+while keeping the in-band notice.
+
+The two are not substitutes. The in-band `kJmaStaleFeedEventClass` record is for
+a human reading a list. `feedStaleness` is the channel
+`AdvisoryAggregator.canAssertNoAdvisory` reads to decide whether it may assert a
+calm road. The interface's own documentation states the consequence of dropping
+it: an adapter that does not implement it *"can still serve a frozen document and
+still satisfy `canAssertNoAdvisory`"*.
+
+Measured on the 81-day-old Niigata fixture: `canAssertNoAdvisory` returned
+**true** through 0.6.0 and returns **false** at 0.7.0.
+`test/defect_proof_current_api_test.dart` pinned the old answer as an honest
+bound labelled UPSTREAM-OWED; it was not owed upstream. `condition_aggregator`
+0.0.10 had already shipped the interface — this package had stopped
+implementing it.
+
+**Because of that, `condition_aggregator` is now `>=0.0.10 <0.2.0`** (was
+`>=0.0.5 <0.2.0`). Below 0.0.10 the interface does not exist.
+
+### The switch
+
+`JmaAdvisoryProvider` now reads
+`https://www.jma.go.jp/bosai/warning/data/r8/{code}.json`.
+
+The path it read from 0.2.0 through 0.6.0 was retired by JMA's **2026-05-29**
+防災気象情報 restructure. It never failed — it has answered `200` with a
+well-formed document frozen at **2026-05-28** ever since. Re-measured
+2026-08-24: Akita `reportDatetime` `2026-05-28T06:11:00+09:00`, ~88 days, while
+the live path was 83 minutes old and carried a **濃霧注意報 in force** — a class
+this adapter already maps.
+
+Verified live end-to-end through the real provider on 2026-08-24: Akita returns
+雷注意報 + 濃霧注意報 effective `2026-08-24T04:14+09:00`, and no feed-health
+notice fires, because the feed is genuinely fresh.
+
+The old URL remains exported as `kJmaRetiredWarningJsonBaseUrl` — documentation
+of what was replaced, not a fallback. **Do not fetch it.**
+
+### Hokkaido was never actually served
+
+The catalogue carried a single `010000` described as covering Hokkaido. **JMA
+has no such office.** Measured against its own area master (frozen at
+`test/fixtures/jma_area_offices.frozen_2026-08-24.json`), `'010000' in offices`
+is FALSE, and the URL 404s on both the retired and the live path. Every point in
+the snowiest prefecture in Japan resolved to a dead code.
+
+It failed loudly rather than falsely — the provider throws, so no driver was
+ever told a false all-clear — but Hokkaido was never served. Replaced with the
+**eight real offices**: 宗谷 / 上川・留萌 / 網走・北見・紋別 / 十勝 / 釧路・根室 /
+胆振・日高 / 石狩・空知・後志 / 渡島・檜山. Verified live: Sapporo, Asahikawa and
+Wakkanai all now return in-force advisories.
+
+### The loom for the NEXT migration
+
+⚑ **The root cause was never "we were on the wrong URL". It was that JMA
+migrated and nothing noticed for 87 days.** Switching the path closes this
+instance and leaves the class open.
+
+The 0.5.0 stale-feed loom worked exactly as designed — measured live, it emitted
+「約87日更新されていません」and independently reproduced the 87-day figure. **And
+nothing moved for 87 days.** The gap was not the alarm. It was the DIAGNOSIS:
+「更新されていません」reads as *the publisher has gone quiet*, which an integrator
+can only wait out. The real condition was *this path was retired*, which is a
+one-line fix.
+
+0.7.0 adds `kJmaPathRetirementEventClass`. Past
+`pathRetirementThreshold` (default **7 days**, vs 6 hours for ordinary
+staleness) the notice says a **different thing**, not a louder thing: this
+configured path may no longer be served, and a successor should be looked for.
+It would have fired on day 8 of 87.
+
+**Its limit, stated because a loom whose bound is hidden is worse than none:**
+it fires on absolute age on the path we read. It cannot see a migration on the
+day it happens, and it cannot distinguish a retired path from a publisher
+outage longer than the threshold — both look identical from one URL. A
+cross-surface check against the always-busy national feed COULD separate them;
+it was weighed and not built, because it doubles the network surface of every
+fetch to sharpen a diagnosis this notice already points at, and this package's
+own bearing is against widening the live-fetch perimeter.
+
+### Migration
+
+| was | now |
+|---|---|
+| `kJmaWarningJsonBaseUrl` = `…/data/warning/` | `…/data/r8/` (old value at `kJmaRetiredWarningJsonBaseUrl`) |
+| document root: object | **list** of per-bulletin documents |
+| `areaTypes[].areas[].warnings[]` | `warning.class10Items[]` ∪ `class20Items[]` |
+| one `reportDatetime` | one per document — **newest** is the feed's freshness |
+| catalogue code `010000` | eight real Hokkaido offices |
+| feed-health = `kJmaStaleFeedEventClass` | **`kJmaFeedHealthEventClasses`** — key on the SET |
+
+⚑ **Key on `kJmaFeedHealthEventClasses`, not on one member.** Which notice is
+emitted now depends on how old the document is. A consumer matching only
+`kJmaStaleFeedEventClass` silently stops seeing feed-health signals for exactly
+the oldest — most dangerous — documents. This package walked into that trap in
+its own test suite during this change, which is why the set is exported.
+
+`parseJmaFeed` / `parseJmaWarningJson` still parse the **legacy** schema and are
+still tested against a real legacy document — that is what proves the two
+schemas can never be silently confused. Feeding an r8 document to the legacy
+parser throws, and vice versa.
+
+### Both granularities are read
+
+`class10Items` and `class20Items` are unioned. Measured 2026-08-24 across 16
+prefectures, zero documents carried a code in `class20Items` that
+`class10Items` lacked — so class10 alone would have sufficed *in that sample*.
+It was a quiet August with four distinct codes nationally: evidence, not proof.
+Unioning costs one loop over a document already in memory and makes a
+class20-only warning structurally impossible to drop. A sampling window does
+not get to decide what a driver is allowed to be told.
+
+### Not done
+
+* **`condition_aggregator_jma` 0.6.0 was staged and never published.** Its work
+  (the short-time tier) ships inside this release; pub.dev goes 0.5.0 → 0.7.0.
+* No short-time fetch path; parser and mapper only.
+* Sapporo resolves to two offices (石狩・空知・後志 and the adjacent 胆振・日高)
+  because the boxes overlap. That is this package's documented over-warn
+  posture, not a defect, but the boxes are approximate and a finer resolver
+  would be an improvement.
+
+## 0.6.0 — 2026-08-24 — The path we read was retired on 2026-05-29, and nobody told us
+
+**STAGED, NOT PUBLISHED.** Publishing is Chair-only voice. This describes a
+staged working tree.
+
+### The headline defect: we have been reading a retired path for 87 days
+
+On **令和8年5月29日 (2026-05-29)** JMA began operating its restructured
+防災気象情報 system. This package reads
+`bosai/warning/data/warning/{code}.json`. Measured 2026-08-23:
+
+```
+data/warning/050000.json  (Akita, ours)  reportDatetime 2026-05-28T06:11+09:00
+data/r8/050000.json       (Akita, live)  reportDatetime 2026-08-23T23:51+09:00
+```
+
+Our path froze **the day before the migration** and has answered `200` with a
+well-formed document ever since. At the moment of measurement the live path
+carried a **濃霧注意報 in force in Akita** — a class this package already maps
+(code `20`) — while the path we read served a 雷注意報 from May.
+
+⚑ **The adapter was not missing a hazard class. It was reading a retired
+path, and the retired path never failed — it kept answering, well-formed,
+forever.** A frozen feed does not look absent. It looks calm. That is why
+0.5.0's stale-feed notice is load-bearing and why it is not sufficient on its
+own.
+
+0.6.0 adds `parseJmaR8Feed` for the live r8 schema. **The provider is NOT yet
+switched** — see "What is not done".
+
+| | legacy | r8 |
+|---|---|---|
+| root | one object | **list** of per-bulletin documents |
+| warnings | `areaTypes[].areas[].warnings[]` | `warning.class10Items[].kinds[]` |
+| freshness | one `reportDatetime` | **one per document** |
+| explicit all-clear | none | `status` = `発表警報・注意報はなし` |
+
+The **warning code space is unchanged**, so `kJmaWarningCodes` carries across
+the migration untouched. r8 also adds something this family has wanted since
+it was founded: an affirmative publisher all-clear (`jmaR8DeclaresNoWarnings`),
+which finally distinguishes *"the publisher says nothing is in force"* from
+*"we could not read the publisher"*.
+
+**Freshness is the NEWEST document, never the oldest.** Each bulletin family
+updates on its own cadence. The negative control, run against an
+oldest-document implementation, failed with:
+
+```
+Expected: '2026-08-23T14:51:00.000Z'
+  Actual: '2026-07-15T21:30:00.000Z'
+```
+
+— reporting a feed 83 minutes old as **38 days dead**, firing a false
+feed-death notice over a fog advisory genuinely in force.
+
+### The short-time tier, across the same migration
+
+JMA publishes an imminent-disruption tier the ladder does not carry. 0.6.0
+parses it for both wire formats: legacy **VPOA50** (typed by `InfoKind`) and
+current **VPBS50 府県気象防災速報** (typed by
+`Headline/Information[@type="情報タグ"]/Item/Kind/Condition`).
+
+⚑ **On VPBS50 neither `Control/Title` nor `InfoKind` identifies the product** —
+both are shared across 記録雨 / 短時間大雪 / 線状降水帯発生 /
+線状降水帯直前予測. Keying on either silently accepts the wrong product.
+
+⚑ **Both families are published in parallel, at the same second**, and the
+VPBS50 EventID is the legacy one with a leading `K`. A naive whole-feed
+consumer double-counts every event; `dedupeShortTimeRecords` collapses the
+twins, keeping the VPBS50 record because it carries the typed measurement.
+
+Severity is an **explicit table**, never the ladder's suffix rule. Every
+short-time product ends in **情報**; the negative control against a
+suffix-delegating implementation failed with:
+
+```
+Expected: AdvisorySeverity:<AdvisorySeverity.extreme>
+  Actual: AdvisorySeverity:<AdvisorySeverity.unknown>
+```
+
+`unknown` sits below `isHighImpact`, so an integrator rendering only
+high-impact advisories would have dropped JMA's most urgent products while
+faithfully rendering a 注意報.
+
+### ⚑ This tier does not fire earlier than the ladder, and does not reach Akita
+
+Two claims worth stating plainly, because both are easy to assume and both are
+wrong:
+
+* **It is not an earlier warning.** JMA's rain criterion is
+  「大雨時の災害に関する警報発表中に、キキクルの「危険」（紫）が出現している場合に
+  発表するもの」— the warning must already be in force. Measured on the real
+  Tokyo timeline of 2026-08-22: 大雨警報 06:19:10Z, short-time product
+  08:09:31Z — the ladder **1h50m earlier**. What the tier adds is rarity,
+  locality and a measured number, not lead time.
+* **短時間大雪 is not issued in this adapter's northern prefectures.** Per JMA
+  `introduction_bosaisokuho.pdf` (※R8.2現在) it runs in 14 府県予報区:
+  新潟・富山・石川・福井・福島(会津)・山形・滋賀・京都・兵庫・広島・岡山・鳥取・
+  島根・岐阜(関ケ原). **秋田 and 北海道 are not among them.** Overlap with this
+  package's six prefectures is **山形 and 新潟 only**. Recorded in code as
+  `kJmaShortSnowIssuedPrefecturesJa` with tests, because the failure mode is
+  silent: an integrator expecting northern snow coverage would wait for a
+  bulletin that is never published.
+
+### What is NOT done, and why
+
+* **The provider still reads the retired path.** `parseJmaR8Feed` is complete
+  and tested; `JmaAdvisoryProvider` is untouched. Switching it changes the
+  live behaviour of a safety adapter across a breaking schema change and
+  deserves its own verification cycle rather than riding on this one. Until
+  then 0.5.0's stale-feed notice remains the only thing standing between a
+  frozen feed and a driver — it works, and it is not enough.
+* **No short-time fetch path.** Parser and mapper only.
+* **The legacy snow bulletin (VPFJ50) is deliberately unsupported.** It never
+  had a typed identity — `InfoKind` was `同一現象用平文情報` for every
+  phenomenon and its `Body` was inert — so consuming it would mean matching a
+  Japanese headline. Refused, with a test.
+* **Snow support is format-verified, not event-verified.** It is built against
+  JMA's own published wire-format sample. The May 2026 cutover has not yet
+  been exercised by a snow season; winter 2026-27 will be the first.
+* **`010000` (Hokkaido) is still catalogued and still 404s** on both the
+  legacy and r8 paths. JMA's area master has no such office; Hokkaido is eight
+  offices. Every Hokkaido point resolves to a dead code. Left unfixed here
+  because repairing it changes which areas resolve, which is out of this
+  change's scope. It fails loudly rather than falsely — the provider throws
+  instead of returning an all-clear.
+
+### Doc-honesty fix
+
+0.5.0 refuted the claim that the windowless JSON "always reflects the current
+in-force state" and corrected `jma_advisory_provider.dart` — but the
+correction never reached `lib/condition_aggregator_jma.dart` or `pubspec.yaml`,
+the two surfaces an edge developer actually reads. Both now carry it.
+
 ## 0.5.0 — 2026-08-16 — A frozen feed can no longer read as a clear road
 
 **Safety fix.** This adapter could not tell the difference between a publisher

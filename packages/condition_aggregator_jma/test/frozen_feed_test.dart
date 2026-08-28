@@ -31,6 +31,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+import 'support/legacy_to_r8.dart';
+
 /// 2026-08-16T00:00+09:00 — the wall clock at which the defect was measured.
 final DateTime kMeasuredNow = DateTime.parse('2026-08-16T00:00:00+09:00');
 
@@ -39,7 +41,7 @@ String _fixture(String code) => File(
 ).readAsStringSync();
 
 http.Response _utf8Response(String body, int status) => http.Response.bytes(
-  utf8.encode(body),
+  utf8.encode(toR8IfLegacy(body)),
   status,
   headers: const {'content-type': 'application/json; charset=utf-8'},
 );
@@ -92,13 +94,26 @@ void main() {
           longitude: 140.098333,
         );
         expect(out.map((a) => a.eventClass), contains('雷注意報'));
+        // The GUARANTEE is that the dead document is marked in band — not
+        // that it is marked with one particular identity. This fixture is 88
+        // days old, past `pathRetirementThreshold`, so from 0.7.0 the notice
+        // NAMES THE LIKELY CAUSE (path retired) instead of only reporting
+        // age. Assert the guarantee via `kJmaFeedHealthEventClasses`, and
+        // assert MORE than before: that it is non-hazard severity and carries
+        // the age.
+        final health = out
+            .where((a) => kJmaFeedHealthEventClasses.contains(a.eventClass))
+            .toList();
         expect(
-          out.map((a) => a.eventClass),
-          contains(kJmaStaleFeedEventClass),
+          health,
+          isNotEmpty,
           reason:
               'served as an ACTIVE hazard 230 times on HER mother\'s '
               'prefecture with nothing marking it dead',
         );
+        expect(health.single.severity, AdvisorySeverity.minor);
+        expect(health.single.isHighImpact, isFalse);
+        expect(health.single.headline, contains('日更新されていません'));
       });
     },
   );

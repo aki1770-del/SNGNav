@@ -81,9 +81,17 @@ public JMA feed, so it can fail offline — handle
 [`example/main.dart`](example/main.dart); run it with
 `dart run example/main.dart`.
 
-> Coverage at this version: 6 snow-zone prefectures (Hokkaido / Aomori /
-> Iwate / Akita / Yamagata / Niigata). Points outside that catalog
-> return an empty list without an HTTP fetch.
+> Coverage at this version: **13 of the 58 offices JMA publishes** — the
+> eight Hokkaido offices (宗谷 / 上川・留萌 / 網走・北見・紋別 / 十勝 /
+> 釧路・根室 / 胆振・日高 / 石狩・空知・後志 / 渡島・檜山) plus Aomori,
+> Iwate, Akita, Yamagata and Niigata. Points outside that catalog return an
+> empty list without an HTTP fetch.
+>
+> ⚑ Through 0.6.0 this line read "6 snow-zone prefectures (Hokkaido / …)".
+> Hokkaido was represented by a single code `010000`, and **JMA has no such
+> office** — it 404s. Every point in the snowiest prefecture in Japan
+> resolved to a dead code. It failed loudly rather than falsely, so no
+> driver was told an all-clear, but it was never served.
 
 ---
 
@@ -100,7 +108,7 @@ Deployed via the windowless per-prefecture warning JSON path. The
 provider resolves the caller's lat/lon to the snow-zone prefecture
 (office) code(s) whose bounding box contains the point, fetches each
 prefecture's
-`https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`,
+`https://www.jma.go.jp/bosai/warning/data/r8/{areacode}.json`,
 parses the current in-force warnings, and surfaces the surfaced-class
 advisories (`kJmaWarningCodes` — the winter-snow classes 大雪警報 /
 大雪注意報 / 暴風雪警報 / 着雪注意報 / 大雪特別警報 / 暴風雪特別警報
@@ -170,8 +178,8 @@ Japan:
 
 1. The caller's lat/lon resolves to the snow-zone prefecture (office)
    code(s) whose bounding box contains the point, via a bounding-box
-   catalog (6 snow-zone prefectures:
-   Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata). An interior
+   catalog (13 offices: the eight Hokkaido offices plus Aomori / Iwate /
+   Akita / Yamagata / Niigata). An interior
    point yields exactly one code; a border point can yield more than one
    (the boxes overlap at shared borders). Points outside the catalog
    return empty without an HTTP fetch.

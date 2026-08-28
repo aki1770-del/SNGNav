@@ -47,8 +47,20 @@
 /// The windowless JSON replaced the 0.1.x atom-feed + per-report-XML
 /// path, which had a window / scroll-off false-negative (a still-in-force
 /// warning that was last re-issued before the feed window opens scrolled
-/// off and was silently missed); the windowless JSON always reflects the
-/// current in-force state. See CHANGELOG 0.2.0.
+/// off and was silently missed). See CHANGELOG 0.2.0.
+///
+/// ⚑ **Windowless is NOT the same as live.** This paragraph read "the
+/// windowless JSON always reflects the current in-force state" until
+/// 2026-08-23. That claim was refuted by measurement on 2026-08-16 and
+/// corrected in `jma_advisory_provider.dart` — but the correction never
+/// reached THIS file or `pubspec.yaml`, so the refuted sentence stayed on
+/// the two surfaces an edge developer actually reads (the library doc and
+/// pub.dev). Re-measured 2026-08-23: every catalogued prefecture is still
+/// frozen in a late-May window (Akita `reportDatetime`
+/// 2026-05-28T06:11+09:00, ~87 days), while the sibling developer feed is
+/// current to the minute. A path with no scroll-off window can still be
+/// arbitrarily old. Judge liveness from `reportDatetime` — see
+/// [JmaAdvisoryProvider.staleFeedThreshold] and CHANGELOG 0.5.0.
 ///
 /// HER-trace (≤4-hop) end-to-end:
 ///   JMA windowless per-prefecture warning JSON (気象庁防災情報)
@@ -79,16 +91,46 @@ export 'src/jma_advisory_provider.dart'
         JmaAdvisoryProvider,
         JmaAdvisoryFetchException,
         kJmaWarningJsonBaseUrl,
+        kJmaRetiredWarningJsonBaseUrl,
         kJmaFetchWallClockBudget,
         kJmaWarningJsonMaxBytes,
         kJmaDefaultStaleFeedThreshold;
+export 'src/jma_r8_warning_mapper.dart'
+    show parseJmaR8Feed, jmaR8DeclaresNoWarnings, kJmaR8StatusNoWarnings;
+export 'src/jma_shorttime_mapper.dart'
+    show
+        JmaShortTimeProduct,
+        JmaBulletinFamily,
+        JmaAreaCodeKind,
+        JmaShortTimeRecord,
+        JmaShortTimeMeasurement,
+        JmaShortTimeParseException,
+        parseJmaShortTimeReport,
+        mapJmaShortTimeToAdvisory,
+        dedupeShortTimeRecords,
+        buildShortTimeUnavailableNotice,
+        kJmaShortTimeConditions,
+        kJmaShortSnowIssuedPrefecturesJa,
+        kJmaShortTimeInfoKinds,
+        kJmaShortTimeEventClass,
+        kJmaShortTimeSeverity,
+        kJmaShortTimeUnavailableEventClass,
+        kJmaInfoTypeAnnounce,
+        kJmaInfoTypeCancel,
+        kJmaInfoTypeCorrect;
 export 'src/jma_advisory_mapper.dart'
     show
         JmaWarningRecord,
         mapJmaWarningToAdvisory,
         buildIncompleteReadNotice,
         kJmaIncompleteReadEventClass,
+        buildOutsideCoverageNotice,
+        kJmaOutsideCoverageEventClass,
         buildStaleFeedNotice,
+        buildPathRetirementNotice,
+        kJmaPathRetirementEventClass,
+        kJmaFeedHealthEventClasses,
+        kJmaDefaultPathRetirementThreshold,
         kJmaStaleFeedEventClass,
         JmaFeedSnapshot,
         parseJmaFeed,
