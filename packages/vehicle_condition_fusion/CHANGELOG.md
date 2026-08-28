@@ -2,11 +2,35 @@
 
 ## 0.5.0
 
+- **`driving_conditions` widened from `^0.6.0` to `>=0.6.0 <0.8.0`.** `^0.6.0` means
+  `>=0.6.0 <0.7.0`, which EXCLUDES `driving_conditions 0.7.0` — the release that removed
+  the fleet term from the safety composite and stopped two unreadable sensors scoring an
+  all-clear. Shipping this package pinned below it would have delivered a consumer
+  straight onto the defect this package exists to escape, exactly as the published
+  `0.3.4` pins `^0.5.2` and cannot reach `0.6.x` at all.
+
+  Verified against the PUBLISHED registry with `dependency_overrides` removed: resolves
+  `driving_conditions 0.7.0`, `dart analyze` clean, **68 tests pass**, and this package
+  references none of the API `0.7.0` removed (`fleetConfidenceScore`, `hasFleetData`,
+  the engines' `provider:` parameter).
+
+
 ### Safety defect in 0.3.1 and earlier — please read
 
-**Up to and including 0.3.1 — the version currently on pub.dev, and the one you
-are almost certainly holding — a vehicle that did not publish an air temperature
-was ASSUMED TO BE ABOVE FREEZING.**
+**Up to and including 0.3.1, a vehicle that did not publish an air temperature was
+ASSUMED TO BE ABOVE FREEZING.**
+
+> ⚑ **Corrected 2026-08-28, before publishing.** This paragraph previously read
+> "0.3.1 — *the version currently on pub.dev, and the one you are almost certainly
+> holding*". That was false and it mattered in the dangerous direction: the current
+> published version is **0.3.4**, and **0.3.4 does NOT have this defect**. Measured
+> from the published archives — in 0.3.1 the constant is declared, documented AND
+> USED (`final temp = s.airTempC ?? kAssumedAboveFreezingCelsius;`,
+> `vehicle_signal_fusion.dart:101`); in 0.3.2, 0.3.3 and 0.3.4 it is a dead
+> declaration with no use site. As written the notice told a reader holding 0.3.4
+> that they were exposed when they were not. **A false alarm in a safety notice
+> costs what a false all-clear costs, pointed the other way** — and a reader who
+> checks it once and finds it wrong stops reading the next one.
 
 ```dart
 // vehicle_signal_fusion.dart, 0.3.1 (verified in the published tarball)
