@@ -60,7 +60,7 @@ void main() {
   group('THE GATE — these fail against published 0.6.0', () {
     test('an unmeasured morning does not earn "no winter hazard"', () {
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: fc([unmeasured(base), unmeasured(h2)]),
           commute: commute(),
           profile: profile,
@@ -71,7 +71,7 @@ void main() {
 
     test('the refusal names WHAT was not measured, per hour', () {
       try {
-        advisor.brief(
+        advisor.briefOrThrow(
           forecast: fc([unmeasured(base), unmeasured(h2)]),
           commute: commute(),
           profile: profile,
@@ -98,7 +98,7 @@ void main() {
       // `NaN < 100` is false, so every ladder test failed and the slot
       // fell through to clear.
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: fc([
             HourlyForecast(
               hour: base,
@@ -141,7 +141,7 @@ void main() {
       );
 
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: fc([s(base), s(h2)]),
           commute: commute(),
           profile: profile,
@@ -163,7 +163,7 @@ void main() {
 
       // Honest "I could not look" -> refused.
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: fc([
             s(base, RoadConditionEstimate.unknown),
             s(h2, RoadConditionEstimate.unknown),
@@ -193,7 +193,7 @@ void main() {
     test('a partly-forecast window does not earn the all-clear', () {
       // 3 h trip, only the first hour forecast.
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: fc([fullyMeasured(base)]),
           commute: commute(d: const Duration(hours: 3)),
           profile: profile,
@@ -245,6 +245,8 @@ void main() {
         estimatedRoadCondition: RoadConditionEstimate.ice,
       );
 
+      // BOTH doors: `brief` is total, `briefOrThrow` may stop — neither may
+      // let an untyped error escape.
       try {
         advisor.brief(
           forecast: fc([s(base), s(h2)]),
@@ -254,7 +256,19 @@ void main() {
       } on PretripDataAbsentException {
         // acceptable: a typed stop
       } catch (e) {
-        fail('threw an untyped ${e.runtimeType}: $e');
+        fail('brief() threw an untyped ${e.runtimeType}: $e');
+      }
+
+      try {
+        advisor.briefOrThrow(
+          forecast: fc([s(base), s(h2)]),
+          commute: commute(),
+          profile: profile,
+        );
+      } on PretripDataAbsentException {
+        // acceptable: a typed stop
+      } catch (e) {
+        fail('briefOrThrow() threw an untyped ${e.runtimeType}: $e');
       }
     });
   });

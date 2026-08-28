@@ -9,6 +9,10 @@
 /// This is an opposed pair. If a future change ever makes `false` mean only
 /// "unassessable", U1 keeps passing while M1 fails. If it ever makes an
 /// unmeasured window earn the all-clear, U1 fails. Either direction is caught.
+///
+/// 0.6.1 note: the throw that U1 pins moved from `brief` to `briefOrThrow`
+/// when `brief` was made total. U1 now pins BOTH doors, so neither can be
+/// relaxed without failing here.
 library;
 
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
@@ -38,12 +42,35 @@ void main() {
 
   group('allClearEarned() == false is not a claim of ignorance', () {
     test(
-      'U1 UNASSESSABLE — a 5C temperature-only window: false, and brief() THROWS',
+      'U1 UNASSESSABLE — a 5C temperature-only window: false, brief() reports '
+      'noData/unknown, and briefOrThrow() THROWS',
       () {
         final f = tempOnly(5.0);
         expect(advisor.allClearEarned(forecast: f, commute: commute), isFalse);
+
+        // The total door: never the affirmative, and it says what happened.
+        final b = advisor.brief(
+          forecast: f,
+          commute: commute,
+          profile: profile,
+        );
+        expect(b.verdict, PretripVerdict.noData);
+        expect(b.peakHazard, HourHazard.unknown);
         expect(
-          () => advisor.brief(forecast: f, commute: commute, profile: profile),
+          b.chips,
+          isNotEmpty,
+          reason:
+              'an unmeasured window must SAY so; an empty chip list is what '
+              '0.6.0 showed the integrator and is not good enough',
+        );
+
+        // The opt-in door: still forces a caller who wants to be forced.
+        expect(
+          () => advisor.briefOrThrow(
+            forecast: f,
+            commute: commute,
+            profile: profile,
+          ),
           throwsA(isA<PretripAssessmentIncompleteException>()),
           reason: 'an unmeasured window must not earn the affirmative',
         );

@@ -52,21 +52,31 @@ exactly as before. **Only the affirmative all-clear is gated.**
   precipitation figure at +8 °C is deliberately not a gap).
 - **`allClearEarned(...)`** (new) — ask before you call `brief`; returns a bool,
   throws nothing.
-- **`brief(...)`** now throws `PretripAssessmentIncompleteException` when the
-  window is covered but the deciding fields were not measured. **This is a
-  behavioural break from 0.6.0** and it is deliberate: a value a caller can
-  ignore was not enough for a false all-clear about a winter road.
-- **`briefOrNull(...)`** (restored from 0.5.2) — returns `null` instead of
-  throwing. `null` means "we do not know", never "clear". **It returns `null`
+- **`brief(...)`** no longer reports an all-clear it did not measure — and it
+  **stays total: it does not throw and does not return `null`.** An
+  unassessable window comes back as `verdict: PretripVerdict.noData`,
+  `peakHazard: HourHazard.unknown`, `recommendation: null`, and a chip naming
+  what was not measured. **This needs nothing from a 0.6.0 caller**: `noData`
+  is a value 0.6.0 already returned, for a window nothing forecast at all, and
+  already documented on `PretripBriefing.recommendation` as the one verdict
+  whose recommendation is `null`.
+- **`briefOrThrow(...)`** (new) — `brief`, but it throws
+  `PretripAssessmentIncompleteException` for the covered-but-unmeasured case
+  instead of reporting it. **Use it when you would rather be forced to
+  notice**. Two things on the public surface separate the two absences — this
+  throw, and `chips` — and this is the one a caller cannot pass over by
+  accident. A window nothing forecast at all does NOT throw here
+  either; it returns, exactly as 0.6.0 did.
+- **`briefOrNull(...)`** (restored from 0.5.2) — returns `null` instead of a
+  briefing. `null` means "we do not know", never "clear". **It returns `null`
   for BOTH absences** — a window a forecast covered but did not measure, and a
   window nothing forecast at all — so `null` alone cannot tell you which one
   you have. See *Migrating from 0.6.0*.
-- **`briefOrUnassessed(...)`** (new) — returns a real `PretripBriefing` with
-  `peakHazard: HourHazard.unknown` and a chip that says so. It is a
-  compatibility shim for a caller that needs a total function, **not the
-  migration**: its `verdict` and `peakHazard` are identical for both absences,
-  and only its `chips` differ. See *Migrating from 0.6.0* for where that is
-  fine and where it produces a new false sentence.
+- **`briefOrUnassessed(...)`** — **now exactly `brief(...)`**, which it
+  delegates to so the two cannot drift. It is kept because this name was
+  documented earlier in this release's own pre-publication notes and a reader
+  who acted on them must keep compiling. There is nothing it adds; call
+  `brief`.
 - **`PretripDataAbsentException` / `PretripAssessmentIncompleteException`**
   restored to the public API (removed in 0.6.0).
   `PretripForecastCoverageException` is also restored but is **NOT thrown on
@@ -88,81 +98,118 @@ exactly as before. **Only the affirmative all-clear is gated.**
 
 ### Migrating from 0.6.0
 
-**The migration is a typed `catch`, not a method swap.**
+**Nothing. There is no migration.** Recompile and ship.
 
-Until this correction the bullet above offered `briefOrUnassessed(...)` as
-"change one identifier". That is withdrawn. 0.6.1 has not been published, so
-no integrator ever acted on it — it is recorded here rather than quietly
-deleted because the reason it was wrong is the same reason this release
-exists.
+`brief(...)` still returns a `PretripBriefing` for every input. Where 0.6.0
+would have printed an all-clear it had not measured, it now returns
+`verdict: PretripVerdict.noData`, `peakHazard: HourHazard.unknown`,
+`recommendation: null`, and a chip naming what was not measured. Every one of
+those is a value 0.6.0 could already produce, for a window nothing forecast at
+all. `noData` is in 0.6.0's public `PretripVerdict`, and 0.6.0's own
+`PretripBriefing.recommendation` documents itself, verbatim, as:
+
+> The contract-shaped recommendation, `null` only for [PretripVerdict.noData].
+
+**No `catch`, no new state, no new branch, no signature change.** The false
+all-clear is dead all the same: `verdict` is not `clear`, `peakHazard` is not
+`clear`, and the chip says so out loud.
+
+**The typed-`catch` migration this section used to prescribe is WITHDRAWN.**
+Until this correction it read *"the migration is a typed `catch`, not a method
+swap"*, and it was mandatory because `brief` threw. It no longer throws, so
+the `catch` clause is now dead code rather than a migration. It is recorded
+here rather than quietly deleted, for the same reason its own predecessor was:
+0.6.1 has not been published, so no integrator ever acted on either, and a
+reader who followed the repository during the release deserves to see which
+instruction was withdrawn and why.
+
+⚑ **If you already wrote that `catch`, it still compiles — and it silently
+stops working.** `brief` no longer throws, so the clause never fires and the
+flag it sets stays `false`. For a surface that used that flag to tell the two
+absences apart, that is a REGRESSION, not a no-op: see the next section, where
+it is measured on our own app. **Change `brief` to `briefOrThrow` in that
+`try` and it behaves exactly as documented.** This is the one upgrade path in
+this release that is not free, and it exists only for readers of an
+unpublished pre-release.
+
+#### ⚑ The one case that is NOT free
+
+Read this if your surface derives a **headline, banner, colour band or spoken
+line from `briefing.verdict` alone.**
+
+`brief` is total, so it must report both absences through the same `verdict`.
+Both arrive as `PretripVerdict.noData`:
+
+| input | `brief()` | `briefOrThrow()` | `briefOrNull()` | `allClearEarned()` |
+|---|---|---|---|---|
+| **A** — a forecast covers the window and measured only temperature | `verdict: noData`, `peakHazard: unknown`, `chips: [assessmentIncomplete()]` | **throws `PretripAssessmentIncompleteException`** | `null` | `false` |
+| **B** — no forecast covers the window at all | `verdict: noData`, `peakHazard: unknown`, `chips: []` | **returns**, `verdict: noData`, `peakHazard: unknown`, `chips: []` | `null` | `false` |
+
+`briefOrUnassessed()` is not a fifth column because it is now literally
+`brief()` — it delegates.
+
+Read down the columns. `verdict` is `noData` and `peakHazard` is `unknown` in
+**both** rows; `briefOrNull` is `null` in both; `allClearEarned` is `false` in
+both — `window.isEmpty` returns `false` on the same line an unmeasured window
+does. **`chips` and the `briefOrThrow` throw are the only discriminators.**
+
+So a `verdict`-keyed headline will say *there is no forecast for your
+departure window* on a morning a forecast arrived. That is a false sentence
+produced by absence — the same defect class this release fixes, moved from a
+chip to the headline, where it is larger, is read first, and is announced
+first to assistive tech. **It is not dangerous — it never reads as an
+all-clear — but it is not true.**
+
+**This is measured, not hypothetical.** Our own integrator app keys its
+headline off `verdict`, and on 2026-08-28 the widget test below was run
+against it with the plain `brief` call in place: it rendered
+「出発時間帯の予報がありません」 — *there is no forecast for your departure
+window* — for case A, while the case-B control kept passing. One identifier
+(`brief` → `briefOrThrow`) restored it. On the MET Norway product, where every
+slot carries `visibilityMeters: null` and `estimatedRoadCondition: null` by
+that source's own honesty rule, **case A is the default morning, not an edge
+case.**
+
+**Two ways out, both small:**
+
+- render `chips` (they already carry the difference), or
+- call **`briefOrThrow(...)`** and catch — the shape the withdrawn migration
+  described, now opt-in:
 
 ```dart
 PretripBriefing briefing;
 var assessmentIncomplete = false;
 try {
-  briefing = advisor.brief(forecast: f, commute: c, profile: p);
+  briefing = advisor.briefOrThrow(forecast: f, commute: c, profile: p);
 } on PretripAssessmentIncompleteException {
   assessmentIncomplete = true;
   // Take this package's own briefing for the state rather than composing a
   // second one that could drift from it.
-  briefing = advisor.briefOrUnassessed(forecast: f, commute: c, profile: p);
+  briefing = advisor.brief(forecast: f, commute: c, profile: p);
 }
 ```
 
-That `assessmentIncomplete` flag is the whole point of the shape: **it is the
-only thing on the public surface that separates the two absences.** Measured
-against this release on 2026-08-28:
-
-| input | `brief()` | `briefOrUnassessed()` | `briefOrNull()` | `allClearEarned()` |
-|---|---|---|---|---|
-| **A** — a forecast covers the window and measured only temperature | **throws `PretripAssessmentIncompleteException`** | `verdict: noData`, `peakHazard: unknown`, `chips: [assessmentIncomplete()]` | `null` | `false` |
-| **B** — no forecast covers the window at all | **returns**, `verdict: noData`, `peakHazard: unknown`, `chips: []` | `verdict: noData`, `peakHazard: unknown`, `chips: []` | `null` | `false` |
-
-Read down the columns. `verdict` is `noData` and `peakHazard` is `unknown` in
-**both** rows; `briefOrNull` is `null` in both; `allClearEarned` is `false` in
-both — `window.isEmpty` returns `false` on the same line an unmeasured window
-does. **The throw is the discriminator.** Nothing else is.
-
-**Where `briefOrUnassessed(...)` is still the right call.** A consumer that
-needs a total function and either does not distinguish the two absences at
-all, or renders `chips` rather than a sentence keyed off `verdict`. The chip
-list *does* carry the difference — case A holds one chip naming what was not
-measured, case B holds none — so a chip-rendering surface stays truthful
-without the catch. Logging, telemetry, batch scoring, and any caller that
-treats `peakHazard: unknown` as "do not conclude" are all fine.
-
-**Where it is NOT appropriate.** Any surface that derives a headline, banner,
-colour band or spoken line from `briefing.verdict` (or `peakHazard`) alone.
-Both absences arrive as `PretripVerdict.noData`, so that surface will tell the
-driver *there is no forecast for your departure window* on a morning a
-forecast arrived. That is a false sentence produced by absence — the same
-defect class this release fixes, moved from a chip to the headline, where it
-is larger, is read first, and is announced first to assistive tech.
-
-This is not hypothetical: **our own integrator app did exactly that**, keyed
-its headline off `briefing.verdict` alone, and rendered the wrong absence for
-case A. On the MET Norway product, where every slot carries
-`visibilityMeters: null` and `estimatedRoadCondition: null` by that source's
-own honesty rule, case A is the *default* morning, not an edge case.
+**Where plain `brief(...)` is entirely fine.** A consumer that renders
+`chips`, or does not distinguish the two absences at all: logging, telemetry,
+batch scoring, and any caller that treats `peakHazard: unknown` as "do not
+conclude". The chip list carries the difference, so a chip-rendering surface
+stays truthful with no change whatsoever.
 
 **A worked reference, in this package's `repository:`.** The seam is
 `lib/widgets/pretrip_screen.dart` and the test that pins it is
 `test/widgets/pretrip_unmeasured_is_not_uncovered_test.dart` — **paths relative
 to the repository root, not to this package**, so they are not in the published
-archive. Both are pinned at commit
-[`ec89c33`](https://github.com/aki1770-del/SNGNav/commit/ec89c33e3c339de287224deffd57032a5bfff4ad)
-rather than cited on the default branch, because at the time of writing they
-live on this release's branch and the default branch does not carry them yet.
-That test is an opposed pair, which is what makes it worth copying rather than
-just reading:
+archive. That test is an opposed pair, which is what makes it worth copying
+rather than just reading:
 
 - **P3** asserts case A never renders the "no forecast" headline.
 - **C1** asserts case B still does — because there, that sentence is TRUE.
 
-Collapse A into B and C1 keeps passing while P3 fails; collapse B into A and
+Collapse A into B and C1 keeps passing while P2/P3 fail; collapse B into A and
 C1 fails. Either direction is caught. A test that only asserted "the screen
-did not crash" would pass on both collapses — which is exactly what swapping
-the method name buys you.
+did not crash" would pass on both collapses — and under this release's shape
+it would pass on the un-migrated app too, which is exactly the regression the
+pair caught.
 
 ⚑ The restored `## 0.5.3` entry below closes with a two-line migration snippet
 ending `if (b == null) renderNoForecastCard();`. It carries the `briefOrNull`
@@ -184,6 +231,13 @@ historical record; read it against this section.
   exception. This is why `PretripForecastCoverageException` is retained but
   never thrown.
 - **`advise(...)`** still returns `null` rather than throwing, as always.
+- **`brief(...)` keeps its name, its signature, its return type AND its
+  totality.** It did not throw in 0.6.0 and it does not throw now. That is
+  deliberate: a break the compiler cannot see — same name, same signature,
+  same return type, no deprecation, no analyzer hint — would have reached a
+  0.6.0 caller as an uncaught exception at runtime, in a pre-trip safety
+  screen, on the ordinary morning rather than the rare one. The behaviour
+  worth keeping was kept, under `briefOrThrow`, where a caller opts in.
 
 ### Restored records
 

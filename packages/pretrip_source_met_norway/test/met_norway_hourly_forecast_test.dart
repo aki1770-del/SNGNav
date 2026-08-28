@@ -278,8 +278,20 @@ void main() {
       // This package can never supply those two fields from the compact
       // product, so this is the permanent honest outcome for a MET-Norway-only
       // input, not a defect and not a temporary gap.
+      // The total door reports the absence rather than stopping: never the
+      // affirmative, and the chip names what was not measured.
+      final briefing = advisor.brief(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
+      expect(briefing.verdict, PretripVerdict.noData);
+      expect(briefing.peakHazard, HourHazard.unknown);
+      expect(briefing.chips, isNotEmpty);
+
+      // The opt-in door still stops, for a caller who wants to be forced.
       expect(
-        () => advisor.brief(
+        () => advisor.briefOrThrow(
           forecast: forecast,
           commute: commute,
           profile: profile,

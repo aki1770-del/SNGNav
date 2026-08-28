@@ -32,14 +32,21 @@
 /// plain-language [message] with a way forward: it is meant to be read by the
 /// developer who catches it, not merely logged.
 ///
-/// ## Three ways to avoid catching, if you would rather branch
+/// ## Nothing here reaches you unless you ask for it
 ///
+/// **`SnowAwarePretripAdvisor.brief` does not throw.** It is total: an
+/// unassessable trip returns `verdict: PretripVerdict.noData`,
+/// `peakHazard: HourHazard.unknown` and a chip saying what was not measured.
+/// These types reach you only through
+/// `SnowAwarePretripAdvisor.briefOrThrow`, which exists for a caller who
+/// would rather be forced to notice than be handed a value they might ignore.
+///
+/// If you would rather branch than catch:
+///
+///  * `SnowAwarePretripAdvisor.brief` returns the honest briefing;
 ///  * `SnowAwarePretripAdvisor.allClearEarned` answers the question BEFORE you
-///    call `brief`;
-///  * `SnowAwarePretripAdvisor.briefOrNull` returns `null` instead of throwing;
-///  * `SnowAwarePretripAdvisor.briefOrUnassessed` returns a real
-///    [PretripBriefing] whose `peakHazard` is [HourHazard.unknown] — the
-///    non-throwing 0.6.x shape, for callers written against 0.6.0.
+///    call anything, and returns a bool;
+///  * `SnowAwarePretripAdvisor.briefOrNull` returns `null` instead of throwing.
 library;
 
 import 'snow_aware_pretrip_advisor.dart' show HazardEvidenceGap, HourHazard;
@@ -50,7 +57,7 @@ import 'snow_aware_pretrip_advisor.dart' show HazardEvidenceGap, HourHazard;
 ///
 /// ```dart
 /// try {
-///   final briefing = advisor.brief(...);
+///   final briefing = advisor.briefOrThrow(...);
 ///   render(briefing);
 /// } on PretripDataAbsentException catch (e) {
 ///   renderNoDataCard(e.message); // never a green card
@@ -77,7 +84,8 @@ abstract class PretripDataAbsentException implements Exception {
 /// they must catch, for a case this ordinary. That is 0.6.0's improvement and
 /// 0.6.1 keeps it unchanged.
 ///
-/// If you catch this today, nothing will reach the clause. Read
+/// If you catch this today, nothing will reach the clause — and on 0.6.1
+/// neither `brief` nor `briefOrThrow` raises it. Read
 /// `PretripBriefing.peakHazard == HourHazard.unknown` instead, or call
 /// `SnowAwarePretripAdvisor.briefOrNull`, which still returns `null` for an
 /// uncovered window.
@@ -100,7 +108,7 @@ class PretripForecastCoverageException extends PretripDataAbsentException {
          'invent one. '
          'What to do: catch PretripForecastCoverageException (or its base, '
          'PretripDataAbsentException) and show your own "no forecast" state, '
-         'or call briefOrNull() which returns null, or call briefOrUnassessed() '
+         'or call briefOrNull() which returns null, or call brief() '
          'which returns a briefing carrying HourHazard.unknown. '
          'advise() still returns null here, as before.',
        );
@@ -115,9 +123,14 @@ class PretripForecastCoverageException extends PretripDataAbsentException {
   final int forecastSlotCount;
 }
 
-/// Thrown by `SnowAwarePretripAdvisor.brief` when a forecast DOES cover the
-/// trip window but the fields that decide the winter-hazard ladder were never
-/// measured — so the affirmative all-clear was not earned.
+/// Thrown by `SnowAwarePretripAdvisor.briefOrThrow` when a forecast DOES cover
+/// the trip window but the fields that decide the winter-hazard ladder were
+/// never measured — so the affirmative all-clear was not earned.
+///
+/// **`brief` does not throw this.** `brief` reports the same situation as
+/// `verdict: PretripVerdict.noData`, `peakHazard: HourHazard.unknown` and a
+/// chip naming what was not measured. Reach for `briefOrThrow` when you want
+/// the compiler-invisible case to become one you cannot pass over.
 ///
 /// This is the per-slot half of the fabricated-clear defect. 0.5.2 stopped the
 /// advisor reporting a clear morning when NO forecast covered the trip. It
@@ -143,8 +156,8 @@ class PretripForecastCoverageException extends PretripDataAbsentException {
 ///     throws nothing; or
 ///   * call `SnowAwarePretripAdvisor.briefOrNull`, which returns `null` here;
 ///     or
-///   * call `SnowAwarePretripAdvisor.briefOrUnassessed`, which returns a
-///     briefing carrying [HourHazard.unknown] instead of stopping.
+///   * call `SnowAwarePretripAdvisor.brief`, which returns a briefing carrying
+///     [HourHazard.unknown] and a chip, instead of stopping.
 ///
 /// `advise` is unchanged: it still returns `null` rather than throwing.
 ///
@@ -172,9 +185,10 @@ class PretripAssessmentIncompleteException extends PretripDataAbsentException {
          'What to do: fill the gap (mergeObservedVisibility puts a measured '
          'visibility into the departure hour; estimatedRoadCondition takes '
          'your own road-surface estimate), or call allClearEarned() to ask '
-         'before you call brief(), or call briefOrNull() which returns null, '
-         'or call briefOrUnassessed() which returns a briefing carrying '
-         'HourHazard.unknown, or catch PretripDataAbsentException and show '
+         'before you call briefOrThrow(), or call brief() which returns a '
+         'briefing carrying verdict noData, HourHazard.unknown and a chip '
+         'naming what was not measured, or call briefOrNull() which returns '
+         'null, or catch PretripDataAbsentException and show '
          'your own "could not assess" state. advise() still returns null '
          'here. Use SnowAwarePretripAdvisor.evidenceGaps(slot) to inspect '
          'this per slot and decide your own policy.',

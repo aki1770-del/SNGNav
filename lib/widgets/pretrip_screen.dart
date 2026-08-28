@@ -955,7 +955,11 @@ class _PretripScreenState extends State<PretripScreen> {
     // THE ALL-CLEAR MUST BE EARNED, AND THE TWO ABSENCES ARE NOT THE SAME.
     //
     // `pretrip_decision_advisor` 0.6.1 refuses the affirmative all-clear it did
-    // not measure: `brief` throws [PretripAssessmentIncompleteException] when a
+    // not measure. `brief` reports that refusal as a VALUE
+    // (`verdict: noData`, `peakHazard: unknown`, plus a chip) so a caller who
+    // upgrades without reading is never handed an uncaught exception. THIS
+    // screen wants the distinction, so it calls `briefOrThrow`, which raises
+    // [PretripAssessmentIncompleteException] when a
     // forecast DOES cover this window but the fields that decide the hazard
     // ladder were never measured. Published 0.6.0 printed
     // 「出発時間帯に冬季の危険を示す兆候はありません」 on exactly that morning —
@@ -966,16 +970,23 @@ class _PretripScreenState extends State<PretripScreen> {
     // The catch is the ONLY thing that can tell that morning apart from one
     // with no forecast at all. Both land as `PretripVerdict.noData`, and
     // `allClearEarned` answers `false` to both — `window.isEmpty` returns
-    // `false` on the same line an unmeasured window does. Calling
-    // `briefOrUnassessed` instead of catching loses the distinction too, and
-    // the card would then tell HER 「出発時間帯の予報がありません」 — *there is
+    // `false` on the same line an unmeasured window does. Calling plain
+    // `brief` instead of catching loses the distinction, and the card would
+    // then tell HER 「出発時間帯の予報がありません」 — *there is
     // no forecast* — on a morning a forecast arrived. That is the same defect
     // 0.6.1 exists to close, moved into the headline, where it is larger and
     // is read first, and is announced first to assistive tech.
+    //
+    // ⚑ That is precisely why this call is `briefOrThrow` and not `brief`.
+    // The chip on `brief`'s briefing DOES carry the difference, so a
+    // chip-rendering surface stays truthful without the catch — but this
+    // screen derives a HEADLINE, and a headline keyed off `verdict` alone
+    // cannot. `test/widgets/pretrip_unmeasured_is_not_uncovered_test.dart`
+    // is the opposed pair that fails if this is ever swapped back.
     PretripBriefing briefing;
     var assessmentIncomplete = false;
     try {
-      briefing = advisor.brief(
+      briefing = advisor.briefOrThrow(
         forecast: forecast,
         commute: commute,
         profile: profile,
@@ -985,7 +996,7 @@ class _PretripScreenState extends State<PretripScreen> {
       // The package already authored what this state SAYS — its
       // `assessmentIncomplete()` chip, in both languages. Take its briefing
       // rather than compose a second one here that could drift from it.
-      briefing = advisor.briefOrUnassessed(
+      briefing = advisor.brief(
         forecast: forecast,
         commute: commute,
         profile: profile,

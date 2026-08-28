@@ -123,7 +123,7 @@ void main() {
       );
 
       expect(
-        () => const SnowAwarePretripAdvisor().brief(
+        () => const SnowAwarePretripAdvisor().briefOrThrow(
           forecast: forecast,
           commute: commute(),
           profile: profile,

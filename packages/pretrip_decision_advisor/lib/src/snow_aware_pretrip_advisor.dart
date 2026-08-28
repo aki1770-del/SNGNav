@@ -240,7 +240,7 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     profile: profile,
   )?.recommendation;
 
-  /// The richer briefing the app UI consumes; [advise] derives from it.
+  /// [brief], but it STOPS instead of reporting an absence you could ignore.
   ///
   /// Throws [PretripAssessmentIncompleteException] (a
   /// [PretripDataAbsentException]) in exactly ONE case: a forecast DOES cover
@@ -255,11 +255,20 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
   /// A MEASURED hazard is never withheld — it reports from partial data as it
   /// always has. Only the affirmative all-clear needs whole knowledge.
   ///
-  /// If you would rather branch than catch: [allClearEarned] answers the
-  /// question first, [briefOrNull] returns `null`, and [briefOrUnassessed]
-  /// returns a briefing carrying [HourHazard.unknown] — which is precisely
-  /// what 0.6.0's `brief` returned, for callers written against it.
-  PretripBriefing brief({
+  /// **Use this when you would rather be forced to notice.** The throw is the
+  /// only thing on the public surface that separates the two absences (see
+  /// [brief]), so a surface that derives a headline, banner, colour band or
+  /// spoken line from `verdict` alone should call this and handle the two
+  /// cases apart. Nothing else distinguishes them except
+  /// [PretripBriefing.chips].
+  ///
+  /// This is what `brief` did on the 0.6.1 pre-release. It was renamed before
+  /// publication: the break was invisible to the compiler — same name, same
+  /// signature, same return type — so a 0.6.0 caller who upgraded without
+  /// reading would have met it as an uncaught exception at runtime, in a
+  /// pre-trip safety screen. The behaviour was worth keeping; putting it
+  /// behind a name a caller has to type is what makes it opt-in.
+  PretripBriefing briefOrThrow({
     required WeatherForecast forecast,
     required CommuteShape commute,
     required DriverProfileSpec profile,
@@ -334,33 +343,44 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
     );
   }
 
-  /// [brief], but never throwing and never `null`: an unassessable trip comes
-  /// back as a real [PretripBriefing] whose `peakHazard` is
-  /// [HourHazard.unknown] and whose verdict is [PretripVerdict.noData].
+  /// The richer briefing the app UI consumes; [advise] derives from it.
   ///
-  /// This is the 0.6.x shape, and it exists for callers written against 0.6.0,
-  /// whose `brief` never threw. It is a compatibility shim, NOT the migration
-  /// from 0.6.0 — that is a typed `catch` on
-  /// [PretripAssessmentIncompleteException], because this method collapses the
-  /// two absences that catch separates. A window a forecast COVERED but did
-  /// not measure, and a window nothing forecast at all, both come back here
-  /// with `verdict: noData` and `peakHazard: unknown`. Only
-  /// [PretripBriefing.chips] differ (the first carries
-  /// [PretripMessages.assessmentIncomplete], the second is empty), and
-  /// [allClearEarned] and [briefOrNull] do not separate them
-  /// either. So: fine for a caller that renders `chips` or does not
-  /// distinguish the two at all; wrong for any surface that derives a
-  /// headline, banner, colour band or spoken line from `verdict` alone —
-  /// that surface will say *there is no forecast for your departure window*
-  /// on a morning a forecast arrived. See the CHANGELOG, *Migrating from
-  /// 0.6.0*.
+  /// **Total: this never throws and never returns `null`.** A trip that could
+  /// not be honestly assessed comes back as a real [PretripBriefing] whose
+  /// `verdict` is [PretripVerdict.noData], whose `peakHazard` is
+  /// [HourHazard.unknown], and whose [PretripBriefing.chips] say so in plain
+  /// language. It is never the affirmative all-clear — `verdict` is not
+  /// `clear`, `peakHazard` is not `clear`, and the chip states what was not
+  /// measured.
   ///
-  /// It is NOT the safer default and it is not what [brief] does, for one
-  /// reason: `HourHazard.unknown` is a value a caller can ignore, while an
-  /// exception is one they must handle. 0.6.0 shipped this shape alone and an
-  /// integrator rendering `briefing.chips` saw an empty list rather than a
-  /// warning. Prefer [brief] or [allClearEarned] in new code.
-  PretripBriefing briefOrUnassessed({
+  /// Up to 0.6.0 a slot carrying a temperature and nothing else fell through
+  /// every guarded hazard test and reported "No winter hazard signals in your
+  /// trip window." That sentence was produced BY the absence of evidence.
+  /// **That is the defect this release closes, and it is closed for a caller
+  /// who changes nothing**: `PretripVerdict.noData` is a value 0.6.0 already
+  /// returned (for a window nothing forecast at all) and already documented on
+  /// [PretripBriefing.recommendation], so this shape needs no new `catch`, no
+  /// new state and no new branch.
+  ///
+  /// A MEASURED hazard is never withheld — it reports from partial data as it
+  /// always has. Only the affirmative all-clear needs whole knowledge.
+  ///
+  /// ## Two absences arrive here, and only `chips` separates them
+  ///
+  ///  * a forecast COVERS the window but the fields deciding the ladder were
+  ///    never measured — `chips` carries
+  ///    [PretripMessages.assessmentIncomplete];
+  ///  * NOTHING forecast the window at all — `chips` is empty, exactly as
+  ///    0.6.0 returned here.
+  ///
+  /// `verdict` is `noData` and `peakHazard` is `unknown` in BOTH; [briefOrNull]
+  /// is `null` in both; [allClearEarned] is `false` in both. So a surface that
+  /// derives a headline, banner, colour band or spoken line from `verdict`
+  /// alone will say *there is no forecast for your departure window* on a
+  /// morning a forecast arrived — a false sentence, though never a dangerous
+  /// one. If your surface must tell them apart, render `chips`, or call
+  /// [briefOrThrow], where the throw is the discriminator.
+  PretripBriefing brief({
     required WeatherForecast forecast,
     required CommuteShape commute,
     required DriverProfileSpec profile,
@@ -395,6 +415,17 @@ class SnowAwarePretripAdvisor implements PretripAdvisor {
       profile: profile,
     );
   }
+
+  /// Exactly [brief]. Retained because the 0.6.1 pre-release documented this
+  /// name, and a reader who acted on those docs must keep compiling.
+  ///
+  /// It delegates rather than duplicating, so the two cannot drift apart. New
+  /// code should call [brief]; there is nothing this adds.
+  PretripBriefing briefOrUnassessed({
+    required WeatherForecast forecast,
+    required CommuteShape commute,
+    required DriverProfileSpec profile,
+  }) => brief(forecast: forecast, commute: commute, profile: profile);
 
   PretripBriefing _buildBriefing({
     required WeatherForecast forecast,
