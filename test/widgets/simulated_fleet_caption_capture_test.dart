@@ -204,6 +204,20 @@ void main() {
     await tester.pumpWidget(buildMapScreen(const Locale('en')));
     await tester.pump();
 
+    // ⚑ ASSERT THE SENTENCE BEFORE THE PIXELS. Until 2026-08-28 this test
+    // asserted ONLY matchesGoldenFile, so a red told you something in that
+    // region changed and could NOT tell you which: a font substitution on the
+    // host, or the disclosure vanishing entirely. Ambiguity is the one property
+    // a disclosure test must not have — this caption exists because "a red ring
+    // that reads as a real road report, and is not one" reached the map screen
+    // once already. The golden is cosmetic evidence; this is the behavioural
+    // claim, and it is the one that must not go quiet.
+    expect(
+      find.text('Simulated fleet (demo) — seeded, deterministic'),
+      findsOneWidget,
+      reason: 'the map must SAY its fleet is simulated, not merely look unchanged against a golden captured on another host',
+    );
+
     await expectLater(
       find.byType(SnowSceneScaffold),
       matchesGoldenFile('goldens/map_simulated_fleet_caption_en.png'),
@@ -223,6 +237,13 @@ void main() {
 
     await tester.pumpWidget(buildMapScreen(const Locale('ja')));
     await tester.pump();
+
+    // Same discipline as the English case: the sentence, then the pixels.
+    expect(
+      find.text('シミュレーション車両(デモ)— シード固定・確定的'),
+      findsOneWidget,
+      reason: 'the Japanese map must SAY its fleet is simulated',
+    );
 
     await expectLater(
       find.byType(SnowSceneScaffold),
