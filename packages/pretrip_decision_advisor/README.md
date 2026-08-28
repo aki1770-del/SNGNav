@@ -1,7 +1,12 @@
 # pretrip_decision_advisor
 
-> **0.5.0. Contract + working reference advisor + localized reason chips +
+> **0.6.1. Contract + working reference advisor + localized reason chips +
 > humidity-aware black-ice (radiative frost) condition.**
+>
+> ⚑ **0.6.1 is a deliberate behavioural break: `brief(...)` now throws rather
+> than call an unmeasured morning clear.** If you are upgrading from 0.6.0,
+> read **Absence is not an all-clear** below before you upgrade — the
+> migration is a typed `catch`, not a method swap.
 >
 > This package ships an abstract contract, its data shapes, **and** a working
 > pure-Dart reference advisor (`SnowAwarePretripAdvisor`) plus a source-neutral
@@ -92,6 +97,70 @@ The package serves several distinct downstream cohorts:
 ```sh
 dart pub add pretrip_decision_advisor
 ```
+
+## Absence is not an all-clear (behavioural break in 0.6.1)
+
+**`brief(...)` can throw, and that is new in 0.6.1.**
+
+Up to 0.6.0 a forecast slot carrying a temperature and nothing else — no
+visibility, no road surface, no precipitation, no humidity — failed every
+guarded hazard test, fell through to `clear`, and the briefing reported *no
+winter hazard signals in your trip window*. That sentence was produced by the
+absence of evidence rather than by evidence. It was not an edge case: a compact
+global product such as [`pretrip_source_met_norway`](https://pub.dev/packages/pretrip_source_met_norway)
+emits `visibilityMeters: null` and `estimatedRoadCondition: null` on every slot
+by its own honesty rule, so a mild morning there was an all-clear across hazard
+families that had never been checked.
+
+0.6.1 gates **only the affirmative all-clear**:
+
+- `brief(...)` throws `PretripAssessmentIncompleteException` when a forecast
+  **does** cover your departure window but too little was measured to earn a
+  "no winter hazard" conclusion.
+- A **measured** hazard is never withheld — it still reports from partial data
+  exactly as before. A temperature-only window is not automatically a throw; a
+  cold-enough temperature is itself a measurement and returns a normal
+  briefing.
+- A window **nothing** forecast at all does not throw. It returns
+  `peakHazard: HourHazard.unknown`, exactly as 0.6.0 did.
+
+### Migrating from 0.6.0 — a typed `catch`, not a method swap
+
+```dart
+PretripBriefing briefing;
+var assessmentIncomplete = false;
+try {
+  briefing = advisor.brief(forecast: f, commute: c, profile: p);
+} on PretripAssessmentIncompleteException {
+  assessmentIncomplete = true;
+  // Take this package's own briefing for the state rather than composing a
+  // second one that could drift from it.
+  briefing = advisor.briefOrUnassessed(forecast: f, commute: c, profile: p);
+}
+```
+
+That `assessmentIncomplete` flag is the point of the shape: **the throw is the
+only thing on the public surface that separates the two absences.**
+
+`briefOrUnassessed(...)` and `briefOrNull(...)` are compatibility shims for
+callers that need a total function, and **neither is the migration**. Both
+collapse the two absences — a window a forecast covered but did not measure,
+and a window nothing forecast at all: `verdict` is `PretripVerdict.noData` and
+`peakHazard` is `HourHazard.unknown` for both, `briefOrNull` is `null` for
+both, and only `chips` differ.
+
+They are fine for a caller that renders `chips`, logs, batch-scores, or treats
+`peakHazard: unknown` as "do not conclude". They are **wrong for any surface
+that derives a headline, banner, colour band or spoken line from `verdict`
+alone** — that surface will tell the driver *there is no forecast for your
+departure window* on a morning a forecast arrived, which is the same
+false-sentence-from-absence this release exists to fix, moved to where it is
+read first.
+
+The per-method migration table, the two absences side by side, and a worked
+opposed-pair widget test are in the CHANGELOG's **Migrating from 0.6.0**
+section — [pub.dev changelog](https://pub.dev/packages/pretrip_decision_advisor/changelog).
+It is deliberately not duplicated here, so the two cannot drift apart.
 
 ## End-to-end: measured source → briefing
 
@@ -253,8 +322,10 @@ because the cost of doing so is borne by the driver, not the advisor.
 
 ## Status
 
-0.5.0. Contract + working reference advisor, localized reason chips, and the
+0.6.1. Contract + working reference advisor, localized reason chips, the
 humidity-aware black-ice (radiative frost) condition bounded to the
-calibration's documented envelope.
+calibration's documented envelope, and the earned-all-clear gate: an
+affirmative "no winter hazard" conclusion now requires that the deciding
+fields were actually measured.
 Interface stability is committed at this version within the bounds described in
 `KNOWN_LIMITATIONS.md`.

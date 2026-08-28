@@ -8,15 +8,32 @@ void main() {
   final dep = DateTime(2026, 1, 1, 7, 15);
   final issued = DateTime(2026, 1, 1, 6, 0);
 
+  /// A FULLY MEASURED slot: every field the hazard ladder reads carries a
+  /// value, so a `clear` verdict built from it is EARNED rather than
+  /// fallen-through.
+  ///
+  /// ⚑ The defaults were `null` until 2026-08-28, and `null` is exactly the
+  /// shape published 0.6.0 read as benign: every test in `hazardOf` is guarded
+  /// `field != null && ...`, so a slot carrying a temperature and nothing else
+  /// failed every test, fell through all of them and scored `clear` having
+  /// decided nothing. Fixtures built from those defaults could therefore reach
+  /// an all-clear the ladder never earned — the defect `pretrip_decision_advisor`
+  /// 0.6.1 closes, sitting inside the tests that were supposed to catch it.
+  ///
+  /// Absence is now written out longhand at the call site (a direct
+  /// `HourlyForecast(...)`), so a test that MEANS "unmeasured" says so instead
+  /// of getting it by default.
   HourlyForecast slot(
     int hour, {
     double temp = -2,
-    double? precip,
-    double? vis,
-    RoadConditionEstimate? road,
+    double precip = 0,
+    double vis = 8000,
+    double humidity = 60,
+    RoadConditionEstimate road = RoadConditionEstimate.dry,
   }) => HourlyForecast(
     hour: DateTime(2026, 1, 1, hour),
     tempCelsius: temp,
+    humidityRH: humidity,
     precipitationMmPerHour: precip,
     visibilityMeters: vis,
     estimatedRoadCondition: road,
@@ -55,11 +72,17 @@ void main() {
 
   group('clear and caution', () {
     test('clear window recommends departing now', () {
+      // 4 C, not 3. The fixture's intent — a temperature ABOVE the frost band
+      // — was written 2026-06-12 (1f452c0) when `frostTempCelsius = 0.0` was
+      // the only band. The radiative-frost band arrived 2026-07-05 (3cd2ce9)
+      // with `radiativeFrostAmbientCeilingCelsius = 3.0`, and 3 C stopped
+      // being above it — it sits exactly ON the ceiling. The fixture kept
+      // reading `clear` for 23 days only because its humidity was ABSENT, and
+      // absent humidity made the frost check return false. Measured
+      // 2026-08-28: at 3 C this slot is `caution` for every humidity from 5%
+      // to 80%. 4 C is above the ceiling, so the ladder decides it outright.
       final b = advisor.brief(
-        forecast: forecast([
-          slot(7, temp: 3, vis: 8000, precip: 0),
-          slot(8, temp: 3, vis: 8000),
-        ]),
+        forecast: forecast([slot(7, temp: 4), slot(8, temp: 4)]),
         commute: commute(),
         profile: profile,
       );
@@ -81,16 +104,56 @@ void main() {
       expect(b.recommendation!.suggestedDelay, Duration.zero);
     });
 
-    test('null fields never fabricate a hazard', () {
-      final b = advisor.brief(
-        forecast: forecast([
-          HourlyForecast(hour: DateTime(2026, 1, 1, 7), tempCelsius: 5),
-          HourlyForecast(hour: DateTime(2026, 1, 1, 8), tempCelsius: 5),
-        ]),
+    // ⚑ THE ASSERTION HERE WAS THE DEFECT, WRITTEN DOWN AS A SPECIFICATION.
+    //
+    // It built a slot carrying a temperature and NOTHING else and asserted
+    // `verdict == clear`. Published 0.6.0 satisfied it, and told a driver in
+    // Akita 「出発時間帯に冬季の危険を示す兆候はありません」 on a morning where
+    // visibility, road surface, precipitation and humidity had never been
+    // measured. A test cannot catch a defect it asserts.
+    //
+    // The INTENT survives and is asserted below, unweakened: absence must not
+    // fabricate a hazard EITHER. A gap never raises the band and never lowers
+    // it — at the adverse end it would invent danger, at the benign end it
+    // would invent safety. What changes is only the third outcome the old
+    // assertion had no word for: the advisor may decline to conclude.
+    test('null fields never fabricate a hazard — nor an all-clear', () {
+      final f = forecast([
+        HourlyForecast(hour: DateTime(2026, 1, 1, 7), tempCelsius: 5),
+        HourlyForecast(hour: DateTime(2026, 1, 1, 8), tempCelsius: 5),
+      ]);
+
+      // THE ORIGINAL INTENT, UNCHANGED: absence invents no hazard. The
+      // ladder still scores these slots `clear`; nothing was promoted to a
+      // warning because a field happened to be missing.
+      expect(advisor.hazardOf(f.hourly.first), HourHazard.clear);
+      expect(advisor.hazardOf(f.hourly.last), HourHazard.clear);
+
+      // AND absence invents no all-clear. `clear` on the ladder means
+      // "nothing fired", which is not "nothing is there".
+      expect(
+        () => advisor.brief(forecast: f, commute: commute(), profile: profile),
+        throwsA(isA<PretripAssessmentIncompleteException>()),
+      );
+
+      // It names WHAT it could not decide, so a caller can go and measure it
+      // rather than only learn that something was missing. At 5 C neither
+      // precipitation nor humidity could have changed this slot's verdict,
+      // so neither is reported — the gate is exactly as tight as the ladder.
+      expect(advisor.evidenceGaps(f.hourly.first), {
+        HazardEvidenceGap.visibility,
+        HazardEvidenceGap.roadSurface,
+      });
+
+      // The caller who would rather branch than catch is not handed a
+      // fabricated band either — the honest middle value.
+      final b = advisor.briefOrUnassessed(
+        forecast: f,
         commute: commute(),
         profile: profile,
       );
-      expect(b.verdict, PretripVerdict.clear);
+      expect(b.verdict, PretripVerdict.noData);
+      expect(b.peakHazard, HourHazard.unknown);
     });
 
     test('subzero dry air is caution, never clear — frost/black-ice risk, '

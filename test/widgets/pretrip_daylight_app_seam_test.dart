@@ -29,15 +29,27 @@ void main() {
   final forecast = WeatherForecast(
     issuedAt: issued,
     hourly: [
+      // Fully measured, 2026-08-28. Road surface and humidity were absent, and
+      // the ladder reads both — so this window scored `clear` having decided
+      // nothing, and 0.6.1 rightly refuses to call that an all-clear. The
+      // subject here is the DAYLIGHT chip, so the fixture's job is to be a
+      // real, decidable evening: a snowy Akita dusk at +3 C is near-saturated,
+      // and 92% RH keeps the radiative-frost calibration quiet at that ambient.
       HourlyForecast(
         hour: DateTime(2026, 1, 15, 17),
         tempCelsius: 3,
+        humidityRH: 92,
+        precipitationMmPerHour: 0,
         visibilityMeters: 8000,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
       ),
       HourlyForecast(
         hour: DateTime(2026, 1, 15, 18),
         tempCelsius: 3,
+        humidityRH: 92,
+        precipitationMmPerHour: 0,
         visibilityMeters: 8000,
+        estimatedRoadCondition: RoadConditionEstimate.dry,
       ),
     ],
   );

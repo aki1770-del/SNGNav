@@ -89,7 +89,8 @@ class PretripScreen extends StatefulWidget {
   final Future<List<Advisory>> Function({
     required double latitude,
     required double longitude,
-  })? jmaAdvisoryFetchOverride;
+  })?
+  jmaAdvisoryFetchOverride;
 
   /// Optional test seam: overrides the CURRENT-LOCATION live MET forecast
   /// fetch at a point, so the briefing's live path — and everything gated on
@@ -129,7 +130,8 @@ class PretripScreen extends StatefulWidget {
     required double originLon,
     required double destLat,
     required double destLon,
-  })? routeShapeFetchOverride;
+  })?
+  routeShapeFetchOverride;
 
   /// Optional test seam (PRODUCTION-ARM): overrides the bundled bridge-CSV
   /// load inside the real wiring (pairs with [routeShapeFetchOverride]).
@@ -197,16 +199,15 @@ class _PretripScreenState extends State<PretripScreen> {
   // prepare, and leaves the decision with her.
   bool _pretripTripRequired = false;
 
-  static const String _pretripForecastSource =
-      String.fromEnvironment('PRETRIP_FORECAST');
+  static const String _pretripForecastSource = String.fromEnvironment(
+    'PRETRIP_FORECAST',
+  );
   // Forecast point — defaults to the app's Nagoya map center. Unparseable
   // overrides fall back to the default rather than guessing a location.
-  static final double _pretripLatDefault = double.tryParse(
-          const String.fromEnvironment('PRETRIP_LAT')) ??
-      35.1709;
-  static final double _pretripLonDefault = double.tryParse(
-          const String.fromEnvironment('PRETRIP_LON')) ??
-      136.8815;
+  static final double _pretripLatDefault =
+      double.tryParse(const String.fromEnvironment('PRETRIP_LAT')) ?? 35.1709;
+  static final double _pretripLonDefault =
+      double.tryParse(const String.fromEnvironment('PRETRIP_LON')) ?? 136.8815;
 
   // The effective point: the test seam wins when supplied; production is the
   // compile-time define, byte-for-byte as before.
@@ -260,8 +261,9 @@ class _PretripScreenState extends State<PretripScreen> {
   // 151/1286 stations report visibility, incl. 秋田/Akita) — same merge, same
   // departure-hour-only rule, same real-sensor-or-nothing honesty. Data: 気象庁
   // / Japan Meteorological Agency (open data) — caption carries it.
-  static const String _pretripVisibilitySource =
-      String.fromEnvironment('PRETRIP_VISIBILITY');
+  static const String _pretripVisibilitySource = String.fromEnvironment(
+    'PRETRIP_VISIBILITY',
+  );
 
   void Function()? _pretripVisibilityClose;
   VisibilityObservation? _pretripVisibility;
@@ -279,8 +281,9 @@ class _PretripScreenState extends State<PretripScreen> {
   // error banner, no substitute claim. No Timer/Stream/poll and no re-fetch
   // on rebuild — the same HER-action-only discipline as the destination-area
   // read above.
-  static const String _pretripRouteOsrmUrl =
-      String.fromEnvironment('PRETRIP_ROUTE_OSRM_URL');
+  static const String _pretripRouteOsrmUrl = String.fromEnvironment(
+    'PRETRIP_ROUTE_OSRM_URL',
+  );
 
   /// The corridor-match result for the CURRENT destination epoch; null until
   /// (and unless) a real route AND the bridge dataset both delivered for that
@@ -308,12 +311,15 @@ class _PretripScreenState extends State<PretripScreen> {
   // Timer, no Stream, no scheduled refresh): background polling of "her area"
   // would be 見守り-by-proxy, and is forbidden. Unparseable overrides ⇒ the
   // feature is OFF (null), never a guessed point.
-  static final double? _pretripDestLat =
-      double.tryParse(const String.fromEnvironment('PRETRIP_DEST_LAT'));
-  static final double? _pretripDestLon =
-      double.tryParse(const String.fromEnvironment('PRETRIP_DEST_LON'));
-  static const String _pretripDestLabel =
-      String.fromEnvironment('PRETRIP_DEST_LABEL');
+  static final double? _pretripDestLat = double.tryParse(
+    const String.fromEnvironment('PRETRIP_DEST_LAT'),
+  );
+  static final double? _pretripDestLon = double.tryParse(
+    const String.fromEnvironment('PRETRIP_DEST_LON'),
+  );
+  static const String _pretripDestLabel = String.fromEnvironment(
+    'PRETRIP_DEST_LABEL',
+  );
 
   // LIVE (in-app) destination AREA: the dart-define values above are kept as the
   // initial SEED, but the driver (HER) can now set/change the area herself in
@@ -364,8 +370,9 @@ class _PretripScreenState extends State<PretripScreen> {
   // +9 h). Null (unset) means "derive the offset from the departure instant's
   // device-local offset" — see [build] for the full rationale and the
   // cross-timezone limitation this override exists to cover.
-  static final int? _pretripUtcOffsetMin =
-      int.tryParse(const String.fromEnvironment('PRETRIP_UTC_OFFSET_MIN'));
+  static final int? _pretripUtcOffsetMin = int.tryParse(
+    const String.fromEnvironment('PRETRIP_UTC_OFFSET_MIN'),
+  );
 
   static final WeatherForecast _pretripForecast = WeatherForecast(
     issuedAt: DateTime(2026, 1, 1, 6, 0),
@@ -440,12 +447,16 @@ class _PretripScreenState extends State<PretripScreen> {
           final p = DigitrafficVisibilityProvider();
           _pretripVisibilityClose = p.close;
           obs = await p.fetchNearestVisibility(
-              latitude: _pretripLat, longitude: _pretripLon);
+            latitude: _pretripLat,
+            longitude: _pretripLon,
+          );
         case 'jma':
           final p = JmaVisibilityProvider();
           _pretripVisibilityClose = p.close;
           obs = await p.fetchNearestVisibility(
-              latitude: _pretripLat, longitude: _pretripLon);
+            latitude: _pretripLat,
+            longitude: _pretripLon,
+          );
         default:
           return; // not selected
       }
@@ -486,7 +497,8 @@ class _PretripScreenState extends State<PretripScreen> {
       longitude: _pretripLon,
       now: DateTime.now(),
       window: _pretripWindow,
-      fetchMetForecast: metOverride ??
+      fetchMetForecast:
+          metOverride ??
           () =>
               met!.fetchForecast(latitude: _pretripLat, longitude: _pretripLon),
       fetchJmaAdvisories: () =>
@@ -497,7 +509,8 @@ class _PretripScreenState extends State<PretripScreen> {
     // is claimed.
     if (!mounted || result.forecast == null) return;
     setState(() {
-      _pretripLiveForecast = result.forecast; // already JMA-merged when applicable
+      _pretripLiveForecast =
+          result.forecast; // already JMA-merged when applicable
       _pretripLiveDeparture = result.departure;
       _pretripLiveStatus = result.status;
       _pretripJmaEventName = result.jmaEventName;
@@ -609,10 +622,7 @@ class _PretripScreenState extends State<PretripScreen> {
     // bridge caution never waits behind the area fetch. _loadSavedPlace is
     // guarded, so these re-entries will NOT re-load and clobber the just-set
     // fields.
-    await Future.wait([
-      _initDestAreaCondition(),
-      _initRouteBridges(),
-    ]);
+    await Future.wait([_initDestAreaCondition(), _initRouteBridges()]);
   }
 
   /// HER-action: remove the saved destination AREA. Closes providers, clears the
@@ -679,7 +689,8 @@ class _PretripScreenState extends State<PretripScreen> {
     // change/clear bumps the epoch and the landings below drop the stale read.
     final epoch = _destEpoch;
 
-    final met = (widget.destForecastProviderFactory ??
+    final met =
+        (widget.destForecastProviderFactory ??
         MetNorwayHourlyForecastProvider.new)();
     _destForecastProvider = met;
     final result = await resolvePretripLiveForecast(
@@ -700,8 +711,10 @@ class _PretripScreenState extends State<PretripScreen> {
       // resurrect stale data into the family card AND the bridge caution's
       // cold gate ([_destLiveForecast]) — dropped instead; the setter's own
       // re-fetch owns the new epoch.
-      debugPrint('pretrip dest area: destination changed during the read — '
-          'stale result dropped');
+      debugPrint(
+        'pretrip dest area: destination changed during the read — '
+        'stale result dropped',
+      );
       return;
     }
 
@@ -714,12 +727,16 @@ class _PretripScreenState extends State<PretripScreen> {
           final p = DigitrafficVisibilityProvider();
           _destVisibilityClose = p.close;
           destObs = await p.fetchNearestVisibility(
-              latitude: destLat, longitude: destLon);
+            latitude: destLat,
+            longitude: destLon,
+          );
         case 'jma':
           final p = JmaVisibilityProvider();
           _destVisibilityClose = p.close;
           destObs = await p.fetchNearestVisibility(
-              latitude: destLat, longitude: destLon);
+            latitude: destLat,
+            longitude: destLon,
+          );
         default:
           destObs = null;
       }
@@ -746,7 +763,7 @@ class _PretripScreenState extends State<PretripScreen> {
       // "no warning" negative for an area no source was queried about.
       warningCheckAvailable:
           result.status == PretripLiveStatus.japanJmaMerged ||
-              result.status == PretripLiveStatus.japanJmaNoAdvisory,
+          result.status == PretripLiveStatus.japanJmaNoAdvisory,
       observed: destObs,
     );
     setState(() {
@@ -819,8 +836,10 @@ class _PretripScreenState extends State<PretripScreen> {
       // destination. Landing it beside the NEW destination would be a false
       // claim — dropped instead. On a change, the setter's own fresh resolve
       // owns the new epoch; on a clear there is nothing to resolve.
-      debugPrint('pretrip route bridges: destination changed during the '
-          'one-shot resolve — stale result dropped');
+      debugPrint(
+        'pretrip route bridges: destination changed during the '
+        'one-shot resolve — stale result dropped',
+      );
       return;
     }
     setState(() => _routeBridges = result);
@@ -869,8 +888,8 @@ class _PretripScreenState extends State<PretripScreen> {
         : 'Fintraffic / digitraffic.fi (CC BY 4.0)';
     final visCaption = obs != null
         ? ' Departure-hour visibility MEASURED: ${obs.meters.round()} m at '
-            '${obs.stationName} (${obs.distanceKm.toStringAsFixed(0)} km '
-            'away) — data: $visAttribution.'
+              '${obs.stationName} (${obs.distanceKm.toStringAsFixed(0)} km '
+              'away) — data: $visAttribution.'
         : '';
     final caption = live != null
         ? pretripLiveSourceCaption(
@@ -884,9 +903,9 @@ class _PretripScreenState extends State<PretripScreen> {
             visCaption: visCaption,
           )
         : strings.simulatedForecastCaption +
-            (_pretripForecastSource == 'met_norway'
-                ? strings.liveFetchUnavailableSuffix
-                : '');
+              (_pretripForecastSource == 'met_norway'
+                  ? strings.liveFetchUnavailableSuffix
+                  : '');
     // OFFLINE DAYLIGHT CLOCK — route-local civil offset for the daylight chip.
     //
     // The [CommuteShape] departure above is a NAIVE wall-clock time in the
@@ -928,14 +947,50 @@ class _PretripScreenState extends State<PretripScreen> {
           : CommuteFlexibility.discretionary,
       geo: geo,
     );
-    final briefing = advisor.brief(
-      forecast: forecast,
-      commute: commute,
-      profile: const DriverProfileSpec(
-        profileTag: 'demo',
-        reactionTimeSeconds: 1.5,
-      ),
+    const profile = DriverProfileSpec(
+      profileTag: 'demo',
+      reactionTimeSeconds: 1.5,
     );
+
+    // THE ALL-CLEAR MUST BE EARNED, AND THE TWO ABSENCES ARE NOT THE SAME.
+    //
+    // `pretrip_decision_advisor` 0.6.1 refuses the affirmative all-clear it did
+    // not measure: `brief` throws [PretripAssessmentIncompleteException] when a
+    // forecast DOES cover this window but the fields that decide the hazard
+    // ladder were never measured. Published 0.6.0 printed
+    // 「出発時間帯に冬季の危険を示す兆候はありません」 on exactly that morning —
+    // a sentence produced BY the absence of evidence. On the MET Norway product
+    // it was the DEFAULT: that source carries neither visibility nor road
+    // surface on any slot, by its own honesty rule.
+    //
+    // The catch is the ONLY thing that can tell that morning apart from one
+    // with no forecast at all. Both land as `PretripVerdict.noData`, and
+    // `allClearEarned` answers `false` to both — `window.isEmpty` returns
+    // `false` on the same line an unmeasured window does. Calling
+    // `briefOrUnassessed` instead of catching loses the distinction too, and
+    // the card would then tell HER 「出発時間帯の予報がありません」 — *there is
+    // no forecast* — on a morning a forecast arrived. That is the same defect
+    // 0.6.1 exists to close, moved into the headline, where it is larger and
+    // is read first, and is announced first to assistive tech.
+    PretripBriefing briefing;
+    var assessmentIncomplete = false;
+    try {
+      briefing = advisor.brief(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
+    } on PretripAssessmentIncompleteException {
+      assessmentIncomplete = true;
+      // The package already authored what this state SAYS — its
+      // `assessmentIncomplete()` chip, in both languages. Take its briefing
+      // rather than compose a second one here that could drift from it.
+      briefing = advisor.briefOrUnassessed(
+        forecast: forecast,
+        commute: commute,
+        profile: profile,
+      );
+    }
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -948,6 +1003,7 @@ class _PretripScreenState extends State<PretripScreen> {
                 // HER mother in Akita — resolved once from the active locale above.
                 strings: strings,
                 briefing: briefing,
+                assessmentIncomplete: assessmentIncomplete,
                 commute: commute,
                 forecastIssuedAt: forecast.issuedAt,
                 tripRequired: _pretripTripRequired,
@@ -974,7 +1030,10 @@ class _PretripScreenState extends State<PretripScreen> {
               // fabrication); they inform, the driver always drives.
               if (live != null && _pretripJmaTurmoilAdvisories.isNotEmpty)
                 _jmaTurmoilWarningsCard(
-                    context, strings, _pretripJmaTurmoilAdvisories),
+                  context,
+                  strings,
+                  _pretripJmaTurmoilAdvisories,
+                ),
               // PARTIAL-READ caution for HER CURRENT location: a border read
               // where a sibling prefecture was unreachable. HER must SEE that
               // the official-warning check was incomplete — over-warn, never a
@@ -983,7 +1042,10 @@ class _PretripScreenState extends State<PretripScreen> {
                   _pretripJmaBorderCheckIncomplete &&
                   _pretripJmaUnreachableArea != null)
                 _borderIncompleteCaution(
-                    context, strings, _pretripJmaUnreachableArea!),
+                  context,
+                  strings,
+                  _pretripJmaUnreachableArea!,
+                ),
               // ROUTE BRIDGE caution: the real fetched route crosses about N
               // mapped bridge sites, and bridge decks freeze before the road
               // surface does. Shown only when a real route delivered, the
@@ -1003,7 +1065,10 @@ class _PretripScreenState extends State<PretripScreen> {
                     now: widget.bridgeGateNowOverride ?? DateTime.now(),
                   ))
                 _bridgeCorridorCaution(
-                    context, strings, _routeBridges!.clusterCount),
+                  context,
+                  strings,
+                  _routeBridges!.clusterCount,
+                ),
               // In-app TYPED-PLACE ENTRY: the driver (HER) sets/changes the
               // destination AREA herself. ALWAYS visible — she must be able to
               // set the place the FIRST time, when _destAreaRead is still null.
@@ -1046,9 +1111,9 @@ class _PretripScreenState extends State<PretripScreen> {
                   areaLabelOverride: _destLabel.isNotEmpty
                       ? _destLabel
                       : (_destAreaPrefCode != null &&
-                              jmaPrefectureName(_destAreaPrefCode!) != null
-                          ? strings.prefectureName(_destAreaPrefCode!)
-                          : strings.genericDestinationArea),
+                                jmaPrefectureName(_destAreaPrefCode!) != null
+                            ? strings.prefectureName(_destAreaPrefCode!)
+                            : strings.genericDestinationArea),
                 ),
               // PARTIAL-READ caution for the FAMILY-THREAD area (her mother's
               // area): a border read where a sibling prefecture was unreachable.
@@ -1057,7 +1122,10 @@ class _PretripScreenState extends State<PretripScreen> {
               // presented as a complete "no warnings" — over-warn, never deter.
               if (_destBorderCheckIncomplete && _destUnreachableArea != null)
                 _borderIncompleteCaution(
-                    context, strings, _destUnreachableArea!),
+                  context,
+                  strings,
+                  _destUnreachableArea!,
+                ),
             ],
           ),
         ),
@@ -1101,7 +1169,8 @@ class _PretripScreenState extends State<PretripScreen> {
                   Text(
                     strings.bridgeCorridorCaution(approxCount),
                     style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onTertiaryContainer),
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   // ODbL produced-work notice: this surface never shows the
@@ -1110,7 +1179,8 @@ class _PretripScreenState extends State<PretripScreen> {
                   Text(
                     strings.bridgeDataAttribution,
                     style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onTertiaryContainer),
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
                   ),
                 ],
               ),
@@ -1175,8 +1245,9 @@ class _PretripScreenState extends State<PretripScreen> {
               padding: const EdgeInsets.only(left: 26),
               child: Text(
                 strings.jmaWarningsVerbatimNote,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: fg.withValues(alpha: 0.8)),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: fg.withValues(alpha: 0.8),
+                ),
               ),
             ),
           ],
@@ -1217,8 +1288,9 @@ class _PretripScreenState extends State<PretripScreen> {
             Expanded(
               child: Text(
                 strings.borderWarningCheckIncomplete(unreachableArea),
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onTertiaryContainer,
+                ),
               ),
             ),
           ],

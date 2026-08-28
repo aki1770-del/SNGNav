@@ -32,6 +32,7 @@ class PretripBriefingCard extends StatelessWidget {
     required this.tripRequired,
     required this.onTripRequiredChanged,
     required this.sourceCaption,
+    this.assessmentIncomplete = false,
     this.winterCard,
     this.strings = BriefingStrings.en,
   });
@@ -67,6 +68,23 @@ class PretripBriefingCard extends StatelessWidget {
   /// Honest one-line description of where the forecast came from.
   final String sourceCaption;
 
+  /// True when the advisor REFUSED the affirmative all-clear because the
+  /// forecast covering this window never measured what decides it — the
+  /// `PretripAssessmentIncompleteException` case of
+  /// `SnowAwarePretripAdvisor.brief`.
+  ///
+  /// This is a DIFFERENT absence from "no forecast at all", and the card
+  /// cannot tell them apart on its own: both arrive as
+  /// [PretripVerdict.noData], and `allClearEarned` returns `false` for both.
+  /// Only the caller's typed catch knows. Rendering
+  /// [BriefingStrings.headlineNoData] here would tell a driver
+  /// 「出発時間帯の予報がありません」 — *there is no forecast* — on a morning a
+  /// forecast DID arrive: a new false sentence produced by absence, in the
+  /// headline, where it is read first and announced first.
+  ///
+  /// Defaults to `false`, so every existing caller renders exactly as before.
+  final bool assessmentIncomplete;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -100,7 +118,9 @@ class PretripBriefingCard extends StatelessWidget {
             Semantics(
               container: true,
               liveRegion: true,
-              label: strings.semanticsLabel(v.severity, v.headline),
+              label: strings
+                  .semanticsLabel(v.severity, v.semanticsHeadline)
+                  .trim(),
               child: ExcludeSemantics(
                 child: Container(
                   width: double.infinity,
@@ -116,8 +136,9 @@ class PretripBriefingCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           v.headline,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(color: v.foreground),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: v.foreground,
+                          ),
                         ),
                       ),
                     ],
@@ -183,8 +204,9 @@ class PretripBriefingCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               strings.sourceLine(sourceCaption, _hhmm(forecastIssuedAt)),
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
         ),
@@ -199,8 +221,7 @@ class PretripBriefingCard extends StatelessWidget {
   List<Widget> _buildWinterCard(ThemeData theme, WinterCard card) {
     final actions = _actionLines(card.guidance);
     return [
-      Text(strings.winterHeader(card.state),
-          style: theme.textTheme.titleSmall),
+      Text(strings.winterHeader(card.state), style: theme.textTheme.titleSmall),
       const SizedBox(height: 6),
       for (final line in actions)
         Padding(
@@ -213,17 +234,16 @@ class PretripBriefingCard extends StatelessWidget {
                 child: Icon(Icons.snowing, size: 14),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(line, style: theme.textTheme.bodySmall),
-              ),
+              Expanded(child: Text(line, style: theme.textTheme.bodySmall)),
             ],
           ),
         ),
       const SizedBox(height: 2),
       Text(
         strings.winterFooter,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: theme.colorScheme.outline),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.outline,
+        ),
       ),
     ];
   }
@@ -259,8 +279,19 @@ class PretripBriefingCard extends StatelessWidget {
     final rec = briefing.recommendation;
     switch (briefing.verdict) {
       case PretripVerdict.noData:
+        // TWO absences arrive here and only one of them may say "there is no
+        // forecast". Where a forecast DID arrive and simply measured nothing,
+        // the banner carries the severity word itself — a state, not a claim
+        // — and the package's own `assessmentIncomplete()` chip says WHAT was
+        // not measured. NO new driver-facing sentence is authored for this:
+        // both strings already shipped, reviewed, in both languages.
         return _VerdictStyle(
-          headline: strings.headlineNoData,
+          headline: assessmentIncomplete
+              ? strings.severityInformationNeeded
+              : strings.headlineNoData,
+          // The banner already shows the severity word in that case, so it is
+          // announced once, not twice.
+          semanticsHeadline: assessmentIncomplete ? '' : null,
           icon: Icons.help_outline,
           background: theme.colorScheme.surfaceContainerHighest,
           foreground: theme.colorScheme.onSurface,
@@ -283,17 +314,20 @@ class PretripBriefingCard extends StatelessWidget {
           severity: strings.severityCaution,
         );
       case PretripVerdict.waitAdvised:
-        final strong =
-            rec?.strength == RecommendationStrength.advisoryStrong;
+        final strong = rec?.strength == RecommendationStrength.advisoryStrong;
         final delay = rec?.suggestedDelay ?? Duration.zero;
         return _VerdictStyle(
-          headline:
-              strings.headlineWaitAdvised(strings.delayText(delay), strong),
+          headline: strings.headlineWaitAdvised(
+            strings.delayText(delay),
+            strong,
+          ),
           icon: Icons.schedule,
-          background:
-              strong ? const Color(0xFFFFE0D6) : const Color(0xFFFFF3E0),
-          foreground:
-              strong ? const Color(0xFF8B2500) : const Color(0xFF8A4B00),
+          background: strong
+              ? const Color(0xFFFFE0D6)
+              : const Color(0xFFFFF3E0),
+          foreground: strong
+              ? const Color(0xFF8B2500)
+              : const Color(0xFF8A4B00),
           severity: strong ? strings.severityHazard : strings.severityCaution,
         );
       case PretripVerdict.hazardPersists:
@@ -326,7 +360,8 @@ class _VerdictStyle {
     required this.background,
     required this.foreground,
     required this.severity,
-  });
+    String? semanticsHeadline,
+  }) : semanticsHeadline = semanticsHeadline ?? headline;
 
   final String headline;
   final IconData icon;
@@ -335,5 +370,14 @@ class _VerdictStyle {
 
   /// A short severity word announced first to assistive tech, so the
   /// colour-encoded severity is never the only carrier of the safety signal.
+  ///
+  /// It is NOT drawn anywhere on the card — measured 2026-08-28, the banner
+  /// paints [headline] alone and this word reaches a driver only through the
+  /// semantics label below.
   final String severity;
+
+  /// What follows the severity word in the spoken announcement. Normally the
+  /// headline itself; empty where the banner is ALREADY showing the severity
+  /// word, so a screen reader does not hear it twice.
+  final String semanticsHeadline;
 }

@@ -12,16 +12,33 @@ void main() {
 
   // Hazard fixtures stay subzero; clear fixtures pass a temp above the frost
   // band (subzero dry air is caution class since the 2026-06-12 quant fix).
+  //
+  // ⚑ A FULLY MEASURED slot, since 2026-08-28. `vis`, `precip`, `road` and
+  // `humidity` all defaulted to `null` before, and every hazard test in the
+  // ladder is guarded `field != null && ...` — so a fixture built from these
+  // defaults fell through every test, scored `clear` having decided nothing,
+  // and rendered an all-clear this card could never have EARNED. These tests
+  // are about RENDERING, and their premise has to be true for the render to
+  // mean anything: a card test that draws an all-clear must first earn the
+  // all-clear, exactly as HER morning must. `pretrip_decision_advisor` 0.6.1
+  // now refuses the unearned one, which is what surfaced this.
+  //
+  // A test that MEANS "unmeasured" builds `HourlyForecast(...)` directly, so
+  // absence is visible at the call site instead of being the silent default.
   HourlyForecast slot(
     int hour, {
     double temp = -3,
-    double? vis,
-    double? precip,
+    double vis = 8000,
+    double precip = 0,
+    double humidity = 60,
+    RoadConditionEstimate road = RoadConditionEstimate.dry,
   }) => HourlyForecast(
     hour: DateTime(2026, 1, 1, hour),
     tempCelsius: temp,
+    humidityRH: humidity,
     precipitationMmPerHour: precip,
     visibilityMeters: vis,
+    estimatedRoadCondition: road,
   );
 
   CommuteShape commuteOf(CommuteFlexibility flexibility) => CommuteShape(
@@ -72,7 +89,7 @@ void main() {
   ) async {
     await pumpCard(
       tester,
-      hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+      hourly: [slot(7, temp: 4), slot(8, temp: 4)],
       flexibility: CommuteFlexibility.discretionary,
     );
     expect(find.textContaining('Conditions look clear'), findsOneWidget);
@@ -120,7 +137,7 @@ void main() {
     bool? toggled;
     await pumpCard(
       tester,
-      hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+      hourly: [slot(7, temp: 4), slot(8, temp: 4)],
       flexibility: CommuteFlexibility.discretionary,
       onChanged: (v) => toggled = v,
     );
@@ -135,7 +152,7 @@ void main() {
     final commute = commuteOf(CommuteFlexibility.discretionary);
     final briefing = advisor.brief(
       forecast: WeatherForecast(
-        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        hourly: [slot(7, temp: 4), slot(8, temp: 4)],
         issuedAt: issued,
       ),
       commute: commute,
@@ -223,7 +240,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpCard(
         tester,
-        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        hourly: [slot(7, temp: 4), slot(8, temp: 4)],
         flexibility: CommuteFlexibility.discretionary,
       );
       expect(
@@ -270,7 +287,7 @@ void main() {
     ) async {
       await pumpCard(
         tester,
-        hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+        hourly: [slot(7, temp: 4), slot(8, temp: 4)],
         flexibility: CommuteFlexibility.discretionary,
         strings: BriefingStrings.ja,
       );
@@ -309,7 +326,7 @@ void main() {
         final handle = tester.ensureSemantics();
         await pumpCard(
           tester,
-          hourly: [slot(7, temp: 3, vis: 8000), slot(8, temp: 3, vis: 8000)],
+          hourly: [slot(7, temp: 4), slot(8, temp: 4)],
           flexibility: CommuteFlexibility.discretionary,
           strings: BriefingStrings.ja,
         );

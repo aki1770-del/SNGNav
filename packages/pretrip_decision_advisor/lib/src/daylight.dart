@@ -129,13 +129,13 @@ class TripDaylight {
 
   @override
   int get hashCode => Object.hash(
-        phase,
-        sunriseHHMM,
-        sunsetHHMM,
-        eventHHMM,
-        minutesToEvent,
-        deepDark,
-      );
+    phase,
+    sunriseHHMM,
+    sunsetHHMM,
+    eventHHMM,
+    minutesToEvent,
+    deepDark,
+  );
 }
 
 /// Evaluate the daylight facts for a single trip [instant] at [geo].
@@ -152,8 +152,13 @@ TripDaylight evaluateDaylight(DateTime instant, TripGeo geo) {
   final d = instant.day;
 
   // The naive wall-clock fields denote local civil time → convert to UTC.
-  final refUtc = DateTime.utc(y, m, d, instant.hour, instant.minute)
-      .subtract(geo.utcOffset);
+  final refUtc = DateTime.utc(
+    y,
+    m,
+    d,
+    instant.hour,
+    instant.minute,
+  ).subtract(geo.utcOffset);
 
   final solar = _solarDay(y, m, d, geo);
 
@@ -319,7 +324,8 @@ double? _eventMinutesUTC(
 
 /// Hour angle (degrees) at [zenithDeg]; null when |cos H| > 1 (polar).
 double? _hourAngle(double latDeg, double decDeg, double zenithDeg) {
-  final cosH = (_cosDeg(zenithDeg) - _sinDeg(latDeg) * _sinDeg(decDeg)) /
+  final cosH =
+      (_cosDeg(zenithDeg) - _sinDeg(latDeg) * _sinDeg(decDeg)) /
       (_cosDeg(latDeg) * _cosDeg(decDeg));
   if (cosH > 1 || cosH < -1) return null;
   return _rad2deg(math.acos(cosH));
@@ -365,7 +371,8 @@ double _sunAppLong(double t) =>
     _sunTrueLong(t) - 0.00569 - 0.00478 * _sinDeg(125.04 - 1934.136 * t);
 
 double _meanObliqEcliptic(double t) =>
-    23 + (26 + ((21.448 - t * (46.815 + t * (0.00059 - t * 0.001813)))) / 60) / 60;
+    23 +
+    (26 + ((21.448 - t * (46.815 + t * (0.00059 - t * 0.001813)))) / 60) / 60;
 
 double _obliqCorr(double t) =>
     _meanObliqEcliptic(t) + 0.00256 * _cosDeg(125.04 - 1934.136 * t);
@@ -383,7 +390,8 @@ double _eqOfTime(double t) {
   final e = _eccentEarthOrbit(t);
   final m = _deg2rad(_geomMeanAnomSun(t));
   final y = math.tan(epsilon / 2) * math.tan(epsilon / 2);
-  final eTime = y * math.sin(2 * l0) -
+  final eTime =
+      y * math.sin(2 * l0) -
       2 * e * math.sin(m) +
       4 * e * y * math.sin(m) * math.cos(2 * l0) -
       0.5 * y * y * math.sin(4 * l0) -

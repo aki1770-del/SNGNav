@@ -10,11 +10,7 @@ void main() {
   group('summarizeAreaConditions', () {
     test('elevated band: near-freezing precip slot at now', () {
       final forecast = _forecast([
-        HourlyForecast(
-          hour: now,
-          tempCelsius: -3,
-          precipitationMmPerHour: 1.0,
-        ),
+        HourlyForecast(hour: now, tempCelsius: -3, precipitationMmPerHour: 1.0),
       ], now);
 
       final r = summarizeAreaConditions(
@@ -41,7 +37,10 @@ void main() {
 
       expect(r.officialWarningVerbatim, '大雪警報');
       expect(
-        areaConditionChips(r, PretripMessages.en).any((c) => c.contains('大雪警報')),
+        areaConditionChips(
+          r,
+          PretripMessages.en,
+        ).any((c) => c.contains('大雪警報')),
         isTrue,
       );
       expect(
@@ -79,52 +78,66 @@ void main() {
       );
     });
 
-    test('real-sensor-or-nothing: no observation ⇒ null + no digit in chip', () {
-      final forecast = _forecast([
-        HourlyForecast(hour: now, tempCelsius: 1),
-      ], now);
+    test(
+      'real-sensor-or-nothing: no observation ⇒ null + no digit in chip',
+      () {
+        final forecast = _forecast([
+          HourlyForecast(hour: now, tempCelsius: 1),
+        ], now);
 
-      final r = summarizeAreaConditions(
-        forecast: forecast,
-        now: now,
-        areaLabel: 'Akita',
-      );
+        final r = summarizeAreaConditions(
+          forecast: forecast,
+          now: now,
+          areaLabel: 'Akita',
+        );
 
-      expect(r.measuredVisibilityMeters, isNull);
-      expect(r.visibilityStationName, isNull);
-      expect(r.visibilityDistanceKm, isNull);
+        expect(r.measuredVisibilityMeters, isNull);
+        expect(r.visibilityStationName, isNull);
+        expect(r.visibilityDistanceKm, isNull);
 
-      final visChip = areaConditionChips(r, PretripMessages.en).last;
-      expect(visChip, PretripMessages.en.areaNoMeasuredVisibility());
-      expect(RegExp(r'\d').hasMatch(visChip), isFalse,
-          reason: 'no digit may appear in the no-measurement chip');
-    });
+        final visChip = areaConditionChips(r, PretripMessages.en).last;
+        expect(visChip, PretripMessages.en.areaNoMeasuredVisibility());
+        expect(
+          RegExp(r'\d').hasMatch(visChip),
+          isFalse,
+          reason: 'no digit may appear in the no-measurement chip',
+        );
+      },
+    );
 
-    test('window uncovered: all slots before now ⇒ not covered, no band word',
-        () {
-      final forecast = _forecast([
-        HourlyForecast(hour: now.subtract(const Duration(hours: 2)),
-            tempCelsius: -5),
-        HourlyForecast(hour: now.subtract(const Duration(hours: 1)),
-            tempCelsius: -5),
-      ], now);
+    test(
+      'window uncovered: all slots before now ⇒ not covered, no band word',
+      () {
+        final forecast = _forecast([
+          HourlyForecast(
+            hour: now.subtract(const Duration(hours: 2)),
+            tempCelsius: -5,
+          ),
+          HourlyForecast(
+            hour: now.subtract(const Duration(hours: 1)),
+            tempCelsius: -5,
+          ),
+        ], now);
 
-      final r = summarizeAreaConditions(
-        forecast: forecast,
-        now: now,
-        areaLabel: 'Akita',
-      );
+        final r = summarizeAreaConditions(
+          forecast: forecast,
+          now: now,
+          areaLabel: 'Akita',
+        );
 
-      expect(r.forecastCovered, isFalse);
-      final chips = areaConditionChips(r, PretripMessages.en);
-      expect(chips, contains(PretripMessages.en.areaForecastNotCovered()));
-      // The hazard chip line must be the not-covered line, not a band.
-      expect(chips[1], PretripMessages.en.areaForecastNotCovered());
-      for (final band in HourHazard.values) {
-        expect(chips[1].contains(PretripMessages.en.areaHazardBand(band)),
-            isFalse);
-      }
-    });
+        expect(r.forecastCovered, isFalse);
+        final chips = areaConditionChips(r, PretripMessages.en);
+        expect(chips, contains(PretripMessages.en.areaForecastNotCovered()));
+        // The hazard chip line must be the not-covered line, not a band.
+        expect(chips[1], PretripMessages.en.areaForecastNotCovered());
+        for (final band in HourHazard.values) {
+          expect(
+            chips[1].contains(PretripMessages.en.areaHazardBand(band)),
+            isFalse,
+          );
+        }
+      },
+    );
 
     group('hazard-band positive mapping (en + ja)', () {
       const enWords = {
@@ -177,26 +190,30 @@ void main() {
       expect(ja[0].contains('可能性があります'), isTrue);
     });
 
-    test('warm benign slots never show a caution band on the mother\u2019s-area '
-        'surface (radiative-frost proportionality pin)', () {
-      // The family-thread surface consumes advisor.hazardOf; the 0.5.0
-      // radiative-frost condition is envelope-bounded (ambient <= +3.0),
-      // so a mild dry day must stay clear here — no cry-wolf toward the
-      // person-adjacent read.
-      final forecast = _forecast([
-        HourlyForecast(hour: now, tempCelsius: 15.0, humidityRH: 30),
-        HourlyForecast(
+    test(
+      'warm benign slots never show a caution band on the mother\u2019s-area '
+      'surface (radiative-frost proportionality pin)',
+      () {
+        // The family-thread surface consumes advisor.hazardOf; the 0.5.0
+        // radiative-frost condition is envelope-bounded (ambient <= +3.0),
+        // so a mild dry day must stay clear here — no cry-wolf toward the
+        // person-adjacent read.
+        final forecast = _forecast([
+          HourlyForecast(hour: now, tempCelsius: 15.0, humidityRH: 30),
+          HourlyForecast(
             hour: now.add(const Duration(hours: 1)),
             tempCelsius: 20.0,
-            humidityRH: 25),
-      ], now);
+            humidityRH: 25,
+          ),
+        ], now);
 
-      final r = summarizeAreaConditions(
-        forecast: forecast,
-        now: now,
-        areaLabel: 'Akita',
-      );
-      expect(r.areaHazard, HourHazard.clear);
-    });
+        final r = summarizeAreaConditions(
+          forecast: forecast,
+          now: now,
+          areaLabel: 'Akita',
+        );
+        expect(r.areaHazard, HourHazard.clear);
+      },
+    );
   });
 }
