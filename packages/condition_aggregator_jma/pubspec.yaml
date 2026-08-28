@@ -6,7 +6,10 @@ description: >-
 version: 0.7.0
 
 # Reads the windowless per-prefecture warning JSON
-# (bosai/warning/data/warning/{areacode}.json) (0.2.0, replacing the 0.1.x
+# (bosai/warning/data/r8/{areacode}.json since 0.7.0; the 0.2.0-0.6.0 path
+# bosai/warning/data/warning/ was RETIRED by JMA's 2026-05-29 restructure and
+# has served a document frozen at 2026-05-28 ever since — do not fetch it)
+# (0.2.0 replaced the 0.1.x
 # atom-feed path's scroll-off false-negative). Windowless is NOT live: this
 # comment claimed "always reflects the current in-force warning state" until
 # 0.6.0; measured 2026-08-16 and again 2026-08-23, the path is frozen in a
@@ -31,7 +34,9 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  condition_aggregator: '>=0.0.5 <0.2.0'
+  # >=0.0.10 because 0.7.0 implements AdvisoryFeedFreshnessReporting, which
+  # that version introduced. Below it the interface does not exist.
+  condition_aggregator: '>=0.0.10 <0.2.0'
   # http is used to fetch the per-prefecture warning JSON. Warning-JSON
   # parsing is via dart:convert (no dependency needed).
   http: ^1.0.0

@@ -1,11 +1,46 @@
 # Changelog
 
+> ⚑ **Three entries below describe versions that were never published.**
+> Measured against the pub.dev API on 2026-08-28: **`0.1.6`, `0.4.0` and
+> `0.6.0` have no release.** Published versions are `0.1.0`–`0.1.5`, `0.2.0`,
+> `0.3.0`, `0.3.1`, `0.3.2`, `0.5.0`.
+>
+> Their entries are kept rather than deleted: the work described in them is real
+> and later versions build on it, and `0.7.0`'s own text refers to "the path this
+> package read from 0.2.0 through 0.6.0". **But you cannot install them, and a
+> CHANGELOG that reads like a release history when it is partly a development
+> log is its own defect.** Read a heading here as "this work happened", not as
+> "this version exists".
+
 ## 0.7.0 — 2026-08-24 — The provider now reads the path JMA actually serves
 
 **STAGED, NOT PUBLISHED.** Publishing is Chair-only voice.
 
 **BREAKING.** The default feed path and its document schema both change, and a
 catalogue code is removed. Read "Migration" below before upgrading.
+
+### `AdvisoryFeedFreshnessReporting` is implemented again
+
+`JmaAdvisoryProvider` implements `AdvisoryFeedFreshnessReporting` and exposes
+`feedStaleness`. **0.3.2 implemented it; 0.5.0 and 0.6.0 silently dropped it**
+while keeping the in-band notice.
+
+The two are not substitutes. The in-band `kJmaStaleFeedEventClass` record is for
+a human reading a list. `feedStaleness` is the channel
+`AdvisoryAggregator.canAssertNoAdvisory` reads to decide whether it may assert a
+calm road. The interface's own documentation states the consequence of dropping
+it: an adapter that does not implement it *"can still serve a frozen document and
+still satisfy `canAssertNoAdvisory`"*.
+
+Measured on the 81-day-old Niigata fixture: `canAssertNoAdvisory` returned
+**true** through 0.6.0 and returns **false** at 0.7.0.
+`test/defect_proof_current_api_test.dart` pinned the old answer as an honest
+bound labelled UPSTREAM-OWED; it was not owed upstream. `condition_aggregator`
+0.0.10 had already shipped the interface — this package had stopped
+implementing it.
+
+**Because of that, `condition_aggregator` is now `>=0.0.10 <0.2.0`** (was
+`>=0.0.5 <0.2.0`). Below 0.0.10 the interface does not exist.
 
 ### The switch
 

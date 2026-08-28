@@ -137,7 +137,8 @@ const Duration kJmaDefaultStaleFeedThreshold = Duration(hours: 6);
 
 /// Adapter implementing [AdvisoryProvider] against the JMA windowless
 /// per-prefecture warning JSON.
-class JmaAdvisoryProvider implements AdvisoryProvider {
+class JmaAdvisoryProvider
+    implements AdvisoryProvider, AdvisoryFeedFreshnessReporting {
   /// Base URL for the per-prefecture warning JSON. Default points at
   /// the public JMA bosai endpoint; injectable for testing or for an
   /// integrator-side mirror.
@@ -153,6 +154,18 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
 
   /// Clock — injectable so feed-staleness is testable without waiting 80 days.
   final DateTime Function() _now;
+
+  /// The staleness measured during the most recent point query, or `null` when
+  /// that document was current. Backs [feedStaleness].
+  ///
+  /// ⚑ RESTORED IN 0.7.0. 0.3.2 implemented [AdvisoryFeedFreshnessReporting];
+  /// 0.5.0 and 0.6.0 dropped it while keeping the in-band notice, and the
+  /// interface's own doc names the consequence: an adapter that does not
+  /// implement it "can still serve a frozen document and still satisfy
+  /// `canAssertNoAdvisory`". The in-band notice is for a human reading a list;
+  /// this getter is for the aggregator deciding whether it may assert a calm
+  /// road. They are not substitutes and 0.5.0 traded the second for the first.
+  AdvisoryFeedStaleness? _feedStaleness;
 
   /// How old a JMA warning document may be before this adapter adds an in-band
   /// [buildStaleFeedNotice] to the returned list.
@@ -205,6 +218,12 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   /// provider's last fetch.
   void close() => _http.close();
 
+  /// Snapshot semantics: read immediately after awaiting the corresponding
+  /// fetch on this instance. `null` means "not stale, or not measured" — never
+  /// proof of freshness.
+  @override
+  AdvisoryFeedStaleness? get feedStaleness => _feedStaleness;
+
   @override
   AdvisorySource get source => AdvisorySource.jmaJapan;
 
@@ -235,6 +254,10 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
             'once before any fetch.',
       );
     }
+
+    // Snapshot semantics: this query's answer only. A stale reading from a
+    // previous point must not survive into this one.
+    _feedStaleness = null;
 
     final prefectureCodes = prefectureCodesForPoint(
       latitude: latitude,
@@ -407,6 +430,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     final staleCodes = <String>[];
     Duration worstAge = Duration.zero;
     String? worstCode;
+    DateTime? worstDocumentTime;
     for (final r in results) {
       final snap = r.snapshot;
       if (snap == null) continue; // failed fetch — already handled above
@@ -416,7 +440,24 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       if (age != null && age > worstAge) {
         worstAge = age;
         worstCode = r.prefectureCode;
+        worstDocumentTime = snap.reportDateTime;
       }
+    }
+    // The aggregator's channel, distinct from the in-band notice built below.
+    if (staleCodes.isNotEmpty) {
+      final days = worstAge.inDays;
+      final hours = worstAge.inHours;
+      _feedStaleness = AdvisoryFeedStaleness(
+        source: AdvisorySource.jmaJapan,
+        documentTime: worstDocumentTime,
+        age: worstAge,
+        detail:
+            'JMA warning document for '
+            '${staleCodes.join(', ')} last written '
+            '${days >= 1 ? '$days d' : '$hours h'} ago; exceeds the '
+            '${staleFeedThreshold.inHours} h threshold this adapter owns. '
+            'Any "no warnings" from this read is NOT evidence of a calm road.',
+      );
     }
     // Past the retirement threshold the message CHANGES, not just its
     // magnitude: "this configured path may no longer be served" points at a
