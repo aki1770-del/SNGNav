@@ -2,6 +2,51 @@
 
 ## 0.6.1
 
+> ## ⚑ HELD — DO NOT PUBLISH THIS VERSION AS IT STANDS. 2026-08-28.
+>
+> Everything described below is real and was measured. It is not enough, and
+> publishing it would ship a defect one layer above the one it fixes.
+>
+> **What broke it.** An adversarial refuter measured that excluding an absent
+> term and re-normalising the remaining weights is *arithmetically identical* to
+> imputing the absent term as the MEAN of the measured ones — max deviation
+> **1.11e-16** across 40,401 grid cells. So absence does not read as "unknown"
+> in the output; it silently agrees with whatever else was measured, and in good
+> conditions it scores **higher** than the `0.8` default this release removes as
+> optimistic (`+0.02` at grip=vis=0.90, `+0.04` at 1.00).
+>
+> **A rebuilt version was refuted too.** A design panel replaced re-normalisation
+> with a floor of `0.1`, proving the invariant on **3,676,491** triples with **0**
+> violations against **1,633,750 (44.4%)** for published `0.6.0`. Two of three
+> refuters still killed it: at shipped defaults the maximum reachable `overall`
+> is **0.780257**, below every profile's safe floor — **the all-clear disappears
+> from the product entirely.**
+>
+> **Why, and this is the finding under all of it.** The fleet term has **never
+> carried a real reading.** Four `FleetProvider` implementations exist in the
+> consuming app; three are test doubles and the fourth is
+> `SimulatedFleetProvider` — five fake vehicles, `Random(42)` — whose own header
+> says *"Production replacement: real fleet telemetry API."* **That replacement
+> does not exist.** Absence is not the edge case any of these designs were tuned
+> for; it is the only case.
+>
+> **And the table surfaced something nobody had seen:** published `0.6.0` misses
+> **11.0%** of alarms on the `ageingRural` profile, including **2.4%
+> critical-suppressed.** One time in nine a hazard that should be announced is
+> not. No floor fixes that — `0.4` reintroduces 40,401 violations and 5.7% missed;
+> `0.7` makes the mean drop negative.
+>
+> **The open recommendation, and it is the publisher's decision, not this file's:**
+> remove the fleet term from the composite until a real source exists,
+> re-weighting the measured terms explicitly rather than by re-normalisation.
+> Every defect in this chain — the `0.8` default, the `NaN`→`1.0` clamp, the
+> re-normalisation, the floor — is a symptom of giving 20% of a safety score's
+> weight to a signal that cannot be measured.
+>
+> Full evidence: `outputs/operational-records/fleet_term_verdict_2026_08_28.md`
+> and `fleet_term_has_no_source_2026_08_28.md` in the governance corpus.
+
+
 ### The 0.6.0 recall was handed back through three default constructor arguments
 
 0.6.0 removed the fabricated fleet term from the MODEL. It did not remove it
