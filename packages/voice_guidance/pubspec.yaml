@@ -22,7 +22,7 @@ dependencies:
   flutter_tts: ^4.2.2
   flutter_bloc: ^9.1.0
   navigation_safety: ^0.9.0
-  navigation_safety_core: ^0.10.0
+  navigation_safety_core: ">=0.10.0 <0.12.0"
   navigation_safety_enums: ^0.1.3
   routing_engine: '>=0.4.0 <0.6.0'
 
