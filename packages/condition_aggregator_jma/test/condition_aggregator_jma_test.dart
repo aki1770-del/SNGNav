@@ -13,12 +13,14 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+import 'support/legacy_to_r8.dart';
+
 /// Test helper — wraps a UTF-8 string body in a mocked [http.Response]
 /// with the bytes preserved (the default `http.Response(String, int)`
 /// constructor encodes via latin-1 which corrupts the JA chars on
 /// round-trip through utf8.decode).
 http.Response _utf8Response(String body, int status) => http.Response.bytes(
-  utf8.encode(body),
+  utf8.encode(toR8IfLegacy(body)),
   status,
   headers: const {'content-type': 'application/json; charset=utf-8'},
 );
@@ -288,7 +290,7 @@ void main() {
       expect(provider.warningJsonBaseUrl, contains('jma.go.jp'));
       expect(
         provider.warningJsonBaseUrl,
-        equals('https://www.jma.go.jp/bosai/warning/data/warning/'),
+        equals('https://www.jma.go.jp/bosai/warning/data/r8/'),
       );
       // Regression guard (0.2.0): the windowless per-prefecture warning
       // JSON path replaces the 0.1.x atom feed, which had a window /
@@ -587,11 +589,20 @@ void main() {
       },
     );
 
-    test('fetch returns empty when caller lat/lon outside catalogued '
-        'prefectures (no HTTP call required)', () async {
+    // ⚑ Until 0.7.x this test read "fetch returns EMPTY when caller lat/lon
+    // outside catalogued prefectures" and asserted `expect(advisories,
+    // isEmpty)`. It passed for its whole life, and what it was defending was
+    // the defect: for 45 of the 58 offices JMA publishes, "we do not cover
+    // this place" was returned as the identical value to "no warnings are in
+    // force". The no-HTTP assertion below was always correct and is kept; the
+    // empty-list assertion was wrong and is inverted. See
+    // `test/outside_coverage_test.dart` for the full guard.
+    test('fetch makes NO HTTP call for a lat/lon outside the catalogued '
+        'offices, and returns a spoken out-of-coverage notice — never '
+        'the silence that reads as an all-clear', () async {
       final mock = MockClient((req) async {
-        // Tokyo is outside the 6-prefecture catalog — the provider
-        // should NOT fetch at all.
+        // Tokyo is outside the catalogue — the provider must NOT fetch:
+        // there is no office code from which to build a URL.
         fail('HTTP fetch should not occur for points outside catalog');
       });
       final provider = JmaAdvisoryProvider(
@@ -604,7 +615,13 @@ void main() {
         latitude: 35.6762, // Tokyo
         longitude: 139.6503,
       );
-      expect(advisories, isEmpty);
+      expect(advisories, hasLength(1));
+      expect(advisories.single.eventClass, kJmaOutsideCoverageEventClass);
+      expect(
+        kJmaFeedHealthEventClasses,
+        contains(advisories.single.eventClass),
+      );
+      expect(advisories.single.isHighImpact, isFalse);
     });
   });
 
@@ -1635,7 +1652,8 @@ void main() {
     test('returns the Japanese prefecture name for catalogued codes', () {
       expect(jmaPrefectureNameJa('050000'), equals('秋田県'));
       expect(jmaPrefectureNameJa('060000'), equals('山形県'));
-      expect(jmaPrefectureNameJa('010000'), equals('北海道'));
+      // '010000' was removed in 0.7.0: JMA has no such office and it 404s.
+      expect(jmaPrefectureNameJa('016000'), equals('北海道 石狩・空知・後志地方'));
       expect(jmaPrefectureNameJa('020000'), equals('青森県'));
       expect(jmaPrefectureNameJa('030000'), equals('岩手県'));
       expect(jmaPrefectureNameJa('150000'), equals('新潟県'));

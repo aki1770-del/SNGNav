@@ -26,13 +26,15 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+import 'support/legacy_to_r8.dart';
+
 final DateTime kNow = DateTime.parse('2026-08-16T00:00:00+09:00');
 
 String _fx(String c) =>
     File('test/fixtures/jma_warning_$c.frozen_2026-05.json').readAsStringSync();
 
 http.Response _r(String b) => http.Response.bytes(
-  utf8.encode(b),
+  utf8.encode(toR8IfLegacy(b)),
   200,
   headers: const {'content-type': 'application/json; charset=utf-8'},
 );
@@ -92,13 +94,18 @@ void main() {
 
       // What replaces it: the dead document is now named in band, so the
       // eternal 雷注意報 can no longer arrive alone and unqualified.
+      final health = out
+          .where((a) => kJmaFeedHealthEventClasses.contains(a.eventClass))
+          .toList();
       expect(
-        out.map((a) => a.eventClass),
-        contains(kJmaStaleFeedEventClass),
+        health,
+        isNotEmpty,
         reason:
             'served as an ACTIVE hazard 230 times over HER mother\'s '
             'prefecture with nothing marking the document dead',
       );
+      expect(health.single.severity, AdvisorySeverity.minor);
+      expect(health.single.headline, contains('日更新されていません'));
 
       // And the age is reachable through the parent primitive that already
       // existed for exactly this and had zero callers.
@@ -119,7 +126,14 @@ void main() {
     // FIXED adapter-side: the integrator's `if (advisories.isEmpty)`
     // all-clear branch no longer fires on an 81-day-old document.
     expect(r.advisories, isNotEmpty);
-    expect(r.advisories.single.eventClass, kJmaStaleFeedEventClass);
+    expect(
+      kJmaFeedHealthEventClasses.contains(r.advisories.single.eventClass),
+      isTrue,
+      reason:
+          'an 81-day silence must arrive as a feed-health notice, and at '
+          '88 days that notice names the retired path rather than only the age',
+    );
+    expect(r.advisories.single.severity, AdvisorySeverity.minor);
 
     // HONEST BOUND, not a pass. `canAssertNoAdvisory` still returns true
     // here: the fetch SUCCEEDED, so providerErrors is empty, and the

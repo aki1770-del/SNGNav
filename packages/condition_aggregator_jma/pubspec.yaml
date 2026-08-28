@@ -3,12 +3,15 @@ description: >-
   JMA (気象庁) adapter for the condition_aggregator interface. Maps the
   JMA windowless per-prefecture warning JSON to source-neutral Advisory
   typed events. Pure Dart.
-version: 0.5.0
+version: 0.7.0
 
 # Reads the windowless per-prefecture warning JSON
-# (bosai/warning/data/warning/{areacode}.json), which always reflects the
-# current in-force warning state (0.2.0, replacing the 0.1.x atom-feed
-# path's scroll-off false-negative). 0.3.0 resolves a border point to ALL
+# (bosai/warning/data/warning/{areacode}.json) (0.2.0, replacing the 0.1.x
+# atom-feed path's scroll-off false-negative). Windowless is NOT live: this
+# comment claimed "always reflects the current in-force warning state" until
+# 0.6.0; measured 2026-08-16 and again 2026-08-23, the path is frozen in a
+# late-May window. Liveness is judged from reportDatetime and surfaced
+# in-band (0.5.0). 0.3.0 resolves a border point to ALL
 # containing prefectures and returns the conservative union (over-warn;
 # partial reads flagged). 0.4.0 widens the surfaced warning classes from
 # snow-only to include the downpour / typhoon-wind / thunder / fog
@@ -29,9 +32,15 @@ environment:
 
 dependencies:
   condition_aggregator: '>=0.0.5 <0.2.0'
-  # http is used to fetch the per-prefecture warning JSON. Parsing is
-  # via dart:convert (no third-party XML/JSON dependency needed).
+  # http is used to fetch the per-prefecture warning JSON. Warning-JSON
+  # parsing is via dart:convert (no dependency needed).
   http: ^1.0.0
+  # xml parses the short-time tier's report XML (0.6.0). The warning-JSON
+  # path does not use it. This is the canonical Dart XML parser and was
+  # this package's own dependency through 0.1.x (commit 6b944c1) before
+  # the 0.2.0 move to JSON; the short-time tier is XML-only at source, so
+  # it returns for that path alone.
+  xml: ^6.5.0
 
 dev_dependencies:
   test: ^1.25.0

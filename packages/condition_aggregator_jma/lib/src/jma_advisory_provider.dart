@@ -46,6 +46,7 @@ import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:http/http.dart' as http;
 
 import 'jma_advisory_mapper.dart';
+import 'jma_r8_warning_mapper.dart';
 
 /// Base URL for the JMA windowless per-prefecture warning JSON. The
 /// provider appends `{areacode}.json` (e.g. `050000.json` for Akita).
@@ -66,6 +67,16 @@ import 'jma_advisory_mapper.dart';
 /// [JmaAdvisoryProvider.staleFeedThreshold]. **A publisher path being
 /// windowless says nothing about whether anyone is still writing to it.**
 const String kJmaWarningJsonBaseUrl =
+    'https://www.jma.go.jp/bosai/warning/data/r8/';
+
+/// The path this package read from 0.2.0 through 0.6.0, retained ONLY so a
+/// reader can see what was replaced and why. **Do not fetch it.**
+///
+/// It was retired by JMA's 2026-05-29 防災気象情報 restructure and has served a
+/// frozen 2026-05-28 document ever since — answering `200`, well-formed,
+/// indefinitely. Re-measured 2026-08-24: `reportDatetime`
+/// `2026-05-28T06:11:00+09:00` for Akita, ~88 days.
+const String kJmaRetiredWarningJsonBaseUrl =
     'https://www.jma.go.jp/bosai/warning/data/warning/';
 
 /// The single per-prefecture fetch budget — also reused as the outer batch
@@ -168,6 +179,14 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   /// [JmaFeedSnapshot] via [parseJmaFeed]).
   final Duration staleFeedThreshold;
 
+  /// Age at or beyond which the feed is reported as a **possible path
+  /// retirement** rather than merely stale.
+  ///
+  /// See [kJmaPathRetirementEventClass] for why this is a different message
+  /// and not just a bigger number: the 0.5.0 stale notice fired correctly for
+  /// 87 days and nothing moved, because it named the wrong cause.
+  final Duration pathRetirementThreshold;
+
   /// Whether [init] has been called.
   bool _initialized = false;
 
@@ -176,6 +195,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     this.userAgent =
         '(sngnav-class app, https://github.com/aki1770-del/sngnav)',
     this.staleFeedThreshold = kJmaDefaultStaleFeedThreshold,
+    this.pathRetirementThreshold = kJmaDefaultPathRetirementThreshold,
     http.Client? client,
     DateTime Function()? now,
   }) : _http = client ?? http.Client(),
@@ -221,11 +241,30 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
       longitude: longitude,
     );
     if (prefectureCodes.isEmpty) {
-      // The point is outside the Japan bounding-box catalog the
-      // adapter ships (6 snow-zone prefectures). Return empty — the
-      // aggregator's other providers (e.g. NWS) cover points outside
-      // the catalog at this layer.
-      return const <Advisory>[];
+      // The point is outside the bounding-box catalogue this adapter ships
+      // (13 of the 58 offices JMA publishes).
+      //
+      // ⚑ This branch used to `return const <Advisory>[]` — THE SAME VALUE
+      // returned for a covered prefecture, fetched successfully, with no
+      // warnings in force. For 45 of 58 offices, "we do not cover this place"
+      // and "nothing is wrong" were byte-identical, and a driver in a Nagano
+      // blizzard was told the road was clear.
+      //
+      // The comment that stood here justified the empty list by saying the
+      // aggregator's other providers "(e.g. NWS)" cover points outside the
+      // catalog. That is false for Japan and was never measured:
+      // `condition_aggregator_nws` wraps NOAA/NWS (United States),
+      // Digitraffic is Finland, MET Norway is Norway. No sibling provider
+      // covers those 45 offices — the empty list was her whole answer.
+      //
+      // So the absence is now SPOKEN, in-band, as the fourth member of the
+      // honest-absence family. There is no error channel available here: no
+      // fetch failed, because none could be attempted, so an exception would
+      // be a lie about what happened. The notice is `minor`, carries no
+      // 警報 / 注意報 suffix, and can never be graded as a hazard.
+      return <Advisory>[
+        buildOutsideCoverageNotice(latitude: latitude, longitude: longitude),
+      ];
     }
 
     // Border zones: the catalogued bounding boxes are crude rectangles
@@ -367,21 +406,39 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
     // so the notice must be able to be the ONLY thing returned.
     final staleCodes = <String>[];
     Duration worstAge = Duration.zero;
+    String? worstCode;
     for (final r in results) {
       final snap = r.snapshot;
       if (snap == null) continue; // failed fetch — already handled above
       if (!snap.isStaleAt(_now(), staleFeedThreshold)) continue;
       staleCodes.add(r.prefectureCode);
       final age = snap.ageAt(_now());
-      if (age != null && age > worstAge) worstAge = age;
+      if (age != null && age > worstAge) {
+        worstAge = age;
+        worstCode = r.prefectureCode;
+      }
     }
-    final staleNotice = staleCodes.isEmpty
-        ? null
-        : buildStaleFeedNotice(
-            prefectureCodes: staleCodes,
-            age: worstAge,
-            asOf: _now(),
-          );
+    // Past the retirement threshold the message CHANGES, not just its
+    // magnitude: "this configured path may no longer be served" points at a
+    // one-line fix, where "the data is old" points at waiting. That
+    // distinction is the whole reason this branch exists — see
+    // [kJmaPathRetirementEventClass].
+    final Advisory? staleNotice;
+    if (staleCodes.isEmpty) {
+      staleNotice = null;
+    } else if (worstAge >= pathRetirementThreshold && worstCode != null) {
+      staleNotice = buildPathRetirementNotice(
+        prefectureCode: worstCode,
+        age: worstAge,
+        sourceUrl: warningJsonBaseUrl,
+      );
+    } else {
+      staleNotice = buildStaleFeedNotice(
+        prefectureCodes: staleCodes,
+        age: worstAge,
+        asOf: _now(),
+      );
+    }
 
     if (failedPrefectureCodes.isNotEmpty) {
       // Non-empty union with at least one unreachable containing prefecture:
@@ -461,7 +518,7 @@ class JmaAdvisoryProvider implements AdvisoryProvider {
   Future<JmaFeedSnapshot> _fetchAndParse(Uri uri, String prefectureCode) async {
     final body = await _httpGet(uri, kJmaWarningJsonMaxBytes);
     try {
-      return parseJmaFeed(body, prefectureCode: prefectureCode);
+      return parseJmaR8Feed(body, prefectureCode: prefectureCode);
     } on FormatException catch (e) {
       throw JmaAdvisoryFetchException(
         'JMA warning JSON parse failed: $e',
