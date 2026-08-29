@@ -67,6 +67,11 @@ dependencies:
   kuksa_dart_sdk: ^0.2.6
 
 dev_dependencies:
+  # Test-only: the offline-camera coupling test builds fixture MBTiles archives
+  # with MbTiles.create so the guard can be pointed at an archive OTHER than the
+  # one this checkout ships. Already resolved transitively via offline_tiles at
+  # the same version; declared here because the test imports it directly.
+  mbtiles: ^0.5.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0

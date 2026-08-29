@@ -1,6 +1,7 @@
 library;
 
 export 'src/managers/offline_tile_manager.dart';
+export 'src/models/archive_camera.dart';
 export 'src/models/coverage_tier.dart';
 export 'src/models/tile_cache_config.dart';
 export 'src/models/tile_source_type.dart';
