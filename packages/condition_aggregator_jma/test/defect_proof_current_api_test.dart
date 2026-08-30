@@ -26,13 +26,15 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+import 'support/legacy_to_r8.dart';
+
 final DateTime kNow = DateTime.parse('2026-08-16T00:00:00+09:00');
 
 String _fx(String c) =>
     File('test/fixtures/jma_warning_$c.frozen_2026-05.json').readAsStringSync();
 
 http.Response _r(String b) => http.Response.bytes(
-  utf8.encode(b),
+  utf8.encode(toR8IfLegacy(b)),
   200,
   headers: const {'content-type': 'application/json; charset=utf-8'},
 );
@@ -92,13 +94,18 @@ void main() {
 
       // What replaces it: the dead document is now named in band, so the
       // eternal 雷注意報 can no longer arrive alone and unqualified.
+      final health = out
+          .where((a) => kJmaFeedHealthEventClasses.contains(a.eventClass))
+          .toList();
       expect(
-        out.map((a) => a.eventClass),
-        contains(kJmaStaleFeedEventClass),
+        health,
+        isNotEmpty,
         reason:
             'served as an ACTIVE hazard 230 times over HER mother\'s '
             'prefecture with nothing marking the document dead',
       );
+      expect(health.single.severity, AdvisorySeverity.minor);
+      expect(health.single.headline, contains('日更新されていません'));
 
       // And the age is reachable through the parent primitive that already
       // existed for exactly this and had zero callers.
@@ -106,8 +113,8 @@ void main() {
     },
   );
 
-  test('DEFECT 3 — the empty-list all-clear is closed AT THE ADAPTER; the '
-      'aggregator-level assertion remains UPSTREAM-OWED', () async {
+  test('DEFECT 3 — the empty-list all-clear is closed AT THE ADAPTER, and '
+      'as of 0.7.0 AT THE AGGREGATOR TOO', () async {
     final p = _provider('150000');
     final agg = AdvisoryAggregator(providers: <AdvisoryProvider>[p]);
     await agg.init();
@@ -119,22 +126,39 @@ void main() {
     // FIXED adapter-side: the integrator's `if (advisories.isEmpty)`
     // all-clear branch no longer fires on an 81-day-old document.
     expect(r.advisories, isNotEmpty);
-    expect(r.advisories.single.eventClass, kJmaStaleFeedEventClass);
-
-    // HONEST BOUND, not a pass. `canAssertNoAdvisory` still returns true
-    // here: the fetch SUCCEEDED, so providerErrors is empty, and the
-    // aggregator has no vocabulary for "answered, but with a dead document".
-    // An integrator that filters the minor-severity notice out and then asks
-    // canAssertNoAdvisory still gets a measured-calm answer on an 81-day-old
-    // document. Closing that needs a change in `condition_aggregator`, which
-    // NDI does not own (NDI bylaws §1(c) — upstream proposal, routed).
     expect(
-      r.canAssertNoAdvisory,
+      kJmaFeedHealthEventClasses.contains(r.advisories.single.eventClass),
       isTrue,
       reason:
-          'UPSTREAM-OWED, recorded rather than hidden. '
-          'condition_aggregator/lib/src/advisory_aggregator.dart:110 says '
-          '"never tell her it is clear" — and on a frozen feed it still does.',
+          'an 81-day silence must arrive as a feed-health notice, and at '
+          '88 days that notice names the retired path rather than only the age',
+    );
+    expect(r.advisories.single.severity, AdvisorySeverity.minor);
+
+    // ⚑ CLOSED IN 0.7.0, and it did NOT need an upstream change.
+    //
+    // Through 0.6.0 this expected `isTrue`, recorded as an honest bound: the
+    // fetch SUCCEEDED, so providerErrors was empty, and an integrator that
+    // filtered the minor-severity notice out and then asked
+    // canAssertNoAdvisory got a measured-calm answer on an 81-day-old
+    // document. It was booked as UPSTREAM-OWED.
+    //
+    // It was not owed. `condition_aggregator` 0.0.10 had ALREADY shipped
+    // `AdvisoryFeedFreshnessReporting` — the vocabulary the bound said was
+    // missing. 0.3.2 implemented it; 0.5.0 and 0.6.0 dropped it while keeping
+    // the in-band notice. 0.7.0 implements it again, so the aggregator now
+    // receives a positive staleness measurement and refuses the assertion.
+    //
+    // The two channels are not substitutes: the in-band notice is for a human
+    // reading a list, and this is for the aggregator deciding whether it may
+    // say the road is calm.
+    expect(
+      r.canAssertNoAdvisory,
+      isFalse,
+      reason:
+          'a frozen document must not support "no advisory in force". The '
+          'adapter reports feedStaleness, so advisory_aggregator.dart:110 '
+          '"never tell her it is clear" now holds on a frozen feed.',
     );
   });
 

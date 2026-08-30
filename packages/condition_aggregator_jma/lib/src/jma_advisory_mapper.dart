@@ -207,12 +207,20 @@ const Set<String> kJmaSnowAdvisoryEventNames = <String>{
 /// warning) can match `Advisory.eventClass == kJmaIncompleteReadEventClass`.
 const String kJmaIncompleteReadEventClass = 'データ取得不可';
 
-/// Bounding-box catalog for 6 snow-zone prefectures.
+/// Bounding-box catalog for 13 snow-zone offices (8 Hokkaido + 5 Tohoku/Niigata).
 /// Bounding-box is approximate (axis-aligned rectangle in WGS84
 /// decimal degrees). Used by [prefectureCodeForPoint] to resolve a
 /// caller's lat/lon to one of the catalogued prefecture codes; points
-/// outside the catalog return null (the aggregator's other providers
-/// cover those points at this layer).
+/// outside the catalog resolve to nothing.
+///
+/// ⚑ **13 of the 58 offices JMA publishes — the other 45 are UNSERVED**, and
+/// no sibling provider covers them (`condition_aggregator_nws` is the United
+/// States, Digitraffic is Finland, MET Norway is Norway). A point in an
+/// unserved office therefore gets [buildOutsideCoverageNotice] from the
+/// provider, never silence — see [kJmaOutsideCoverageEventClass] for what the
+/// silence used to cost. The served-vs-published split is pinned against
+/// JMA's own frozen area master in `test/outside_coverage_test.dart`, which
+/// fails if either side drifts.
 ///
 /// Code → (south, west, north, east). Bounding box widths are
 /// generous enough to absorb minor coastal indentation; precision
@@ -221,8 +229,30 @@ const String kJmaIncompleteReadEventClass = 'データ取得不可';
 const Map<String, ({double south, double west, double north, double east})>
 kJmaPrefectureBoundingBoxes =
     <String, ({double south, double west, double north, double east})>{
-      // Hokkaido — office 010000 covers the prefecture overall.
-      '010000': (south: 41.35, west: 139.33, north: 45.55, east: 148.90),
+      // ⚑ Hokkaido is EIGHT offices, not one. Through 0.6.0 this catalogue
+      // carried a single '010000' described as "the prefecture overall".
+      // JMA has no such office: measured against its own area master
+      // (`bosai/common/const/area.json`, frozen at
+      // `test/fixtures/jma_area_offices.frozen_2026-08-24.json`),
+      // `'010000' in offices` is FALSE, and the URL 404s on BOTH the retired
+      // and the live path. Every point in Hokkaido — the snowiest prefecture
+      // in Japan — resolved to a dead code. It failed loudly rather than
+      // falsely (the provider throws), so no driver was told a false
+      // all-clear; but Hokkaido was never served.
+      //
+      // Boxes are approximate axis-aligned WGS84 rectangles and OVERLAP at
+      // shared boundaries by design — [prefectureCodesForPoint] returns the
+      // union, which is this package's documented over-warn posture: a driver
+      // near a boundary receives both neighbours' warnings rather than the
+      // resolver guessing one side.
+      '011000': (south: 44.65, west: 141.55, north: 45.55, east: 142.65),
+      '012000': (south: 43.30, west: 141.35, north: 45.05, east: 143.35),
+      '013000': (south: 43.45, west: 142.75, north: 44.95, east: 145.45),
+      '014030': (south: 42.25, west: 142.35, north: 43.65, east: 144.15),
+      '014100': (south: 42.85, west: 143.55, north: 43.95, east: 145.95),
+      '015000': (south: 41.85, west: 140.35, north: 43.15, east: 143.05),
+      '016000': (south: 42.55, west: 139.65, north: 44.05, east: 142.35),
+      '017000': (south: 41.35, west: 139.30, north: 42.65, east: 141.55),
       '020000': (
         south: 40.21,
         west: 139.49,
@@ -266,7 +296,14 @@ kJmaPrefectureBoundingBoxes =
 /// tell their own prefecture's warning from an over-warned neighbour's at a
 /// border — see [kJmaPrefectureNamesJa] / [jmaPrefectureNameJa].
 const Map<String, String> kJmaPrefectureNames = <String, String>{
-  '010000': 'Hokkaido',
+  '011000': 'Hokkaido (Soya)',
+  '012000': 'Hokkaido (Kamikawa/Rumoi)',
+  '013000': 'Hokkaido (Abashiri/Kitami/Monbetsu)',
+  '014030': 'Hokkaido (Tokachi)',
+  '014100': 'Hokkaido (Kushiro/Nemuro)',
+  '015000': 'Hokkaido (Iburi/Hidaka)',
+  '016000': 'Hokkaido (Ishikari/Sorachi/Shiribeshi)',
+  '017000': 'Hokkaido (Oshima/Hiyama)',
   '020000': 'Aomori',
   '030000': 'Iwate',
   '050000': 'Akita',
@@ -287,7 +324,14 @@ String? jmaPrefectureName(String code) => kJmaPrefectureNames[code];
 /// `Advisory.areaDescription`). Codes mirror [kJmaPrefectureBoundingBoxes];
 /// any code outside the catalog returns null via [jmaPrefectureNameJa].
 const Map<String, String> kJmaPrefectureNamesJa = <String, String>{
-  '010000': '北海道',
+  '011000': '北海道 宗谷地方',
+  '012000': '北海道 上川・留萌地方',
+  '013000': '北海道 網走・北見・紋別地方',
+  '014030': '北海道 十勝地方',
+  '014100': '北海道 釧路・根室地方',
+  '015000': '北海道 胆振・日高地方',
+  '016000': '北海道 石狩・空知・後志地方',
+  '017000': '北海道 渡島・檜山地方',
   '020000': '青森県',
   '030000': '岩手県',
   '050000': '秋田県',
@@ -742,6 +786,185 @@ Advisory buildIncompleteReadNotice(List<String> failedPrefectureCodes) {
     certainty: AdvisoryCertainty.unknown,
     urgency: AdvisoryUrgency.unknown,
     areaDescription: joined,
+    effective: null,
+    expires: null,
+    headline: text,
+    description: text,
+  );
+}
+
+/// Identity for the **out-of-coverage** meta-advisory built by
+/// [buildOutsideCoverageNotice].
+///
+/// ⚑ **Why this exists, and why none of the other three could say it.**
+///
+/// Through 0.7.x, a lat/lon that fell outside every box in
+/// [kJmaPrefectureBoundingBoxes] made the provider return `const <Advisory>[]`
+/// — **the same value it returns for a prefecture it fully covers, fetched
+/// successfully, with no warnings in force.** Measured against JMA's own area
+/// master (frozen at `test/fixtures/jma_area_offices.frozen_2026-08-24.json`,
+/// 58 offices) this catalogue serves 13. So for **45 of 58 offices** —
+/// 長野県, 富山県, 石川県, 福井県, 群馬県, 宮城県, 福島県 among them — the
+/// adapter answered *"we do not cover this place"* with the bytes that mean
+/// *"nothing is wrong"*. A driver in a Nagano blizzard was told the road was
+/// clear, and there was no signal anywhere in the returned value for an
+/// integrator to render differently.
+///
+/// The branch defended itself in a comment: the aggregator's other providers
+/// "(e.g. NWS)" cover points outside the catalog. Measured, that is false for
+/// Japan — `condition_aggregator_nws` wraps NOAA/NWS (United States),
+/// Digitraffic is Finland, MET Norway is Norway. **No sibling provider covers
+/// those 45 offices.** The empty list was the driver's entire answer.
+///
+/// Like the path-retirement notice, this says a DIFFERENT thing rather than a
+/// louder thing. [kJmaIncompleteReadEventClass] means *"we could not look"* —
+/// it is raised when a **containing** prefecture failed to fetch, and so
+/// presupposes the point is inside coverage. [kJmaStaleFeedEventClass] means
+/// *"we looked, and what answered is stale"*. This one means *"we never had a
+/// code for this place"*: no request was made, none could be, and the fix is
+/// neither a retry nor a path migration but a bounding box this package does
+/// not yet ship.
+///
+/// Carries no 警報 / 注意報 suffix, so the severity-by-suffix mapping can never
+/// grade it as a hazard, and it is `minor` — below `Advisory.isHighImpact`.
+const String kJmaOutsideCoverageEventClass = '気象警報の提供対象外地域';
+
+/// Builds the **out-of-coverage** meta-advisory for a point this adapter's
+/// bounding-box catalogue does not serve.
+///
+/// The point itself is the only identity available — there is no office code
+/// to name, which is precisely the condition being reported — so the notice
+/// carries the coordinates in [Advisory.areaDescription] rather than
+/// fabricating a prefecture label.
+///
+/// `effective` / `expires` are null: a coverage notice has no weather validity
+/// window, and a null `effective` keeps `stalenessAt` honestly "unknown"
+/// instead of inventing a freshness timestamp.
+Advisory buildOutsideCoverageNotice({
+  required double latitude,
+  required double longitude,
+}) {
+  final where =
+      '北緯${latitude.toStringAsFixed(3)}度／'
+      '東経${longitude.toStringAsFixed(3)}度';
+  final text =
+      'この地点（$where）は本アダプターの提供対象外の地域です。'
+      '気象庁はこの地域にも警報・注意報を発表していますが、'
+      'この配信経路では取得していません。'
+      '警報が表示されていないことは、安全であることを意味しません。';
+  return Advisory(
+    source: AdvisorySource.jmaJapan,
+    eventClass: kJmaOutsideCoverageEventClass,
+    severity: AdvisorySeverity.minor,
+    certainty: AdvisoryCertainty.unknown,
+    urgency: AdvisoryUrgency.unknown,
+    areaDescription: where,
+    effective: null,
+    expires: null,
+    headline: text,
+    description: text,
+  );
+}
+
+/// Every **feed-health** meta-advisory identity this adapter can emit.
+///
+/// These are not weather. They report on the CHANNEL: that the document is
+/// old ([kJmaStaleFeedEventClass]), that its path may have been retired
+/// ([kJmaPathRetirementEventClass]), that a containing prefecture could
+/// not be read at all ([kJmaIncompleteReadEventClass]), or that the point
+/// lies outside the bounding-box catalogue entirely
+/// ([kJmaOutsideCoverageEventClass]).
+///
+/// ⚑ **Key on this set, not on one member.** Which of the first two is
+/// emitted depends on HOW old the document is, and that boundary moved in
+/// 0.7.0 when the path-retirement diagnosis was added. A consumer that
+/// matched only `kJmaStaleFeedEventClass` silently stopped seeing feed-health
+/// signals for exactly the documents most likely to be dangerous — the very
+/// oldest. That is a trap this package walked into in its own test suite, so
+/// the set is exported rather than left for each consumer to assemble.
+///
+/// Every member is `minor` severity, carries no 警報 / 注意報 suffix, and can
+/// never be graded as a hazard by the severity-by-suffix mapping.
+const Set<String> kJmaFeedHealthEventClasses = <String>{
+  kJmaStaleFeedEventClass,
+  kJmaPathRetirementEventClass,
+  kJmaIncompleteReadEventClass,
+  kJmaOutsideCoverageEventClass,
+};
+
+/// Identity for the **path-retirement** meta-advisory built by
+/// [buildPathRetirementNotice].
+///
+/// ⚑ **Why this is distinct from [kJmaStaleFeedEventClass], and why a bigger
+/// number on the existing notice would not have done.**
+///
+/// The 0.5.0 stale-feed loom worked exactly as designed. Measured live on
+/// 2026-08-23 it emitted 「秋田県 の気象警報・注意報の情報が約87日更新されて
+/// いません」— correct, honest, and independently reproducing the 87-day
+/// figure. **And nothing moved for 87 days.**
+///
+/// The gap was not the alarm. It was the DIAGNOSIS. 「更新されていません」
+/// reads as *the publisher has gone quiet* — a condition an integrator can do
+/// nothing about and will reasonably wait out. The actual condition was *JMA
+/// migrated on 2026-05-29 and this path was retired*, which an integrator can
+/// fix in one line. A loom that reports the wrong cause is not a smaller loom;
+/// it points the reader away from the fix.
+///
+/// So this notice says a different thing, not a louder thing: the path may
+/// have been retired, and a successor should be looked for.
+///
+/// ⚑ **Its limit, stated because a loom whose bound is hidden is worse than
+/// none.** This fires on ABSOLUTE AGE on the path we read. It cannot see a
+/// migration on the day it happens, and it cannot distinguish a retired path
+/// from a publisher outage lasting longer than the threshold — both look
+/// identical from one URL. What it does is convert a defect that ran 87 days
+/// undiagnosed into one that names its own likely cause within a week.
+/// A cross-surface check (comparing against the always-busy national feed
+/// `developer/xml/feed/extra.xml`) COULD distinguish those two and was
+/// considered; it is not built here because it doubles the network surface of
+/// every fetch to sharpen a diagnosis this notice already points at, and this
+/// package's own §12 bearing is against widening the live-fetch perimeter.
+/// Recorded so the next reader knows it was weighed, not missed.
+const String kJmaPathRetirementEventClass = '気象情報の提供経路が変更された可能性';
+
+/// Default [JmaAdvisoryProvider.pathRetirementThreshold] — seven days.
+///
+/// Chosen against the measurement that motivated it: the retired path was
+/// frozen for 87 days. Seven days would have fired on day 8. It sits well
+/// above [kJmaDefaultStaleFeedThreshold] (six hours) so an ordinary quiet
+/// spell is never diagnosed as a retirement.
+const Duration kJmaDefaultPathRetirementThreshold = Duration(days: 7);
+
+/// Builds the synthetic, clearly-marked, LOW-severity **path-retirement**
+/// notice for a prefecture whose feed has not moved in
+/// [kJmaDefaultPathRetirementThreshold] or more.
+///
+/// Like the other meta-advisories it carries no 警報 / 注意報 suffix, so the
+/// severity-by-suffix mapping can never grade it as a hazard, and it is
+/// `minor` — below `Advisory.isHighImpact`.
+Advisory buildPathRetirementNotice({
+  required String prefectureCode,
+  required Duration age,
+  required String sourceUrl,
+}) {
+  final label =
+      jmaPrefectureNameJa(prefectureCode) ??
+      jmaPrefectureName(prefectureCode) ??
+      prefectureCode;
+  final days = age.inDays;
+  final text =
+      '$label の気象警報・注意報が約$days日更新されていません。'
+      'この配信経路（$sourceUrl）の提供が終了し、'
+      '新しい経路に移行した可能性があります。'
+      'ここに表示されている内容は最新ではない可能性があり、'
+      '警報が出ていない場合でも安全とは限りません。';
+  return Advisory(
+    source: AdvisorySource.jmaJapan,
+    eventClass: kJmaPathRetirementEventClass,
+    severity: AdvisorySeverity.minor,
+    certainty: AdvisoryCertainty.unknown,
+    urgency: AdvisoryUrgency.unknown,
+    areaDescription: label,
     effective: null,
     expires: null,
     headline: text,

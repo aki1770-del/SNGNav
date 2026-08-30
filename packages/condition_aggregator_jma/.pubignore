@@ -1,0 +1,6 @@
+# Build artefacts of the Python helpers in tool/. They are byte-compiled on
+# whatever interpreter last ran them and are meaningless to a consumer.
+# Measured 2026-08-28: tool/__pycache__/osm_pbf_min.cpython-312.pyc (11 KB)
+# was inside the 0.7.0 publish archive.
+tool/__pycache__/
+**/*.pyc
