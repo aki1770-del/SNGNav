@@ -77,14 +77,14 @@ packages:
       path: "../../condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.8"
   condition_aggregator_jma:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.7.0"
   condition_aggregator_met_norway:
     dependency: "direct overridden"
     description:
@@ -197,7 +197,7 @@ packages:
       path: "../../fleet_hazard"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -290,7 +290,7 @@ packages:
       path: "../../kalman_dr"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.1"
   latlong2:
     dependency: "direct main"
     description:
@@ -353,7 +353,7 @@ packages:
       path: "../../map_viewport_bloc"
       relative: true
     source: path
-    version: "0.4.3"
+    version: "0.4.7"
   matcher:
     dependency: transitive
     description:
@@ -408,7 +408,7 @@ packages:
       path: "../../nav2_safety_layer"
       relative: true
     source: path
-    version: "0.1.3"
+    version: "0.2.0"
   navigation_lend_mode_experiment:
     dependency: "direct overridden"
     description:
@@ -422,7 +422,7 @@ packages:
       path: "../../navigation_safety"
       relative: true
     source: path
-    version: "0.9.3"
+    version: "0.9.6"
   navigation_safety_calibration:
     dependency: "direct overridden"
     description:
@@ -436,7 +436,7 @@ packages:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.1"
+    version: "0.11.5"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
@@ -473,7 +473,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.5.7"
   path:
     dependency: transitive
     description:
@@ -530,6 +530,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  petitparser:
+    dependency: transitive
+    description:
+      name: petitparser
+      sha256: "91bd59303e9f769f108f8df05e371341b15d59e995e6806aefab827b58336675"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.2"
   platform:
     dependency: transitive
     description:
@@ -590,21 +598,21 @@ packages:
       path: "../../route_condition_forecast"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.2.1"
   routing_bloc:
     dependency: "direct overridden"
     description:
       path: "../../routing_bloc"
       relative: true
     source: path
-    version: "0.4.5"
+    version: "0.4.6"
   routing_engine:
     dependency: "direct overridden"
     description:
       path: "../../routing_engine"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.3"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -719,7 +727,7 @@ packages:
       path: "../../voice_guidance"
       relative: true
     source: path
-    version: "0.7.3"
+    version: "0.7.6"
   web:
     dependency: transitive
     description:
@@ -760,6 +768,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  xml:
+    dependency: transitive
+    description:
+      name: xml
+      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.6.1"
   yaml:
     dependency: transitive
     description:

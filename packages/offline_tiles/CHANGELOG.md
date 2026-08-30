@@ -25,6 +25,37 @@ resolves siblings locally exactly as before; the published example now resolves
 against pub.dev.
 
 ## Unreleased (rides the next republish — the core ^0.11 wave)
+- feat: `ArchiveCamera` — derive a map camera from an MBTiles archive's own
+  `metadata` (bounds / center / zoom range) instead of hardcoding one, degrading
+  per field to caller-supplied values when the archive is absent or silent.
+  `OfflineTileManager.archiveMetadata` and `.archiveCamera(...)` expose it.
+  ⚑ The two zoom bounds are NOT symmetric and the API says so: `minZoom` is a
+  BLANKNESS FLOOR (the resolver only walks *down* looking for a parent tile, so
+  one step below the archive's own `minzoom` the map is empty) and is RAISED to
+  it; `maxZoom` is not a blankness ceiling (above the archive's top zoom a parent
+  tile is cropped and upscaled — blurry, never blank) and is only ever raised,
+  never lowered below what the caller asked for.
+  A malformed archive cannot produce a NaN, an infinity, an out-of-Mercator
+  latitude, or an inverted zoom range through this type.
+  *Production-found 2026-08-29 on an ARM IVI target: a host app whose hardcoded
+  camera was 580 km outside the loaded archive's bounds showed a green
+  "OFFLINE MAP" badge over a blank grey rectangle.*
+- feat: `OfflineTileManager.coverageForBounds(bounds, zoom:, panBuffer:)` and
+  the `TileCoverage` value type — coverage over a whole VIEWPORT, not a single
+  point. `hasLocalCoverageForPoint` is not wrong, it answers a smaller question
+  than a map badge is asking: measured against a real 15.6 MB prefecture archive
+  at its own declared centre and its own declared floor zoom 8, the centre point
+  answers "covered" while only 6 of the 35 tiles an 800x480 viewport requests
+  resolve locally. `panBuffer` must match the `TileLayer.panBuffer` of the layer
+  being described, because flutter_map REQUESTS that off-screen ring.
+- docs: `allowOnlineFallback` — a host that passes `urlTemplate: null` to its
+  `TileLayer` (the usual offline-first shape) MUST pass
+  `allowOnlineFallback: false`, or every tile the archive lacks resolves to
+  `RuntimeTileSource.online`, reaches `NetworkTileProvider` with no template,
+  and `TileProvider.getTileUrl` throws `ArgumentError`. One throw in the pan
+  buffer takes down the whole tile layer. Measured on target 2026-08-29:
+  0 visible tiles took that branch and 18 tiles in the prefetch ring did — the
+  map was blank because of eighteen tiles nobody could see.
 - docs: Android SQLite native-library trap section — `sqlite3_flutter_libs`
   0.6.0+eol is a no-op; pin 0.5.x until a hooks-delivered `.so` is
   device-verified; the failure mode is a silent blank offline map with green

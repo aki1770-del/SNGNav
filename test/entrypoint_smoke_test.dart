@@ -21,10 +21,45 @@ void main() {
       expect(find.text('SNGNav — Offline Map Demo'), findsOneWidget);
     });
 
-    testWidgets('shows status message on startup', (tester) async {
+    // AMENDED 2026-08-29 (SDE, IVI-6). This asserted `findsWidgets` on the text
+    // "Initializing" — the placeholder — while its own comment said "either
+    // 'Initializing...' or the actual status after init". The assertion and the
+    // comment disagreed, and the assertion was the weaker of the two.
+    //
+    // It now has to change because the archive is opened SYNCHRONOUSLY in
+    // initState. `MapOptions.initialCenter` is read exactly once, so a camera
+    // derived one microtask later never reaches the screen at all; the previous
+    // `await file.exists()` bought no concurrency (OfflineTileManager's
+    // constructor was already blocking) and only guaranteed the first frame was
+    // built before the camera was known.
+    //
+    // The replacement is STRICTLY STRONGER: it locks the new invariant that the
+    // status line is a real answer at the first frame, and accepts any of the
+    // four real answers so a checkout without data/offline_tiles.mbtiles still
+    // passes.
+    testWidgets('resolves the archive status before the first frame', (
+      tester,
+    ) async {
       await tester.pumpWidget(const main_app.SNGNavGettingStarted());
-      // Either "Initializing..." or the actual status after init
-      expect(find.textContaining('Initializing'), findsWidgets);
+
+      expect(
+        find.textContaining('Initializing'),
+        findsNothing,
+        reason: 'the archive open is synchronous; nothing should still be '
+            'showing the placeholder by the first frame',
+      );
+      expect(
+        find.byWidgetPredicate((w) {
+          if (w is! Text) return false;
+          final t = w.data ?? '';
+          return t.startsWith('Offline — MBTiles loaded') ||
+              t.startsWith('MBTiles loaded') ||
+              t.startsWith('No MBTiles file at') ||
+              t.startsWith('MBTiles error:');
+        }),
+        findsOneWidget,
+        reason: 'the status line must state one of the four real outcomes',
+      );
     });
   });
 

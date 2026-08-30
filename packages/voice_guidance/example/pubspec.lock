@@ -322,7 +322,7 @@ packages:
       path: "../../kalman_dr"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.1"
   latlong2:
     dependency: "direct main"
     description:

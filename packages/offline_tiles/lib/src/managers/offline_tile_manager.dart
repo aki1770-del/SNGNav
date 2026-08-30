@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:mbtiles/mbtiles.dart';
 
+import '../models/archive_camera.dart';
 import '../models/coverage_tier.dart';
 import '../models/tile_cache_config.dart';
 import '../models/tile_source_type.dart';
@@ -35,6 +36,36 @@ class CachedCoverageRegion {
   final DateTime expiresAt;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
+}
+
+/// What an archive can paint over a region: how many tiles the renderer will
+/// ask for, and how many of those the archive can answer locally.
+class TileCoverage {
+  const TileCoverage({required this.requested, required this.resolved});
+
+  /// Tiles the renderer will request for this view, including the pan buffer.
+  final int requested;
+
+  /// Of those, how many the archive can answer without a network.
+  final int resolved;
+
+  /// Nothing was asked — no archive, or a degenerate viewport. NOT the same as
+  /// "nothing is covered", and callers must not collapse the two.
+  bool get isUnknown => requested == 0;
+
+  /// Every tile in the view can be painted from the archive.
+  bool get isComplete => requested > 0 && resolved == requested;
+
+  /// Not one tile in the view can be painted from the archive.
+  bool get isEmpty => requested > 0 && resolved == 0;
+
+  /// Some of the view can be painted and some cannot.
+  bool get isPartial => requested > 0 && resolved > 0 && resolved < requested;
+
+  double get fraction => requested == 0 ? 0 : resolved / requested;
+
+  @override
+  String toString() => 'TileCoverage($resolved/$requested)';
 }
 
 class OfflineTileManager {
@@ -69,6 +100,106 @@ class OfflineTileManager {
       List<CachedCoverageRegion>.unmodifiable(_cachedRegions);
 
   bool get hasOfflineArchive => _resolver.hasMbtilesArchive;
+
+  /// What the opened archive says about itself, or null when no archive is
+  /// open.
+  ///
+  /// The metadata is the archive's own claim about where it covers and at which
+  /// zoom levels. A host that hardcodes a camera instead is asserting a coverage
+  /// claim nothing measured — see [archiveCamera].
+  MbTilesMetadata? get archiveMetadata {
+    final archive = _resolver.mbtiles;
+    if (archive == null) return null;
+    try {
+      return archive.getMetadata();
+    } catch (_) {
+      // A malformed or unreadable metadata table is an absent claim, not a
+      // crash: the caller degrades to its own fallback camera.
+      return null;
+    }
+  }
+
+  /// The camera this archive can actually serve, degrading per field to the
+  /// caller's own values when the archive is absent or silent.
+  ///
+  /// See [ArchiveCamera] for why the zoom floor and ceiling are not symmetric.
+  ArchiveCamera archiveCamera({
+    required LatLng fallbackCenter,
+    required double fallbackZoom,
+    required double fallbackMinZoom,
+    required double fallbackMaxZoom,
+  }) {
+    return ArchiveCamera.resolve(
+      metadata: archiveMetadata,
+      fallbackCenter: fallbackCenter,
+      fallbackZoom: fallbackZoom,
+      fallbackMinZoom: fallbackMinZoom,
+      fallbackMaxZoom: fallbackMaxZoom,
+    );
+  }
+
+  /// How much of a whole VIEWPORT the archive can actually paint.
+  ///
+  /// ⚑ WHY THIS EXISTS BESIDE [hasLocalCoverageForPoint], WHICH IS NOT WRONG
+  /// BUT IS NOT ENOUGH.
+  ///
+  /// Measured against the real 15.6 MB Akita archive on 2026-08-29, at its own
+  /// declared centre and its own declared floor zoom 8, over an 800x480
+  /// viewport with `panBuffer: 1` (35 tiles):
+  ///
+  ///   z8  ->   6 / 35 resolve      z11 -> 35 / 35
+  ///   z9  ->  20 / 35              z12 -> 35 / 35
+  ///   z10 ->  30 / 35              z13 -> 35 / 35
+  ///
+  /// At z8 the centre point answers `true` while five sixths of the screen has
+  /// nothing to draw. A badge wired to the centre point alone would call that
+  /// a working offline map. It is not lying about the centre — it is answering
+  /// a smaller question than the driver is asking.
+  ///
+  /// [panBuffer] must match the `TileLayer.panBuffer` of the layer being
+  /// described, because flutter_map REQUESTS that ring: a tile the driver
+  /// cannot see still goes through the provider.
+  TileCoverage coverageForBounds(
+    LatLngBounds bounds, {
+    required int zoom,
+    int panBuffer = 1,
+  }) {
+    if (!hasOfflineArchive) return const TileCoverage(requested: 0, resolved: 0);
+
+    final range = _tileRangeForBounds(bounds, zoom);
+    final tileCount = 1 << zoom;
+    final minX = math.max(0, range.minX - panBuffer);
+    final maxX = math.min(tileCount - 1, range.maxX + panBuffer);
+    final minY = math.max(0, range.minY - panBuffer);
+    final maxY = math.min(tileCount - 1, range.maxY + panBuffer);
+
+    final width = maxX - minX + 1;
+    final height = maxY - minY + 1;
+    if (width <= 0 || height <= 0) {
+      return const TileCoverage(requested: 0, resolved: 0);
+    }
+
+    // COST GUARD. This runs on every camera movement. A viewport is normally a
+    // few dozen tiles, but a degenerate bounds at a high zoom could ask for
+    // millions, and an archive lookup is a SQLite query each. Above the cap we
+    // stride-sample instead of enumerating, so the answer stays honest-ish and
+    // the frame budget stays intact.
+    const maxProbes = 240;
+    final total = width * height;
+    final stride = total <= maxProbes ? 1 : math.sqrt(total / maxProbes).ceil();
+
+    var requested = 0;
+    var resolved = 0;
+    for (var x = minX; x <= maxX; x += stride) {
+      for (var y = minY; y <= maxY; y += stride) {
+        requested++;
+        if (_resolver.hasLocalCoverage(TileCoordinates(x, y, zoom))) {
+          resolved++;
+        }
+      }
+    }
+    return TileCoverage(requested: requested, resolved: resolved);
+  }
 
   bool hasLocalCoverageForPoint(LatLng point, {int zoom = 12}) {
     return _resolver.hasLocalCoverage(_tileCoordinatesForPoint(point, zoom));

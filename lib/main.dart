@@ -73,13 +73,51 @@ class SNGNavGettingStarted extends StatelessWidget {
 /// perspective forward-looking 3D snow scene, or the pre-trip briefing.
 enum _ViewMode { map, forward, pretrip }
 
+/// What can honestly be said about the offline map UNDER THE CURRENT VIEW.
+///
+/// Three states, because two were not enough and the missing one was the
+/// dangerous one. Until 2026-08-29 this was a single bool set from
+/// `File.existsSync()` — file presence reported as map presence — and on a real
+/// IVI screen that produced a green "OFFLINE MAP" badge over a blank grey
+/// rectangle, with a perfectly good archive open for another prefecture.
+enum _MapCoverage {
+  /// No archive opened at all.
+  noArchive,
+
+  /// An archive is open, and it holds no tile at all for this view.
+  archiveButNotHere,
+
+  /// An archive is open and it can paint SOME of this view but not all of it.
+  ///
+  /// ⚑ This state exists because of a measurement, not a hunch. Against the
+  /// real 15.6 MB Akita archive at its own declared centre and its own declared
+  /// floor zoom 8, only 6 of the 35 tiles an 800x480 viewport requests resolve
+  /// locally. Asking about the centre POINT answers "covered"; asking about the
+  /// VIEW answers "one sixth of it". Both are true, and only the second is what
+  /// the driver is looking at.
+  partiallyCovered,
+
+  /// An archive is open and it can paint every tile of this view.
+  covered,
+}
+
 class OfflineMapPage extends StatefulWidget {
   const OfflineMapPage({
     super.key,
     this.savedPlaceStore,
     this.destForecastProviderFactory,
     this.forecastSourceOverride,
+    this.mbtilesPath,
   });
+
+  /// Optional test seam: the offline archive to open. Production defaults to
+  /// [_OfflineMapPageState._defaultMbtilesPath] when null.
+  ///
+  /// This exists so the coverage/camera coupling can be exercised against an
+  /// archive OTHER than the one this checkout happens to ship. A loom that can
+  /// only ever be pointed at the one archive that already agrees with the
+  /// hardcoded camera cannot fail, and a guard that cannot fail is not a guard.
+  final String? mbtilesPath;
 
   /// Optional test seam: the store for the driver-chosen destination area.
   /// Production defaults to [openDefaultSavedPlaceStore] when null.
@@ -103,15 +141,23 @@ class OfflineMapPage extends StatefulWidget {
 
 class _OfflineMapPageState extends State<OfflineMapPage> {
   offline_tiles.OfflineTileManager? _offlineTileManager;
-  /// Whether a local MBTiles map was found and loaded.
-  ///
-  /// **This measures the TILE SOURCE, never the network.** The old name and
-  /// its "ONLINE"/"OFFLINE" badge asserted a connectivity state nothing here
-  /// ever measured: with no MBTiles the badge read "ONLINE" even in a dead
-  /// zone with no signal and a blank map. Absence of a measurement is not a
-  /// measurement — the same defect family as the `?? 0` maneuver distances
-  /// and the old `LatLng(0, 0)` positions.
-  bool _hasOfflineMap = false;
+
+  // THERE IS DELIBERATELY NO BOOLEAN "have we got a map" FLAG HERE ANY MORE.
+  //
+  // Two generations of one defect lived on this line, and both reached a
+  // screen:
+  //   gen 1 — the badge measured CONNECTIVITY and reported MAP. With no
+  //           MBTiles it read "ONLINE" in a dead zone over a blank map.
+  //           Fixed 2026-08-28.
+  //   gen 2 — the replacement measured FILE PRESENCE (`File.existsSync()`)
+  //           and reported MAP PRESENCE. Photographed on the ARM IVI target
+  //           2026-08-29 at 09:09: a green "OFFLINE MAP" badge and
+  //           "Offline — MBTiles loaded (15.6 MB)" over a blank grey
+  //           rectangle. The archive was fine; it covered another prefecture.
+  //
+  // Absence of a measurement is not a measurement, and neither is a proxy for
+  // one. The badge now reads [_coverage], which asks the open archive whether
+  // it holds a tile for the view the driver is actually looking at.
   String _statusMessage = 'Initializing...';
 
   // Default view is the existing 2D map — the toggle is opt-in, the app's
@@ -248,12 +294,52 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     }
   }
 
-  // Nagoya Station — default center for Chūbu region tiles
+  // Nagoya Station — the camera used ONLY when no archive is open, or when the
+  // archive declines to say where it covers. It is not a claim about any
+  // particular tileset; it is the documented demo's starting view.
   static const _nagoya = LatLng(35.1709, 136.8815);
+  static const _fallbackZoom = 11.0;
+  static const _fallbackMinZoom = 6.0;
+  static const _fallbackMaxZoom = 16.0;
+
+  /// The camera the OPEN ARCHIVE can actually serve.
+  ///
+  /// Derived from the archive's own `metadata` table (bounds / center / zoom
+  /// range) and falling back per field to the constants above when there is no
+  /// archive. Before 2026-08-29 the camera was a hardcoded constant and nothing
+  /// compared it with the archive: on the ARM IVI target that put the view
+  /// 580 km outside the Akita tileset's bounds, with a green "OFFLINE MAP"
+  /// badge over a blank grey rectangle.
+  offline_tiles.ArchiveCamera _camera = offline_tiles.ArchiveCamera.fallback(
+    center: _nagoya,
+    zoom: _fallbackZoom,
+    minZoom: _fallbackMinZoom,
+    maxZoom: _fallbackMaxZoom,
+  );
+
+  /// Where the map is looking RIGHT NOW — updated as HER pans and pinches, so
+  /// the coverage badge answers "is there a map HERE", not "was there a map
+  /// where we started".
+  LatLng? _viewCenter;
+  double? _viewZoom;
+
+  /// The rectangle the map is currently showing. Null until the map has been
+  /// laid out once.
+  LatLngBounds? _visibleBounds;
+
+  /// The ring of off-screen tiles flutter_map prefetches. Declared once here
+  /// and passed to BOTH the TileLayer and the coverage query, because a
+  /// coverage answer computed over a different set of tiles than the renderer
+  /// requests is a coverage answer about a different screen.
+  static const int _panBuffer = 1;
 
   // MBTiles file path — relative to the project directory.
   // The edge developer places her .mbtiles file here.
-  static const _mbtilesPath = 'data/offline_tiles.mbtiles';
+  static const _defaultMbtilesPath = 'data/offline_tiles.mbtiles';
+
+  /// The archive this page actually opens: the injected test seam when one is
+  /// given, the documented default otherwise.
+  String get _mbtilesPath => widget.mbtilesPath ?? _defaultMbtilesPath;
 
   @override
   void initState() {
@@ -360,39 +446,226 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     }
   }
 
-  Future<void> _initTileProvider() async {
+  /// Opens the offline archive and derives the camera from it.
+  ///
+  /// SYNCHRONOUS ON PURPOSE, and this is load-bearing. [OfflineTileManager]'s
+  /// constructor already opens the archive with a blocking `existsSync()` +
+  /// `MbTiles(...)`, so the previous `await file.exists()` bought no
+  /// concurrency whatsoever — all it guaranteed was that the FIRST FRAME was
+  /// built before the camera was known. `MapOptions.initialCenter` is read
+  /// exactly once, so a camera that arrives one microtask late is a camera that
+  /// never reaches the screen at all.
+  ///
+  /// Assigns fields directly instead of calling setState: this runs from
+  /// [initState], where markNeedsBuild would assert.
+  void _initTileProvider() {
     final file = File(_mbtilesPath);
     try {
-      if (await file.exists()) {
+      if (file.existsSync()) {
         final manager = offline_tiles.OfflineTileManager(
           tileSource: offline_tiles.TileSourceType.mbtiles,
           mbtilesPath: _mbtilesPath,
+          // OFFLINE-FIRST, AND HONEST ABOUT IT. The TileLayer below passes
+          // `urlTemplate: null` whenever a manager exists, so a resolution of
+          // RuntimeTileSource.online reaches NetworkTileProvider with no
+          // template and `TileProvider.getTileUrl` throws an ArgumentError —
+          // once per uncovered tile, swallowed by the image pipeline, no log,
+          // no pixel, and identical whether or not a network exists. With the
+          // fallback off the same tile resolves to a transparent placeholder
+          // instead: same blank square, no thrown exception, and the badge
+          // above now says WHY it is blank.
+          allowOnlineFallback: false,
         );
-        setState(() {
-          _offlineTileManager = manager;
-          _hasOfflineMap = true;
-          _statusMessage =
-              'Offline — MBTiles loaded (${_formatSize(file.lengthSync())})';
-        });
+        _offlineTileManager = manager;
+        _camera = manager.archiveCamera(
+          fallbackCenter: _nagoya,
+          fallbackZoom: _fallbackZoom,
+          fallbackMinZoom: _fallbackMinZoom,
+          fallbackMaxZoom: _fallbackMaxZoom,
+        );
+        _viewCenter = _camera.center;
+        _viewZoom = _camera.zoom;
+        _statusMessage = _archiveStatusLine(file.lengthSync());
       } else {
-        setState(() {
-          _offlineTileManager = null;
-          _hasOfflineMap = false;
-          _statusMessage =
-              'No MBTiles file at $_mbtilesPath — no offline map';
-        });
+        _resetTileState();
+        _statusMessage = 'No MBTiles file at $_mbtilesPath — no offline map';
       }
     } catch (e) {
-      setState(() {
-        // Reset BOTH, not just the message. Leaving the flag true here would
-        // keep the badge reading "OFFLINE MAP" while the manager is null and
-        // tiles come from the network. Latent while _initTileProvider has one
-        // call site; live the moment a retry or reload is added.
-        _offlineTileManager = null;
-        _hasOfflineMap = false;
-        _statusMessage = 'MBTiles error: $e — no offline map';
-      });
+      // Reset BOTH, not just the message. Leaving the flag true here would
+      // keep the badge reading "OFFLINE MAP" while the manager is null and
+      // tiles come from the network. Latent while _initTileProvider has one
+      // call site; live the moment a retry or reload is added.
+      _resetTileState();
+      _statusMessage = 'MBTiles error: $e — no offline map${_loaderHint(e)}';
     }
+  }
+
+  void _resetTileState() {
+    _offlineTileManager = null;
+    _camera = offline_tiles.ArchiveCamera.fallback(
+      center: _nagoya,
+      zoom: _fallbackZoom,
+      minZoom: _fallbackMinZoom,
+      maxZoom: _fallbackMaxZoom,
+    );
+    _viewCenter = null;
+    _viewZoom = null;
+  }
+
+  /// Turns the one failure an edge developer cannot diagnose from the message
+  /// alone into one she can.
+  ///
+  /// `package:sqlite3` opens the system library by the literal name
+  /// `libsqlite3.so`. On Debian/Ubuntu that unversioned symlink ships in
+  /// `libsqlite3-dev`, NOT in the runtime package — and on a production
+  /// embedded rootfs it is absent for the same reason. Measured on the ARM IVI
+  /// image 2026-08-29: `libsqlite3.so.0 -> libsqlite3.so.0.8.6` present, no
+  /// unversioned `libsqlite3.so`. The raw FFI error names a file and says
+  /// nothing about which package supplies it.
+  String _loaderHint(Object error) {
+    final text = error.toString();
+    if (!text.contains('libsqlite3')) return '';
+    return '\n(the versioned libsqlite3.so.N is usually present; the '
+        'unversioned libsqlite3.so symlink the loader asks for is not — '
+        'install sqlite3 development headers on a desktop, or add the symlink '
+        'to the image on an embedded target)';
+  }
+
+  /// The status line, which must never claim more than coverage supports.
+  String _archiveStatusLine(int bytes) {
+    final size = _formatSize(bytes);
+    switch (_coverage) {
+      case _MapCoverage.covered:
+        return 'Offline — MBTiles loaded ($size)';
+      case _MapCoverage.partiallyCovered:
+        return 'MBTiles loaded ($size) — only part of this view is in the '
+            'archive; zoom in or move back inside its coverage';
+      case _MapCoverage.archiveButNotHere:
+        return 'MBTiles loaded ($size) but it holds no tiles for this view'
+            '${_camera.bounds == null ? '' : ' — covers '
+                '${_camera.bounds!.south.toStringAsFixed(2)},'
+                '${_camera.bounds!.west.toStringAsFixed(2)} to '
+                '${_camera.bounds!.north.toStringAsFixed(2)},'
+                '${_camera.bounds!.east.toStringAsFixed(2)}'}';
+      case _MapCoverage.noArchive:
+        return 'No MBTiles file at $_mbtilesPath — no offline map';
+    }
+  }
+
+  /// What we can actually say about the map under the current view.
+  ///
+  /// THIS IS A MEASUREMENT, not a file check. The flag this replaced answered
+  /// "did a file open"; this answers "does that file hold tiles for where the
+  /// driver is looking". Conflating the two is how a green OFFLINE MAP badge
+  /// came to sit over a blank grey rectangle on a real IVI screen.
+  _MapCoverage get _coverage {
+    final manager = _offlineTileManager;
+    if (manager == null || !manager.hasOfflineArchive) {
+      return _MapCoverage.noArchive;
+    }
+    final zoom = (_viewZoom ?? _camera.zoom).round();
+
+    // Prefer the WHOLE VISIBLE RECTANGLE over the centre point. The centre can
+    // answer "covered" while most of the screen has nothing to draw — measured
+    // 6/35 at z8 on the real Akita archive. `_visibleBounds` is null only
+    // before the map has been laid out; then, and only then, fall back to the
+    // point.
+    final bounds = _visibleBounds;
+    if (bounds != null) {
+      final coverage = manager.coverageForBounds(
+        bounds,
+        zoom: zoom,
+        // Must match TileLayer.panBuffer below: flutter_map REQUESTS the ring,
+        // so a tile the driver cannot see still goes through the provider.
+        panBuffer: _panBuffer,
+      );
+      if (coverage.isComplete) return _MapCoverage.covered;
+      if (coverage.isEmpty) return _MapCoverage.archiveButNotHere;
+      if (coverage.isPartial) return _MapCoverage.partiallyCovered;
+    }
+
+    final center = _viewCenter ?? _camera.center;
+    return manager.hasLocalCoverageForPoint(center, zoom: zoom)
+        ? _MapCoverage.covered
+        : _MapCoverage.archiveButNotHere;
+  }
+
+  /// Recomputes the badge as the view moves. Cheap: a single indexed lookup in
+  /// the already-open archive, and only when the answer actually changes.
+  void _onViewChanged(MapCamera camera) {
+    final before = _coverage;
+    final beforeStatus = _statusMessage;
+    _viewCenter = camera.center;
+    _viewZoom = camera.zoom;
+    _visibleBounds = camera.visibleBounds;
+    final after = _coverage;
+    if (after == before) return;
+    if (!mounted) return;
+    setState(() {
+      if (_offlineTileManager != null) {
+        try {
+          _statusMessage = _archiveStatusLine(File(_mbtilesPath).lengthSync());
+        } catch (_) {
+          _statusMessage = beforeStatus;
+        }
+      }
+    });
+  }
+
+  /// The badge, in the three states the driver must be able to tell apart.
+  ///
+  /// COLOUR CARRIES THE SAFETY FACT; TEXT AND ICON CARRY THE REASON.
+  ///
+  /// Green means one thing only: there is a real local map under this view.
+  /// Both other states mean there is not — and for a driver at ten metres'
+  /// visibility on a mountain pass they are the SAME actionable fact, so they
+  /// share a colour rather than inventing a severity ladder that does not
+  /// exist. What differs is the icon and the word, so she can see WHY without
+  /// reading the status line, and so an edge developer can tell "you shipped no
+  /// archive" from "you shipped the wrong one".
+  Widget _buildCoverageBadge() {
+    final (IconData icon, Color color, String label) = switch (_coverage) {
+      _MapCoverage.covered => (Icons.map, Colors.green, 'OFFLINE MAP'),
+      // Some of the view is real and some is not. Not green: she cannot trust
+      // the whole picture. Not "NOT HERE" either: that would be false, and a
+      // false alarm she learns to ignore is worse than no badge.
+      _MapCoverage.partiallyCovered => (
+          Icons.grid_off,
+          Colors.orange,
+          'MAP: PARTIAL',
+        ),
+      // An archive that does not reach here is not a map she can use here.
+      _MapCoverage.archiveButNotHere => (
+          Icons.wrong_location,
+          Colors.orange,
+          'MAP: NOT HERE',
+        ),
+      _MapCoverage.noArchive => (
+          Icons.cloud_queue,
+          Colors.orange,
+          'NO OFFLINE MAP',
+        ),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        Text(
+          // What we measured: does the OPEN ARCHIVE hold tiles for THIS view?
+          // Not whether a network exists — we never asked, and in the dead zone
+          // the old 'ONLINE' label was actively false. And not whether a file
+          // exists — that was the next generation of the same defect.
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
   }
 
   String _formatSize(int bytes) {
@@ -484,30 +757,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _hasOfflineMap ? Icons.map : Icons.cloud_queue,
-                    size: 16,
-                    color: _hasOfflineMap ? Colors.green : Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    // What we measured: do we hold a local map? NOT whether a
-                    // network exists — we never asked, and in the dead zone the
-                    // old 'ONLINE' label was actively false.
-                    _hasOfflineMap ? 'OFFLINE MAP' : 'NO OFFLINE MAP',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: _hasOfflineMap ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: Center(child: _buildCoverageBadge()),
           ),
         ],
       ),
@@ -544,10 +794,17 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
       children: [
         FlutterMap(
           options: MapOptions(
-            initialCenter: _nagoya,
-            initialZoom: 11,
-            minZoom: 6,
-            maxZoom: 16,
+            // Every one of these four comes from the archive that is actually
+            // open, falling back per field to the demo constants when there is
+            // none. minZoom in particular is the archive's own floor: the tile
+            // resolver only ever walks DOWN in zoom looking for a parent, so
+            // one step below the floor the map is blank — and it used to be
+            // reachable, with the badge still reading green.
+            initialCenter: _camera.center,
+            initialZoom: _camera.zoom,
+            minZoom: _camera.minZoom,
+            maxZoom: _camera.maxZoom,
+            onPositionChanged: (camera, _) => _onViewChanged(camera),
           ),
           children: [
             TileLayer(
@@ -556,6 +813,11 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
               urlTemplate: _offlineTileManager == null
                   ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
                   : null,
+              // Declared explicitly (it is flutter_map's default) because
+              // _coverage above must ask about the SAME tile set the renderer
+              // requests. EIE measured on target 2026-08-29: 0 visible tiles
+              // took the online branch and 18 tiles in this ring did.
+              panBuffer: _panBuffer,
               userAgentPackageName: 'com.sngnav.getting_started',
             ),
             const SimpleAttributionWidget(
