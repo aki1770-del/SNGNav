@@ -82,3 +82,17 @@ tool/winter_knowledge/corpus_v3.txt
 tool/winter_knowledge/cards_raw.json
 tool/winter_knowledge/cards_v3.json
 tool/winter_knowledge/cards_v4_raw.json
+
+# --- B1 reproducibility, 2026-08-30 -------------------------------------
+# OSM extracts: 1.6 GB of regenerable input. NOT committed — but their
+# .md5 files ARE tracked, because the checksum is the reproducibility
+# anchor: re-fetch the extract, verify the md5, and the build is the same
+# build. Committing the payload would bloat the repo without adding a
+# single guarantee the checksum does not already give.
+*.osm.pbf
+# Editor/agent backup snapshots. Measured 2026-08-30: 8 of 10 were
+# byte-identical to HEAD and the other 2 were strictly superseded by the
+# working file. Git is the backup; a .bak beside a tracked file is litter
+# that hides which copy is real (dirty-tree-was-the-only-copy, 2026-08-28).
+*.bak-*
+.cache/
