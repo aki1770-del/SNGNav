@@ -1,6 +1,7 @@
 /// Engine-agnostic voice guidance primitives for navigation flows.
 library;
 
+export 'src/availability_reporting.dart';
 export 'src/default_tts_engine.dart';
 export 'src/flutter_haptic_engine.dart';
 export 'src/flutter_tts_engine.dart';
