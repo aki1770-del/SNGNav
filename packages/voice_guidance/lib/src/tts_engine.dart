@@ -1,7 +1,37 @@
 /// Abstract text-to-speech engine used by voice guidance flows.
 library;
 
+/// Outcome of the most recent [TtsEngine.speak] call.
+///
+/// A queued utterance is not a heard one. An engine that cannot observe its own
+/// output reports [unknown] rather than letting "accepted" read as "delivered" —
+/// for a driver in unexpected snow the difference is the whole warning.
+enum SpeechDelivery {
+  /// The engine confirmed the utterance finished.
+  delivered,
+
+  /// The engine reported a failure, or did not finish within the bound.
+  failed,
+
+  /// Not observable on this engine. Never treat as delivered.
+  unknown,
+}
+
+/// An engine that can report whether its last utterance actually arrived.
+///
+/// Kept OFF [TtsEngine] deliberately. A member added there — even one with a
+/// body — breaks every existing `implements TtsEngine`, which the analyzer
+/// proved on this package's own two sibling engines. Consumers opt in with
+/// `if (engine is DeliveryObservable)`; anything that does not implement it is
+/// simply unobserved, which is the truth rather than a silent pass.
+abstract interface class DeliveryObservable {
+  /// Outcome of the most recent `speak`. Never [SpeechDelivery.delivered]
+  /// unless the engine confirmed it.
+  SpeechDelivery get lastDelivery;
+}
+
 abstract class TtsEngine {
+
   /// Returns true if this engine can serve speech requests.
   Future<bool> isAvailable();
 
