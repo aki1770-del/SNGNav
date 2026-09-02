@@ -35,8 +35,32 @@ class LinuxTtsEngine implements TtsEngine {
   Process? _activeProcess;
   String? _resolvedExecutable;
 
+  /// Resolve [executable] to a real, existing file, or null.
+  ///
+  /// INV-6 (availability is not a tautology). This returned its argument
+  /// unchanged until 2026-09-02, which made [isAvailable] answer `true` for
+  /// every non-disposed engine on every Linux host — including a Yocto IVI
+  /// image with no speech-dispatcher installed at all. An integrator asking
+  /// "can this device speak?" got `true` from a device that cannot, and the
+  /// only later signal was a `ProcessException` that `speak` swallows.
+  ///
+  /// A `null` here is the honest answer, and it is the one the caller can act
+  /// on: select another engine, or escalate to a channel that exists.
   static String? _defaultResolveExecutable(String executable) {
-    return executable;
+    if (executable.isEmpty) return null;
+    if (executable.contains('/')) {
+      return File(executable).existsSync() ? executable : null;
+    }
+    final pathVar = Platform.environment['PATH'];
+    if (pathVar == null || pathVar.isEmpty) return null;
+    for (final dir in pathVar.split(':')) {
+      if (dir.isEmpty) continue;
+      final candidate = dir.endsWith('/')
+          ? '$dir$executable'
+          : '$dir/$executable';
+      if (File(candidate).existsSync()) return candidate;
+    }
+    return null;
   }
 
   @override
