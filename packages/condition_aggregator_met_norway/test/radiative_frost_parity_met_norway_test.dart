@@ -1,18 +1,15 @@
-// The above-zero black-ice window, which this adapter could not see until 0.1.0.
+// The above-zero band: what this adapter may say there, and what it may not.
 //
-// Up to 0.0.6 the coldest gate here was `air_temperature <= 0`. That is the
-// exact threshold `navigation_safety_calibration` documents as missing this
-// case: "a 'warn below 0 °C ambient' threshold misses this window". Under
-// clear-sky radiative cooling the road surface falls toward the dew point and
-// surface moisture freezes while the air still reads +1…+3 °C — and a driver
-// reading a Norwegian or Finnish forecast got NOTHING AT ALL in that band,
-// while the same hazard was already served elsewhere in this catalogue.
+// 0.0.6 said NOTHING in (0, +3] C. 0.1.0 spoke there for the first time and an
+// adversarial gate measured what it actually said on 600 live api.met.no
+// slices: the `severe` channel fired on 64 of them, and 54 of those 64 (84%)
+// were under cloud >= 80% -- the sky state that SUPPRESSES the longwave cooling
+// the class is named for. It also fired on `heavyrain` slices, and on -10 C.
+// Every test below pins one of those refutations.
 //
-// The classification is NOT recomputed here. It is delegated to
-// `isRadiativeFrostBlackIce`, whose own documentation gives the reason: "Two
-// independently-maintained copies of this threshold logic ARE that disagreement
-// waiting to happen." This adapter was a third copy; these tests pin that it no
-// longer is.
+// The classification is delegated to `isRadiativeFrostBlackIce`; what this
+// package decides is WHEN IT IS ENTITLED TO ASK -- a dry surface, a clear sky,
+// and an ambient band bounded at BOTH ends.
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:condition_aggregator_met_norway/condition_aggregator_met_norway.dart';
 import 'package:test/test.dart';
@@ -21,6 +18,8 @@ Map<String, dynamic> response({
   required double tempC,
   double? precipitationMm,
   double? humidityPercent,
+  double? cloudPercent,
+  String? symbolCode = 'clearsky_night',
 }) => {
       'geometry': {
         'type': 'Point',
@@ -36,6 +35,8 @@ Map<String, dynamic> response({
                   'air_temperature': tempC,
                   if (humidityPercent != null)
                     'relative_humidity': humidityPercent,
+                  if (cloudPercent != null)
+                    'cloud_area_fraction': cloudPercent,
                 },
               },
               'next_1_hours': {
@@ -43,7 +44,7 @@ Map<String, dynamic> response({
                   if (precipitationMm != null)
                     'precipitation_amount': precipitationMm,
                 },
-                'summary': {'symbol_code': 'clearsky_night'},
+                if (symbolCode != null) 'summary': {'symbol_code': symbolCode},
               },
             },
           },
@@ -51,118 +52,160 @@ Map<String, dynamic> response({
       },
     };
 
+// A dry, clear, +2 C pre-dawn slice: the case the class exists for.
+Advisory? frostCase({double rh = 60.0, double cloud = 5.0}) =>
+    mapLocationForecastResponseToAdvisory(
+      response: response(
+          tempC: 2.0, precipitationMm: 0.0, humidityPercent: rh,
+          cloudPercent: cloud),
+    );
+
 void main() {
   group('the window the pre-0.1.0 gate could not see', () {
-    test(
-        'THE CASE ITSELF — +2 °C with dry-to-moderate air is black ice, and '
-        'was silence before', () {
-      final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0, humidityPercent: 60.0),
-      );
-
-      expect(a, isNotNull,
-          reason: 'this is the Akita/Nordic pre-dawn bridge-deck hazard. '
-              'Returning null here is what 0.0.6 did.');
+    test('THE CASE ITSELF — dry surface, clear sky, +2 C: black ice', () {
+      final a = frostCase();
+      expect(a, isNotNull, reason: 'silence here is what 0.0.6 did');
       expect(a!.eventClass, 'Radiative frost black ice');
-      expect(a.severity, AdvisorySeverity.severe,
-          reason: 'ice ON the road, not merely a cold road');
     });
 
-    test(
-        'NEGATIVE CONTROL — the old gate. Same slice with the humidity the '
-        'feed sends REMOVED goes to a different class, proving the humidity '
-        'is what does the work and this test is not vacuous', () {
-      final withHumidity = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0, humidityPercent: 60.0),
+    test('NEGATIVE CONTROL — remove the humidity the feed sends and the same '
+        'slice classifies differently, so the humidity is what does the work',
+        () {
+      final withRh = frostCase();
+      final withoutRh = mapLocationForecastResponseToAdvisory(
+        response: response(tempC: 2.0, precipitationMm: 0.0, cloudPercent: 5.0),
       );
-      final withoutHumidity = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0),
-      );
-
-      expect(withHumidity!.eventClass, 'Radiative frost black ice');
-      expect(withoutHumidity!.eventClass, isNot('Radiative frost black ice'));
+      expect(withRh!.eventClass, 'Radiative frost black ice');
+      expect(withoutRh!.eventClass, isNot('Radiative frost black ice'));
+      expect(withoutRh.eventClass, 'Radiative frost, inputs not measured');
     });
   });
 
-  group('the scope the calibration documents, inherited not re-decided', () {
-    test('SATURATED air above zero does NOT fire — the model does not cover '
-        'freezing fog and must not pretend to', () {
-      // Documented verbatim in navigation_safety_calibration: at +2 °C / 95 %
-      // RH the dew point is ~ +1.3 °C, so this is not radiative frost.
-      final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0, humidityPercent: 95.0),
-      );
-      expect(a, isNull);
-    });
-
-    test('above the ambient ceiling does NOT fire — no cry-wolf on a benign '
-        'dry afternoon', () {
-      final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 12.0, humidityPercent: 30.0),
-      );
-      expect(a, isNull);
-    });
-
-    test('a mis-wired FRACTION (0.6 where percent is required) yields no '
-        'advisory rather than a fabricated one', () {
-      // The calibration floors implausible sub-5 % readings and returns false,
-      // deliberately, because a saturated 1.0 passed as a percent would read as
-      // 1 % RH and fabricate a deep false depression. Pinned so the behaviour
-      // is visible rather than accidental.
-      final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0, humidityPercent: 0.6),
-      );
-      expect(a, isNull);
-    });
-  });
-
-  group('caution-add-only: it may speak where 0.0.6 was silent, never over a '
-      'colder finding', () {
-    test('measured freezing precipitation still wins', () {
+  group('CRY-WOLF REFUTATIONS — each pins a slice the gate caught 0.1.0 on',
+      () {
+    test('MEASURED RAIN below the heavy floor is not black ice. 0.1.0 called a '
+        'heavyrain slice "Radiative frost black ice" in its own headline', () {
       final a = mapLocationForecastResponseToAdvisory(
         response: response(
-            tempC: -1.0, precipitationMm: 1.0, humidityPercent: 60.0),
+            tempC: 1.0, precipitationMm: 3.9, humidityPercent: 90.0,
+            cloudPercent: 100.0, symbolCode: 'heavyrain'),
       );
-      expect(a!.eventClass, 'Freezing precipitation');
-      expect(a.severity, AdvisorySeverity.severe);
+      expect(a, isNull);
     });
 
-    test('freezing with UNMEASURED precipitation still refuses the downgrade',
-        () {
+    test('OVERCAST is not black ice — cloud suppresses the mechanism the class '
+        'is named for, and 84% of 0.1.0 fires were under cloud >= 80%', () {
+      final overcast = frostCase(cloud: 100.0);
+      expect(overcast, isNull);
+
+      // The identical slice with a clear sky DOES fire — so this test is
+      // measuring the sky and not something else.
+      expect(frostCase(cloud: 5.0)!.eventClass, 'Radiative frost black ice');
+    });
+
+    test('an UNREAD sky is an unread input, not a clear one', () {
       final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: -3.0, humidityPercent: 60.0),
+        response: response(
+            tempC: 2.0, precipitationMm: 0.0, humidityPercent: 60.0),
       );
-      expect(a!.eventClass, 'Freezing, precipitation not measured');
+      expect(a!.eventClass, 'Radiative frost, inputs not measured');
       expect(a.severity, AdvisorySeverity.unknown);
     });
   });
 
-  group('absence does not become an all-clear', () {
-    test('inside the frost band with NO humidity is named, not silent', () {
+  group('BOUNDED AT BOTH ENDS — the calibration has a ceiling and no floor', () {
+    test('-10 C is not "ice while the air is above zero". 0.1.0 classified it '
+        'as black ice, severe, in a description reading -10.0 C', () {
       final a = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0),
+        response: response(
+            tempC: -10.0, precipitationMm: -1.0, humidityPercent: 60.0,
+            cloudPercent: 5.0),
       );
-      expect(a, isNotNull,
-          reason: 'the window cannot be ruled OUT without humidity, and '
-              '"we could not evaluate it" is not "there is no ice"');
-      expect(a!.eventClass, 'Radiative frost, humidity not measured');
-      expect(a.severity, AdvisorySeverity.unknown,
-          reason: 'an unmeasured field buys no downgrade — same rule as '
-              'Freezing, precipitation not measured');
-      expect(a.severity, isNot(AdvisorySeverity.moderate));
+      expect(a?.eventClass, isNot('Radiative frost black ice'));
     });
 
-    test('the description names a humidity it does not have, rather than '
-        'omitting the line', () {
-      final absent = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0),
+    test('an integrator LOWERING freezingTemperatureCelsius to warn LESS must '
+        'not get an escalation instead', () {
+      final a = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: -1.0, precipitationMm: 0.0, humidityPercent: 60.0,
+            cloudPercent: 5.0),
+        freezingTemperatureCelsius: -2.0,
       );
-      expect(absent!.description, contains('relative_humidity not reported'));
+      expect(a?.eventClass, isNot('Radiative frost black ice'));
+    });
 
-      final present = mapLocationForecastResponseToAdvisory(
-        response: response(tempC: 2.0, humidityPercent: 60.0),
+    test('above the ambient ceiling stays silent', () {
+      expect(
+        mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 12.0, precipitationMm: 0.0, humidityPercent: 30.0,
+              cloudPercent: 0.0),
+        ),
+        isNull,
       );
-      expect(present!.description, contains('relative_humidity 60.0 %'));
+    });
+  });
+
+  group('the hazard the model CANNOT assess is named, not silenced', () {
+    test('saturated air above zero returns the freezing-fog class. 0.1.0 '
+        'returned bare null here — D3 worst case, and 0.1.0 had also changed '
+        'what that silence MEANT', () {
+      final a = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 2.0, precipitationMm: 0.0, humidityPercent: 97.0,
+            cloudPercent: 100.0, symbolCode: 'fog'),
+      );
+      expect(a, isNotNull);
+      expect(a!.eventClass, contains('Freezing fog risk'));
+      expect(a.severity, AdvisorySeverity.unknown,
+          reason: 'a hazard we can see the conditions for and cannot assess is '
+              'UNSTATED, never minor and never silence');
+    });
+  });
+
+  group('whose claim is it', () {
+    test('derived classes carry `possible`, never the publisher\'s confidence, '
+        'and symbol_code must not lend it', () {
+      // symbol_code present would have bought `likely` in 0.1.0.
+      final a = frostCase();
+      expect(a!.certainty, AdvisoryCertainty.possible);
+    });
+
+    test('a publisher-threshold class keeps the prior symbol_code rule', () {
+      final a = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: -2.0, precipitationMm: 1.0, symbolCode: 'sleet'),
+      );
+      expect(a!.eventClass, 'Freezing precipitation');
+      expect(a.certainty, AdvisoryCertainty.likely);
+    });
+
+    test('the description marks a derived claim as OURS, above the byline', () {
+      final derived = frostCase();
+      expect(derived!.description,
+          contains('Derived by condition_aggregator_met_norway'));
+      expect(derived.description, contains('not an advisory issued by the '
+          'publisher'));
+
+      final relayed = mapLocationForecastResponseToAdvisory(
+        response: response(tempC: -2.0, precipitationMm: 1.0),
+      );
+      expect(relayed!.description,
+          isNot(contains('Derived by condition_aggregator_met_norway')),
+          reason: 'a relayed publisher threshold is not our inference');
+    });
+  });
+
+  group('the description change is DECLARED, because it touches every class',
+      () {
+    test('pre-existing classes gained a humidity segment — the CHANGELOG says '
+        'so, and this pins it so it cannot drift back silently', () {
+      final a = mapLocationForecastResponseToAdvisory(
+        response: response(tempC: -2.0, precipitationMm: 1.0),
+      );
+      expect(a!.eventClass, 'Freezing precipitation');
+      expect(a.description, contains('relative_humidity not reported'));
     });
   });
 }

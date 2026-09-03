@@ -336,11 +336,17 @@ Advisory? mapLocationForecastResponseToAdvisory({
     // request and no extra byte. Up to 0.0.6 this adapter dropped it, and
     // with it the whole above-zero radiative-frost window — see [_classify].
     final humidityPercent = _readNum(instantDetails?['relative_humidity']);
+  // The SKY, also already in the payload and also discarded up to 0.1.0.
+  // Radiative cooling needs a clear one; cloud re-radiates longwave back to the
+  // surface and suppresses the mechanism the black-ice class is named for.
+  // Without this the class fired under overcast and said so in its own headline.
+  final cloudPercent = _readNum(instantDetails?['cloud_area_fraction']);
 
   final eventClass = _classify(
     temperature: temperature,
     precipitation: precipitation,
-      humidityPercent: humidityPercent,
+    humidityPercent: humidityPercent,
+    cloudPercent: cloudPercent,
     heavyPrecipitationMmPerHour: heavyPrecipitationMmPerHour,
     freezingTemperatureCelsius: freezingTemperatureCelsius,
   );
@@ -354,9 +360,15 @@ Advisory? mapLocationForecastResponseToAdvisory({
     freezingTemperatureCelsius: freezingTemperatureCelsius,
   );
 
-  final certainty = next1Symbol != null
-      ? AdvisoryCertainty.likely
-      : AdvisoryCertainty.possible;
+  // The publisher's `symbol_code` says nothing about OUR derived inference, and
+  // the classifier does not consult it - so it must not lend that inference the
+  // publisher's confidence. The derived classes are model output and say
+  // `possible`; the publisher-threshold classes keep the prior rule.
+  final certainty = _derivedClasses.contains(eventClass)
+      ? AdvisoryCertainty.possible
+      : (next1Symbol != null
+          ? AdvisoryCertainty.likely
+          : AdvisoryCertainty.possible);
 
   final geometry = response['geometry'];
   final areaDescription = _composeAreaDescription(geometry);
@@ -369,8 +381,9 @@ Advisory? mapLocationForecastResponseToAdvisory({
   final description = _composeDescription(
     temperature: temperature,
     precipitation: precipitation,
-      humidityPercent: humidityPercent,
+    humidityPercent: humidityPercent,
     symbolCode: next1Symbol,
+    derivedClaim: _derivedClasses.contains(eventClass),
   );
 
   return Advisory(
@@ -418,18 +431,60 @@ const String _subzeroForecast = 'Subzero forecast';
 /// this function so they cannot drift." This adapter WAS a third copy.
 const String _radiativeFrostBlackIce = 'Radiative frost black ice';
 
+/// Saturated air above zero — a hazard this adapter can SEE but cannot ASSESS.
+///
+/// `isRadiativeFrostBlackIce` is a dew-point-depression model, so at saturation
+/// the effective temperature converges on ambient and the predicate is `false`
+/// exactly where the air is wettest. The calibration names the consequence
+/// itself: "near-zero SATURATED FREEZING FOG above ~ +1 C ... is therefore NOT
+/// detected by this model - a genuine hazard this function does not cover."
+///
+/// 0.1.0 returned bare `null` here, indistinguishable from "measured, benign" -
+/// and 0.1.0 also CHANGED WHAT SILENCE MEANS in this band, so that silence was
+/// worse than 0.0.6's. In fog, above zero, with ice forming and nothing
+/// visible, that is D3's worst case. This names the gap instead of leaving it
+/// in a CHANGELOG the driver never reads.
+const String _freezingFogNotAssessed =
+    'Freezing fog risk - above zero, saturated, not assessed by this model';
+
 /// Freezing-risk band entered with no humidity reading.
 ///
 /// Mirrors [_freezingPrecipUnmeasured]: the above-zero frost window cannot be
 /// evaluated without humidity, and "we could not evaluate it" must not be
 /// served to a driver as the benign silence this adapter returned up to 0.0.6.
 const String _radiativeFrostUnmeasured =
-    'Radiative frost, humidity not measured';
+    'Radiative frost, inputs not measured';
+
+/// Cloud ceiling above which the radiative mechanism is suppressed.
+///
+/// Radiative frost REQUIRES a clear sky: cloud re-radiates longwave back to the
+/// surface and the cooling this class is named for does not happen. 0.1.0 never
+/// read the sky at all, and a gate measured the cost on 600 live api.met.no
+/// slices - the severe channel fired on 64 of them and 54 of those 64 (84%)
+/// were under cloud >= 80%, i.e. the state that refutes the mechanism.
+/// Integrator-overridable.
+const double kDefaultMetNorwayClearSkyCloudPercentMax = 50.0;
+
+/// Relative humidity at or above which the air is treated as saturated, so the
+/// dew-point model is out of scope and [_freezingFogNotAssessed] applies. The
+/// calibration's own worked example is +2 C / 95% RH -> dew point ~ +1.3 C,
+/// i.e. not detected.
+const double kMetNorwaySaturatedHumidityPercent = 95.0;
+
+/// The classes THIS PACKAGE infers, as opposed to the ones it relays from a
+/// publisher threshold. They carry `possible` certainty and are marked in the
+/// description as ours.
+const Set<String> _derivedClasses = <String>{
+  _radiativeFrostBlackIce,
+  _radiativeFrostUnmeasured,
+  _freezingFogNotAssessed,
+};
 
 String? _classify({
   required double? temperature,
   required double? precipitation,
   required double? humidityPercent,
+  required double? cloudPercent,
   required double heavyPrecipitationMmPerHour,
   required double freezingTemperatureCelsius,
 }) {
@@ -437,7 +492,7 @@ String? _classify({
       temperature != null && temperature <= freezingTemperatureCelsius;
 
   // An unmeasured precipitation figure can never make `heavy` true, and it must
-  // never make it FALSE either — it simply is not evidence.
+  // never make it FALSE either - it simply is not evidence.
   final heavy =
       precipitation != null && precipitation >= heavyPrecipitationMmPerHour;
 
@@ -448,26 +503,58 @@ String? _classify({
   if (freezing && precipitation == null) return _freezingPrecipUnmeasured;
   if (freezing && precipitation == 0) return _subzeroForecast;
 
-  // CAUTION-ADD-ONLY, and placed here deliberately: every branch above is a
-  // colder or wetter finding and keeps precedence. This can only speak in the
-  // band where 0.0.6 returned `null` — i.e. it never downgrades or replaces an
-  // existing classification, matching the calibration's own guarantee that the
-  // effective estimate never exceeds ambient.
-  if (temperature != null && temperature.isFinite) {
-    if (isRadiativeFrostBlackIce(
-      ambientCelsius: temperature,
-      humidityRHPercent: humidityPercent,
-    )) {
-      return _radiativeFrostBlackIce;
-    }
-    // Inside the calibration's ambient ceiling but with no humidity to test
-    // against. The window cannot be ruled OUT, and an unmeasured field must not
-    // buy silence any more than it may buy a downgrade.
-    if (humidityPercent == null &&
-        temperature > freezingTemperatureCelsius &&
-        temperature <= radiativeFrostAmbientCeilingCelsius) {
-      return _radiativeFrostUnmeasured;
-    }
+  // ---- the above-zero radiative band -------------------------------------
+  //
+  // BOUNDED AT BOTH ENDS. 0.1.0 guarded only `temperature.isFinite` and leaned
+  // on the calibration's ceiling; the calibration has no FLOOR, so -10 C with a
+  // corrupt precipitation figure classified as black ice, and an integrator
+  // LOWERING `freezingTemperatureCelsius` to warn less got an escalation
+  // instead. The sibling branch already carried this guard; this one did not.
+  //
+  // The floor is the STRICTER of two bounds, and it must be, because they
+  // answer different questions:
+  //   * `freezingTemperatureCelsius` keeps this branch from overlapping the
+  //     colder ones above, and an integrator may move it;
+  //   * 0 C is what the class NAME asserts - "ice while the air is above zero".
+  // Binding only to the configurable one let an integrator who LOWERED it to
+  // -2.0 (to warn less) get `Radiative frost black ice` at -1.0 C: a class
+  // whose own name was false about the number in its own description. No
+  // configuration may make this branch speak at or below zero.
+  final radiativeFloor = freezingTemperatureCelsius > 0.0
+      ? freezingTemperatureCelsius
+      : 0.0;
+  if (temperature == null ||
+      !temperature.isFinite ||
+      temperature <= radiativeFloor ||
+      temperature > radiativeFrostAmbientCeilingCelsius) {
+    return null;
+  }
+
+  // MEASURED rain rules the mechanism out: this band is a DRY surface cooling
+  // to the dew point. 0.1.0 read no wet axis at all, so every slice with
+  // 0 < precipitation < the heavy floor fell through into the radiative branch
+  // and was announced as black ice - headline "Radiative frost black ice -
+  // heavyrain". An ABSENT figure is not evidence of rain and does not block a
+  // hazard finding (this package's standing asymmetry: positive evidence fires
+  // on partial data; only the benign verdict needs complete data).
+  if (precipitation != null && precipitation > 0) return null;
+
+  if (humidityPercent == null) return _radiativeFrostUnmeasured;
+
+  // Saturated: out of the model's scope, and NOT silence.
+  if (humidityPercent >= kMetNorwaySaturatedHumidityPercent) {
+    return _freezingFogNotAssessed;
+  }
+
+  // The sky is part of the mechanism, so an unread sky is an unread input.
+  if (cloudPercent == null) return _radiativeFrostUnmeasured;
+  if (cloudPercent > kDefaultMetNorwayClearSkyCloudPercentMax) return null;
+
+  if (isRadiativeFrostBlackIce(
+    ambientCelsius: temperature,
+    humidityRHPercent: humidityPercent,
+  )) {
+    return _radiativeFrostBlackIce;
   }
   return null;
 }
@@ -507,7 +594,10 @@ AdvisorySeverity _deriveSeverity({
   // "cold, and nothing is falling". The calibration is already conservative
   // here — a +3 °C ambient ceiling and no firing on saturated air — so this is
   // not a cry-wolf channel.
-  if (eventClass == _radiativeFrostBlackIce) return AdvisorySeverity.severe;
+  if (eventClass == _radiativeFrostBlackIce) return AdvisorySeverity.moderate;
+  // A hazard whose conditions we can see and explicitly cannot assess. Never
+  // `minor`, never silence - UNSTATED, like every other unmeasured verdict here.
+  if (eventClass == _freezingFogNotAssessed) return AdvisorySeverity.unknown;
   // Unmeasured: severity UNSTATED, never `moderate` by default. Same rule as
   // [_freezingPrecipUnmeasured] — absence buys no downgrade.
   if (eventClass == _radiativeFrostUnmeasured) return AdvisorySeverity.unknown;
@@ -543,6 +633,7 @@ String _composeDescription({
   required double? precipitation,
   required double? humidityPercent,
   required String? symbolCode,
+  required bool derivedClaim,
 }) {
   final parts = <String>[];
   if (temperature != null) {
@@ -568,6 +659,18 @@ String _composeDescription({
     parts.add('relative_humidity not reported');
   }
   if (symbolCode != null) parts.add('symbol_code $symbolCode');
+  // WHOSE CLAIM IS THIS. The measured fields above are MET Norway's; the
+  // radiative classes are an inference THIS PACKAGE draws from them and the
+  // institute never made. Saying so is dignity toward a publisher whose byline
+  // follows on the very next line, it is what CC BY 4.0 asks when a source is
+  // modified, and it lets a driver weigh a national institute's warning
+  // differently from a third party's model.
+  if (derivedClaim) {
+    parts.add(
+      'Derived by condition_aggregator_met_norway from the fields above; '
+      'not an advisory issued by the publisher',
+    );
+  }
   parts.add(AdvisorySource.metNorway.attributionString);
   return parts.join('. ');
 }
