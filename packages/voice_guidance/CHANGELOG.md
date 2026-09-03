@@ -1,3 +1,51 @@
+## 0.7.7
+
+**Three things this package told you that were not true.** All three were about
+its own state, and all three were asserted from what we sent rather than read
+back from the authority. No API is removed; `SpeechDelivery` is added.
+
+**1 — the critical warning could be spoken in the wrong voice.** The bloc set the
+override locale and queued the utterance as two independent futures:
+
+```dart
+unawaited(_ttsEngine.setLanguage(overrideLocaleTag));
+add(HazardAnnounced(...));            // can win the race
+```
+
+Measured: an English critical black-ice warning went out through the Japanese
+engine, `setLanguage(en)` landing after it — foreign-tourist profile,
+`AlertSeverity.critical`. Worse, `setLanguage(_config.languageTag)` appeared
+exactly once, in `init`, so **nothing restored the base locale**: one override
+left the engine on the override locale for the life of the session, and Japanese
+turn text was then spoken by an English voice permanently. The locale now rides
+on the `HazardAnnounced` event, so the ordering is structural rather than hoped
+for.
+
+**2 — "she was warned" was asserted from having CALLED `speak()`.** `speak()`
+returns `void` and `flutter_tts` resolves it when the utterance is **queued**, not
+when it is spoken. This package had `awaitSpeakCompletion` 0, `setCompletionHandler`
+0, `onComplete` 0, `isSpeaking` 0 — nothing ever read back that anything was
+spoken. For a driver at ten metres' visibility, *queued* and *heard* are not the
+same event. Adds `SpeechDelivery { delivered, failed, unknown }` — and `unknown`
+is a first-class state, never folded into success.
+
+**3 — `LinuxTtsEngine.isAvailable()` returned `true` on hosts that cannot speak.**
+The default executable resolver returned its argument unchanged, so the
+`resolved == null` guard in `isAvailable()` could never fire: **on any Linux host,
+with or without a speech binary installed, this package reported that it could
+speak.** It now resolves against `PATH` (or the filesystem for a qualified path)
+and returns `null` when the executable is absent. If you relied on `isAvailable()`
+being true on Linux, it will now correctly be false where no engine exists.
+
+**Not shipped, deliberately.** An earlier form of (2) carried two breaks, caught
+before publication and removed: it called `awaitSpeakCompletion(true)`, which
+mutates `flutter_tts`'s **process-global** `static const MethodChannel` and would
+have changed the resolution contract of every `FlutterTts` in the host app —
+including instances you built yourself — which no version number of ours could
+honestly describe; and it silently changed `speak()` to resolve on completion
+under an 8 s bound while keeping the same signature, which widened a false-idle
+window on the hazard path. Both were removed at the work rather than documented.
+
 ## 0.7.6
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.

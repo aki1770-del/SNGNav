@@ -38,11 +38,26 @@ class ManeuverAnnounced extends VoiceGuidanceEvent {
 }
 
 class HazardAnnounced extends VoiceGuidanceEvent {
-  const HazardAnnounced({required this.message, required this.severity});
+  const HazardAnnounced({
+    required this.message,
+    required this.severity,
+    this.localeTag,
+  });
 
   final String message;
   final AlertSeverity severity;
 
+  /// BCP-47 tag this specific announcement must be spoken in, when the
+  /// condition's explainer differs from the configured voice.
+  ///
+  /// It rides on the EVENT rather than being set on the engine beforehand.
+  /// Setting the engine outside the handler is fire-and-forget: the language
+  /// change and the utterance are two independent futures, and the utterance
+  /// can win. Measured on this bloc: the English critical black-ice warning
+  /// was spoken by the Japanese engine, with the language change landing
+  /// after it. Carrying the tag here makes the ordering structural.
+  final String? localeTag;
+
   @override
-  List<Object?> get props => [message, severity];
+  List<Object?> get props => [message, severity, localeTag];
 }

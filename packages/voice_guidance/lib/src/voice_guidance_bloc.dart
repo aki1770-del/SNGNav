@@ -247,18 +247,16 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
           );
         }
 
-        if (overrideLocaleTag != null &&
-            overrideLocaleTag != _config.languageTag) {
-          // Honour the per-condition locale on this announcement.
-          // Setting language on the engine takes effect for the
-          // subsequent speak call.
-          unawaited(_ttsEngine.setLanguage(overrideLocaleTag));
-        }
-
+        // The locale rides on the event; it is NOT set on the engine here.
+        // `unawaited(setLanguage(...))` used to sit at this line, and the
+        // comment beside it asserted the change "takes effect for the
+        // subsequent speak call". It does not: the two are independent
+        // futures and the utterance can win.
         add(
           HazardAnnounced(
             message: hazardText,
             severity: navigationState.alertSeverity!,
+            localeTag: overrideLocaleTag,
           ),
         );
       }
@@ -315,7 +313,23 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
       ),
     );
 
-    await _ttsEngine.speak(event.message);
+    // Await the language change BEFORE the utterance, and restore the
+    // configured voice after it. Without the restore, one override left the
+    // engine on the override locale for the life of the session — measured:
+    // Japanese turn text spoken by an English voice, permanently.
+    final overrideTag = event.localeTag;
+    final needsOverride =
+        overrideTag != null && overrideTag != _config.languageTag;
+    if (needsOverride) {
+      await _ttsEngine.setLanguage(overrideTag);
+    }
+    try {
+      await _ttsEngine.speak(event.message);
+    } finally {
+      if (needsOverride) {
+        await _ttsEngine.setLanguage(_config.languageTag);
+      }
+    }
 
     emit(state.copyWith(status: VoiceGuidanceStatus.idle));
   }
