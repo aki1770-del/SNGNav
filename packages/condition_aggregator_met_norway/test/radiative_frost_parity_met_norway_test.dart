@@ -148,19 +148,113 @@ void main() {
   });
 
   group('the hazard the model CANNOT assess is named, not silenced', () {
-    test('saturated air above zero returns the freezing-fog class. 0.1.0 '
-        'returned bare null here — D3 worst case, and 0.1.0 had also changed '
-        'what that silence MEANT', () {
+    test('saturated air NEAR ZERO under cloud returns the freezing-fog class',
+        () {
+      // Re-pinned inside the reachable bound. The first form of this test
+      // pinned a fire at +2.0 C / 97 % RH — dew point +1.57 C, a freeze that
+      // cannot happen — which a gate caught along with 14 other in-band points
+      // announcing physically unreachable freezing.
       final a = mapLocationForecastResponseToAdvisory(
         response: response(
-            tempC: 2.0, precipitationMm: 0.0, humidityPercent: 97.0,
+            tempC: 0.5, precipitationMm: 0.0, humidityPercent: 97.0,
             cloudPercent: 100.0, symbolCode: 'fog'),
       );
       expect(a, isNotNull);
       expect(a!.eventClass, contains('Freezing fog risk'));
-      expect(a.severity, AdvisorySeverity.unknown,
-          reason: 'a hazard we can see the conditions for and cannot assess is '
-              'UNSTATED, never minor and never silence');
+      expect(a.severity, AdvisorySeverity.unknown);
+    });
+
+    test('ABOVE the freezing-fog ceiling it does NOT fire — a freeze that '
+        'cannot be reached must not be announced', () {
+      expect(
+        mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 2.0, precipitationMm: 0.0, humidityPercent: 97.0,
+              cloudPercent: 100.0, symbolCode: 'fog'),
+        ),
+        isNull,
+      );
+    });
+
+    test('⚑ FREEZING DRIZZLE IN FOG still speaks — measured rain rules out the '
+        'RADIATIVE mechanism, not ice, and this is D3\'s compound case', () {
+      // The rain gate used to run first and return bare null here: she cannot
+      // see AND ice is forming, and the package said nothing.
+      for (final mm in <double>[0.1, 0.5, 2.0, 3.9]) {
+        final a = mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 0.5, precipitationMm: mm, humidityPercent: 97.0,
+              cloudPercent: 100.0, symbolCode: 'sleet'),
+        );
+        expect(a, isNotNull, reason: 'silent at precipitation $mm mm');
+        expect(a!.eventClass, contains('Freezing fog risk'));
+      }
+    });
+  });
+
+  group('an unmeasured input is reported ONLY where it could change the answer',
+      () {
+    test('absent sky with the predicate ALREADY FALSE stays SILENT — the cloud '
+        'gate can only suppress a finding, never create one', () {
+      // Previously this manufactured an `unknown` advisory out of a state the
+      // package can positively rule out as benign.
+      for (final rh in <double>[88.0, 90.0, 92.0, 94.0]) {
+        expect(
+          mapLocationForecastResponseToAdvisory(
+            response: response(
+                tempC: 2.0, precipitationMm: 0.0, humidityPercent: rh),
+          ),
+          isNull,
+          reason: 'manufactured an advisory at RH $rh with no sky reading',
+        );
+      }
+    });
+
+    test('absent sky with the predicate TRUE is reported — there the sky could '
+        'have changed the answer', () {
+      final a = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 2.0, precipitationMm: 0.0, humidityPercent: 60.0),
+      );
+      expect(a!.eventClass, 'Radiative frost, inputs not measured');
+      expect(a.severity, AdvisorySeverity.unknown);
+    });
+  });
+
+  group('severity, and the thresholds that carry it', () {
+    test('black ice is SEVERE — above Advisory.isHighImpact', () {
+      final a = frostCase();
+      expect(a!.severity, AdvisorySeverity.severe);
+      expect(a.isHighImpact, isTrue,
+          reason: 'invisible ice is the case the windscreen cannot contradict, '
+              'so it must reach the axis consumers actually read');
+    });
+
+    test('and it is ranked ABOVE Subzero forecast, which the old comment '
+        'claimed while shipping the same level for both', () {
+      final subzero = mapLocationForecastResponseToAdvisory(
+        response: response(tempC: -1.0, precipitationMm: 0.0),
+      );
+      expect(subzero!.eventClass, 'Subzero forecast');
+      expect(subzero.severity, AdvisorySeverity.moderate);
+      expect(frostCase()!.severity.index,
+          greaterThan(subzero.severity.index));
+    });
+
+    test('the cloud ceiling is genuinely OVERRIDABLE — it was documented as '
+        'such in three places while being unreachable from outside', () {
+      final overcast = response(
+          tempC: 2.0, precipitationMm: 0.0, humidityPercent: 60.0,
+          cloudPercent: 80.0);
+      // Default 50 % — 80 % overcast suppresses.
+      expect(mapLocationForecastResponseToAdvisory(response: overcast), isNull);
+      // An integrator who accepts more cloud gets the finding.
+      expect(
+        mapLocationForecastResponseToAdvisory(
+                response: overcast, clearSkyCloudPercentMax: 90.0)!
+            .eventClass,
+        'Radiative frost black ice',
+      );
     });
   });
 
