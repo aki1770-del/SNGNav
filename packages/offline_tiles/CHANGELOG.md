@@ -1,3 +1,30 @@
+## 0.5.8
+
+**The offline map could show a green OFFLINE MAP badge over a blank grey
+rectangle, and nothing anywhere reported a failure.** Measured on an ARM IVI
+target on 2026-08-29: the camera sat **580 km outside the loaded archive's own
+bounds**. The archive was fine. `flutter_map` draws a blank grey tile for a tile
+the archive does not hold — no error, no log, and indistinguishable from "not
+loaded yet". A host app that hardcodes a camera is making a coverage claim
+nothing measured, and the failure is silent.
+
+Additive only — two new classes, nothing removed or changed in signature.
+
+- **`ArchiveCamera`** — derive the camera from the MBTiles archive's **own
+  metadata** instead of asserting one. `ArchiveCamera.resolve` reads what the
+  archive says about itself and falls back **per field, never wholesale**, when
+  the archive is absent or silent. The two bounds are deliberately asymmetric:
+  `minZoom` is a blankness floor, because the runtime resolver only ever walks
+  DOWN looking for a parent tile.
+- **`TileCoverage` / `coverageForBounds`** — coverage over a whole **viewport**
+  rather than a single point, so an "offline map available" badge answers the
+  question a badge is actually asking rather than a narrower one that happens to
+  be true at the centre pixel.
+- **The thrown-layer fix** — with `urlTemplate` null the online branch did not
+  merely skip fetching, it threw `ArgumentError` and took the entire tile layer
+  down with it. That is why the map was grey while a valid archive sat loaded on
+  the same device.
+
 ## 0.5.7
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.
