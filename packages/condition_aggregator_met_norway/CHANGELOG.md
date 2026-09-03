@@ -9,93 +9,82 @@ this window."* Under clear-sky radiative cooling the road surface falls toward
 the dew point and surface moisture freezes while the air still reads +1…+3 °C.
 This adapter said **nothing at all** there.
 
-Two adversarial gate rounds ran against this change before it shipped. The first
-found five defects, the second found five more — three of them created by the
-first round's fixes. **Nothing of either intermediate form was ever published.**
-What follows is what the package actually does.
+**Three adversarial gate rounds ran against this change. None of the
+intermediate forms was ever published.** The first found five defects; the
+second found five, three of them created by the first round's fixes; the third
+found five more, again mostly created by the second round's. What follows is
+what the package does, and why the third round was the last.
 
-### When it is entitled to speak
+### ⚑ The root was one thing, and re-ordering conditions was never going to fix it
 
-The physics is **delegated** to `isRadiativeFrostBlackIce`, whose own doc gives
-the reason: *"Two independently-maintained copies of this threshold logic ARE
-that disagreement waiting to happen."* This adapter had been a third copy. What
-this package decides is **when it may ask** — and every condition below exists
-because a gate proved its absence produced a false warning:
+Every one of those fifteen defects was the same defect: **`null` meant two
+things.** "Assessed, and there is nothing to report" and "I could not assess
+this" were the same return value, so a driver-facing surface could not tell them
+apart — and neither, it turned out, could the author. A rain gate returning
+`null` on freezing drizzle, a cloud gate turning a severe advisory into silence,
+a ceiling silencing the band it was cited to cover: all one overloading.
 
-- **A dry surface.** Measured precipitation rules the radiative mechanism out.
-  Without this, every slice with `0 < precipitation < 4.0` mm/h fell through and
-  a `heavyrain` slice was announced as *"Radiative frost black ice — heavyrain"*.
-- **A clear sky** (`cloud_area_fraction ≤ 50 %`, overridable). Cloud re-radiates
-  longwave back to the surface and suppresses the cooling. A gate measured the
-  channel firing on **64 of 600 live slices, 54 of them (84 %) under cloud ≥ 80 %**.
-- **A band bounded at BOTH ends.** The calibration has a +3 °C ceiling and no
-  floor; without one, `-10 °C` classified as *"ice while the air is above zero"*.
-  The floor is the **stricter** of `freezingTemperatureCelsius` and 0 °C, so no
-  configuration can make this branch speak at or below zero.
+Classification now returns a **sealed** verdict — `_Hazard`, `_AssessedBenign`,
+or `_NotAssessed(missingInput)` — matched by an **exhaustive switch**. A path
+that forgets to say which of the three it means **does not compile**; deleting a
+case yields `non_exhaustive_switch_statement`. **`_AssessedBenign` is the only
+verdict permitted to become silence.** A `_NotAssessed` becomes an advisory that
+names the reading which stopped the assessment.
 
 ### Classes
 
-- **`Radiative frost black ice`** — **`severe`**, `certainty: possible`.
-  ⚑ `severe` places it above `Advisory.isHighImpact`. In the in-drive advisor
-  that is concern-level 2, which **alone yields heightened caution and never
-  "consider stopping"** — it escalates by one only when the position×visibility
-  core is already degraded. `moderate` escalates nothing, ever. It is `severe`
-  because **black ice is defined by the driver not being able to see it**: this
-  catalogue's rule is *"a false alarm is contradicted by the windscreen; a false
-  all-clear removes the prompt to look out of it"*, and the windscreen cannot
-  contradict invisible ice. The cry-wolf risk is carried at the gating layer
-  above; discounting severity as well would double-count it.
+- **`Radiative frost black ice`** — **`severe`**, `certainty: possible`. Requires
+  a dry surface and a measured clear sky. `severe` places it above
+  `Advisory.isHighImpact`; ambiguity on an invisible hazard routes toward
+  caution, because **black ice is defined by the driver not being able to see
+  it** and this catalogue's rule — *"a false alarm is contradicted by the
+  windscreen; a false all-clear removes the prompt to look out of it"* — binds
+  harder where the windscreen cannot contradict anything.
 - **`Freezing fog risk - above zero, saturated, not assessed by this model`** —
-  `unknown`. At saturation the dew-point model converges on ambient and is false
-  exactly where the air is wettest; the calibration names this uncovered.
-  Bounded to +1 °C, where freezing is physically reachable, and never announced
-  under a measured clear sky. ⚑ **Deliberately NOT suppressed by rain**: freezing
-  drizzle in fog just above zero is the canonical glaze-ice generator, and
-  returning `null` there was the exact hole this class exists to close.
-- **`Radiative frost, inputs not measured`** — `unknown`. Humidity or sky absent,
-  **and reported only where that input could have changed the answer.** The cloud
-  gate can only suppress a finding, never create one, so an absent sky over an
-  already-false predicate stays silent rather than manufacturing an advisory out
-  of a measured-benign state.
+  `unknown`. Fires on **`saturated && !frost`**: the model's own blind spot,
+  defined by the predicate rather than by a chosen number, so it covers exactly
+  the band the calibration calls uncovered. ⚑ Not gated on the sky — **radiation
+  fog forms BECAUSE the sky is clear**, and `fog_area_fraction` is a publisher
+  field distinct from `cloud_area_fraction`. ⚑ Not gated on rain — freezing
+  drizzle in fog is the canonical glaze-ice generator.
+- **`Radiative frost, inputs not measured`** — `unknown`, and the description
+  names the missing reading (`relative_humidity` or `cloud_area_fraction`).
 
 ### Whose claim it is
 
-These three are **inferences this package draws**, not advisories MET Norway
-issued. They carry `certainty: possible` — the publisher's `symbol_code` no
-longer lends them confidence it never had business lending, since the classifier
-does not consult it — and the description says plainly that the finding is
-derived and not issued by the publisher. That is dignity toward an institute
-whose byline follows on the next line, and what CC BY 4.0 asks of a modified
-source.
+These are **inferences this package draws**, not advisories MET Norway issued.
+They carry `certainty: possible` — the publisher's `symbol_code` no longer lends
+them confidence, since the classifier does not consult it — and the description
+says so above the byline. That is dignity toward the institute, and what CC BY
+4.0 asks of a modified source.
 
 ### ⚑ A change to EVERY existing advisory, declared
 
 **`Advisory.description` now carries a `relative_humidity` segment on every
-class, including the four from 0.0.6.** An earlier draft of this entry said *"no
-signature changes"* — true of `eventClass` and `severity`, **false of
-`description`**. If you parse descriptions, they have changed. A test pins it.
+class, including the four from 0.0.6.** If you parse descriptions, they have
+changed. `eventClass` and `severity` on the pre-existing classes are unchanged.
 
 ### Overridable, and this time actually
 
-`clearSkyCloudPercentMax` and `freezingFogAmbientCeilingCelsius` are constructor
-parameters, mapper parameters, and exported. ⚑ The cloud ceiling was documented
-as *"integrator-overridable"* in three places while being a bare private const —
-a capability that did not exist, shipped as the mitigation for a threshold that
-was chosen rather than derived. A compile probe from an integrator's position
-proved the absence; the same probe now passes.
+`clearSkyCloudPercentMax` is a constructor parameter, a mapper parameter, and
+exported. It was documented as *"integrator-overridable"* in three places while
+being a bare private const; a compile probe from an integrator's position proved
+the absence, and the same probe now passes. ⚑ **50 % remains a chosen figure —
+but it can no longer cause silence.** Above it, or with the sky unread, the
+verdict is `_NotAssessed`, not `null`: a wrong threshold can downgrade a
+finding, never hide one.
 
 ### Cost and verification
 
 **No new network cost.** `relative_humidity` and `cloud_area_fraction` were both
 already in the `compact` payload this adapter fetches (verified live at
-api.met.no, 2026-09-03) and were being parsed past.
+api.met.no, 2026-09-03).
 
-**40 tests**, analyzer clean. **5 of the behavioural tests fail against the
-pre-fix classifier**, so a green suite is evidence rather than testimony. A live
-run over 1,260 slices from 15 Nordic points produced no advisory from these
-classes — **stated with its control: 0 of those 1,260 were in the (0, +3 °C] band
-at all** (range 4.1…20.2 °C), so it shows non-regression and **cannot** show
-correct gating. The unit tests carry that.
+**43 tests**, analyzer clean. The exhaustive switch is proven by deleting a case
+and observing the compile error. A live run over 1,260 slices from 15 Nordic
+points produced no advisory from these classes — **stated with its control: 0 of
+those 1,260 were in the (0, +3 °C] band at all** (range 4.1…20.2 °C), so it shows
+non-regression and **cannot** show correct gating. The tests carry that.
 
 **Why the minor bump.** `0.0.x` told an integrator "experimental" about a package
 that already implemented the full provider contract.

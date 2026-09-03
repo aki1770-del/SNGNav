@@ -72,9 +72,6 @@ class MetNorwayAdvisoryProvider implements AdvisoryProvider {
   /// suppressed. See [kDefaultMetNorwayClearSkyCloudPercentMax].
   final double clearSkyCloudPercentMax;
 
-  /// Ambient ceiling for the freezing-fog class. See
-  /// [kDefaultMetNorwayFreezingFogAmbientCeilingCelsius].
-  final double freezingFogAmbientCeilingCelsius;
 
   /// HTTP client — injectable for testing. The adapter does not own
   /// the lifecycle of an injected client; the caller owns close().
@@ -97,8 +94,6 @@ class MetNorwayAdvisoryProvider implements AdvisoryProvider {
         kDefaultMetNorwayFreezingTemperatureCelsius,
     this.clearSkyCloudPercentMax =
         kDefaultMetNorwayClearSkyCloudPercentMax,
-    this.freezingFogAmbientCeilingCelsius =
-        kDefaultMetNorwayFreezingFogAmbientCeilingCelsius,
   }) : _client = http.Client(),
        _ownsClient = true;
 
@@ -116,8 +111,6 @@ class MetNorwayAdvisoryProvider implements AdvisoryProvider {
         kDefaultMetNorwayFreezingTemperatureCelsius,
     this.clearSkyCloudPercentMax =
         kDefaultMetNorwayClearSkyCloudPercentMax,
-    this.freezingFogAmbientCeilingCelsius =
-        kDefaultMetNorwayFreezingFogAmbientCeilingCelsius,
   }) : _client = client,
        _ownsClient = false;
 
@@ -241,7 +234,6 @@ class MetNorwayAdvisoryProvider implements AdvisoryProvider {
       heavyPrecipitationMmPerHour: heavyPrecipitationMmPerHour,
       freezingTemperatureCelsius: freezingTemperatureCelsius,
       clearSkyCloudPercentMax: clearSkyCloudPercentMax,
-      freezingFogAmbientCeilingCelsius: freezingFogAmbientCeilingCelsius,
     );
     if (advisory == null) return const <Advisory>[];
     return <Advisory>[advisory];
@@ -306,8 +298,6 @@ Advisory? mapLocationForecastResponseToAdvisory({
       kDefaultMetNorwayFreezingTemperatureCelsius,
   double clearSkyCloudPercentMax =
       kDefaultMetNorwayClearSkyCloudPercentMax,
-  double freezingFogAmbientCeilingCelsius =
-      kDefaultMetNorwayFreezingFogAmbientCeilingCelsius,
 }) {
   final properties = response['properties'];
   if (properties is! Map<String, dynamic>) return null;
@@ -364,7 +354,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
   // Without this the class fired under overcast and said so in its own headline.
   final cloudPercent = _readNum(instantDetails?['cloud_area_fraction']);
 
-  final eventClass = _classify(
+  final verdict = _classify(
     temperature: temperature,
     precipitation: precipitation,
     humidityPercent: humidityPercent,
@@ -372,9 +362,24 @@ Advisory? mapLocationForecastResponseToAdvisory({
     heavyPrecipitationMmPerHour: heavyPrecipitationMmPerHour,
     freezingTemperatureCelsius: freezingTemperatureCelsius,
     clearSkyCloudPercentMax: clearSkyCloudPercentMax,
-    freezingFogAmbientCeilingCelsius: freezingFogAmbientCeilingCelsius,
   );
-  if (eventClass == null) return null;
+
+  // EXHAUSTIVE over a sealed type. Adding a verdict without deciding what a
+  // driver is told is a COMPILE ERROR, not a silent `null`. That is the whole
+  // point of the type — see [_BandVerdict].
+  final String eventClass;
+  final String? missingInput;
+  switch (verdict) {
+    case _AssessedBenign():
+      // The ONLY path permitted to become silence.
+      return null;
+    case _NotAssessed(missingInput: final input):
+      eventClass = _radiativeFrostUnmeasured;
+      missingInput = input;
+    case _Hazard(eventClass: final hazard):
+      eventClass = hazard;
+      missingInput = null;
+  }
 
   final severity = _deriveSeverity(
     eventClass: eventClass,
@@ -408,6 +413,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
     humidityPercent: humidityPercent,
     symbolCode: next1Symbol,
     derivedClaim: _derivedClasses.contains(eventClass),
+    missingInput: missingInput,
   );
 
   return Advisory(
@@ -493,20 +499,49 @@ const String _radiativeFrostUnmeasured =
 /// admitted it invented. A gate proved the absence with a compile probe.
 const double kDefaultMetNorwayClearSkyCloudPercentMax = 50.0;
 
-/// Ambient ceiling for the freezing-fog class, °C.
-///
-/// Saturated air only freezes near zero. `navigation_safety_calibration` bounds
-/// the hazard it does NOT cover at "near-zero SATURATED FREEZING FOG above
-/// ~ +1 °C", and this implements that bound rather than the +3 °C radiative
-/// ceiling: without it the class announced a freeze at a measured dew point of
-/// +2.90 °C. Integrator-overridable.
-const double kDefaultMetNorwayFreezingFogAmbientCeilingCelsius = 1.0;
 
 /// Relative humidity at or above which the air is treated as saturated, so the
 /// dew-point model is out of scope and [_freezingFogNotAssessed] applies. The
 /// calibration's own worked example is +2 C / 95% RH -> dew point ~ +1.3 C,
 /// i.e. not detected.
 const double kMetNorwaySaturatedHumidityPercent = 95.0;
+
+/// What this band can conclude — and it is SEALED so that "assessed, and there
+/// is nothing to say" and "I could not assess this" can never again be the same
+/// return value.
+///
+/// ⚑ THIS TYPE EXISTS BECAUSE A BARE `null` MEANT BOTH, AND THAT ONE
+/// OVERLOADING PRODUCED EVERY DEFECT THREE ADVERSARIAL GATE ROUNDS FOUND.
+/// Sakichi Vision 14: "a function that returns a success-shaped value while the
+/// operation failed is a loom weaving through a broken warp." Vision 15 ranks
+/// the remedies — "best is CANNOT BE DONE WRONG; next is detected instantly;
+/// worst is found downstream" — and three rounds of re-ordering conditions was
+/// `found downstream`, three times. Vision 89: a type checker is poka-yoke, it
+/// makes a class of defect structurally impossible to commit. Dart's exhaustive
+/// switch over a sealed type is that fixture: a path that forgets to say which
+/// of the three it means will not compile.
+sealed class _BandVerdict {
+  const _BandVerdict();
+}
+
+/// A named hazard.
+final class _Hazard extends _BandVerdict {
+  const _Hazard(this.eventClass);
+  final String eventClass;
+}
+
+/// Assessed, and there is nothing to report. **The only verdict permitted to
+/// become silence.**
+final class _AssessedBenign extends _BandVerdict {
+  const _AssessedBenign();
+}
+
+/// NOT assessed, and [missingInput] names the reading that stopped us. This can
+/// never become silence — it becomes an advisory that says so.
+final class _NotAssessed extends _BandVerdict {
+  const _NotAssessed(this.missingInput);
+  final String missingInput;
+}
 
 /// The classes THIS PACKAGE infers, as opposed to the ones it relays from a
 /// publisher threshold. They carry `possible` certainty and are marked in the
@@ -517,7 +552,10 @@ const Set<String> _derivedClasses = <String>{
   _freezingFogNotAssessed,
 };
 
-String? _classify({
+/// Full classification: the colder, publisher-threshold branches first, then
+/// the above-zero band. Returns a [_BandVerdict] so no caller can mistake
+/// "assessed benign" for "could not assess".
+_BandVerdict _classify({
   required double? temperature,
   required double? precipitation,
   required double? humidityPercent,
@@ -525,92 +563,104 @@ String? _classify({
   required double heavyPrecipitationMmPerHour,
   required double freezingTemperatureCelsius,
   required double clearSkyCloudPercentMax,
-  required double freezingFogAmbientCeilingCelsius,
 }) {
   final freezing =
       temperature != null && temperature <= freezingTemperatureCelsius;
 
   // An unmeasured precipitation figure can never make `heavy` true, and it must
-  // never make it FALSE either - it simply is not evidence.
+  // never make it FALSE either — it simply is not evidence.
   final heavy =
       precipitation != null && precipitation >= heavyPrecipitationMmPerHour;
 
   if (freezing && precipitation != null && precipitation > 0) {
-    return _freezingPrecipitation;
+    return const _Hazard(_freezingPrecipitation);
   }
-  if (heavy) return _heavyPrecipitation;
-  if (freezing && precipitation == null) return _freezingPrecipUnmeasured;
-  if (freezing && precipitation == 0) return _subzeroForecast;
+  if (heavy) return const _Hazard(_heavyPrecipitation);
+  if (freezing && precipitation == null) {
+    return const _Hazard(_freezingPrecipUnmeasured);
+  }
+  if (freezing && precipitation == 0) {
+    return const _Hazard(_subzeroForecast);
+  }
 
-  // ---- the above-zero band: EVALUATE EVERYTHING, THEN DECIDE ---------------
-  //
-  // The previous form was a chain of early `return`s, so its meaning lived in
-  // the ORDER of the returns — and a gate found the order wrong three separate
-  // ways: the fog branch pre-empted the predicate and downgraded true ice; the
-  // rain gate pre-empted saturation and returned bare `null` on freezing
-  // drizzle in fog; and both absent-input branches pre-empted the predicate,
-  // manufacturing advisories out of states the package can positively rule out
-  // as benign. Those are not three bugs. They are one design defect, and this
-  // is the repair: compute every fact first, then decide once.
-  //
-  // FLOOR IS THE STRICTER OF TWO BOUNDS, and it must be, because they answer
-  // different questions: `freezingTemperatureCelsius` keeps this branch from
-  // overlapping the colder ones above and an integrator may move it; 0 °C is
-  // what the class NAME asserts. Binding only to the configurable one let an
-  // integrator who LOWERED it to warn less get black ice at -1.0 °C.
+  return _classifyBand(
+    temperature: temperature,
+    precipitation: precipitation,
+    humidityPercent: humidityPercent,
+    cloudPercent: cloudPercent,
+    freezingTemperatureCelsius: freezingTemperatureCelsius,
+    clearSkyCloudPercentMax: clearSkyCloudPercentMax,
+  );
+}
+
+_BandVerdict _classifyBand({
+  required double? temperature,
+  required double? precipitation,
+  required double? humidityPercent,
+  required double? cloudPercent,
+  required double freezingTemperatureCelsius,
+  required double clearSkyCloudPercentMax,
+}) {
+  // FLOOR IS THE STRICTER OF TWO BOUNDS: `freezingTemperatureCelsius` keeps
+  // this band from overlapping the colder branches and an integrator may move
+  // it; 0 °C is what the black-ice class NAME asserts. Binding only to the
+  // configurable one let an integrator who LOWERED it to warn less get black
+  // ice at -1.0 °C.
   final radiativeFloor =
       freezingTemperatureCelsius > 0.0 ? freezingTemperatureCelsius : 0.0;
   if (temperature == null ||
       !temperature.isFinite ||
       temperature <= radiativeFloor ||
       temperature > radiativeFrostAmbientCeilingCelsius) {
-    return null;
+    // Genuinely outside what this band assesses — the colder branches above
+    // own it, or it is simply warm. Assessed.
+    return const _AssessedBenign();
   }
 
-  // MEASURED rain rules out the RADIATIVE mechanism — a dry surface cooling to
-  // the dew point. It does NOT rule out ice. An ABSENT figure is not evidence
-  // of rain (positive evidence fires on partial data; only the benign verdict
-  // needs complete data).
   final wet = precipitation != null && precipitation > 0;
   final saturated = humidityPercent != null &&
       humidityPercent >= kMetNorwaySaturatedHumidityPercent;
-  // A measured clear sky. `null` is NOT clear — an unread sky is unread.
-  final clearSky =
-      cloudPercent != null && cloudPercent <= clearSkyCloudPercentMax;
   final frost = isRadiativeFrostBlackIce(
     ambientCelsius: temperature,
     humidityRHPercent: humidityPercent,
   );
 
-  // 1 — POSITIVE DETERMINATION FIRST, so it can never be pre-empted by a
-  //     lesser branch. Needs the mechanism's own preconditions: dry surface,
-  //     clear sky.
-  if (frost && clearSky && !wet) return _radiativeFrostBlackIce;
+  // Humidity is the input nothing here can proceed without.
+  if (humidityPercent == null) return const _NotAssessed('relative_humidity');
 
-  // 2 — SATURATED AIR NEAR ZERO: out of the model's scope, and NOT silence.
-  //     Deliberately NOT gated on `wet`: freezing drizzle in fog just above
-  //     zero is the canonical glaze-ice generator and D3's compound case (she
-  //     cannot see AND ice is forming). Returning `null` there was the exact
-  //     hole this class exists to close. Bounded to where freezing is
-  //     physically reachable, and never announced under a measured clear sky —
-  //     fog is cloud at ground level.
-  if (saturated &&
-      temperature <= freezingFogAmbientCeilingCelsius &&
-      !clearSky) {
-    return _freezingFogNotAssessed;
+  // SATURATED AND THE MODEL SAYS NOT-FROST IS THE MODEL'S OWN BLIND SPOT, by
+  // construction rather than by a chosen number. The calibration states it:
+  // "near-zero SATURATED FREEZING FOG above ~ +1 °C (dew point >= 0) is
+  // therefore NOT detected by this model — a genuine hazard this function does
+  // not cover." A previous form gated this at `temperature <= 1.0`, which is
+  // the COMPLEMENT of that sentence: it spoke only where the model DOES assess
+  // and fell silent across the whole band the citation calls uncovered.
+  //
+  // ⚑ NOT gated on the sky. RADIATION FOG FORMS BECAUSE THE SKY IS CLEAR — the
+  // same longwave loss the black-ice class is named for — so a `!clearSky`
+  // condition here was anti-correlated with the hazard. Measured at the
+  // publisher: `fog_area_fraction` is a field DISTINCT from
+  // `cloud_area_fraction`, so "fog is cloud at ground level" was false.
+  //
+  // ⚑ NOT gated on rain. Freezing drizzle in fog just above zero is the
+  // canonical glaze-ice generator and D3's compound case: she cannot see AND
+  // ice is forming.
+  if (saturated && !frost) return const _Hazard(_freezingFogNotAssessed);
+
+  if (frost) {
+    // Measured rain rules out the RADIATIVE mechanism — a dry surface cooling
+    // to the dew point. That is an assessment, not an absence.
+    if (wet) return const _AssessedBenign();
+    // The sky is part of the mechanism, so an unread sky is an unread input —
+    // and it can no longer become silence.
+    if (cloudPercent == null) return const _NotAssessed('cloud_area_fraction');
+    // Cloud re-radiates longwave back to the surface and suppresses the
+    // cooling. Assessed, and suppressed.
+    if (cloudPercent > clearSkyCloudPercentMax) return const _AssessedBenign();
+    return const _Hazard(_radiativeFrostBlackIce);
   }
 
-  // 3 — UNMEASURED INPUTS, reported ONLY where they could have changed the
-  //     answer. The cloud gate is a pure AND-suppressor: it can turn a true
-  //     predicate into silence, never a false one into a finding. So when
-  //     humidity IS measured and the predicate is already FALSE, an absent sky
-  //     changes nothing, and announcing one would manufacture an advisory out
-  //     of a measured-benign state.
-  if (!wet) {
-    if (humidityPercent == null) return _radiativeFrostUnmeasured;
-    if (frost && cloudPercent == null) return _radiativeFrostUnmeasured;
-  }
-  return null;
+  return const _AssessedBenign();
 }
 
 AdvisorySeverity _deriveSeverity({
@@ -704,6 +754,7 @@ String _composeDescription({
   required double? humidityPercent,
   required String? symbolCode,
   required bool derivedClaim,
+  required String? missingInput,
 }) {
   final parts = <String>[];
   if (temperature != null) {
@@ -735,6 +786,11 @@ String _composeDescription({
   // follows on the very next line, it is what CC BY 4.0 asks when a source is
   // modified, and it lets a driver weigh a national institute's warning
   // differently from a third party's model.
+  // Name the reading that stopped the assessment. "Not assessed" without
+  // saying WHAT was missing is a smaller version of the same silence.
+  if (missingInput != null) {
+    parts.add('not assessed: $missingInput was not reported');
+  }
   if (derivedClaim) {
     parts.add(
       'Derived by condition_aggregator_met_norway from the fields above; '

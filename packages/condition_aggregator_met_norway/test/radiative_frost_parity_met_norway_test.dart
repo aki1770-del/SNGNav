@@ -148,47 +148,111 @@ void main() {
   });
 
   group('the hazard the model CANNOT assess is named, not silenced', () {
-    test('saturated air NEAR ZERO under cloud returns the freezing-fog class',
-        () {
-      // Re-pinned inside the reachable bound. The first form of this test
-      // pinned a fire at +2.0 C / 97 % RH — dew point +1.57 C, a freeze that
-      // cannot happen — which a gate caught along with 14 other in-band points
-      // announcing physically unreachable freezing.
-      final a = mapLocationForecastResponseToAdvisory(
-        response: response(
-            tempC: 0.5, precipitationMm: 0.0, humidityPercent: 97.0,
-            cloudPercent: 100.0, symbolCode: 'fog'),
-      );
-      expect(a, isNotNull);
-      expect(a!.eventClass, contains('Freezing fog risk'));
-      expect(a.severity, AdvisorySeverity.unknown);
-    });
-
-    test('ABOVE the freezing-fog ceiling it does NOT fire — a freeze that '
-        'cannot be reached must not be announced', () {
-      expect(
-        mapLocationForecastResponseToAdvisory(
+    test('it covers exactly the band the calibration calls UNCOVERED — a '
+        'previous form implemented the COMPLEMENT of its own citation', () {
+      // navigation_safety_calibration: "near-zero SATURATED FREEZING FOG above
+      // ~ +1 C (dew point >= 0) is therefore NOT detected by this model".
+      // A `temperature <= 1.0` ceiling spoke only where the model DOES assess.
+      for (final t in <double>[0.5, 1.1, 1.5, 2.0, 2.9]) {
+        final a = mapLocationForecastResponseToAdvisory(
           response: response(
-              tempC: 2.0, precipitationMm: 0.0, humidityPercent: 97.0,
+              tempC: t, precipitationMm: 0.0, humidityPercent: 97.0,
               cloudPercent: 100.0, symbolCode: 'fog'),
-        ),
-        isNull,
-      );
+        );
+        expect(a, isNotNull, reason: 'silent at $t C, inside the blind spot');
+        expect(a!.eventClass, contains('Freezing fog risk'));
+        expect(a.severity, AdvisorySeverity.unknown);
+      }
     });
 
-    test('⚑ FREEZING DRIZZLE IN FOG still speaks — measured rain rules out the '
-        'RADIATIVE mechanism, not ice, and this is D3\'s compound case', () {
-      // The rain gate used to run first and return bare null here: she cannot
-      // see AND ice is forming, and the package said nothing.
+    test('⚑ IT FIRES UNDER A CLEAR SKY — radiation fog forms BECAUSE the sky '
+        'is clear, so a !clearSky gate was anti-correlated with the hazard',
+        () {
+      // Measured live: 2 of 84 saturated slices carried cloud <= 50 — the
+      // Trondheim 00:00Z and 01:00Z radiation-fog hours, with MET reporting fog
+      // under what a cloud gate calls a clear sky.
+      for (final cloud in <double>[0.0, 20.0, 33.4]) {
+        final a = mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 0.5, precipitationMm: 0.0, humidityPercent: 97.0,
+              cloudPercent: cloud),
+        );
+        expect(a, isNotNull, reason: 'silent under cloud $cloud');
+        expect(a!.eventClass, contains('Freezing fog risk'));
+      }
+    });
+
+    test('wetter air at the same temperature must never turn a severe advisory '
+        'into SILENCE', () {
+      // The regression a gate measured across 104 grid cells: at +0.5 C /
+      // cloud 20, RH 96.4 gave severe black ice and RH 96.5..100 gave null.
+      final severe = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 0.5, precipitationMm: 0.0, humidityPercent: 96.4,
+            cloudPercent: 20.0),
+      );
+      expect(severe!.severity, AdvisorySeverity.severe);
+      for (final rh in <double>[96.5, 97.0, 99.0, 100.0]) {
+        expect(
+          mapLocationForecastResponseToAdvisory(
+            response: response(
+                tempC: 0.5, precipitationMm: 0.0, humidityPercent: rh,
+                cloudPercent: 20.0),
+          ),
+          isNotNull,
+          reason: 'wetter air at RH $rh produced silence',
+        );
+      }
+    });
+
+    test('⚑ FREEZING DRIZZLE IN FOG speaks — rain rules out the RADIATIVE '
+        'mechanism, not ice, and this is D3\'s compound case', () {
       for (final mm in <double>[0.1, 0.5, 2.0, 3.9]) {
         final a = mapLocationForecastResponseToAdvisory(
           response: response(
               tempC: 0.5, precipitationMm: mm, humidityPercent: 97.0,
-              cloudPercent: 100.0, symbolCode: 'sleet'),
+              cloudPercent: 0.0, symbolCode: 'sleet'),
         );
         expect(a, isNotNull, reason: 'silent at precipitation $mm mm');
         expect(a!.eventClass, contains('Freezing fog risk'));
       }
+    });
+
+    test('raising the freezing floor to warn MORE must not delete the class',
+        () {
+      // The mirror of the defect already fixed on the black-ice branch: a
+      // fixed ceiling crossed by a configurable floor emptied the window.
+      for (final floor in <double>[0.0, 0.5, 1.0, 1.5, 2.0]) {
+        expect(
+          mapLocationForecastResponseToAdvisory(
+            response: response(
+                tempC: 2.5, precipitationMm: 0.0, humidityPercent: 97.0,
+                cloudPercent: 100.0),
+            freezingTemperatureCelsius: floor,
+          ),
+          isNotNull,
+          reason: 'class died at freezingTemperatureCelsius $floor',
+        );
+      }
+    });
+
+    test('the positive determination WINS in the overlap, and an unread sky is '
+        'NAMED rather than mistaken for fog', () {
+      // frost TRUE and saturated FALSE at +0.1 C / RH 95 is the overlap a gate
+      // found the fog branch pre-empting when the sky was unread.
+      final unreadSky = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 0.1, precipitationMm: 0.0, humidityPercent: 60.0),
+      );
+      expect(unreadSky!.eventClass, 'Radiative frost, inputs not measured');
+      expect(unreadSky.description, contains('cloud_area_fraction'));
+
+      final clearSky = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 0.1, precipitationMm: 0.0, humidityPercent: 60.0,
+            cloudPercent: 20.0),
+      );
+      expect(clearSky!.eventClass, 'Radiative frost black ice');
     });
   });
 
