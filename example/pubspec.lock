@@ -7,7 +7,7 @@ packages:
       path: "../packages/adaptive_reroute"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.2.1"
   async:
     dependency: transitive
     description:
@@ -116,7 +116,7 @@ packages:
       path: "../packages/driving_conditions"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.7.0"
   driving_consent:
     dependency: "direct overridden"
     description:

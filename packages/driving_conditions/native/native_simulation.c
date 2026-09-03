@@ -6,7 +6,6 @@ typedef struct {
   float overall_mean;
   float grip_mean;
   float visibility_mean;
-  float fleet_mean;
   float overall_variance;
   uint32_t incident_count;
   float execution_ms;
@@ -46,16 +45,20 @@ SimulationResponse simulation_run_batch(
   float speed,
   float grip_factor,
   uint32_t surface_code,
-  float visibility_meters,
-  float fleet_confidence
+  float visibility_meters
 ) {
-  const float fleet_confidence_score = fleet_confidence;
+  /* 0.7.0: the fleet term is gone from the composite. It never carried a real
+     reading — see SimulatedSafetyScore in the Dart lane for the four defects
+     and the genba that closed the question. The weights below are stated, sum
+     to 1.0, and are NEVER re-normalised: re-normalising over "the terms that
+     are present" is arithmetically identical to imputing the absent term as
+     the mean of the present ones, which is how absence came to RAISE the
+     score in 0.6.0. */
   const uint32_t effective_runs = runs == 0u ? 1u : runs;
   clock_t start = clock();
   float total_overall = 0.0f;
   float total_grip = 0.0f;
   float total_visibility = 0.0f;
-  float total_fleet = 0.0f;
   float total_overall_squared = 0.0f;
   uint32_t incident_count = 0u;
 
@@ -77,13 +80,11 @@ SimulationResponse simulation_run_batch(
       0.0f,
       1.0f
     );
-    float overall =
-      grip_score * 0.4f + visibility_score * 0.4f + fleet_confidence_score * 0.2f;
+    float overall = grip_score * 0.5f + visibility_score * 0.5f;
 
     total_overall += overall;
     total_grip += grip_score;
     total_visibility += visibility_score;
-    total_fleet += fleet_confidence_score;
     total_overall_squared += overall * overall;
 
     if (overall < 0.4f) {
@@ -101,7 +102,6 @@ SimulationResponse simulation_run_batch(
     .overall_mean = overall_mean,
     .grip_mean = total_grip / (float) effective_runs,
     .visibility_mean = total_visibility / (float) effective_runs,
-    .fleet_mean = total_fleet / (float) effective_runs,
     .overall_variance = variance,
     .incident_count = incident_count,
     .execution_ms = execution_ms,

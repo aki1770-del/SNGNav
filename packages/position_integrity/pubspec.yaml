@@ -1,0 +1,22 @@
+name: position_integrity
+description: >-
+  Offline, pure-Dart position-integrity floor: turns a fused location stream
+  into a trust verdict (trusted/suspect/failed) plus a safe source handoff for
+  navigation apps.
+version: 0.1.0
+homepage: https://github.com/aki1770-del/SNGNav
+repository: https://github.com/aki1770-del/SNGNav
+issue_tracker: https://github.com/aki1770-del/SNGNav/issues
+topics:
+  - navigation
+  - safety
+  - gps
+  - automotive
+  - geolocation
+
+environment:
+  sdk: ^3.5.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.1.0

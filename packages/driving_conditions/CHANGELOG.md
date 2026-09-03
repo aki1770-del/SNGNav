@@ -1,5 +1,333 @@
 # Changelog
 
+## 0.7.0
+
+**BREAKING. The fleet term is removed from the safety score.**
+
+`overall` is now `0.5 * gripScore + 0.5 * visibilityScore`. Two terms, two
+weights, both stated as constants that sum to exactly 1.0, and **never
+re-normalised**.
+
+> ### ⚑ The HELD notice on 0.6.1 is DISCHARGED, and 0.6.1 is not published
+>
+> 0.6.1 was drafted, held, and never released — `pub.dev` went `0.6.0` →
+> `0.7.0`. Its content is folded in below. It was renumbered rather than
+> shipped because **`^0.6.0` means `>=0.6.0 <0.7.0`**: a `0.6.1` installs on a
+> `pub upgrade` nobody asked for, and this release changes what `overall`
+> means. A safety score that moves must not arrive unannounced. A `0.7.0`
+> cannot arrive unasked.
+>
+> What the notice said was still open, and what closed it, is recorded in
+> **Why the term is gone** below. Nothing in it is left standing.
+
+### Why the term is gone
+
+Four defects were found in that one term, in this order. Each was real, each
+was fixed, and each fix was insufficient one layer up:
+
+1. **The default was `0.8`.** `ConstantFleetConfidenceProvider()` defaulted to
+   `0.8`, and all three engines defaulted to it, so a consumer who wired **no
+   fleet source at all** got `hasFleetData == true` and an optimistic number
+   folded in at weight 0.2. Measured against published `0.6.0` over 22,932 grid
+   points: `hasFleetData` reported `true` on **100.0%** of them, every one
+   measuring nothing.
+2. **`NaN` became `1.0`.** The adapter's trailing `.clamp(0.0, 1.0)` turned a
+   non-finite confidence into exactly `1.0` — *"fleet reports consistently safe
+   conditions"* — manufactured from unreadable data. `double.nan.clamp(0, 1)`
+   is `1.0`, and `double.nan == 0.0` is `false`, so the zero-weight guard never
+   fired.
+3. **Re-normalisation imputed the mean.** Excluding an absent term and
+   re-normalising the remaining weights is *arithmetically identical* to
+   imputing the absent term as the MEAN of the measured ones — max deviation
+   **1.11e-16** across 40,401 cells. Absence did not read as "unknown"; it
+   silently agreed with everything else, and in good conditions scored HIGHER
+   than the `0.8` default being removed as optimistic.
+4. **A floor made the all-clear unreachable.** A rebuilt design with a floor of
+   `0.1` proved the absence invariant on **3,676,491 triples, 0 violations**
+   against **1,633,750 (44.4%)** for published `0.6.0` — and capped the maximum
+   reachable `overall` at **0.780257**, below every `DriverProfile`'s
+   `safeScoreFloor`. The all-clear disappeared from the product.
+
+**The finding under all four:** the fleet term has never carried a real
+reading. Four `FleetProvider` implementations exist in the consuming app; three
+are test doubles and the fourth is a simulator of five fake vehicles on Route
+153 seeded `Random(42)`, whose own header names a *"production replacement:
+real fleet telemetry API"* that does not exist. Absence is not the edge case
+those four designs were tuned for — **it is the only case.** A term with no
+source does not carry weight in a safety score.
+
+### What this is worth to the driver — measured
+
+On the `ageingRural` profile (safe 0.85 / info 0.55 / warn 0.35 — the 65+
+rural-commuter thresholds), over 161,604 pairs: 201x201 grip x visibility cells
+by the four fleet answers the adapter can actually return (dry 1.0, wet 0.7,
+snowy 0.4, icy 0.1). "Missed" = the package announces a less severe band than a
+score that had the fleet reading would have.
+
+| rule (what the package outputs when the fleet is silent) | cry-wolf % | missed % | crit-suppressed % |
+|---|---:|---:|---:|
+| `0.6.0` **as published and default-wired** (`0.4g + 0.4v + 0.16`) | 4.18 | **24.59** | **9.13** |
+| `0.6.0` via the adapter, re-normalised (`0.5g + 0.5v`) | 15.11 | 11.15 | 2.37 |
+| **`0.7.0` (this release)** | 15.11 | **11.15** | **2.37** |
+
+**For every consumer that exists, missed alarms fall 24.59% → 11.15% and
+critical-suppressed 9.13% → 2.37%** — because `p(fleet absent) = 1.0`, so the
+default-wired row is the only row anyone was ever on.
+
+⚑ **What this release does NOT do, stated plainly because the number is easy to
+claim.** The 11.15% does **not** go to zero, and the middle and bottom rows
+above are identical to the digit. `(0.4g + 0.4v) / 0.8` and `0.5g + 0.5v` are
+the same arithmetic, so on this metric removal is indistinguishable from the
+re-normalisation it replaces. What remains is not a defect in the code: it is
+the price of not having a fleet source. If a real fleet ever reported worse
+than the mean of grip and visibility, `overall` would not reflect it — read
+`FleetHazardConfidenceAdapter` yourself and act on it. **No weighting closes
+that gap. Only a real measurement does.**
+
+The all-clear, by contrast, is fully restored: maximum reachable `overall` is
+**0.999480** across 9,072 shipped-default configurations (attempt 4: 0.780257),
+and `none` is reachable on **all six** `DriverProfile`s (attempt 4: none of
+them). A dry road at 1000 m and 30 km/h reads `overall 0.9168`, band `none`, on
+`ageingRural`; black ice at 300 m and 40 km/h still reads `0.2071`, `critical`.
+
+### Also fixed: an unreadable sensor was scoring as a perfect road
+
+`num.clamp(0.0, 1.0)` maps a non-finite operand to **`1.0`**. Defect 2 above was
+fixed in the fleet adapter for `0.6.0` and **never fixed in the grip and
+visibility terms beside it** — the terms that survive this release. Measured
+against published `0.6.0`, `ageingRural`:
+
+| input | `overall` | band |
+|---|---:|---|
+| black ice, 300 m visibility, 40 km/h | 0.3077 | `critical` |
+| the same road, `gripFactor: double.nan` | 0.6732 | `info` |
+| the same road, both sensors `nan` | **0.9373** | **`none`** |
+| a genuinely perfect dry road at 0 km/h | 0.9178 | `none` |
+
+**Two unreadable sensors outscored the best real road in the model and handed
+her an all-clear.** On the held `0.6.1` branch the same probe read 0.9716
+against 0.9473 — re-normalisation widened the gap, because the two fabricated
+`1.0`s then carried the whole weight. The adapter's own clamp was still live
+too: four `icy` reports with a `nan` self-confidence returned `confidence ==
+1.0`, the ice erased.
+
+`speed`, `gripFactor` and `visibilityMeters` now throw `ArgumentError` when
+non-finite, at every engine entry point; `SimulatedSafetyScore` refuses to hold
+a non-finite term; the adapter drops reports whose self-confidence is
+non-finite or negative, exactly as it drops `RoadCondition.unknown`. **No value
+is substituted in either direction** — `0.0` would be the same fabrication
+pointed at danger. Finite out-of-range values are still coerced into `[0, 1]`:
+narrowing a real number and inventing an unreal one are different acts.
+
+### Migration
+
+| removed | what to do |
+|---|---|
+| `CpuSafetyScoreSimulationEngine(provider: …)` | drop the argument |
+| `NativeSafetyScoreSimulationEngine(provider: …)` | drop the argument |
+| `SafetyScoreSimulator(provider: …)` | drop the argument |
+| `SimulatedSafetyScore.fleetConfidenceScore` | `FleetHazardConfidenceAdapter(reports).confidence` |
+| `SimulatedSafetyScore.hasFleetData` | `FleetHazardConfidenceAdapter(reports).confidence != null` |
+| `SimulatedSafetyScore(fleetConfidenceScore: …)` | drop the argument |
+| `ConstantFleetConfidenceProvider()` | `ConstantFleetConfidenceProvider(0.8)` — state the value, or use `.unavailable()` |
+
+**KEPT, and deliberately so:** `FleetConfidenceProvider`,
+`ConstantFleetConfidenceProvider` and `FleetHazardConfidenceAdapter` are still
+exported and still supported. Reading fleet telemetry is a legitimate thing to
+want, and the adapter is honest standalone code that returns `null` when the
+fleet said nothing. Deleting a working public symbol to make a point would have
+broken consumers for no safety gain. What changed is that this package no
+longer folds that number into a score it calls a safety score.
+
+The engines' `provider:` parameters were **removed rather than
+accepted-and-ignored**. A constructor that takes a fleet source, discards it,
+and returns a safety score anyway is a worse lie than the `0.8` default it
+would replace. The compile error is the notification.
+
+### Native kernel — ABI change, rebuild required
+
+`native/native_simulation.c` weights are now `0.5 / 0.5`;
+`simulation_run_batch` takes six arguments instead of seven and
+`SimulationResponse` no longer carries `fleet_mean`. **Rebuild
+`native/build/libsimulation_engine.so`.** A `0.6.x` binary is an ABI mismatch,
+not a slightly-stale one. `NativeSafetyScoreSimulationEngine` no longer falls
+back to the CPU path (it did whenever the fleet term was absent, which was
+always), so `SimulationResult.executionMs` is now non-null on the native path.
+
+### Verification
+
+- `dart analyze`: 0 issues. `dart test`: 141 passed, 0 failed.
+- Re-run with `dependency_overrides` removed, against **published** siblings
+  (`navigation_safety_core 0.11.5`, `driving_weather 0.5.0`, `snow_rendering
+  0.3.0`, `fleet_hazard 0.6.1`, all `source: hosted`): analyze clean, 141
+  passed, example runs, native/Dart FFI parity holds.
+- Absence invariant, exhaustive: 0 violations in 20,200 monotonicity
+  comparisons over a 101x101 grid; the score is bit-identical across all six
+  reachable fleet answers including absence; every non-finite input throws
+  rather than scoring.
+- Opposed control: **0 divergences across 22,932 grid points** against the held
+  `0.6.1` branch — this release changes the API and the input contract, not the
+  arithmetic that branch had already reached. Against published `0.6.0`, all
+  22,932 points differ (max delta 0.16), which is the fix.
+- New guard `test/simulation/unreadable_is_not_perfect_test.dart`: 15 of its 19
+  cases fail against the pre-`0.7.0` behaviour, verified by reverting the fix
+  in place.
+
+### Reach — this fix does not arrive on its own
+
+`vehicle_condition_fusion 0.3.4`, the only published dependent, pins
+`driving_conditions: ^0.5.2` and cannot resolve `0.6.x` or `0.7.x` at all.
+Publishing does not deliver this to that consumer. Reach is tracked separately;
+this entry does not claim delivery.
+
+---
+
+## 0.6.1 — DRAFTED, HELD, NEVER PUBLISHED
+
+Renumbered into `0.7.0` above. Retained here so a reader who saw a `0.6.1`
+reference elsewhere can find out what happened to it. The work described below
+is real and is included in `0.7.0`.
+
+### The 0.6.0 recall was handed back through three default constructor arguments
+
+0.6.0 removed the fabricated fleet term from the MODEL. It did not remove it
+from the CONSTRUCTORS. Three default arguments still read:
+
+```dart
+// 0.6.0 — cpu_safety_score_simulation_engine.dart:38
+//         safety_score_simulator.dart:29
+//         native_safety_score_simulation_engine.dart:29
+FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
+//                                                                    ^ value defaults to 0.8
+```
+
+So a consumer who wired **no fleet source at all** received
+`fleetConfidenceScore == 0.8`, `hasFleetData == true`, and a `toString()`
+printing `fleet: 0.80` where a real absence prints `fleet: not measured`. The
+honest-absence flag this package introduced was made to report a fleet that had
+never spoken. `FleetHazardConfidenceAdapter([]).confidence` was correctly
+`null` the whole time — the defect was that nothing reached it unless you asked.
+
+**Fixed**: those three defaults are now
+`const ConstantFleetConfidenceProvider.unavailable()`. No signature changed, so
+this ships in range for `^0.6.0`.
+
+`ConstantFleetConfidenceProvider(0.8)` is unchanged and still means exactly what
+it always honestly meant: a caller **asserting** a fleet confidence — a fixture,
+a scenario, a simulator input. Only the DEFAULT changed. Asserting a scenario is
+honest; laundering an absence into an assertion is not.
+
+### What it cost the driver — measured, not asserted
+
+Swept 22,932 input points (speed 0–130 km/h x gripFactor 0.00–1.00 x visibility
+0–1000 m x 3 seeds, 48 Monte Carlo runs each), comparing the shipped default
+against the honest absence at each of the six `DriverProfile` threshold sets.
+
+The defaulted 0.8 **raised** the overall score at 97.48% of points and lowered
+it at 2.52%; it was never identical.
+
+| `DriverProfile` floors (safe/info/warn) | severity changed | -> LESS severe | -> MORE severe |
+|---|---:|---:|---:|
+| 0.80 / 0.50 / 0.30 (default; `snowZoneExperienced`, `professional`, `agriculturalForestry`) | 30.32% | 100.00% | 0.00% |
+| 0.85 / 0.55 / 0.35 (`ageingRural`) | 28.76% | 99.12% | 0.88% |
+| 0.85 / 0.55 / 0.32 (`noviceUrban`) | 27.83% | 99.09% | 0.91% |
+| 0.90 / 0.60 / 0.40 (`foreignTouristSnowZone`) | 25.58% | 99.47% | 0.53% |
+
+At the default floors, **15.38% of the whole grid moved `critical` to
+`warning`** and 14.95% moved `warning` to `info`.
+
+**The counter-direction cases are real and are named here rather than rounded
+away.** In three of the six profiles a small share of points moved the other
+way. Every one of them is the same shape — `none` -> `info`, in the region where
+the honest score is already 0.85-0.92 — because an asserted 0.8 drags a
+*better-than-0.8* score down. **In no profile, at any point in the grid, did the
+defaulted term ever produce a `warning` or a `critical` that honesty would not.**
+The defect only ever removed warnings; it never added one.
+
+A worked case, black ice / 300 m visibility / 40 km/h, standard floors:
+
+| | overall | severity | rendered |
+|---|---:|---|---|
+| honest (0.6.1) | 0.207 | `critical` | `fleet: not measured` |
+| defaulted (0.6.0) | 0.326 | `warning` | `fleet: 0.80` |
+
+She was told to reduce speed where the measured terms alone say turn back, on
+the strength of a fleet that reported nothing.
+
+### The default changed — three shipped tests changed with it
+
+This was deliberate back-compatibility in 0.6.0, not an oversight, so the tests
+that pinned it were **re-authored to assert the honest behaviour, not deleted**:
+
+- `safety_score_simulator_test.dart` — `expect(score.fleetConfidenceScore, 0.8)`
+  is now `isNull` + `hasFleetData` `isFalse`; a new case asserts that an
+  explicitly asserted `0.8` is still honoured.
+- `safety_score_simulator_test.dart` — `closeTo(0.8, 1e-9)` on the default run
+  count is now `isNull`.
+- `simulation_engine_test.dart` — the default simulator's
+  `closeTo(0.8, 1e-9)` is now `isNull` + `hasFleetData` `isFalse`.
+
+A **fourth** test also depended on the default and was not in the original
+finding: `fleet_confidence_provider_test.dart`'s *"simulator with icy adapter
+produces lower score than constant 0.8"* used a bare `const
+SafetyScoreSimulator()` as its "constant 0.8" comparand. It now passes
+`ConstantFleetConfidenceProvider(0.8)` explicitly, which is what the test's own
+name always claimed it was doing.
+
+New guard: `test/simulation/default_provider_absence_test.dart`. Five of its
+seven cases fail against 0.6.0's defaults (verified by reverting the fix); the
+two that pass are the ones asserting behaviour that correctly did not change.
+
+### Behaviour change worth knowing: the native engine's default path
+
+`NativeSafetyScoreSimulationEngine()` **constructed with no provider now takes
+the CPU path and never enters the FFI kernel**, so `SimulationResult.executionMs`
+is `null`. The native kernel's weighted mean takes a non-nullable fleet term and
+cannot express an absent one, so it is skipped rather than fed a number nobody
+measured. Correctness before throughput. Pass a provider that returns a value to
+reach the kernel; the FFI parity test now does exactly that.
+
+### Documentation that taught the defect
+
+- `constant_fleet_confidence_provider.dart` said *"Use it when no fleet data is
+  available"* — the precise wrong instruction, and it contradicted the same
+  file's own constructor doc. It now says: use it to ASSERT a value; use
+  `.unavailable()` for no fleet data.
+- `fleet_confidence_provider.dart` documented the default as
+  `ConstantFleetConfidenceProvider` (0.8).
+- `fleet_hazard_confidence_adapter.dart` still documented `unknown -> 0.8` and
+  *"returns 0.8 — the neutral baseline"* **against its own corrected code**,
+  which has returned `null` on all three absence paths since 0.6.0.
+- `README.md` shipped the pre-0.6.0 non-renormalised `overall` formula and an
+  API table describing the 0.8 default.
+- `SAFETY_BOUNDARY.md` claimed *"a consumer cannot render a fleet number that
+  does not exist"*, which was false while the defaults stood. The residual
+  insufficiency is now recorded there and marked closed in 0.6.1.
+- `example/main.dart` framed a bare `const SafetyScoreSimulator()` as
+  *"constant 0.8 — an ASSERTED value"*. It was not asserted; it was defaulted.
+
+### Also fixed, found while correcting the above
+
+- **`example/main.dart` did not compile.** `fleet_hazard` 0.6.0 made
+  `FleetReport.confidence` **required** — removing its own defaulted `0.8` for
+  exactly the reason this package removed its — and this package's constraint
+  (`fleet_hazard: '>=0.5.0 <0.8.0'`) admits it. The shipped example therefore
+  failed to analyze against any in-range `fleet_hazard >= 0.6.0`, and
+  `dart analyze` was red on 0.6.0 with 2 errors. Both call sites now state
+  `confidence` explicitly. `dart analyze` is clean.
+- **`NativeSimulationBindings.runBatch` had `double fleetConfidence = 0.8`** —
+  the same laundering one level lower. It is unreachable today (the class is not
+  exported, and its only call site always passes the value), so this changes no
+  behaviour; the parameter is now `required` so the defect cannot re-enter
+  through it.
+
+### Reach — this fix does not arrive on its own
+
+`vehicle_condition_fusion` 0.3.4, the only published dependent, pins
+`driving_conditions: ^0.5.2` and cannot resolve 0.6.x at all. Publishing 0.6.1
+does not deliver it to that consumer. Reach is tracked separately; this entry
+does not claim delivery.
+
 ## 0.6.0
 
 ### Safety defect in 0.5.4 and earlier — please read
@@ -143,6 +471,129 @@ consumer cannot name is a contract that does not reach them. Now exported.
   still pass. The break reaches only the code paths where data was absent, which
   is exactly where the old behaviour was wrong.
 
+## 0.5.7
+
+Fixes a fleet report whose own confidence is NaN or infinite being reported as
+`1.0` — "fleet reports consistently safe conditions". Behaviour change on that
+one path only. Every finite path is byte-for-byte the same answer as 0.5.6.
+
+**What you already have, if you pulled any release from 0.5.0 to 0.5.6.**
+`FleetHazardConfidenceAdapter.confidence` ended with
+`(total / totalWeight).clamp(0.0, 1.0)`. Dart's `num.clamp` maps NaN to the
+*upper* bound: measured on the Dart VM, `double.nan.clamp(0.0, 1.0)` is `1.0`,
+and that result's `.isFinite` is `true`. `FleetReport.confidence` is a plain
+`double` with no finiteness constraint, so a single report carrying NaN or
+`Infinity` — from a division by zero upstream, a bad parse, an uninitialised
+sensor — poisons the weighted average, and the adapter answered `1.0`.
+
+Measured, on the published 0.5.6 archive:
+
+| Recent reports | 0.5.6 answered | 0.5.7 answers |
+|---|---|---|
+| one ICY report, `confidence: NaN` | `1.0` | `NaN` |
+| one ICY report, `confidence: Infinity` | `1.0` | `NaN` |
+| one ICY report, `confidence: -Infinity` | `1.0` | `NaN` |
+| four honest ICY reports plus one NaN | `1.0` | `NaN` |
+| anything finite | unchanged | unchanged |
+
+The last row of that table is the one worth pausing on: four vehicles reporting
+ice, and one malformed report, produced maximum confidence that the road was
+safe.
+
+**Why it also mattered downstream.** `navigation_safety_core` deliberately maps
+a non-finite score to `0` — the worst case — so that an uncertain score
+*alerts* rather than passing silently (`safety_score.dart`, the
+conservative-on-uncertain invariant). That guard can only fire on a value that
+is still non-finite when it arrives. By clamping first, this package converted
+the non-finite value into a finite, maximal one and the guard never ran. A
+sanitiser here was disarming a safety guard there. Verified end to end: with
+the 0.5.6 adapter, a NaN-confidence ICY report yields
+`SafetyScore.fleetConfidenceScore == 1.0`; with 0.5.7 the same input yields
+`0.0`, and a 50-run `CpuSafetyScoreSimulationEngine` simulation goes from 0
+incidents and an overall of 0.877 to 50 incidents and an overall of 0.0.
+
+**What changed in the code.** One branch, before the clamp:
+
+```dart
+final average = total / totalWeight;
+if (!average.isFinite) return average; // do not clamp; see below
+return average.clamp(0.0, 1.0);
+```
+
+A non-finite return asserts nothing in either direction — every comparison
+against NaN is false — so a consumer that does not handle it makes no claim
+about the road either way. Only a consumer that has opted into
+conservative-on-uncertain turns it into an alert. That decision belongs to the
+consumer, not to this adapter.
+
+**What did NOT change.** The `0.8` neutral baseline for absent, stale or
+zero-weight fleet data is untouched, and so is every condition factor. No
+public API signature changed. If your fleet data has always been finite, this
+release is a no-op for you.
+
+**What to check if you display the value directly.** `confidence` may now be
+`NaN` where 0.5.6 gave you `1.0`. `NaN.toStringAsFixed(2)` renders `"NaN"`, and
+every `<` or `>` comparison against it is false. If you format or threshold
+this value for a driver, handle `!value.isFinite` explicitly and decide what it
+should mean in your UI — it means "we could not read the fleet evidence", not
+"safe" and not "dangerous". Guarding it is a two-line change; leaving it
+unguarded is safer than 0.5.6 was, because a naive comparison now makes no
+claim instead of the wrong one.
+
+## 0.5.6
+
+Removes build artifacts that 0.5.5 published by mistake. No API or behaviour
+change: every file under `lib/` is byte-identical to 0.5.5.
+
+**What 0.5.5 contained, and what you already have.** The 0.5.5 archive was
+2,133,126 bytes, of which about 99% was a `build/` directory that should never
+have been in a published package. It held eight files, the largest a Flutter
+kernel cache (`build/test_cache/build/*.cache.dill.track.dill`, 5.7 MB
+uncompressed) that embedded 465 absolute filesystem paths from the machine that
+published it, all of the form
+`/home/<user>/.pub-cache/hosted/pub.dev/<package>-<version>/...`.
+
+If you pulled 0.5.5, those bytes are in your pub cache. They disclose the
+publishing machine's account name and pub-cache location, and the exact set and
+versions of the 37 packages resolved there at build time. We checked for
+credentials and found none — no private keys, SSH keys, or API tokens; the
+payload is a compiler cache and dependency source, not configuration. Nothing
+about *consumers* of this package was included, and the files were inert: no
+code under `lib/` reads anything in `build/`, so nothing you ran was affected.
+
+Upgrading to 0.5.6 (in range for any `^0.5.x` constraint) replaces the archive.
+Removing `.pub-cache/hosted/pub.dev/driving_conditions-0.5.5/` clears the old
+copy.
+
+**Cause, and why it should not recur.** `build/` has been ignored by the
+repository's root `.gitignore` since 2026-03-04, and `dart pub publish` honours
+that when run from inside the work tree. 0.5.5 was published from a staging copy
+*outside* the work tree, where a repo-root `.gitignore` does not apply; pub then
+included every file on disk and reported "0 warnings". This release adds a
+`.pubignore` to the package itself, so the exclusion travels with the package
+directory wherever it is copied or staged. Verified by reproducing the fault:
+with `build/` present on disk, the publish dry-run produced 2 MB without the
+`.pubignore` and 24 KB with it.
+
+## 0.5.5
+
+Widens the `navigation_safety_core` constraint to `>=0.10.0 <0.12.0`.
+
+The previous `^0.10.0` constraint excluded core 0.11.x, so a project that asked
+for the current core could not also take this package at its current version.
+The resolver silently selected an older release of this package instead, with no
+error and no warning. Core 0.11.0 and 0.11.1 are additive (a re-export, and a
+percent-to-fraction humidity factory); this package compiles and its full test
+suite passes against 0.11.1.
+
+Also removes a `dependency_overrides` block that referenced sibling packages by
+relative path. It was inert for consumers, but it prevented this package from
+resolving standalone from its published archive.
+
+No API or behaviour change.
+
+# Changelog
+
 ## 0.5.4
 
 - deps: allow `fleet_hazard: ^0.4.0` → `^0.5.0` (the anonymized-`HazardZone`
@@ -183,6 +634,12 @@ consumer cannot name is a contract that does not reach them. Now exported.
 
 ## 0.4.0
 
+> ⚑ **NEVER PUBLISHED.** Measured against the pub.dev API on 2026-08-28: the
+> published version list is `0.1.0, 0.1.1, 0.2.0, 0.3.0, 0.5.0 … 0.5.7, 0.6.0`.
+> `0.4.0` is not on it and never was. The entry is kept rather than deleted
+> because the work below is real; a reader looking for `0.4.0` on pub.dev will
+> not find it, and should read this section as part of `0.5.0`.
+
 - **Refactor**: drop direct `navigation_safety` package dependency; consume `navigation_safety_core` (pure-Dart core) only. Tracks the NSC pure-Dart core extraction (commit `86632c4`); driving_conditions only uses the core safety vocabulary types and never required the Flutter+BLoC surface.
 - **Breaking**: `SafetyScoreSimulator.simulate()` and `SafetyScoreSimulationEngine.simulate()` now return `SimulationResult` instead of `SafetyScore`.
 - **New type**: `SimulationResult` — wraps the mean `SafetyScore` with statistical measures: `variance`, `incidentCount`, and (native engine only) `executionMs`.
@@ -195,3 +652,22 @@ consumer cannot name is a contract that does not reach them. Now exported.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 
+## 0.2.0
+
+- Added comprehensive dartdoc coverage for native simulation APIs and model quality fields.
+- Fixed `dart doc` warnings so documentation builds cleanly.
+- Added edge-case coverage for road-surface thresholds, hysteresis behavior, and visibility degradation.
+
+## 0.1.1
+
+- Add explicit Install section and API Overview table to README.
+- Refresh README validation and license metadata for republish.
+
+## 0.1.0
+
+- Initial release.
+- `RoadSurfaceState` — 6 road surface classifications with decision tree and hysteresis filter.
+- `PrecipitationConfig` — particle visual parameters derived from weather conditions.
+- `VisibilityDegradation` — opacity and blur sigma from visibility distance.
+- `DrivingConditionAssessment` — composite assessment from weather conditions.
+- `SafetyScoreSimulator` — Monte Carlo safety score simulation scaffold.

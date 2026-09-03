@@ -8,13 +8,27 @@
 that convert a weather condition into road surface classification, grip
 estimation, visibility degradation, and Monte Carlo safety scores.
 
-> **0.6.0 fixes a safety defect present through 0.5.4.** An unclassifiable road
-> became `RoadSurfaceState.dry` / `gripFactor: 1.0` / "Conditions normal", and
-> SILENCE from the fleet was folded into the safety score as a `0.8` "neutral
-> baseline" — so no fleet data RAISED the computed score. Surfaces, grips and
-> the fleet term are now nullable, and the overall score is re-normalised over
-> the terms actually measured. Read the [CHANGELOG](CHANGELOG.md) before
-> upgrading — the compile errors are the fix.
+> **0.7.0 REMOVES the fleet term from the safety score, and is breaking.**
+> `overall` is now `0.5 * grip + 0.5 * visibility` — two terms, weights stated,
+> never re-normalised. The fleet term never carried a real reading, and four
+> consecutive attempts to make its absence honest each failed one layer up; the
+> full chain is in `SimulatedSafetyScore`'s own documentation. The
+> `provider:` parameters and `SimulatedSafetyScore.fleetConfidenceScore` /
+> `hasFleetData` are gone. **`FleetConfidenceProvider`,
+> `ConstantFleetConfidenceProvider` and `FleetHazardConfidenceAdapter` are
+> KEPT** — reading fleet telemetry is legitimate; folding it into a safety
+> score with no source was not.
+>
+> 0.7.0 also rejects non-finite inputs instead of scoring them. On 0.6.0,
+> `gripFactor: double.nan` produced `gripScore == 1.0` (`num.clamp` maps `NaN`
+> to the top of the range) and a run with both sensors unreadable scored
+> `overall 0.9373`, band `none` — **an all-clear rated higher than a genuinely
+> perfect dry road** (0.9178). Those now throw `ArgumentError`.
+>
+> Read the [CHANGELOG](CHANGELOG.md) before upgrading — the compile errors are
+> the fix. This is a `0.7.0` and not a `0.6.1` deliberately: `^0.6.0` means
+> `>=0.6.0 <0.7.0`, so a change that moves a safety score must not arrive on a
+> `pub upgrade` nobody asked for.
 
 This package converts a `WeatherCondition` into structured driving guidance:
 
@@ -125,13 +139,27 @@ Monte Carlo scoring model:
 ```text
 gripScore = gripFactor * (1 - gripJitter) * (1 - speedFactor * 0.3)
 visibilityScore = clamp(visibilityMeters / 1000.0, 0, 1) * (1 - visJitter)
-fleetConfidenceScore = FleetConfidenceProvider.confidence  // injectable; default 0.8
-overall = gripScore * 0.4 + visibilityScore * 0.4 + fleetConfidenceScore * 0.2
+
+// Two terms. The weights are CONSTANTS that sum to 1.0, and they are never
+// re-normalised — re-normalising over "the terms that are present" is
+// arithmetically identical to imputing the absent one as the mean of the
+// present ones, which is how absence came to RAISE the score in 0.6.0:
+overall = gripScore * 0.5 + visibilityScore * 0.5
 ```
 
 Jitter is random `0.0..0.1` per run. Use `seed` for deterministic tests.
 
-Inject a `FleetHazardConfidenceAdapter` to replace the 0.8 baseline with real fleet data.
+`speed`, `gripFactor` and `visibilityMeters` must be finite. A non-finite value
+throws `ArgumentError` rather than being clamped into a perfect reading — see
+the 0.7.0 note at the top.
+
+**There is no fleet parameter.** Read fleet telemetry directly if you have it:
+
+```dart
+final fleet = FleetHazardConfidenceAdapter(reports).confidence; // double?, null = silence
+```
+
+`null` means the fleet said nothing — not 0.8, and not 0.0.
 
 ## Quick Start
 
@@ -249,9 +277,9 @@ the stack, no UI dependency, but a direct path to a driver-facing advisory.
 | `VisibilityDegradation` | UI-facing opacity and blur values derived from visibility distance. |
 | `SafetyScoreSimulator` | Monte Carlo simulator for advisory safety scoring under uncertain conditions. |
 | `SimulationResult` | Full output of a simulation run: mean `SafetyScore`, variance, incident count, and (native engine) execution time. |
-| `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. Inject to replace the 0.8 baseline. |
-| `ConstantFleetConfidenceProvider` | Returns a fixed confidence value. Default (0.8) preserves pre-Sprint-91 behaviour. |
-| `FleetHazardConfidenceAdapter` | Derives confidence from `List<FleetReport>` — dry 1.0, wet 0.7, snowy 0.4, icy 0.1. |
+| `FleetConfidenceProvider` | Interface for fleet-derived safety confidence. `confidence` is `double?`; `null` means the fleet said NOTHING. **Not consumed by the safety score from 0.7.0** — it is yours to read. |
+| `ConstantFleetConfidenceProvider` | Returns a fixed confidence value you ASSERT. `value` is REQUIRED from 0.7.0 (it used to default to `0.8`). `.unavailable()` is the no-fleet-data form (`confidence == null`). |
+| `FleetHazardConfidenceAdapter` | Derives confidence from `List<FleetReport>` — dry 1.0, wet 0.7, snowy 0.4, icy 0.1. `unknown`, non-finite and negative self-confidences carry no weight. |
 | `CpuSafetyScoreSimulationEngine` | **Default** pure-Dart Monte Carlo engine. Always available regardless of platform; no build step required. |
 | `NativeSafetyScoreSimulationEngine` | **Optional** C FFI engine for higher throughput. **Not the default and not usable out of the box** — see the note below. |
 | `SimulationBackend` / `SimulationOptions` | Extension points for native or alternative simulation engines. |
@@ -282,7 +310,7 @@ Current package status:
 |---------|-----|
 | [driving_weather](https://pub.dev/packages/driving_weather) | Upstream — provides `WeatherCondition` input |
 | [navigation_safety](https://pub.dev/packages/navigation_safety) | Downstream — safety scores drive alert severity |
-| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Direct dependency — `FleetHazardConfidenceAdapter` bridges fleet reports into simulation |
+| [fleet_hazard](https://pub.dev/packages/fleet_hazard) | Direct dependency — `FleetHazardConfidenceAdapter` reads fleet reports (it no longer feeds the score; see 0.7.0) |
 
 ## See Also
 

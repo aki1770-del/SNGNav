@@ -131,6 +131,12 @@ jobs:
           python3 scripts/stale-pin-check.py packages/nav2_safety_layer || true
 
       - name: Run every package's test suite
+        # if: always() -- added 2026-08-28. This step had no condition, so ANY earlier
+        # app-test failure SKIPPED it and blinded us to all 37 package suites. On the
+        # option-C branch that night, one failing app test hid whether the package
+        # suite passed, and the comparison the Chair needed could not be made. It
+        # still GATES -- its failure fails the job -- it just always MEASURES.
+        if: always()
         # Was TWO hardcoded allow-lists -- 7 names for `dart test`, 5 for
         # `flutter test` -- covering 12 of 35 publishable packages. The other 23
         # had test/ directories that never once executed.

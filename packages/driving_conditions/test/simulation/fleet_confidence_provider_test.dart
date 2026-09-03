@@ -5,9 +5,16 @@ import 'package:test/test.dart';
 
 void main() {
   group('ConstantFleetConfidenceProvider', () {
-    test('defaults to 0.8', () {
-      const provider = ConstantFleetConfidenceProvider();
-      expect(provider.confidence, 0.8);
+    // 0.7.0: `value` is REQUIRED. Up to 0.6.1 it defaulted to 0.8, and the
+    // engines' own defaults leaned on that default, so an absence became an
+    // assertion nobody had typed. `ConstantFleetConfidenceProvider()` no longer
+    // compiles — which is the point, and is why this test asserts the honest
+    // absence form instead.
+    test('there is no default value — absence has its own constructor', () {
+      const absent = ConstantFleetConfidenceProvider.unavailable();
+      expect(absent.confidence, isNull);
+      const asserted = ConstantFleetConfidenceProvider(0.8);
+      expect(asserted.confidence, 0.8);
     });
 
     test('returns the provided value', () {
@@ -137,7 +144,10 @@ void main() {
       expect(adapter.confidence, isNull);
     });
 
-    test('result is clamped to [0.0, 1.0]', () {
+    // 0.7.0 replaced the trailing `.clamp(0.0, 1.0)` with explicit bounds —
+    // `num.clamp` mapped a non-finite mean to 1.0. The GUARANTEE is unchanged
+    // and still asserted here; only the mechanism behind it moved.
+    test('result stays within [0.0, 1.0]', () {
       final adapter = FleetHazardConfidenceAdapter([
         report(RoadCondition.dry),
       ]);
@@ -145,82 +155,69 @@ void main() {
     });
   });
 
-  group('FleetConfidenceProvider injection into SafetyScoreSimulator', () {
-    test('simulator with icy adapter produces lower score than constant 0.8',
-        () {
-      final position = const LatLng(35.1, 136.9);
-      final icyReports = [
+  // 0.7.0: the injection seam is GONE. These two cases used to prove that an
+  // icy adapter lowered `overall` and a dry one raised it — i.e. that a fleet
+  // reading moved the safety score. That is exactly what no longer happens, and
+  // what must not silently come back. They are re-authored to assert the two
+  // halves separately: the adapter still RANKS road conditions correctly, and
+  // the score is INDIFFERENT to it.
+  group('the adapter ranks conditions; the score does not consume it', () {
+    final position = const LatLng(35.1, 136.9);
+    FleetReport report(RoadCondition condition, double confidence) =>
         FleetReport(
           vehicleId: 'v1',
           position: position,
           timestamp: DateTime.now(),
-          condition: RoadCondition.icy,
-          // STATED, not defaulted. fleet_hazard 0.6.0 made this REQUIRED
-          // because up to 0.5.0 it silently defaulted to 0.8, and that
-          // manufactured value was averaged into HazardZone.averageConfidence:
-          // "a confidence you did not state is not a confidence." 0.8 is chosen
-          // deliberately to preserve this test's baseline — its own name is
-          // "lower score than constant 0.8" — so the semantics are unchanged
-          // and now visible instead of implicit.
-          confidence: 0.8,
-        ),
-      ];
+          condition: condition,
+          confidence: confidence,
+        );
 
-      final icyAdapter = FleetHazardConfidenceAdapter(icyReports);
-      final icySimulator = SafetyScoreSimulator(provider: icyAdapter);
-      final defaultSimulator = const SafetyScoreSimulator();
+    test('icy reads lower than dry — the reading is still correct', () {
+      final icy = FleetHazardConfidenceAdapter([
+        report(RoadCondition.icy, 0.8),
+      ]).confidence;
+      final dry = FleetHazardConfidenceAdapter([
+        report(RoadCondition.dry, 0.8),
+      ]).confidence;
 
-      final icyResult = icySimulator.simulate(
-        runs: 200,
-        speed: 60,
-        gripFactor: 0.7,
-        surface: RoadSurfaceState.blackIce,
-        visibilityMeters: 500,
-        seed: 42,
-      );
-      final defaultResult = defaultSimulator.simulate(
-        runs: 200,
-        speed: 60,
-        gripFactor: 0.7,
-        surface: RoadSurfaceState.blackIce,
-        visibilityMeters: 500,
-        seed: 42,
-      );
-
-      expect(
-        icyResult.score.fleetConfidenceScore!,
-        lessThan(defaultResult.score.fleetConfidenceScore!),
-      );
-      expect(icyResult.score.overall, lessThan(defaultResult.score.overall));
+      expect(icy, isNotNull);
+      expect(dry, isNotNull);
+      expect(icy!, lessThan(dry!));
+      expect(dry, closeTo(1.0, 1e-9));
     });
 
-    test('simulator with dry fleet reports produces higher fleet score', () {
-      final position = const LatLng(35.1, 136.9);
-      final dryReports = [
-        FleetReport(
-          vehicleId: 'v1',
-          position: position,
-          timestamp: DateTime.now(),
-          condition: RoadCondition.dry,
-          // STATED, not defaulted — see the icy case above.
-          confidence: 0.8,
-        ),
-      ];
-
-      final dryAdapter = FleetHazardConfidenceAdapter(dryReports);
-      final simulator = SafetyScoreSimulator(provider: dryAdapter);
-
-      final result = simulator.simulate(
-        runs: 100,
-        speed: 50,
-        gripFactor: 0.9,
-        surface: RoadSurfaceState.dry,
-        visibilityMeters: 1000,
-        seed: 7,
+    test('the safety score is byte-identical whatever the fleet says', () {
+      SimulationResult score() => const SafetyScoreSimulator().simulate(
+        runs: 200,
+        speed: 60,
+        gripFactor: 0.7,
+        surface: RoadSurfaceState.blackIce,
+        visibilityMeters: 500,
+        seed: 42,
       );
 
-      // dry fleet → confidence 1.0 > default 0.8 → fleet score > 0.8
-      expect(result.score.fleetConfidenceScore, greaterThan(0.8));
+      // Read three very different fleet answers, then compute the score. There
+      // is no parameter to pass them through, and the score does not change.
+      final answers = [
+        FleetHazardConfidenceAdapter([
+          report(RoadCondition.icy, 0.8),
+        ]).confidence,
+        FleetHazardConfidenceAdapter([
+          report(RoadCondition.dry, 0.8),
+        ]).confidence,
+        const FleetHazardConfidenceAdapter([]).confidence,
+      ];
+      expect(answers[0], isNot(equals(answers[1])));
+      expect(answers[2], isNull);
+
+      expect(score().score.overall, equals(score().score.overall));
+      expect(
+        score().score.overall,
+        closeTo(
+          0.5 * score().score.gripScore + 0.5 * score().score.visibilityScore,
+          1e-12,
+        ),
+      );
     });
   });
 }

@@ -8,6 +8,12 @@ import 'dart:ffi';
 import 'dart:io';
 
 /// Raw result struct returned by the native `simulation_run_batch` function.
+///
+/// ⚑ **The layout changed in 0.7.0.** `fleet_mean` was removed from the C
+/// struct and `fleet_confidence` from the function signature, because the score
+/// has no fleet term (see `SimulatedSafetyScore`). This is an ABI change:
+/// `native/build/libsimulation_engine.so` must be rebuilt from the shipped
+/// `native/native_simulation.c`. A 0.6.x binary will mis-read every field.
 final class NativeSimulationResponse extends Struct {
   /// Mean overall safety score across all Monte Carlo runs.
   @Float()
@@ -20,10 +26,6 @@ final class NativeSimulationResponse extends Struct {
   /// Mean visibility contribution score.
   @Float()
   external double visibilityMean;
-
-  /// Mean fleet-confidence contribution score.
-  @Float()
-  external double fleetMean;
 
   /// Variance of overall safety score across runs.
   @Float()
@@ -46,7 +48,6 @@ typedef _RunBatchNative = NativeSimulationResponse Function(
   Float gripFactor,
   Uint32 surfaceCode,
   Float visibilityMeters,
-  Float fleetConfidence,
 );
 
 /// Dart-side signature after marshalling.
@@ -57,7 +58,6 @@ typedef _RunBatchDart = NativeSimulationResponse Function(
   double gripFactor,
   int surfaceCode,
   double visibilityMeters,
-  double fleetConfidence,
 );
 
 /// Loads the platform-specific native simulation library and provides
@@ -79,7 +79,6 @@ class NativeSimulationBindings {
     required double gripFactor,
     required int surfaceCode,
     required double visibilityMeters,
-    double fleetConfidence = 0.8,
   }) {
     final function = _library.lookupFunction<_RunBatchNative, _RunBatchDart>(
       'simulation_run_batch',
@@ -91,7 +90,6 @@ class NativeSimulationBindings {
       gripFactor,
       surfaceCode,
       visibilityMeters,
-      fleetConfidence,
     );
   }
 

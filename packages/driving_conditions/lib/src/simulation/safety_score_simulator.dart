@@ -1,7 +1,7 @@
 /// Monte Carlo safety score simulator — pure Dart computation.
 ///
 /// Runs N stochastic simulations with jittered inputs to produce
-/// a probabilistic [SafetyScore]. Deterministic seeding for tests.
+/// a probabilistic [SimulatedSafetyScore]. Deterministic seeding for tests.
 ///
 /// Performance gate: 1,000 runs < 200ms in `dart test`.
 ///
@@ -11,35 +11,37 @@ library;
 
 import 'dart:math';
 
-import 'package:navigation_safety_core/navigation_safety_core.dart';
-
 import '../models/road_surface_state.dart';
-import 'constant_fleet_confidence_provider.dart';
 import 'cpu_safety_score_simulation_engine.dart';
-import 'fleet_confidence_provider.dart';
 import 'safety_score_simulation_engine.dart';
 import 'simulated_safety_score.dart';
 import 'simulation_backend.dart';
 import 'simulation_options.dart';
 import 'simulation_result.dart';
 
+/// Front door to the simulation lane.
+///
+/// **0.7.0 removed the `provider:` parameter.** The score has no fleet term —
+/// see [SimulatedSafetyScore]. A consumer with a real fleet source reads it
+/// directly through `FleetHazardConfidenceAdapter`, which is still exported and
+/// still returns `null` when the fleet said nothing.
 class SafetyScoreSimulator {
-  const SafetyScoreSimulator({
-    SafetyScoreSimulationEngine? engine,
-    FleetConfidenceProvider provider = const ConstantFleetConfidenceProvider(),
-  }) : _engine = engine,
-       _provider = provider;
+  /// Creates a simulator, optionally over a specific [engine].
+  const SafetyScoreSimulator({SafetyScoreSimulationEngine? engine})
+    : _engine = engine;
 
   final SafetyScoreSimulationEngine? _engine;
-  final FleetConfidenceProvider _provider;
 
   SafetyScoreSimulationEngine get _effectiveEngine =>
-      _engine ?? CpuSafetyScoreSimulationEngine(provider: _provider);
+      _engine ?? const CpuSafetyScoreSimulationEngine();
 
   /// Run a single simulation with stochastic perturbation.
   ///
   /// Jitter (±10%) is applied to grip and visibility inputs
   /// to model real-world sensor noise.
+  ///
+  /// Throws [ArgumentError] if [speed], [gripFactor] or [visibilityMeters] is
+  /// non-finite.
   SimulatedSafetyScore runOnce({
     required double speed,
     required double gripFactor,
@@ -71,6 +73,9 @@ class SafetyScoreSimulator {
   ///
   /// [runs] defaults to 1000. Provide [seed] for deterministic results
   /// (required for testing).
+  ///
+  /// Throws [ArgumentError] if [speed], [gripFactor] or [visibilityMeters] is
+  /// non-finite.
   SimulationResult simulate({
     int runs = 1000,
     required double speed,

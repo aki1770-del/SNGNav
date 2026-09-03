@@ -102,7 +102,15 @@ void main() {
       expect(result.score.overall, inInclusiveRange(0.0, 1.0));
       expect(result.score.gripScore, inInclusiveRange(0.0, 1.0));
       expect(result.score.visibilityScore, inInclusiveRange(0.0, 1.0));
-      expect(result.score.fleetConfidenceScore, closeTo(0.8, 1e-9));
+      // 0.7.0: the fleet term is removed from the composite entirely. Up to
+      // 0.6.0 this asserted 0.8; 0.6.1 asserted `isNull`.
+      expect(
+        result.score.overall,
+        closeTo(
+          0.5 * result.score.gripScore + 0.5 * result.score.visibilityScore,
+          1e-12,
+        ),
+      );
       expect(result.variance, isNonNegative);
       expect(result.incidentCount, greaterThanOrEqualTo(0));
     });
