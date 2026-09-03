@@ -374,7 +374,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
       // The ONLY path permitted to become silence.
       return null;
     case _NotAssessed(missingInput: final input):
-      eventClass = _radiativeFrostUnmeasured;
+      eventClass = kEventRadiativeFrostInputsNotMeasured;
       missingInput = input;
     case _Hazard(eventClass: final hazard):
       eventClass = hazard;
@@ -438,11 +438,11 @@ Advisory? mapLocationForecastResponseToAdvisory({
 /// and per the contract's asymmetry (positive evidence fires on partial data;
 /// only the BENIGN verdict requires complete data) an unknown must not be
 /// quietly filed as the milder "Subzero forecast".
-const String _freezingPrecipitation = 'Freezing precipitation';
-const String _freezingPrecipUnmeasured =
+const String kEventFreezingPrecipitation = 'Freezing precipitation';
+const String kEventFreezingPrecipNotMeasured =
     'Freezing, precipitation not measured';
-const String _heavyPrecipitation = 'Heavy precipitation';
-const String _subzeroForecast = 'Subzero forecast';
+const String kEventHeavyPrecipitation = 'Heavy precipitation';
+const String kEventSubzeroForecast = 'Subzero forecast';
 
 /// Black ice forming while the air still reads ABOVE zero.
 ///
@@ -459,7 +459,7 @@ const String _subzeroForecast = 'Subzero forecast';
 /// documentation states why: "Two independently-maintained copies of this
 /// threshold logic ARE that disagreement waiting to happen. Both surfaces call
 /// this function so they cannot drift." This adapter WAS a third copy.
-const String _radiativeFrostBlackIce = 'Radiative frost black ice';
+const String kEventRadiativeFrostBlackIce = 'Radiative frost black ice';
 
 /// Saturated air above zero — a hazard this adapter can SEE but cannot ASSESS.
 ///
@@ -474,15 +474,15 @@ const String _radiativeFrostBlackIce = 'Radiative frost black ice';
 /// worse than 0.0.6's. In fog, above zero, with ice forming and nothing
 /// visible, that is D3's worst case. This names the gap instead of leaving it
 /// in a CHANGELOG the driver never reads.
-const String _freezingFogNotAssessed =
-    'Freezing fog risk - above zero, saturated, not assessed by this model';
+const String kEventSaturatedAboveZeroNotAssessed =
+    'Saturated air above zero - not assessed by this model';
 
 /// Freezing-risk band entered with no humidity reading.
 ///
-/// Mirrors [_freezingPrecipUnmeasured]: the above-zero frost window cannot be
+/// Mirrors [kEventFreezingPrecipNotMeasured]: the above-zero frost window cannot be
 /// evaluated without humidity, and "we could not evaluate it" must not be
 /// served to a driver as the benign silence this adapter returned up to 0.0.6.
-const String _radiativeFrostUnmeasured =
+const String kEventRadiativeFrostInputsNotMeasured =
     'Radiative frost, inputs not measured';
 
 /// Cloud ceiling above which the radiative mechanism is suppressed.
@@ -501,7 +501,7 @@ const double kDefaultMetNorwayClearSkyCloudPercentMax = 50.0;
 
 
 /// Relative humidity at or above which the air is treated as saturated, so the
-/// dew-point model is out of scope and [_freezingFogNotAssessed] applies. The
+/// dew-point model is out of scope and [kEventSaturatedAboveZeroNotAssessed] applies. The
 /// calibration's own worked example is +2 C / 95% RH -> dew point ~ +1.3 C,
 /// i.e. not detected.
 const double kMetNorwaySaturatedHumidityPercent = 95.0;
@@ -547,9 +547,9 @@ final class _NotAssessed extends _BandVerdict {
 /// publisher threshold. They carry `possible` certainty and are marked in the
 /// description as ours.
 const Set<String> _derivedClasses = <String>{
-  _radiativeFrostBlackIce,
-  _radiativeFrostUnmeasured,
-  _freezingFogNotAssessed,
+  kEventRadiativeFrostBlackIce,
+  kEventRadiativeFrostInputsNotMeasured,
+  kEventSaturatedAboveZeroNotAssessed,
 };
 
 /// Full classification: the colder, publisher-threshold branches first, then
@@ -573,14 +573,14 @@ _BandVerdict _classify({
       precipitation != null && precipitation >= heavyPrecipitationMmPerHour;
 
   if (freezing && precipitation != null && precipitation > 0) {
-    return const _Hazard(_freezingPrecipitation);
+    return const _Hazard(kEventFreezingPrecipitation);
   }
-  if (heavy) return const _Hazard(_heavyPrecipitation);
+  if (heavy) return const _Hazard(kEventHeavyPrecipitation);
   if (freezing && precipitation == null) {
-    return const _Hazard(_freezingPrecipUnmeasured);
+    return const _Hazard(kEventFreezingPrecipNotMeasured);
   }
   if (freezing && precipitation == 0) {
-    return const _Hazard(_subzeroForecast);
+    return const _Hazard(kEventSubzeroForecast);
   }
 
   return _classifyBand(
@@ -608,8 +608,12 @@ _BandVerdict _classifyBand({
   // ice at -1.0 °C.
   final radiativeFloor =
       freezingTemperatureCelsius > 0.0 ? freezingTemperatureCelsius : 0.0;
-  if (temperature == null ||
-      !temperature.isFinite ||
+  // MUST NOT be benign: an absent or corrupt temperature is the one reading
+  // nothing here can proceed without, and 0.0.7 certified it "assessed".
+  if (temperature == null || !temperature.isFinite) {
+    return const _NotAssessed('air_temperature');
+  }
+  if (
       temperature <= radiativeFloor ||
       temperature > radiativeFrostAmbientCeilingCelsius) {
     // Genuinely outside what this band assesses — the colder branches above
@@ -618,7 +622,18 @@ _BandVerdict _classifyBand({
   }
 
   final wet = precipitation != null && precipitation > 0;
-  final saturated = humidityPercent != null &&
+  // BOUNDED BOTH WAYS. 0.0.7 defined this as `>= 95.0` with no upper bound, so
+  // RH 106/150/200/999 all read as saturated and fired the hazard, while a
+  // mis-wired FRACTION (0.97) was certified assessed-benign inside the
+  // black-ice window. `navigation_safety_calibration` already documents the
+  // plausible band and returns the SAME `false` for five distinct
+  // could-not-classify classes; this stops re-deciding that band and simply
+  // refuses to speak on a reading outside it.
+  final humidityPlausible = humidityPercent != null &&
+      humidityPercent.isFinite &&
+      humidityPercent >= 5.0 &&
+      humidityPercent <= 105.0;
+  final saturated = humidityPlausible &&
       humidityPercent >= kMetNorwaySaturatedHumidityPercent;
   final frost = isRadiativeFrostBlackIce(
     ambientCelsius: temperature,
@@ -626,7 +641,7 @@ _BandVerdict _classifyBand({
   );
 
   // Humidity is the input nothing here can proceed without.
-  if (humidityPercent == null) return const _NotAssessed('relative_humidity');
+  if (!humidityPlausible) return const _NotAssessed('relative_humidity');
 
   // SATURATED AND THE MODEL SAYS NOT-FROST IS THE MODEL'S OWN BLIND SPOT, by
   // construction rather than by a chosen number. The calibration states it:
@@ -645,7 +660,7 @@ _BandVerdict _classifyBand({
   // ⚑ NOT gated on rain. Freezing drizzle in fog just above zero is the
   // canonical glaze-ice generator and D3's compound case: she cannot see AND
   // ice is forming.
-  if (saturated && !frost) return const _Hazard(_freezingFogNotAssessed);
+  if (saturated && !frost) return const _Hazard(kEventSaturatedAboveZeroNotAssessed);
 
   if (frost) {
     // Measured rain rules out the RADIATIVE mechanism — a dry surface cooling
@@ -654,10 +669,25 @@ _BandVerdict _classifyBand({
     // The sky is part of the mechanism, so an unread sky is an unread input —
     // and it can no longer become silence.
     if (cloudPercent == null) return const _NotAssessed('cloud_area_fraction');
-    // Cloud re-radiates longwave back to the surface and suppresses the
-    // cooling. Assessed, and suppressed.
-    if (cloudPercent > clearSkyCloudPercentMax) return const _AssessedBenign();
-    return const _Hazard(_radiativeFrostBlackIce);
+    // ⚑ 0.0.7 returned _AssessedBenign here — silence — while its own CHANGELOG
+    // promised "a wrong threshold can downgrade a finding, never hide one".
+    // Both limbs were false, and a gate measured the cost: at +0.5 °C the shared
+    // calibration finds black ice on 1,389 of 1,613 live dry slices and this
+    // adapter spoke on 382, silent on 1,007 (72.5 %) — with cloud > 50 % being
+    // 75.8 % of live Nordic slices, i.e. the normal case.
+    //
+    // Cloud genuinely suppresses the radiative mechanism, but that is OUR
+    // judgement layered on top of a calibration that made a positive finding
+    // and does not consider cloud at all. Overriding it with a chosen threshold
+    // is the third-copy defect this adapter was repaired for once already. The
+    // finding is downgraded and NAMED, never silenced.
+    if (cloudPercent > clearSkyCloudPercentMax) {
+      return const _NotAssessed(
+        'clear-sky confirmation (cloud suppresses the mechanism, '
+        'but does not rule out ice)',
+      );
+    }
+    return const _Hazard(kEventRadiativeFrostBlackIce);
   }
 
   return const _AssessedBenign();
@@ -680,19 +710,19 @@ AdvisorySeverity _deriveSeverity({
   //   risk but no active fall).
   // - minor: otherwise (defensive default; classify() would have
   //   returned null in that case).
-  if (eventClass == _freezingPrecipitation &&
+  if (eventClass == kEventFreezingPrecipitation &&
       precipitation != null &&
       precipitation >= heavyPrecipitationMmPerHour) {
     return AdvisorySeverity.extreme;
   }
-  if (eventClass == _freezingPrecipitation) return AdvisorySeverity.severe;
-  if (eventClass == _heavyPrecipitation) return AdvisorySeverity.severe;
+  if (eventClass == kEventFreezingPrecipitation) return AdvisorySeverity.severe;
+  if (eventClass == kEventHeavyPrecipitation) return AdvisorySeverity.severe;
   // Freezing, and nobody measured whether anything is falling. This is NOT the
   // milder "subzero, dry" case — we do not know that it is dry. The severity is
   // therefore UNSTATED (never `moderate` by default): an unmeasured field must
   // not buy a downgrade. `AdvisorySeverity.unknown` ranks above minor/moderate
   // in every consumer that ranks honestly.
-  if (eventClass == _freezingPrecipUnmeasured) return AdvisorySeverity.unknown;
+  if (eventClass == kEventFreezingPrecipNotMeasured) return AdvisorySeverity.unknown;
   // SEVERE, and the comment that used to sit here said the opposite of what
   // shipped: it claimed this was ranked away from `Subzero forecast` while
   // returning the same `moderate`. It also asserted "not a cry-wolf channel",
@@ -714,14 +744,14 @@ AdvisorySeverity _deriveSeverity({
   //  * VSS `Vehicle.Safety.RoadIcingState` — built on signals from this
   //    catalogue — makes `RISK` ("conditions favor ice formation") a
   //    first-class safety state beside `DETECTED`. This class is RISK exactly.
-  if (eventClass == _radiativeFrostBlackIce) return AdvisorySeverity.severe;
+  if (eventClass == kEventRadiativeFrostBlackIce) return AdvisorySeverity.severe;
   // A hazard whose conditions we can see and explicitly cannot assess. Never
   // `minor`, never silence - UNSTATED, like every other unmeasured verdict here.
-  if (eventClass == _freezingFogNotAssessed) return AdvisorySeverity.unknown;
+  if (eventClass == kEventSaturatedAboveZeroNotAssessed) return AdvisorySeverity.unknown;
   // Unmeasured: severity UNSTATED, never `moderate` by default. Same rule as
-  // [_freezingPrecipUnmeasured] — absence buys no downgrade.
-  if (eventClass == _radiativeFrostUnmeasured) return AdvisorySeverity.unknown;
-  if (eventClass == _subzeroForecast) return AdvisorySeverity.moderate;
+  // [kEventFreezingPrecipNotMeasured] — absence buys no downgrade.
+  if (eventClass == kEventRadiativeFrostInputsNotMeasured) return AdvisorySeverity.unknown;
+  if (eventClass == kEventSubzeroForecast) return AdvisorySeverity.moderate;
   return AdvisorySeverity.minor;
 }
 

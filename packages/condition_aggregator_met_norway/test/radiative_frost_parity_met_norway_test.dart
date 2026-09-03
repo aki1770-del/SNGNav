@@ -96,7 +96,11 @@ void main() {
     test('OVERCAST is not black ice — cloud suppresses the mechanism the class '
         'is named for, and 84% of 0.1.0 fires were under cloud >= 80%', () {
       final overcast = frostCase(cloud: 100.0);
-      expect(overcast, isNull);
+      expect(overcast!.eventClass, isNot('Radiative frost black ice'));
+      // ⚑ and it is NOT silence: 0.0.7 returned null here while its CHANGELOG
+      // promised a wrong threshold "can downgrade a finding, never hide one".
+      expect(overcast.eventClass, contains('inputs not measured'));
+      expect(overcast.description, contains('clear-sky confirmation'));
 
       // The identical slice with a clear sky DOES fire — so this test is
       // measuring the sky and not something else.
@@ -160,7 +164,7 @@ void main() {
               cloudPercent: 100.0, symbolCode: 'fog'),
         );
         expect(a, isNotNull, reason: 'silent at $t C, inside the blind spot');
-        expect(a!.eventClass, contains('Freezing fog risk'));
+        expect(a!.eventClass, contains('Saturated air above zero'));
         expect(a.severity, AdvisorySeverity.unknown);
       }
     });
@@ -178,7 +182,7 @@ void main() {
               cloudPercent: cloud),
         );
         expect(a, isNotNull, reason: 'silent under cloud $cloud');
-        expect(a!.eventClass, contains('Freezing fog risk'));
+        expect(a!.eventClass, contains('Saturated air above zero'));
       }
     });
 
@@ -214,7 +218,7 @@ void main() {
               cloudPercent: 0.0, symbolCode: 'sleet'),
         );
         expect(a, isNotNull, reason: 'silent at precipitation $mm mm');
-        expect(a!.eventClass, contains('Freezing fog risk'));
+        expect(a!.eventClass, contains('Saturated air above zero'));
       }
     });
 
@@ -310,8 +314,10 @@ void main() {
       final overcast = response(
           tempC: 2.0, precipitationMm: 0.0, humidityPercent: 60.0,
           cloudPercent: 80.0);
-      // Default 50 % — 80 % overcast suppresses.
-      expect(mapLocationForecastResponseToAdvisory(response: overcast), isNull);
+      // Default 50 % — 80 % overcast downgrades, and SAYS SO.
+      final suppressed = mapLocationForecastResponseToAdvisory(response: overcast);
+      expect(suppressed!.eventClass, isNot('Radiative frost black ice'));
+      expect(suppressed.eventClass, contains('inputs not measured'));
       // An integrator who accepts more cloud gets the finding.
       expect(
         mapLocationForecastResponseToAdvisory(
@@ -364,6 +370,91 @@ void main() {
       );
       expect(a!.eventClass, 'Freezing precipitation');
       expect(a.description, contains('relative_humidity not reported'));
+    });
+  });
+
+  group('0.0.8 — the recall patch, one test per live defect', () {
+    test('MUST-1: the four constants 0.0.6 exported are back, with the same '
+        'values — 0.0.7 DELETED them inside the caret range', () {
+      // 0.0.6 shipped these under a doc saying they exist "so a consumer can
+      // branch on them without matching literal strings that a future release
+      // might reword". 0.0.7 removed the constants AND reworded.
+      expect(kEventFreezingPrecipitation, 'Freezing precipitation');
+      expect(kEventFreezingPrecipNotMeasured,
+          'Freezing, precipitation not measured');
+      expect(kEventHeavyPrecipitation, 'Heavy precipitation');
+      expect(kEventSubzeroForecast, 'Subzero forecast');
+      // and the classes this release added are exported too, so the same trap
+      // cannot recur on them.
+      expect(kEventRadiativeFrostBlackIce, isNotEmpty);
+      expect(kEventSaturatedAboveZeroNotAssessed, isNotEmpty);
+      expect(kEventRadiativeFrostInputsNotMeasured, isNotEmpty);
+    });
+
+    test('MUST-2: a cloud reading above the ceiling can DOWNGRADE a finding, '
+        'never hide one — which is what the CHANGELOG already promised', () {
+      for (final cloud in <double>[50.1, 60.0, 80.0, 100.0]) {
+        final a = mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 2.0, precipitationMm: 0.0, humidityPercent: 70.0,
+              cloudPercent: cloud),
+        );
+        expect(a, isNotNull, reason: 'silent at cloud $cloud');
+        expect(a!.severity, isNot(AdvisorySeverity.severe));
+      }
+      // control: at the ceiling it is still the full finding
+      expect(
+        mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 2.0, precipitationMm: 0.0, humidityPercent: 70.0,
+              cloudPercent: 50.0),
+        )!.eventClass,
+        'Radiative frost black ice',
+      );
+    });
+
+    test('MUST-5: an implausible humidity is NEVER assessed-benign, and never '
+        'fires a hazard', () {
+      // Above the band: 0.0.7 read these as "saturated" and fired.
+      for (final rh in <double>[106.0, 150.0, 200.0, 999.0]) {
+        final a = mapLocationForecastResponseToAdvisory(
+          response: response(
+              tempC: 2.0, precipitationMm: 0.0, humidityPercent: rh,
+              cloudPercent: 10.0),
+        );
+        expect(a!.eventClass, contains('inputs not measured'),
+            reason: 'RH $rh produced a hazard');
+      }
+      // A mis-wired FRACTION: 0.0.7 certified this benign inside the
+      // black-ice window.
+      final frac = mapLocationForecastResponseToAdvisory(
+        response: response(
+            tempC: 1.5, precipitationMm: 0.0, humidityPercent: 0.97,
+            cloudPercent: 5.0),
+      );
+      expect(frac, isNotNull, reason: 'a mis-wired fraction became silence');
+      expect(frac!.eventClass, contains('inputs not measured'));
+    });
+
+    test('MUST-6: an absent or non-finite air_temperature is NOT benign', () {
+      final absent = mapLocationForecastResponseToAdvisory(
+        response: {
+          'geometry': {'type': 'Point', 'coordinates': [18.96, 69.65]},
+          'properties': {
+            'timeseries': [
+              {
+                'time': '2026-01-15T07:00:00Z',
+                'data': {
+                  'instant': {'details': {'relative_humidity': 70.0}},
+                  'next_1_hours': {'details': {'precipitation_amount': 0.0}},
+                },
+              },
+            ],
+          },
+        },
+      );
+      expect(absent, isNotNull, reason: 'a missing temperature became silence');
+      expect(absent!.description, contains('air_temperature'));
     });
   });
 }
