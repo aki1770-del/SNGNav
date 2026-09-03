@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.1.0
+## 0.0.7
+
+⚑ **Released as `0.0.7`, not `0.1.0`, and the reason is reach.** `^0.0.6` resolves
+to `>=0.0.6 <0.1.0` under Dart's caret rule, so `0.1.0` crosses the wall and a
+caret-pinned consumer could **never** receive it. The minor bump was chosen to
+signal that `0.0.x` understated a package implementing the full provider
+contract — a signalling argument, whose price was that the fix could not arrive.
+An in-range patch is the only vehicle that reaches an existing consumer.
 
 **This adapter could not see black ice forming above 0 °C.** Its coldest gate was
 `air_temperature <= 0` — the exact threshold `navigation_safety_calibration`
