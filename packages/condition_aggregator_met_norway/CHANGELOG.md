@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.0.8
+
+**RECALL PATCH. 0.0.7 shipped a breaking change inside the caret range and a
+false safety claim in its own CHANGELOG. Both are repaired here.** An in-range
+patch is the only vehicle that reaches a consumer already resolved to 0.0.7;
+retraction would not un-break anyone.
+
+### 1. Restored: four constants 0.0.7 deleted from the public API
+
+`kEventFreezingPrecipitation`, `kEventFreezingPrecipNotMeasured`,
+`kEventHeavyPrecipitation` and `kEventSubzeroForecast` were exported by 0.0.6
+under a doc saying they exist *"so a consumer can branch on them without
+matching literal strings that a future release might reword."* **0.0.7 removed
+the constants and reworded the strings.** `^0.0.6` admits 0.0.7, so `pub get`
+alone broke an unchanged consumer with `undefined_identifier`. They are back
+with identical values, and the three classes added in 0.0.7 are now exported as
+constants too — `kEventRadiativeFrostBlackIce`,
+`kEventSaturatedAboveZeroNotAssessed`, `kEventRadiativeFrostInputsNotMeasured` —
+so the same trap cannot recur on them.
+
+### 2. ⚑ 0.0.7's CHANGELOG made a safety claim its code did not honour
+
+0.0.7 stated: *"50 % remains a chosen figure — but it can no longer cause
+silence. Above it, or with the sky unread, the verdict is `_NotAssessed`, not
+`null`: a wrong threshold can downgrade a finding, never hide one."*
+
+**Both limbs were false.** Above the ceiling the code returned the one verdict
+permitted to become silence. Measured on 1,613 live api.met.no slices: at
++0.5 °C the shared calibration finds black ice on 1,389 dry slices, 0.0.7 spoke
+on 382 and was **silent on 1,007 — 72.5 %**; and cloud above 50 % is **75.8 %**
+of live Nordic slices, so this was the normal case, not an edge. Worse, an
+integrator reading that sentence had been told in writing that the threshold
+could not hide anything, so had no reason to raise it.
+
+**0.0.8 makes the sentence true.** Above the ceiling the verdict is now
+`_NotAssessed`, and the advisory names what is missing: *clear-sky confirmation
+(cloud suppresses the mechanism, but does not rule out ice)*. Cloud genuinely
+suppresses radiative cooling — but that is this package's judgement layered over
+a calibration that made a positive finding and does not consider cloud at all.
+Overriding it with a chosen threshold is the duplicate-judgement defect this
+adapter was repaired for once already.
+
+### 3. The saturated-air class no longer claims evidence it cannot have
+
+Renamed from *"Freezing fog risk …"* to **`Saturated air above zero - not
+assessed by this model`**. The adapter fetches the `compact` product, in which
+`fog_area_fraction` does not appear at all — it exists only in `complete` — so a
+class asserting fog was resting on relative humidity alone. What it detects is
+what it is now called: saturated air above zero, where the dew-point model
+explicitly does not reach. Freezing fog remains the hazard it cannot rule out,
+and that belongs in this note rather than in the event name.
+
+### 4. Implausible readings are never "assessed, benign"
+
+`saturated` was `>= 95.0` with no upper bound, so RH 106 / 150 / 200 / 999 all
+read as saturated and fired a hazard, while a mis-wired **fraction** (`0.97`)
+was certified benign inside the black-ice window. Humidity is now bounded to the
+plausible band the calibration already documents, and anything outside it — like
+an absent or non-finite `air_temperature`, which 0.0.7 also certified benign —
+returns `_NotAssessed` naming the reading.
+
+### Verification
+
+47 tests, analyzer clean, one test per defect above. The sealed-verdict
+exhaustive switch introduced in 0.0.7 is unchanged and still holds: deleting a
+case does not compile.
+
 ## 0.0.7
 
 ⚑ **Released as `0.0.7`, not `0.1.0`, and the reason is reach.** `^0.0.6` resolves

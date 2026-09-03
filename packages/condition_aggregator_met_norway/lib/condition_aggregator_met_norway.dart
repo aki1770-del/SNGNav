@@ -45,4 +45,11 @@ export 'src/met_norway_advisory_provider.dart'
         kDefaultMetNorwayHeavyPrecipitationMmPerHour,
         kDefaultMetNorwayFreezingTemperatureCelsius,
         kDefaultMetNorwayClearSkyCloudPercentMax,
-        kMetNorwaySaturatedHumidityPercent;
+        kMetNorwaySaturatedHumidityPercent,
+        kEventFreezingPrecipitation,
+        kEventFreezingPrecipNotMeasured,
+        kEventHeavyPrecipitation,
+        kEventSubzeroForecast,
+        kEventRadiativeFrostBlackIce,
+        kEventSaturatedAboveZeroNotAssessed,
+        kEventRadiativeFrostInputsNotMeasured;
