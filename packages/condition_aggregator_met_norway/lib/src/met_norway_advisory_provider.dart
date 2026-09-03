@@ -16,6 +16,7 @@ import 'dart:convert';
 
 import 'package:condition_aggregator/condition_aggregator.dart';
 import 'package:http/http.dart' as http;
+import 'package:navigation_safety_calibration/navigation_safety_calibration.dart';
 
 /// Default MET Norway locationforecast endpoint — the compact product
 /// returning hourly + multi-hour-summary forecasts as GeoJSON Point.
@@ -329,10 +330,17 @@ Advisory? mapLocationForecastResponseToAdvisory({
   // (2) it printed "next_1_hours precipitation_amount 0.0 mm" into the
   // driver-facing description for a figure the feed never sent.
   final precipitation = _readNum(next1Details?['precipitation_amount']);
+    // NULLABLE, and read from a payload we were ALREADY fetching and
+    // discarding. `relative_humidity` is present in the `compact` product
+    // (measured live at api.met.no on 2026-09-03), so this costs no extra
+    // request and no extra byte. Up to 0.0.6 this adapter dropped it, and
+    // with it the whole above-zero radiative-frost window — see [_classify].
+    final humidityPercent = _readNum(instantDetails?['relative_humidity']);
 
   final eventClass = _classify(
     temperature: temperature,
     precipitation: precipitation,
+      humidityPercent: humidityPercent,
     heavyPrecipitationMmPerHour: heavyPrecipitationMmPerHour,
     freezingTemperatureCelsius: freezingTemperatureCelsius,
   );
@@ -361,6 +369,7 @@ Advisory? mapLocationForecastResponseToAdvisory({
   final description = _composeDescription(
     temperature: temperature,
     precipitation: precipitation,
+      humidityPercent: humidityPercent,
     symbolCode: next1Symbol,
   );
 
@@ -392,9 +401,35 @@ const String _freezingPrecipUnmeasured =
 const String _heavyPrecipitation = 'Heavy precipitation';
 const String _subzeroForecast = 'Subzero forecast';
 
+/// Black ice forming while the air still reads ABOVE zero.
+///
+/// Added 0.1.0. Until then this adapter's coldest gate was
+/// `air_temperature <= 0`, which is the exact threshold
+/// `navigation_safety_calibration` documents as missing this window:
+/// "a 'warn below 0 °C ambient' threshold misses this window". Under clear-sky
+/// radiative cooling the road surface falls toward the dew point and surface
+/// moisture freezes while the air reads +1…+3 °C. A driver reading a Norwegian
+/// or Finnish forecast got nothing at all in that band.
+///
+/// The classification is NOT computed here. It is delegated to
+/// [isRadiativeFrostBlackIce] in `navigation_safety_calibration`, whose own
+/// documentation states why: "Two independently-maintained copies of this
+/// threshold logic ARE that disagreement waiting to happen. Both surfaces call
+/// this function so they cannot drift." This adapter WAS a third copy.
+const String _radiativeFrostBlackIce = 'Radiative frost black ice';
+
+/// Freezing-risk band entered with no humidity reading.
+///
+/// Mirrors [_freezingPrecipUnmeasured]: the above-zero frost window cannot be
+/// evaluated without humidity, and "we could not evaluate it" must not be
+/// served to a driver as the benign silence this adapter returned up to 0.0.6.
+const String _radiativeFrostUnmeasured =
+    'Radiative frost, humidity not measured';
+
 String? _classify({
   required double? temperature,
   required double? precipitation,
+  required double? humidityPercent,
   required double heavyPrecipitationMmPerHour,
   required double freezingTemperatureCelsius,
 }) {
@@ -412,6 +447,28 @@ String? _classify({
   if (heavy) return _heavyPrecipitation;
   if (freezing && precipitation == null) return _freezingPrecipUnmeasured;
   if (freezing && precipitation == 0) return _subzeroForecast;
+
+  // CAUTION-ADD-ONLY, and placed here deliberately: every branch above is a
+  // colder or wetter finding and keeps precedence. This can only speak in the
+  // band where 0.0.6 returned `null` — i.e. it never downgrades or replaces an
+  // existing classification, matching the calibration's own guarantee that the
+  // effective estimate never exceeds ambient.
+  if (temperature != null && temperature.isFinite) {
+    if (isRadiativeFrostBlackIce(
+      ambientCelsius: temperature,
+      humidityRHPercent: humidityPercent,
+    )) {
+      return _radiativeFrostBlackIce;
+    }
+    // Inside the calibration's ambient ceiling but with no humidity to test
+    // against. The window cannot be ruled OUT, and an unmeasured field must not
+    // buy silence any more than it may buy a downgrade.
+    if (humidityPercent == null &&
+        temperature > freezingTemperatureCelsius &&
+        temperature <= radiativeFrostAmbientCeilingCelsius) {
+      return _radiativeFrostUnmeasured;
+    }
+  }
   return null;
 }
 
@@ -445,6 +502,15 @@ AdvisorySeverity _deriveSeverity({
   // not buy a downgrade. `AdvisorySeverity.unknown` ranks above minor/moderate
   // in every consumer that ranks honestly.
   if (eventClass == _freezingPrecipUnmeasured) return AdvisorySeverity.unknown;
+  // Ice ON the road, not merely a cold road: ranked with the other
+  // ice-on-surface findings rather than with `Subzero forecast`, which is only
+  // "cold, and nothing is falling". The calibration is already conservative
+  // here — a +3 °C ambient ceiling and no firing on saturated air — so this is
+  // not a cry-wolf channel.
+  if (eventClass == _radiativeFrostBlackIce) return AdvisorySeverity.severe;
+  // Unmeasured: severity UNSTATED, never `moderate` by default. Same rule as
+  // [_freezingPrecipUnmeasured] — absence buys no downgrade.
+  if (eventClass == _radiativeFrostUnmeasured) return AdvisorySeverity.unknown;
   if (eventClass == _subzeroForecast) return AdvisorySeverity.moderate;
   return AdvisorySeverity.minor;
 }
@@ -475,6 +541,7 @@ String _composeHeadline({
 String _composeDescription({
   required double? temperature,
   required double? precipitation,
+  required double? humidityPercent,
   required String? symbolCode,
 }) {
   final parts = <String>[];
@@ -491,6 +558,14 @@ String _composeDescription({
     );
   } else {
     parts.add('next_1_hours precipitation_amount not reported');
+  }
+  // Same rule as precipitation: a figure the feed did not send is named as
+  // absent rather than omitted, because a reader cannot tell an omitted line
+  // from a measured benign one.
+  if (humidityPercent != null) {
+    parts.add('relative_humidity ${humidityPercent.toStringAsFixed(1)} %');
+  } else {
+    parts.add('relative_humidity not reported');
   }
   if (symbolCode != null) parts.add('symbol_code $symbolCode');
   parts.add(AdvisorySource.metNorway.attributionString);

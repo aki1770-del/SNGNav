@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.1.0
+
+**This adapter could not see black ice forming above 0 °C, and that is the
+window most likely to catch a driver out.** Its coldest gate was
+`air_temperature <= 0` — the exact threshold `navigation_safety_calibration`
+documents as missing this case: *"a 'warn below 0 °C ambient' threshold misses
+this window."* Under clear-sky radiative cooling the road surface falls toward
+the dew point and surface moisture freezes while the air still reads +1…+3 °C.
+Until now this adapter returned **nothing at all** in that band.
+
+Additive: two new event classes, no removals, no signature changes.
+
+- **`Radiative frost black ice`** (`severe`) — ice on the road while the air is
+  above zero. Ranked with the other ice-on-surface findings rather than with
+  `Subzero forecast`, which only means "cold, and nothing is falling".
+- **`Radiative frost, humidity not measured`** (`unknown`) — inside the frost
+  band with no humidity to evaluate. The window cannot be ruled *out*, and an
+  unmeasured field buys no more silence than it buys a downgrade. Same rule this
+  package already applies to `Freezing, precipitation not measured`.
+
+**The classification is delegated, not re-implemented.** It calls
+`isRadiativeFrostBlackIce` from `navigation_safety_calibration`, whose own
+documentation says why: *"Two independently-maintained copies of this threshold
+logic ARE that disagreement waiting to happen. Both surfaces call this function
+so they cannot drift."* **This adapter had been a third copy.** You therefore
+inherit that function's documented scope exactly — including that it does **not**
+fire on near-saturated air above zero, so **freezing fog is not covered by it**.
+
+**Caution-add-only.** Every colder or wetter classification keeps precedence;
+this can only speak where 0.0.6 returned `null`. It never downgrades or replaces
+an existing finding.
+
+**No new network cost.** `relative_humidity` was already present in the
+`compact` payload this adapter fetches (verified live against api.met.no,
+2026-09-03) and was being parsed past and discarded. No extra request, no extra
+byte, no endpoint change.
+
+**Why the minor bump rather than a patch.** `0.0.x` told an integrator
+"experimental" about a package that already implemented the full provider
+contract. That understated it, and version numbers are how a developer decides
+whether to depend on you.
+
 ## 0.0.6
 
 ### Safety defect in 0.0.5 and earlier — please read
