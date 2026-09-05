@@ -1,4 +1,4 @@
-// Re-exported from snow_rendering (SNGNav P1, D-SC22-2).
+// Re-exported from snow_rendering.
 //
 // This re-export was MISSING up to 0.5.4: `DrivingConditionAssessment` was
 // re-exported, but the type of its `recommendedResponse` field was not — so a

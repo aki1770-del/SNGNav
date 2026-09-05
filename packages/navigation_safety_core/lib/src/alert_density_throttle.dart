@@ -36,34 +36,27 @@ import 'driver_profile.dart';
 
 /// Per-profile alert-density throttle.
 ///
-/// Loom Protocol vision attribution (3 slots — see `LOOMS.md` for the
-/// cross-reference table and the SPA AI loom-authoring guide for the
-/// canonical convention):
+/// Design rationale:
 ///
-/// - `sakichi_vision_id: 14` — silent-failure / anti-Jidoka. The
-///   failure this loom prevents is alert-fatigue: the app fires more
+/// - **Failure mode this prevents** — alert fatigue: the app fires more
 ///   advisory alerts than the driver can process, the driver
 ///   desensitizes, and a later safety-critical alert lands on a
-///   desensitized state. The throttle is the Jidoka halt that catches
-///   the broken thread (over-warning) before the desensitization
-///   compounds.
-/// - `method_vision_ids: [77, 18, 99]` — genchi-genbutsu (per-profile
-///   caps anchored in PMC12181921 + PMC7283540 + PubMed 16313881 +
-///   PubMed 22664714 + AAA-FTS + arxiv 2410.06388 — the literature is
-///   the gemba); 5-Whys-mechanism (terminates at "the cap was absent,"
-///   not at blame); write-decision-down (the cap table itself is the
-///   recorded decision in `defaultCapFor`).
-/// - `stance_vision_ids: [22, 100]` — loom-serves-weaver (the
-///   throttle protects the driver, not the app); equal-dignity
-///   per-profile (each driver class gets a literature-anchored cap
-///   that matches its actual reaction-time and overwhelm characteristics
-///   — no class is treated as second-tier).
+///   desensitized driver. The throttle stops the over-warning before
+///   that desensitization compounds.
+/// - **How it works** — per-profile caps are anchored in PMC12181921,
+///   PMC7283540, PubMed 16313881, PubMed 22664714, AAA-FTS and
+///   arxiv 2410.06388. The cap table in `defaultCapFor` is the
+///   recorded decision.
+/// - **What it will not do** — it throttles the app, never the driver.
+///   Each driver class gets a literature-anchored cap matched to its
+///   own reaction-time and overwhelm characteristics; no class is
+///   treated as second-tier.
 ///
 /// Maintains a sliding rolling window of fired-alert timestamps and
 /// gates new alerts against [alertsPerMinuteCap]. Critical alerts
 /// bypass the cap when [bypassForCritical] is true (the default and
 /// recommended setting; documented invariant — any future change to
-/// this default requires governance ratification).
+/// this default is a breaking change).
 ///
 /// Edge-case behavior (documented in code comments next to each rule):
 ///

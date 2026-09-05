@@ -1,20 +1,20 @@
-/// Runtime looms — guards that fire INSIDE the consuming app to catch
-/// failure modes the Loom Protocol vocabulary names.
+/// Runtime looms — guards that run INSIDE the consuming app to catch
+/// alerting failure modes at the package boundary.
 ///
-/// Each loom in this barrel carries a 3-slot vision attribution
-/// (`sakichi_vision_id` / `method_vision_ids` / `stance_vision_ids`)
-/// in its class-level doc-comment, matching the convention documented
-/// in the SPA AI loom-authoring guide:
-/// https://github.com/aki1770-del/spa-ai/blob/main/docs/loom_authoring_guide.md
+/// A *loom*, in this package, is a single guard that catches one named
+/// failure mode. The word is this package's own vocabulary and appears
+/// in its public API (`LoomFitTelemetry`, `LoomFitOutcome`); it carries
+/// no meaning beyond "one guard, one failure mode".
 ///
-/// SPA AI ships *build-time* looms in Python (one Jidoka halt per loom,
-/// installed via PR). `navigation_safety_core` ships *runtime* looms in
-/// Pure Dart (one Jidoka halt per loom, instantiated by the consuming
-/// app). Both sets share the same Loom Protocol vocabulary; the 3-slot
-/// vision attribution is the cross-language binding.
+/// Each loom in this barrel documents, in its class-level doc comment,
+/// the failure mode it prevents, the evidence its behaviour is anchored
+/// in, and the boundary it keeps between this package and the
+/// integrating application.
 ///
-/// See `LOOMS.md` at the package root for the cross-reference table
-/// and per-loom vision attribution.
+/// These are *runtime* guards: the consuming app constructs and owns
+/// them, and they run in-process on the app's own data. They are
+/// advisory-only — none of them actuates the vehicle, performs I/O, or
+/// depends on Flutter.
 library;
 
 export 'alert_density_throttle.dart';

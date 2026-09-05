@@ -1,4 +1,4 @@
-/// Automotive-grade privacy consent with Jidoka semantics.
+/// Automotive-grade privacy consent with fail-closed semantics.
 ///
 /// Provides a three-state consent gate ([ConsentStatus]) where UNKNOWN is
 /// treated as DENIED — the pipeline stops itself until the driver explicitly
@@ -13,7 +13,7 @@
 ///
 /// final service = InMemoryConsentService();
 ///
-/// // Check before sending fleet data — Jidoka gate
+/// // Check before sending fleet data — the consent gate
 /// final consent = await service.getConsent(ConsentPurpose.fleetLocation);
 /// if (!consent.isEffectivelyGranted) {
 ///   // Pipeline stops. No data leaves the device.

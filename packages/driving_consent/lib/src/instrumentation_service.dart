@@ -5,10 +5,10 @@
 /// in-memory test implementation for a persistent, encrypted-at-rest
 /// implementation per jurisdiction. The package boundary stays the same.
 ///
-/// Jidoka discipline at the gate boundary:
+/// Fail-closed discipline at the gate boundary:
 ///   * `recordEvent` throws `StateError` if the corresponding consent
 ///     status is not explicitly granted. UNKNOWN equals DENIED — the
-///     line stops itself.
+///     call is refused rather than recorded.
 ///   * `readEvents` enforces the same gate on the way out: it queries the
 ///     consent service per purpose and excludes any purpose whose consent
 ///     is not effectively granted. Revoking consent stops reads, not just
@@ -27,9 +27,9 @@ abstract class InstrumentationService {
   /// Record an instrumentation event for a given purpose.
   ///
   /// Throws `StateError` if consent for [purpose] is not explicitly granted
-  /// (UNKNOWN equals DENIED). The exception preserves the Jidoka discipline:
-  /// silent integrators cannot accidentally harvest data the driver never
-  /// authorized.
+  /// (UNKNOWN equals DENIED). Throwing rather than silently dropping is
+  /// deliberate: an integrator cannot accidentally harvest data the driver
+  /// never authorized, and cannot miss that it was refused.
   Future<void> recordEvent(ConsentPurpose purpose, InstrumentationEvent event);
 
   /// Read recorded events, optionally filtered by purpose and time window.

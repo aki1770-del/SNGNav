@@ -1,7 +1,7 @@
 /// In-memory consent service — non-persistent implementation.
 ///
 /// Stores consent records in a map. No persistence across restarts.
-/// All purposes start as UNKNOWN (Jidoka: effectively denied).
+/// All purposes start as UNKNOWN (fail-closed: effectively denied).
 ///
 /// For persistent storage, implement [ConsentService] with your
 /// preferred backing store (SQLite, Hive, SharedPreferences, etc.).

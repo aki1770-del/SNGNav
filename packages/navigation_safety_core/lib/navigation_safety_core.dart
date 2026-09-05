@@ -3,7 +3,7 @@
 /// These types live outside `navigation_safety` so that pure-Dart
 /// consumers (e.g. `driving_conditions`) can depend on the vocabulary
 /// without inheriting `navigation_safety`'s Flutter + BLoC + widget
-/// dependency tree (D-SC22-4 boundary).
+/// dependency tree.
 ///
 /// The full `navigation_safety` package re-exports everything here
 /// for back-compat, so consumers that don't care about the Pure Dart
@@ -13,9 +13,8 @@
 ///
 /// Runtime looms — `AlertDensityThrottle` and `AlertExplainer` — are
 /// also surfaced as a category via `package:navigation_safety_core/
-/// src/looms.dart` (added in 0.4.1). See `LOOMS.md` at the package
-/// root for the runtime-loom catalog and 3-slot vision-attribution
-/// cross-reference.
+/// src/looms.dart` (added in 0.4.1). A *loom*, in this package, is a
+/// single guard that catches one named failure mode.
 library;
 
 // Calibration primitives now live in the standalone

@@ -510,16 +510,15 @@ const double kMetNorwaySaturatedHumidityPercent = 95.0;
 /// is nothing to say" and "I could not assess this" can never again be the same
 /// return value.
 ///
-/// ⚑ THIS TYPE EXISTS BECAUSE A BARE `null` MEANT BOTH, AND THAT ONE
-/// OVERLOADING PRODUCED EVERY DEFECT THREE ADVERSARIAL GATE ROUNDS FOUND.
-/// Sakichi Vision 14: "a function that returns a success-shaped value while the
-/// operation failed is a loom weaving through a broken warp." Vision 15 ranks
-/// the remedies — "best is CANNOT BE DONE WRONG; next is detected instantly;
-/// worst is found downstream" — and three rounds of re-ordering conditions was
-/// `found downstream`, three times. Vision 89: a type checker is poka-yoke, it
-/// makes a class of defect structurally impossible to commit. Dart's exhaustive
-/// switch over a sealed type is that fixture: a path that forgets to say which
-/// of the three it means will not compile.
+/// This type exists because a bare `null` meant both, and that single
+/// overloading produced every defect three adversarial review rounds found.
+/// A function that returns a success-shaped value while the operation
+/// actually failed hides that failure from every caller downstream.
+/// Re-ordering the conditions was tried three times, and each time the
+/// defect was still only found downstream. Making the distinction a type
+/// instead makes the whole class of defect impossible to write: Dart's
+/// exhaustive switch over a sealed type means a path that forgets to say
+/// which of the three it means will not compile.
 sealed class _BandVerdict {
   const _BandVerdict();
 }

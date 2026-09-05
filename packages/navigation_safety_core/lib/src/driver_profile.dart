@@ -4,10 +4,10 @@
 /// fits a generic driver. Real driver populations are not generic — a
 /// 70-year-old novice EV driver in rural Akita has different cognitive
 /// load and reaction profile than a 40-year-old snow-zone commuter or
-/// a 25-year-old urban novice. Per the V100 equal-dignity principle of
-/// the Sakichi Principle Actuator unit, each driver-class deserves
-/// defaults that fit them — the same loom should serve all generations,
-/// but the loom's defaults should differentiate.
+/// a 25-year-old urban novice. Each driver class deserves defaults that
+/// fit it: one package should serve every generation of driver, and its
+/// defaults should differentiate between them rather than average them
+/// into a single profile that fits none of them well.
 ///
 /// In v1 (this addition), the differentiation is at the threshold layer:
 /// `NavigationSafetyConfig.forProfile(profile)` returns a config tuned
@@ -74,7 +74,7 @@ enum DriverProfile {
   /// 5-profile taxonomy mis-mapped this class to either snowZoneExperienced
   /// (catastrophically wrong — they have neither experience nor local
   /// equipment) or noviceUrban (location-wrong). This profile closes that
-  /// gap; added in 0.3.0 per published evidence and the unit's V100
-  /// equal-dignity discipline.
+  /// gap; added in 0.3.0 per published evidence, so that this driver
+  /// class gets defaults of its own rather than another class's.
   foreignTouristSnowZone,
 }

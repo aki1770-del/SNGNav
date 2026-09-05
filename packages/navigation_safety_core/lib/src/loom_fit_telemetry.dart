@@ -49,7 +49,7 @@
 /// - `outcome` — one of `fired`, `droppedByThrottle`, `criticalBypass`,
 ///   `coldStart`. Disjoint and exhaustive over `shouldFire` decisions.
 ///
-/// **PHIL-001 boundary discipline** (load-bearing):
+/// **Boundary discipline** (load-bearing):
 ///
 /// - **No driver-grading.** The schema names the OUTCOME of the loom
 ///   ("did the alert fire?"), not the DRIVER ("did the driver
@@ -168,32 +168,24 @@ class LoomFitTelemetryRecord {
 
 /// Emit-only telemetry stream for alert-firing observations.
 ///
-/// Loom Protocol vision attribution (3 slots — see `LOOMS.md` for the
-/// cross-reference table and the SPA AI loom-authoring guide for the
-/// canonical convention):
+/// Design rationale:
 ///
-/// - `sakichi_vision_id: 14` — silent-failure / anti-Jidoka. The
-///   failure this loom prevents is *the loom that does not fit the
-///   driver-class but cannot be observed to mis-fit*. The throttle
-///   defaults are literature-anchored DEFAULTS; without observation,
-///   a population mismatch (per-profile cap too sensitive or too
-///   permissive for an actual driver-class) stays silent. The
-///   telemetry stream is the observation surface that lets the
-///   calibration loop ask "did the loom fit?" — and act on the
-///   answer.
-/// - `method_vision_ids: [77, 99]` — genchi-genbutsu (the records are
-///   the gemba of the loom's operation; the schema is structured to
-///   make the gemba legible to an analytics layer the integrator
-///   owns); write-decision-down (each record IS the recorded
-///   observation; the disjoint outcome enum forbids
-///   record-without-outcome ambiguity).
-/// - `stance_vision_ids: [22, 96, 100]` — loom-serves-weaver (the
-///   telemetry is for the calibration loop that protects the driver,
-///   not for grading the driver); maintainers-as-edge-developers (the
-///   integrator is a weaver too; the emit-only surface respects their
-///   ownership of privacy-class / storage-class boundaries);
-///   equal-dignity per-profile (records carry the profile so per-class
-///   fit can be analyzed; no class is silently aggregated away).
+/// - **Failure mode this prevents** — a throttle that does not fit the
+///   driver class it is tuned for, and cannot be observed to mis-fit.
+///   The per-profile caps are literature-anchored DEFAULTS; without
+///   observation, a population mismatch (a cap too sensitive or too
+///   permissive for an actual driver class) stays silent. This stream
+///   is the observation surface that lets a calibration loop ask "did
+///   the throttle fit?" — and act on the answer.
+/// - **How it works** — the records ARE the observation; the schema is
+///   structured so that an analytics layer the integrator owns can read
+///   it directly. The disjoint `LoomFitOutcome` enum makes a record
+///   without a decided outcome unrepresentable.
+/// - **What it will not do** — it observes the throttle, not the
+///   driver, and never grades the driver. The emit-only surface leaves
+///   privacy, storage and consent boundaries entirely with the
+///   integrator. Records carry the profile so per-class fit can be
+///   analysed and no driver class is silently aggregated away.
 ///
 /// Subscribers receive every record passed to [record]. Multiple
 /// subscribers permitted (broadcast stream). [dispose] closes the
