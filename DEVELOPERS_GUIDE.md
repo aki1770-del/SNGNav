@@ -348,7 +348,7 @@ final record = await service.grant(
 );
 print('Granted: ${record.isEffectivelyGranted}');
 
-// Check before collecting — Jidoka: UNKNOWN = DENIED
+// Check before collecting — fail-safe default: UNKNOWN = DENIED
 final consent = await service.getConsent(ConsentPurpose.fleetLocation);
 if (consent.isEffectivelyGranted) {
   // Safe to collect fleet telemetry

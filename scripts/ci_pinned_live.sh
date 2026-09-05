@@ -14,12 +14,12 @@
 #   1. Its comment read "These tests assert the FIX for defects that are still
 #      live. They FAIL by design." That stopped being true at nav2_safety_layer
 #      0.2.0, when all four were REPAIRED. The package's own dart_test.yaml had
-#      already recorded the repair; the workflow never propagated it (OPS-002).
+#      already recorded the repair; the workflow never propagated it.
 #
 #   2. `|| true` meant a REGRESSION in those four guards could not turn CI red.
 #      dart_test.yaml said the separate job existed "so a future failure is
 #      unmissable"; `|| true` made a future failure exactly missable. A warning
-#      that does not interrupt is not a halt (Sakichi Vision #8).
+#      that does not interrupt is not a halt.
 #
 #   3. `for pkg in nav2_safety_layer` was a HARDCODED ALLOW-LIST -- the same
 #      defect scripts/ci_package_tests.sh exists to kill, in the same workflow,
@@ -48,8 +48,8 @@
 # tolerance is the wrong shape for it, because it also tolerates regressions.
 # Instead: a package may be listed in KNOWN_RED below, WITH a reason and a date.
 # The list is empty today. Adding to it is a visible, reviewable act; leaving it
-# empty is the default. A gate that can never pass gets routed around
-# (Sakichi Vision #20) -- and a gate that always passes was never a gate.
+# empty is the default. A gate that can never pass gets routed around --
+# and a gate that always passes was never a gate.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

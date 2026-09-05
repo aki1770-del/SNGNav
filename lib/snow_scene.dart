@@ -70,10 +70,9 @@ import 'widgets/snow_scene_scaffold.dart';
 //
 // Maneuver positions MUST align with SimulatedLocationProvider waypoints.
 // Both follow the same corridor: 栄駅 → 国道153号 → 岡崎方面 → 東岡崎駅.
-// See OPS-RULE-005 in CLAUDE.md for the route consistency rule.
 // ---------------------------------------------------------------------------
 
-// Demo route instructions in Japanese — this is HER drive; the running demo
+// Demo route instructions in Japanese — this is the driver's drive; the running demo
 // defaults to this mock route, so it must reach her in her own language.
 // (The OSRM/Valhalla engines localize live via ManeuverLocalizer / server
 // directions_options; these hand-authored strings keep the demo's narrative.)
@@ -243,10 +242,10 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
         useMaterial3: true,
       ),
       // The pre-trip safety briefing (hosted via the shared [PretripScreen] in
-      // the shell below) must reach HER mother in Akita, who reads Japanese —
+      // the shell below) must reach the driver's mother in Akita, who reads Japanese —
       // it follows the device locale (ja → Japanese, any other → the English
       // fallback). Without these delegates + locales the Japanese silently falls
-      // back to English (a D4 reach failure).
+      // back to English — a reach failure for the driver who needs it most.
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const [Locale('en'), Locale('ja')],
       // LAZY-DRIVE GUARANTEE (load-bearing): every drive BlocProvider below is
@@ -376,7 +375,7 @@ class _SnowSceneShellState extends State<SnowSceneShell> {
 
   @override
   Widget build(BuildContext context) {
-    // The chrome around the briefing must reach HER mother in Akita too: resolve
+    // The chrome around the briefing must reach the driver's mother in Akita too: resolve
     // the localized strings so the AppBar title + Start-drive label follow the
     // device locale (ja → Japanese) instead of leaking English above a Japanese
     // briefing card.

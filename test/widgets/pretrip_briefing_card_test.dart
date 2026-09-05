@@ -20,7 +20,7 @@ void main() {
   // and rendered an all-clear this card could never have EARNED. These tests
   // are about RENDERING, and their premise has to be true for the render to
   // mean anything: a card test that draws an all-clear must first earn the
-  // all-clear, exactly as HER morning must. `pretrip_decision_advisor` 0.6.1
+  // all-clear, exactly as the driver morning must. `pretrip_decision_advisor` 0.6.1
   // now refuses the unearned one, which is what surfaced this.
   //
   // A test that MEANS "unmeasured" builds `HourlyForecast(...)` directly, so
@@ -278,7 +278,7 @@ void main() {
     },
   );
 
-  // Reach-fix for language: HER mother in Akita reads Japanese. The safety
+  // Reach-fix for language: the driver's mother in Akita reads Japanese. The safety
   // verdict, the checklist, and the assistive-tech announcement must all reach
   // her in her own language — a verdict she cannot read does not reach her.
   group('Japanese (ja) localization', () {

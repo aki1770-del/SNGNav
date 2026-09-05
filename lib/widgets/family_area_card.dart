@@ -36,7 +36,7 @@ class FamilyAreaCard extends StatelessWidget {
   final AreaConditionRead read;
 
   /// The locale table the area chips are written in (resolved from the active
-  /// locale upstream, so HER mother in Akita reads Japanese).
+  /// locale upstream, so the driver's mother in Akita reads Japanese).
   final PretripMessages messages;
 
   /// The localized structural text (title, place line, honesty note).

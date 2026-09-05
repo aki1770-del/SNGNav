@@ -2,7 +2,7 @@
 # ── live_source_guard.sh ──────────────────────────────────────────────────────
 # A live provider must never assert a synthetic observation.
 #
-# WHY (PHIL-001 / D3 supreme): HER is the driver in unexpected snow. A synthetic
+# WHY: the person at the end of this chain is a driver in unexpected snow. A synthetic
 # "clear" emitted by something she believes is measuring the road is not a bug in
 # a data type — it is the road telling her it is safe when nobody looked. The
 # contract already exists in prose, at driving_weather/lib/src/weather_condition.dart:
@@ -13,7 +13,7 @@
 #     "A live provider must never construct this: an absent measurement is
 #      WeatherCondition.unknown."
 #
-# ⚑ That second sentence is a RULE, and a rule is not a loom. Measured 2026-08-20:
+# ⚑ That second sentence is a RULE, and a rule is not a mechanism. Measured 2026-08-20:
 #   it holds — 0 violations across 11 network-bearing packages — and nothing
 #   whatsoever made it hold. It held because whoever wrote each adapter remembered.
 #   This is the same shape found the same day in nav2_smac_planner, where a

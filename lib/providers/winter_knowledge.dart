@@ -41,7 +41,7 @@ class WinterCard {
   /// rather than show nothing or an unverified translation.
   final String? guidanceJa;
 
-  /// The guidance text for [lang], falling back to English. HER mother in
+  /// The guidance text for [lang], falling back to English. the driver's mother in
   /// Akita gets Japanese when a verified card exists; otherwise she gets the
   /// grounded English — never a blank, never an unverified rendering.
   String guidanceForLanguage(String lang) =>

@@ -1,7 +1,7 @@
 /// L2 source-guard tests — a non-finite GeoClue read is skipped at ingest so a
 /// NaN/±inf coordinate never enters the location pipeline (and so never reaches
 /// a flutter_map boundary, which on 8.2.2 SILENTLY projects a non-finite
-/// coordinate to garbage, teleporting HER dot with no throw — the degraded-GPS
+/// coordinate to garbage, teleporting the driver dot with no throw — the degraded-GPS
 /// compound-failure scenario this whole defense-in-depth stack exists for).
 ///
 /// The skip is SILENT (no stream error): surfacing an error on a single bad fix

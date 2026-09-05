@@ -1,12 +1,12 @@
-/// The on-device store for the ONE destination AREA the driver (HER) chooses
+/// The on-device store for the ONE destination AREA the driver chooses
 /// for the family-thread pre-trip read.
 ///
-/// WHY this exists (mission anchor — D3 worst-case, PHIL-001 Driver Test): the
+/// WHY this exists (the compound-failure worst case — the driver test): the
 /// family-thread destination-area read already shipped, but it was locked behind
 /// build-time `--dart-define=PRETRIP_DEST_*` values an end driver can never set.
-/// This store lets HER name the area herself in the app, so the read reaches a
+/// This store lets her name the area herself in the app, so the read reaches a
 /// daughter deciding whether/when to drive to her mother's snow-zone area — the
-/// loom that helps a driver act rightly before a compound-failure trip.
+/// guard that helps a driver act rightly before a compound-failure trip.
 ///
 /// DIGNITY BOUNDARIES (binding — each holds by construction here):
 ///   * SUBJECT IS A PLACE, never a person. A [SavedPlace] is lat/lon + a

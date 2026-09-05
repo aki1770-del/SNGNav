@@ -1,8 +1,8 @@
 /// Merges an official JMA winter-snow advisory into a pre-trip forecast so the
-/// Japanese driver's briefing is not blind to the hazard PHIL-001 is built
+/// Japanese driver's briefing is not blind to the hazard this project is built
 /// around.
 ///
-/// Genchi-genbutsu (2026-06-13): the live Japan forecast source (the MET Norway
+/// Measured at the source (2026-06-13): the live Japan forecast source (the MET Norway
 /// compact product) carries NO visibility and NO road-surface state
 /// (`met_norway_hourly_forecast.dart`: both mapped null ALWAYS), so the Nagoya
 /// driver's briefing runs on temperature + precipitation alone and can never

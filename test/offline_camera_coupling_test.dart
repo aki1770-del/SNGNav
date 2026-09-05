@@ -10,7 +10,7 @@ import 'package:mbtiles/mbtiles.dart';
 
 import 'package:sngnav_snow_scene/main.dart';
 
-/// SDE — the loom that couples the entrypoint's camera to the archive it ships.
+/// The guard that couples the entrypoint's camera to the archive it ships.
 ///
 /// ## Why this file exists
 ///
@@ -26,7 +26,7 @@ import 'package:sngnav_snow_scene/main.dart';
 /// was fine. The camera was 580 km away, and the badge was measuring FILE
 /// PRESENCE and reporting MAP PRESENCE.
 ///
-/// ## What makes this a loom and not a decoration
+/// ## What makes this a real guard and not a decoration
 ///
 /// The first test opens an archive that does NOT cover the app's fallback
 /// camera and demands the badge say so. Against the entrypoint as it stood on
@@ -114,7 +114,7 @@ void main() {
       'LIVE: panning off the covered area flips the badge to "MAP: NOT HERE"',
       (tester) async {
         // The badge must answer "is there a map HERE", continuously — not "was
-        // there a map where we started". This is the state HER reaches by
+        // there a map where we started". This is the state the driver reaches by
         // driving out of the covered corridor.
         final oneTile = _writeArchive(
           tmp,
@@ -196,7 +196,7 @@ void main() {
     testWidgets(
       'no tile in the pan buffer throws when the archive does not hold it',
       (tester) async {
-        // ROOT CAUSE, root-caused by EIE from the on-target journal 2026-08-29:
+        // ROOT CAUSE, root-caused from the on-target journal 2026-08-29:
         //
         //   Invalid argument(s): 'wmsOptions' or 'urlTemplate' must be provided
         //     NetworkTileProvider.getTileUrl
@@ -211,7 +211,7 @@ void main() {
         // `tile_provider/base_tile_provider.dart:233-237`, where the null
         // template is `(throw ArgumentError(...))`.
         //
-        // ⚑ EIE's enumeration is the point: 0 of the VISIBLE tiles took that
+        // ⚑ The enumeration is the point: 0 of the VISIBLE tiles took that
         // branch and 18 tiles in the panBuffer ring did. The map was blank
         // because of eighteen tiles nobody could see. One throw in the ring
         // takes down the layer.

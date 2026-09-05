@@ -1,7 +1,7 @@
 // Render-and-SEE capture of Japanese maneuver narration in the REAL
-// RouteProgressBar (OPS-066 / L32 observation-grade verification).
+// RouteProgressBar (observation-grade verification).
 //
-// This is HER glanceable driving cue: icon from maneuver.type + text from
+// This is the driver glanceable driving cue: icon from maneuver.type + text from
 // maneuver.instruction. The captures verify, in pixels:
 //   1. The mock-demo merge maneuver (#2) — the icon/text coherence fix
 //      (type 'merge' now matches the 合流 text; it was a right-turn arrow

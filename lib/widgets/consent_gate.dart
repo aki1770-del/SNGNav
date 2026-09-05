@@ -1,4 +1,4 @@
-/// ConsentGate — fleet data opt-in toggle (Jidoka gate).
+/// ConsentGate — fleet data opt-in toggle (fail-safe gate).
 ///
 /// `BlocBuilder<ConsentBloc, ConsentState>`:
 ///   - Fleet granted: green chip 'Fleet: ON' + tap to revoke
@@ -9,7 +9,7 @@
 /// Consent is per-purpose and revocable. This widget controls fleetLocation.
 /// The driver taps to toggle — explicit, revocable, per-purpose consent.
 ///
-/// Jidoka (自働化): UNKNOWN = DENIED. The pipeline stops itself.
+/// Fail-safe default: UNKNOWN = DENIED. The pipeline stops itself.
 library;
 
 import 'package:driving_consent/driving_consent.dart';

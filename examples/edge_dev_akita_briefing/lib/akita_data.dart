@@ -1,4 +1,4 @@
-/// Edge-developer data assembly for HER mother's Akita pre-trip briefing.
+/// Edge-developer data assembly for the driver's mother's Akita pre-trip briefing.
 ///
 /// This file is PURE DART — no Flutter. It is the data path an edge developer
 /// writes using ONLY the two published-shaped packages:
@@ -13,7 +13,7 @@
 ///     → JmaVisibilityProvider  → VisibilityObservation (metres)
 ///     → mergeObservedVisibility into the departure-hour forecast slot
 ///     → SnowAwarePretripAdvisor.brief() → PretripBriefing
-///     → the edge developer's OWN widget so HER mother can decide before she
+///     → the edge developer's OWN widget so the driver's mother can decide before she
 ///       sets out into unexpected snow.
 library;
 
@@ -21,7 +21,7 @@ import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 import 'package:pretrip_source_jma/pretrip_source_jma.dart'
     show JmaVisibilityProvider, JmaVisibilityException;
 
-/// 秋田 / Akita — HER mother's anchor (AMeDAS station 32402 @ 39.72, 140.10).
+/// 秋田 / Akita — the driver's mother's anchor (AMeDAS station 32402 @ 39.72, 140.10).
 const double akitaLat = 39.72;
 const double akitaLon = 140.10;
 
@@ -51,7 +51,7 @@ CommuteShape akitaCommute() => CommuteShape(
       flexibility: CommuteFlexibility.discretionary,
     );
 
-/// HER mother's driver profile (reaction-time is calibration only — never
+/// the driver's mother's driver profile (reaction-time is calibration only — never
 /// changes the strength of the recommendation, per the advisor contract).
 DriverProfileSpec akitaDriver() => const DriverProfileSpec(
       profileTag: 'akitaRural',

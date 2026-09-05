@@ -21,7 +21,7 @@ import 'package:voice_guidance/voice_guidance.dart';
 extension _RouteResultToNavigation on RouteResult {
   NavigationRoute toNavigationRoute() => NavigationRoute(
         shape: shape,
-        // CHAIR RULING 3 (BOD-19): the Null Island guard lands in this wave.
+        // The Null Island guard lands in this wave.
         //
         // routing_engine 0.6.0 made `RouteManeuver.position` nullable. Before
         // it, a maneuver whose location failed to parse silently carried
@@ -587,7 +587,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
               // The maneuvers that reach NavigationRoute all carry a position
               // (the adapter above refuses to fabricate one), so this centre is
               // always a real coordinate. Before the guard, a maneuver whose
-              // location failed to parse would have centred HER map on Null
+              // location failed to parse would have centred her map on Null
               // Island — the Gulf of Guinea — while she was driving in Akita.
               context.read<MapBloc>().add(CenterChanged(maneuver.position));
               context.read<MapBloc>().add(const ZoomChanged(12.0));

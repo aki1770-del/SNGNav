@@ -1,12 +1,12 @@
-/// REACH test: HER must SEE the JMA partial-read (border-incomplete) caution.
+/// REACH test: the driver must SEE the JMA partial-read (border-incomplete) caution.
 ///
 /// THE GAP this guards: at a border, the `condition_aggregator_jma` package
 /// returns the reachable prefecture's REAL warning ALONGSIDE a synthetic in-band
 /// incomplete-read notice (`eventClass == kJmaIncompleteReadEventClass`) naming
 /// the unreachable sibling (秋田県, which could be holding a 大雪特別警報). The app
-/// used to DROP that notice — a mild reachable 着雪注意報 reached HER dressed as a
+/// used to DROP that notice — a mild reachable 着雪注意報 reached the driver dressed as a
 /// COMPLETE warning check. This test pumps the SHIPPED [PretripScreen], injects
-/// that exact advisory list through the JMA test seam, and proves HER mother's
+/// that exact advisory list through the JMA test seam, and proves the driver's mother's
 /// family-thread surface now shows BOTH the real warning AND an honest caution
 /// naming 秋田県 — and that a CLEAN complete read shows NO such caution.
 ///
@@ -103,7 +103,7 @@ void main() {
     );
   });
 
-  /// Pumps the shipped [PretripScreen] for HER mother's Akita border area,
+  /// Pumps the shipped [PretripScreen] for the driver's mother's Akita border area,
   /// seeding a saved place and injecting [jmaAdvisories] through the JMA seam.
   /// Returns nothing — the caller asserts on the rendered tree.
   Future<void> pumpForAkita(
@@ -115,7 +115,7 @@ void main() {
     await tester.runAsync(() async {
       tmp = await Directory.systemTemp.createTemp('border_incomplete_test');
       store = SavedPlaceStore(File('${tmp.path}/sngnav/saved_place.json'));
-      // Seed HER mother's area (Akita, 39.72/140.10 → JMA snow-zone) so the
+      // Seed the driver's mother's area (Akita, 39.72/140.10 → JMA snow-zone) so the
       // family-thread read fires from initState with no dialog interaction.
       await store.save(
         const SavedPlace(lat: 39.72, lon: 140.10, label: '母の地域'),
@@ -142,7 +142,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        // HER mother reads Japanese — pin the locale so we verify the surface
+        // the driver's mother reads Japanese — pin the locale so we verify the surface
         // SHE actually sees.
         locale: const Locale('ja'),
         localizationsDelegates: const [
@@ -170,7 +170,7 @@ void main() {
   }
 
   testWidgets(
-    'PARTIAL border read: HER sees the 秋田県 caution AND the real 着雪注意報',
+    'PARTIAL border read: the driver sees the 秋田県 caution AND the real 着雪注意報',
     (tester) async {
       await pumpForAkita(
         tester,
@@ -180,7 +180,7 @@ void main() {
         ],
       );
 
-      // 1) The partial-read caution REACHES HER, naming the unreachable area.
+      // 1) The partial-read caution REACHES the driver, naming the unreachable area.
       expect(
         find.byKey(const Key('pretrip-border-incomplete-caution')),
         findsOneWidget,
@@ -188,7 +188,7 @@ void main() {
       expect(
         find.textContaining('秋田県の警報を確認できませんでした'),
         findsOneWidget,
-        reason: 'HER must see the honest partial-read caution naming 秋田県',
+        reason: 'the driver must see the honest partial-read caution naming 秋田県',
       );
 
       // 2) The REAL warning is STILL surfaced (both honoured — never hidden by
@@ -196,7 +196,7 @@ void main() {
       expect(
         find.textContaining('着雪注意報'),
         findsWidgets,
-        reason: 'the reachable real warning must still reach HER',
+        reason: 'the reachable real warning must still reach the driver',
       );
     },
   );
@@ -209,7 +209,7 @@ void main() {
       jmaAdvisories: [_adv('着雪注意報')], // clean, complete — no notice
     );
 
-    // The real warning still reaches HER...
+    // The real warning still reaches the driver...
     expect(find.textContaining('着雪注意報'), findsWidgets);
     // ...and NO false caution is shown (a complete check stays clean).
     expect(

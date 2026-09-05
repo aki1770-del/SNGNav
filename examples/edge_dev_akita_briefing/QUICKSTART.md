@@ -1,4 +1,4 @@
-# Build HER winter-safety briefing in 15 minutes
+# Build a winter-safety briefing in 15 minutes
 
 This is a step-by-step on-ramp for an **edge developer** who has never touched
 these packages. You start from an empty `flutter create` and finish with a
@@ -232,7 +232,7 @@ class MyApp extends StatelessWidget {
 flutter run
 ```
 
-You now see HER briefing — the screenshot at the top of this file. **You built a
+You now see her briefing — the screenshot at the top of this file. **You built a
 working offline winter-safety briefing in about ten minutes**, and every safety
 decision came from the published advisor, not from code you had to get right.
 
@@ -289,7 +289,7 @@ mislead a driver:
 
 The `80 m` here is a labelled **demonstration** whiteout value (live Akita
 visibility in June reads clear). It shows the path that lights the severe band
-when the sensor really does read low — which, for HER mother in Akita, it will.
+when the sensor really does read low — which, for the driver's mother in Akita, it will.
 
 ---
 

@@ -42,7 +42,7 @@ class ConsentGrantRequested extends ConsentEvent {
 /// Revoke consent for a specific purpose.
 ///
 /// Dispatched when the driver explicitly opts out.
-/// The consent gate closes — data flow stops (Jidoka).
+/// The consent gate closes — data flow stops.
 class ConsentRevokeRequested extends ConsentEvent {
   final ConsentPurpose purpose;
 

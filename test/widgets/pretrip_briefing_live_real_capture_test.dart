@@ -5,8 +5,8 @@
 /// this test parses those REAL responses with the product's own
 /// `mapLocationForecastToWeatherForecast` and renders the briefing, so a human
 /// can eyeball the product on real current data:
-///   - nagoya  (HER)        — MET Norway global case
-///   - akita   (HER mother) — Japan snow-zone case (MET base; JMA live-check is a
+///   - nagoya  (the driver)        — MET Norway global case
+///   - akita   (the driver's mother) — Japan snow-zone case (MET base; JMA live-check is a
 ///                            separate runtime step, NOT run here — June: ~23C, no snow)
 ///   - ushuaia (Argentina)  — a real Southern-Hemisphere winter point
 /// Next-best OBSERVABLE rung toward evidenced service while the board is

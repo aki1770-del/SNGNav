@@ -204,7 +204,7 @@ void main() {
 
       test('builds human-readable English instructions when asked', () async {
         // The English builder is exercised explicitly — the request default
-        // is 'ja-JP' (HER's locale) since the ja narration fix.
+        // is 'ja-JP' (her locale) since the ja narration fix.
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 
         final result = await engine.calculateRoute(
@@ -224,7 +224,7 @@ void main() {
       });
 
       test('default language (ja-JP) yields Japanese instructions', () async {
-        // HER's contract: the default request localizes; English never leaks
+        // her contract: the default request localizes; English never leaks
         // to a Japanese driver by default.
         final engine = OsrmRoutingEngine(client: _mockClient(_validResponse()));
 

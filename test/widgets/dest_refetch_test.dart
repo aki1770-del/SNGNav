@@ -86,7 +86,7 @@ void main() {
   });
 
   testWidgets(
-    'HER-set destination drives a re-fetch + re-render (offline, leak-clean)',
+    'driver-set destination drives a re-fetch + re-render (offline, leak-clean)',
     (tester) async {
       // ALL File I/O must run inside runAsync — the fake-async test body blocks
       // real dart:io (createTemp / read / write) otherwise.
@@ -218,14 +218,14 @@ void main() {
         await flush(); // re-fetch + setState lands
       }
 
-      // --- HER sets place A (coordinates, non-Japan point) ------------------
+      // --- the driver sets place A (coordinates, non-Japan point) ------------------
       await setPlace(60.0, 10.0, 'Area A');
       expect(created, hasLength(1));
       expect(created[0].closed, isFalse); // still the active provider
       expect(find.byType(FamilyAreaCard), findsOneWidget);
       expect(find.textContaining('Area A'), findsWidgets);
 
-      // --- HER changes to place B ⇒ prior provider CLOSED before re-fetch ----
+      // --- the driver changes to place B ⇒ prior provider CLOSED before re-fetch ----
       await setPlace(61.0, 11.0, 'Area B');
       expect(created, hasLength(2));
       expect(

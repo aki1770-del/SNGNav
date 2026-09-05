@@ -81,7 +81,7 @@ final _iceRisk = WeatherCondition(
   source: ObservationSource.measured,
 );
 
-/// HER's Akita radiative-frost morning: +2 °C, 70 % RH, clear sky, perfect
+/// her Akita radiative-frost morning: +2 °C, 70 % RH, clear sky, perfect
 /// visibility. Raw `isHazardous` is FALSE — only the measured-humidity
 /// classifier knows the road surface is frozen.
 final _radiativeFrost = WeatherCondition(
@@ -248,7 +248,7 @@ void main() {
       (tester) async {
         // Pins the listenWhen escalation clause: without it, the widened
         // predicate swallows the frost-morning-turns-hazardous transition
-        // (prev already alertable → no false→true edge) and HER standing
+        // (prev already alertable → no false→true edge) and the driver standing
         // warning never upgrades to the critical alert.
         final controller = StreamController<WeatherState>.broadcast();
         whenListen(
@@ -512,7 +512,7 @@ void main() {
         () => navigationBloc.add(
           any(
             that: isA<SafetyAlertReceived>()
-                // The precise JAF term HER knows, ja-primary, possibility-
+                // The precise JAF term the driver knows, ja-primary, possibility-
                 // graded, with an EN line. The feed-flagged path fires during
                 // visible precipitation, so it must NOT claim the road merely
                 // "looks wet" — that variant belongs to the invisible-ice

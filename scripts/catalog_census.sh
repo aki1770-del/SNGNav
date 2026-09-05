@@ -22,7 +22,9 @@
 
 set -u  # error on unset variables; we deliberately do NOT set -e (continue on errors)
 
-PKG_ROOT="${PKG_ROOT:-/home/komada/SNGNav/packages}"
+# Defaults to THIS checkout's packages/ tree, resolved from the script's own
+# location -- never a path baked to one machine. Env override retained.
+PKG_ROOT="${PKG_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../packages" 2>/dev/null && pwd)}"
 REPO_ROOT="$(cd "$PKG_ROOT/.." && pwd)"
 COHERENCE_REF="${COHERENCE_REF:-origin/main}"   # ref whose committed version must match pub.dev
 

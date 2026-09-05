@@ -1,6 +1,6 @@
 // Units contract for the KUKSA end-to-end harness.
 //
-// WHY THIS EXISTS (OPS-070(B), written before the act):
+// WHY THIS EXISTS written before the act:
 //
 //   A UNIT is a contract between two parties who never meet — whoever fills a
 //   VSS leaf, and whoever reads it. On 2026-08-26 those two sides were found to
@@ -25,7 +25,7 @@
 // WHY A TEST AND NOT A SCRIPT IN scripts/:
 //   Measured the same day: 34 scripts in the governance repo were BUILT and
 //   NEVER ARMED — no cron row, no hook, no armed caller. A gate that nothing
-//   fires is a file, not a loom. CI already runs `flutter test`, so an assertion
+//   fires is a file, not a mechanism. CI already runs `flutter test`, so an assertion
 //   placed here is armed by construction and needs no new wiring, no registry
 //   row and nobody's memory.
 //

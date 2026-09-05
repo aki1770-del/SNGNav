@@ -12,7 +12,7 @@ This document shows what has been built, what is in progress, and what comes nex
 - **Dead reckoning** — 4D Extended Kalman Filter (`kalman_dr` 0.2.0, [pub.dev](https://pub.dev/packages/kalman_dr))
 - **Weather-aware driving conditions** — deterministic road surface classification (`driving_conditions` 0.2.0, [pub.dev](https://pub.dev/packages/driving_conditions))
 - **Offline map tiles** — MBTiles (SQLite) with no network dependency
-- **Privacy-first consent** — Jidoka model: UNKNOWN = DENIED, per-purpose, per-jurisdiction
+- **Privacy-first consent** — fail-safe default: UNKNOWN = DENIED, per-purpose, per-jurisdiction
 - **Safety architecture** — display-only, ASIL-QM documented (see [SAFETY.md](SAFETY.md))
 - **Developer onboarding** — `git clone` → `flutter run` on any Linux machine, no server required for default config
 
@@ -42,7 +42,7 @@ This document shows what has been built, what is in progress, and what comes nex
   | `route_condition_forecast` | 0.1.0 | | |
 
 - **App version**: 0.4.0
-- **CI**: 3-job matrix (Analyze + Test + Build Linux), Flutter pinned to 3.41.4 (per OPS-RULE-042 governance)
+- **CI**: 3-job matrix (Analyze + Test + Build Linux), Flutter pinned to 3.41.4
 
 ### Documentation
 

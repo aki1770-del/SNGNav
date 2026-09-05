@@ -1,7 +1,7 @@
-// Render-and-see capture for the Japanese pre-trip briefing (OPS-066 / L32).
+// Render-and-see capture for the Japanese pre-trip briefing (observation-grade).
 //
 // A normal widget test uses blank test fonts, so CJK text would not render as
-// real glyphs and "tests pass" would NOT prove HER mother can read the card.
+// real glyphs and "tests pass" would NOT prove the driver's mother can read the card.
 // This test loads the real Noto Sans CJK JP font and writes a PNG golden of
 // the Japanese card, so the rendered Japanese can actually be looked at.
 //
@@ -36,12 +36,12 @@ void main() {
     }
   });
 
-  testWidgets('renders the Japanese briefing for HER mother in Akita', (
+  testWidgets('renders the Japanese briefing for her mother in Akita', (
     tester,
   ) async {
     // Without a real CJK font the card would render tofu boxes, and a passing
-    // golden would prove nothing about whether HER mother can read it. Skip
-    // rather than bake a misleading blank (OPS-066: the artifact must be real).
+    // golden would prove nothing about whether the driver's mother can read it. Skip
+    // rather than bake a misleading blank (observation-grade: the artifact must be real).
     if (!fontLoaded) {
       markTestSkipped('No Noto CJK font on this host — skipping JA render.');
       return;
@@ -50,7 +50,7 @@ void main() {
     final issued = DateTime(2026, 1, 1, 6, 0);
     // The reason chips read in Japanese too now — the same locale resolution
     // main.dart performs for a `ja` driver, so this PNG shows the whole safety
-    // surface (verdict + reasons + checklist + winter guidance) as HER mother
+    // surface (verdict + reasons + checklist + winter guidance) as the driver's mother
     // actually receives it. Only the data-source caption stays English (the
     // remaining named gap, shown not hidden).
     final advisor = SnowAwarePretripAdvisor(messages: PretripMessages.ja);
@@ -126,8 +126,8 @@ void main() {
               forecastIssuedAt: issued,
               tripRequired: false,
               onTripRequiredChanged: (_) {},
-              // PRODUCTION-TRUTHFUL fixture (OPS-066: the scene we look at must
-              // be the scene HER mother gets, not an idealised one). The winter
+              // PRODUCTION-TRUTHFUL fixture (observation-grade: the scene we look at must
+              // be the scene the driver's mother gets, not an idealised one). The winter
               // guidance is resolved through the REAL loader from the REAL
               // shipped asset at lang 'ja', and the demo source caption is the
               // localized one production now renders — so this PNG shows exactly
@@ -155,7 +155,7 @@ void main() {
     // The waitAdvised golden above shows only the whiteout chip. The
     // caution-band reason chips — freezingAir (black ice) and allowExtraTime —
     // carry the safety-CALIBRATION register that a single-pass review got wrong
-    // (おそれがあります warning-grade vs the correct 可能性があります "possible"). OPS-066
+    // (おそれがあります warning-grade vs the correct 可能性があります "possible"). observation-grade
     // binds "verified" on an observable surface to going and SEEING it, so this
     // second golden renders that band with real CJK glyphs.
     if (!fontLoaded) {

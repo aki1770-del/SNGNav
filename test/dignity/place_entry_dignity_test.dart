@@ -295,7 +295,7 @@ void main() {
   });
 
   // The feature's single most load-bearing dignity claim is that the dest-area
-  // read is ON-DEMAND ONLY — initState + the single HER-action setter, with NO
+  // read is ON-DEMAND ONLY — initState + the single driver-action setter, with NO
   // Timer/Stream/scheduled refresh. A poller added to the dest path turns a
   // once-only read into recurring surveillance of her mother's area
   // (見守り-by-proxy) and contains NO person token, so the token scans miss it.

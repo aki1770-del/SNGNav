@@ -231,7 +231,7 @@ class _PretripScreenState extends State<PretripScreen> {
   String? _pretripJmaEventName;
   String? _pretripJmaPrefecture;
 
-  // PARTIAL-READ at HER current location: a border read where a containing
+  // PARTIAL-READ at the driver's current location: a border read where a containing
   // prefecture was unreachable. When true, the briefing shows an honest caution
   // (naming [_pretripJmaUnreachableArea]) — a partial read is never presented as
   // a complete warning check, even when a real warning DID merge.
@@ -239,7 +239,7 @@ class _PretripScreenState extends State<PretripScreen> {
   String? _pretripJmaUnreachableArea;
 
   // In-force NON-snow JMA warnings (0.4.0 turmoil classes: 大雨 / 暴風・強風 /
-  // 雷 / 濃霧) at HER current location — relayed verbatim as advisory cards,
+  // 雷 / 濃霧) at the driver's current location — relayed verbatim as advisory cards,
   // highest severity first. Never merged into the road-condition band.
   List<Advisory> _pretripJmaTurmoilAdvisories = const <Advisory>[];
   static const Duration _pretripWindow = Duration(minutes: 30);
@@ -279,7 +279,7 @@ class _PretripScreenState extends State<PretripScreen> {
   // resolves NOTHING. ANY failure (no URL, no destination, network error,
   // empty shape, missing asset) ⇒ the feature is ABSENT: no section, no
   // error banner, no substitute claim. No Timer/Stream/poll and no re-fetch
-  // on rebuild — the same HER-action-only discipline as the destination-area
+  // on rebuild — the same driver-action-only discipline as the destination-area
   // read above.
   static const String _pretripRouteOsrmUrl = String.fromEnvironment(
     'PRETRIP_ROUTE_OSRM_URL',
@@ -290,7 +290,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// epoch. Null ⇒ no bridge section.
   BridgeCorridorResult? _routeBridges;
 
-  /// Destination identity, bumped by the two HER-action mutations
+  /// Destination identity, bumped by the two driver-action mutations
   /// ([_setDestination] / [_clearDestination]). The route resolve (and the
   /// destination-area read) can be in flight for up to ~15 s; if SHE changes
   /// or clears the destination in that window, the late result describes the
@@ -307,7 +307,7 @@ class _PretripScreenState extends State<PretripScreen> {
   //
   // The destination point comes ONLY from these static defines. It NEVER reads
   // a device location, a presence signal, or any person — and the fetch fires
-  // one-shot from initState plus once per HER-action destination change (no
+  // one-shot from initState plus once per driver-action destination change (no
   // Timer, no Stream, no scheduled refresh): background polling of "her area"
   // would be 見守り-by-proxy, and is forbidden. Unparseable overrides ⇒ the
   // feature is OFF (null), never a guessed point.
@@ -322,12 +322,12 @@ class _PretripScreenState extends State<PretripScreen> {
   );
 
   // LIVE (in-app) destination AREA: the dart-define values above are kept as the
-  // initial SEED, but the driver (HER) can now set/change the area herself in
+  // initial SEED, but the driver can now set/change the area herself in
   // the app — the family-thread reach-fix. These instance fields are the live
   // source of truth (seeded from the defines); a saved place from
   // [SavedPlaceStore] overwrites them on load. The point is still a PLACE only;
   // it watches no person, and the fetch is still ONE-SHOT (initState + the
-  // single HER-action setter), never a background poll.
+  // single driver-action setter), never a background poll.
   double? _destLat = _pretripDestLat;
   double? _destLon = _pretripDestLon;
   String _destLabel = _pretripDestLabel;
@@ -345,7 +345,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// bridge caution's cold gate can consult the far endpoint too (a warm
   /// coastal origin says nothing about inland decks; cold at either endpoint
   /// arms the caution — caution-add-only, zero extra network). Cleared with
-  /// the read on every HER-action destination change.
+  /// the read on every driver-action destination change.
   WeatherForecast? _destLiveForecast;
 
   /// The JMA prefecture code resolved for the current dest read (or null). Kept
@@ -551,7 +551,7 @@ class _PretripScreenState extends State<PretripScreen> {
   }
 
   /// Loads the driver-saved destination PLACE once (memoized future, so the
-  /// HER-action setter's re-fetch never re-loads and clobbers the just-set
+  /// driver-action setter's re-fetch never re-loads and clobbers the just-set
   /// fields — and so CONCURRENT initState callers, the dest-area read and the
   /// route-bridge fetch, AWAIT the same single load instead of racing past a
   /// boolean guard and reading not-yet-loaded fields). On a non-null saved
@@ -583,7 +583,7 @@ class _PretripScreenState extends State<PretripScreen> {
     }
   }
 
-  /// HER-action setter: the driver chose a new destination AREA in the app.
+  /// driver-action setter: the driver chose a new destination AREA in the app.
   /// ONE-SHOT (no Timer/Stream) — closes prior providers (leak hygiene), hides
   /// the stale card, persists the single record, then re-fetches + re-renders.
   Future<void> _setDestination(SavedPlace place) async {
@@ -625,7 +625,7 @@ class _PretripScreenState extends State<PretripScreen> {
     await Future.wait([_initDestAreaCondition(), _initRouteBridges()]);
   }
 
-  /// HER-action: remove the saved destination AREA. Closes providers, clears the
+  /// driver-action: remove the saved destination AREA. Closes providers, clears the
   /// fields + card, and deletes the single record.
   Future<void> _clearDestination() async {
     _destForecastProvider?.close();
@@ -657,7 +657,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// Fetches the DESTINATION-AREA condition read (the FAMILY-THREAD section):
   /// the PUBLIC weather + official advisory at her mother's PLACE, so SHE
   /// decides whether/when to drive there. ON-DEMAND ONLY — called one-shot
-  /// from [initState] plus once per HER-action destination change
+  /// from [initState] plus once per driver-action destination change
   /// ([_setDestination]); there is NO Timer, NO Stream, NO scheduled refresh
   /// and NO notification: polling "her area" in the background would be
   /// 見守り-by-proxy, which is forbidden. It watches no person — the point
@@ -671,7 +671,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// is DROPPED on the epoch guard ([_destEpoch]) — a stale area read must not
   /// resurrect into the family card or the bridge caution's cold gate.
   Future<void> _initDestAreaCondition() async {
-    // Load any driver-saved place FIRST (guarded so re-entry from the HER-action
+    // Load any driver-saved place FIRST (guarded so re-entry from the driver-action
     // setter won't clobber the just-set fields). Seeds _destLat/_destLon/_destLabel.
     await _loadSavedPlace();
     final forecastSource =
@@ -684,7 +684,7 @@ class _PretripScreenState extends State<PretripScreen> {
     final destLat = _destLat!;
     final destLon = _destLon!;
     // Captured AFTER the coords are read (the [_initRouteBridges] idiom) and
-    // BEFORE any await that can straddle a HER-action change: a read computed
+    // BEFORE any await that can straddle a driver-action change: a read computed
     // for the coords as they stand HERE is correct for this epoch; any later
     // change/clear bumps the epoch and the landings below drop the stale read.
     final epoch = _destEpoch;
@@ -771,7 +771,7 @@ class _PretripScreenState extends State<PretripScreen> {
       // Kept for the bridge caution's cold gate (far-endpoint evidence).
       _destLiveForecast = result.forecast;
       _destAreaPrefCode = result.prefectureCode;
-      // A border read where a sibling prefecture was unreachable: HER mother's
+      // A border read where a sibling prefecture was unreachable: the driver's mother's
       // area read is PARTIAL. Carry the flag + the unreachable prefecture so the
       // family section shows an honest caution (over-warn), never a clean
       // "no warnings" / "all checked".
@@ -781,7 +781,7 @@ class _PretripScreenState extends State<PretripScreen> {
   }
 
   /// Fetches the route polyline once PER DESTINATION EPOCH — from [initState]
-  /// (a saved destination) and once per HER-action destination change
+  /// (a saved destination) and once per driver-action destination change
   /// ([_setDestination]); nothing self-scheduled in the background, no
   /// re-fetch on rebuild, and a clear ([_clearDestination]) resolves NOTHING
   /// — and counts the mapped bridge sites on it. Opt-in twice over: the
@@ -807,7 +807,7 @@ class _PretripScreenState extends State<PretripScreen> {
       final destLon = _destLon;
       if (destLat == null || destLon == null) return; // no destination set
       // Captured AFTER the coords are read: a result computed for the coords
-      // as they stand HERE is correct for this epoch; any later HER-action
+      // as they stand HERE is correct for this epoch; any later driver-action
       // change bumps the epoch and the landing below drops the result.
       epoch = _destEpoch;
       final fetchOverride = widget.routeShapeFetchOverride;
@@ -857,7 +857,7 @@ class _PretripScreenState extends State<PretripScreen> {
   @override
   Widget build(BuildContext context) {
     // The whole pre-trip surface reads in the driver's own language — Japanese
-    // for HER mother in Akita — resolved ONCE from the app's active locale so
+    // for the driver's mother in Akita — resolved ONCE from the app's active locale so
     // the chips, the card's structural strings, and the winter card never
     // diverge on which locale they used.
     final locale = Localizations.localeOf(context);
@@ -921,14 +921,14 @@ class _PretripScreenState extends State<PretripScreen> {
     // and the wall-clock fields the package reads come from the SAME instant, so
     // a future UTC-stamped departure cannot leave the offset and the clock out
     // of step. This is EXACTLY correct whenever the device timezone == the route
-    // timezone — HER dominant case (a Japanese device driving in/to Japan,
+    // timezone — the dominant case (a Japanese device driving in/to Japan,
     // JST +9, no DST).
     //
     // LIMITATION: when the route and the device are in DIFFERENT timezones (a
     // cross-zone edge developer), the device offset is wrong for the route, so
     // pass `--dart-define=PRETRIP_UTC_OFFSET_MIN=<minutes>` to override. We
     // deliberately do NOT guess from longitude/15: a solar guess can mis-place
-    // HER wall clock by up to an hour, and a wrong sunrise time is worse than no
+    // her wall clock by up to an hour, and a wrong sunrise time is worse than no
     // chip at all.
     final utcOffset = _pretripUtcOffsetMin != null
         ? Duration(minutes: _pretripUtcOffsetMin!)
@@ -968,7 +968,7 @@ class _PretripScreenState extends State<PretripScreen> {
     // `allClearEarned` answers `false` to both — `window.isEmpty` returns
     // `false` on the same line an unmeasured window does. Calling
     // `briefOrUnassessed` instead of catching loses the distinction too, and
-    // the card would then tell HER 「出発時間帯の予報がありません」 — *there is
+    // the card would then tell the driver 「出発時間帯の予報がありません」 — *there is
     // no forecast* — on a morning a forecast arrived. That is the same defect
     // 0.6.1 exists to close, moved into the headline, where it is larger and
     // is read first, and is announced first to assistive tech.
@@ -1000,7 +1000,7 @@ class _PretripScreenState extends State<PretripScreen> {
             children: [
               PretripBriefingCard(
                 // The briefing reads in the driver's own language — Japanese for
-                // HER mother in Akita — resolved once from the active locale above.
+                // the driver's mother in Akita — resolved once from the active locale above.
                 strings: strings,
                 briefing: briefing,
                 assessmentIncomplete: assessmentIncomplete,
@@ -1013,7 +1013,7 @@ class _PretripScreenState extends State<PretripScreen> {
                 // Grounded offline guidance for the surface state the host's
                 // assessment expects; null (omitted) until the asset loads or for
                 // a benign surface with no baked card. Resolved in the driver's
-                // language — Japanese for HER mother when a verified card exists,
+                // language — Japanese for the driver's mother when a verified card exists,
                 // else the grounded English (honest fallback, never blank).
                 winterCard: widget.surfaceState == null
                     ? null
@@ -1023,9 +1023,9 @@ class _PretripScreenState extends State<PretripScreen> {
                       ),
               ),
               // IN-FORCE JMA TURMOIL WARNINGS (0.4.0 widening): downpour /
-              // typhoon-wind / thunder / fog warnings at HER current location,
+              // typhoon-wind / thunder / fog warnings at the driver's current location,
               // relayed VERBATIM as cards (Article 17 β) — a fetched in-force
-              // 大雨危険警報 must reach HER, never be silently dropped. These
+              // 大雨危険警報 must reach the driver, never be silently dropped. These
               // never touch the road-condition band (that inference would be
               // fabrication); they inform, the driver always drives.
               if (live != null && _pretripJmaTurmoilAdvisories.isNotEmpty)
@@ -1034,8 +1034,8 @@ class _PretripScreenState extends State<PretripScreen> {
                   strings,
                   _pretripJmaTurmoilAdvisories,
                 ),
-              // PARTIAL-READ caution for HER CURRENT location: a border read
-              // where a sibling prefecture was unreachable. HER must SEE that
+              // PARTIAL-READ caution for the driver's CURRENT location: a border read
+              // where a sibling prefecture was unreachable. the driver must SEE that
               // the official-warning check was incomplete — over-warn, never a
               // clean "all checked". Naming the unreachable prefecture (秋田県).
               if (live != null &&
@@ -1069,7 +1069,7 @@ class _PretripScreenState extends State<PretripScreen> {
                   strings,
                   _routeBridges!.clusterCount,
                 ),
-              // In-app TYPED-PLACE ENTRY: the driver (HER) sets/changes the
+              // In-app TYPED-PLACE ENTRY: the driver sets/changes the
               // destination AREA herself. ALWAYS visible — she must be able to
               // set the place the FIRST time, when _destAreaRead is still null.
               // It is a PLACE entry; it watches no person.
@@ -1137,7 +1137,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// sites lie on the fetched route, and bridge decks freeze before the road
   /// surface does. Same visual weight as [_borderIncompleteCaution] — a
   /// caution, not an alarm. The count is approximate by construction and the
-  /// string says so (約/"About"); it never tells HER not to drive.
+  /// string says so (約/"About"); it never tells the driver not to drive.
   Widget _bridgeCorridorCaution(
     BuildContext context,
     BriefingStrings strings,
@@ -1195,7 +1195,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// — one row per warning, highest severity first, prefecture-labeled. The
   /// card is visual-only (no spoken/audio path from this surface) per the
   /// adapter's severity-gated modality guidance; it informs, it never tells
-  /// HER not to drive. Card color escalates only when a 警報-class
+  /// the driver not to drive. Card color escalates only when a 警報-class
   /// (severe/extreme) warning is present; 注意報-only stays caution-toned.
   Widget _jmaTurmoilWarningsCard(
     BuildContext context,
@@ -1259,7 +1259,7 @@ class _PretripScreenState extends State<PretripScreen> {
   /// An honest, conservative caution that the official-warning check was only
   /// PARTIAL: a border prefecture ([unreachableArea]) could not be reached, so a
   /// warning (up to a 大雪特別警報) may be in force there that is not shown. It
-  /// DISCLOSES the gap; it never tells HER not to drive. Localized for HER
+  /// DISCLOSES the gap; it never tells the driver not to drive. Localized for the driver
   /// (Japanese for her mother in Akita).
   Widget _borderIncompleteCaution(
     BuildContext context,

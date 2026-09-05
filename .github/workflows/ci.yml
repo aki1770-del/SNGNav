@@ -68,8 +68,8 @@ jobs:
 
       - name: Sibling-constraint check — prove the instrument first
         # The guard shipped npm caret semantics 2026-08-21..08-28 and reported 8
-        # false FAILs in 16. A gate that over-reports gets routed around
-        # (Sakichi V20). The self-test is anchored to pub_semver and carries
+        # false FAILs in 16. A gate that over-reports gets routed around, so it
+        # stops being a gate. The self-test is anchored to pub_semver and carries
         # negative controls that go RED if either defect is reintroduced, so the
         # instrument is proven on every push before its verdict is trusted.
         run: python3 scripts/sibling_constraint_check.py --self-test
@@ -134,7 +134,7 @@ jobs:
         # if: always() -- added 2026-08-28. This step had no condition, so ANY earlier
         # app-test failure SKIPPED it and blinded us to all 37 package suites. On the
         # option-C branch that night, one failing app test hid whether the package
-        # suite passed, and the comparison the Chair needed could not be made. It
+        # suite passed, so the comparison we needed could not be made. It
         # still GATES -- its failure fails the job -- it just always MEASURES.
         if: always()
         # Was TWO hardcoded allow-lists -- 7 names for `dart test`, 5 for
@@ -200,7 +200,7 @@ jobs:
 
   test-target-dart:
     name: Test (embedded target Dart 3.10.1)
-    # Process-fix C (D-VGC218-1, "freeze-neutral correctness-fix"): the embedded flutter-engine
+    # Freeze-neutral correctness fix: the embedded flutter-engine
     # (Yocto FLUTTER_SDK_TAG 3.38.3) ships Dart 3.10.1, but the other lanes pin 3.41.4 (Dart 3.12)
     # and silently hid every source requiring >3.10 — the skew that locked the embedded target out.
     # This lane resolves+analyzes+tests on the EXACT target Dart so that class can never return.

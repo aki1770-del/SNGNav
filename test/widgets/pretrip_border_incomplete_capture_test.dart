@@ -1,10 +1,10 @@
 /// Render-and-SEE capture of the JMA partial-read (border-incomplete) caution on
-/// HER mother's family-thread surface (OPS-066 observation-grade verification).
+/// the driver's mother's family-thread surface (observation-grade verification).
 ///
 /// A passing reach test (pretrip_border_incomplete_test.dart) proves the caution
 /// is in the widget tree; it does NOT prove the Japanese is readable or that the
 /// real warning and the honest caution sit together legibly. This loads the real
-/// Noto CJK font and writes a PNG for a human (VAA) to go and LOOK:
+/// Noto CJK font and writes a PNG for a human to go and LOOK:
 ///   test/widgets/_capture/pretrip_border_incomplete_ja.png
 ///
 /// Run:  flutter test test/widgets/pretrip_border_incomplete_capture_test.dart
@@ -107,7 +107,7 @@ void main() {
     );
   });
 
-  testWidgets('CAPTURE: JMA partial-read caution reaches HER (ja)', (
+  testWidgets('CAPTURE: JMA partial-read caution reaches the driver (ja)', (
     tester,
   ) async {
     final hasCjk = await _loadCjk();

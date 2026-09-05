@@ -1,16 +1,16 @@
 /// In-app TYPED-PLACE ENTRY for the family-thread destination area.
 ///
-/// WHY this exists (mission anchor — D3 worst-case / PHIL-001 Driver Test): the
+/// WHY this exists (the compound-failure worst case — the driver test): the
 /// destination-area read shipped behind build-time `PRETRIP_DEST_*` dart-defines
-/// an end driver can never set. This is the minimal in-app surface that lets HER
-/// — the driver, a daughter — set her mother's-area destination PLACE herself,
+/// an end driver can never set. This is the minimal in-app surface that lets the
+/// driver — a daughter — set her mother's-area destination PLACE herself,
 /// completing the family-thread reach. It is a PLACE entry; it watches NO person.
 ///
-/// DIGNITY BOUNDARIES (binding): the entry source is ONLY HER-typed lat/lon OR
-/// HER selection from the offline curated JMA prefecture list. There is NO
+/// DIGNITY BOUNDARIES (binding): the entry source is ONLY driver-typed lat/lon OR
+/// the driver's selection from the offline curated JMA prefecture list. There is NO
 /// import of any contact list, device-location, person-locating, geo-fencing, or
-/// proximity API — and there is NO online geocoder (offline-first, D3
-/// worst-case). The label is a place name SHE types; it is never seeded with a
+/// proximity API — and there is NO online geocoder (offline-first, for the
+/// compound-failure worst case). The label is a place name she types; it is never seeded with a
 /// person or relationship word. Resolution is prefecture-level (coarse),
 /// disclosed as such — never town-level, never an arrival/passable status.
 library;

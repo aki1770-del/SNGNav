@@ -1,4 +1,4 @@
-/// SimulatedFleetCaption — the loom for the map screen's demo-data disclosure.
+/// SimulatedFleetCaption — the guard for the map screen's demo-data disclosure.
 ///
 /// The defect this catches: the live-drive map drew fleet vehicle markers and
 /// red hazard rings from a fixed-seed `Random(42)` and said nothing about it,
@@ -189,7 +189,7 @@ void main() {
       expect(
         find.text(BriefingStrings.ja.simulatedFleetCaption),
         findsOneWidget,
-        reason: 'HER mother reads the map in Japanese or not at all',
+        reason: 'her mother reads the map in Japanese or not at all',
       );
       expect(find.text(BriefingStrings.en.simulatedFleetCaption), findsNothing);
     });

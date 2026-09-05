@@ -17,7 +17,7 @@ extension RouteResultNavigationAdapter on RouteResult {
         // routing_engine 0.6.0: `RouteManeuver.position` is nullable. A maneuver
         // whose location could not be parsed is NOT at `LatLng(0, 0)` — Null
         // Island, in the Gulf of Guinea, which is where the old sentinel would
-        // have narrated and centred HER map. `NavigationManeuver.position` is
+        // have narrated and centred her map. `NavigationManeuver.position` is
         // non-nullable, so a positionless maneuver cannot enter this type at
         // all: it is omitted rather than given a fabricated coordinate.
         maneuvers: maneuvers

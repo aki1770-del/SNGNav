@@ -94,7 +94,7 @@ void main() {
   });
 
   // The Japanese guidance is a faithful, adversarially-verified translation
-  // (asset `_meta.translation_ja`). It must reach HER mother in Japanese, fall
+  // (asset `_meta.translation_ja`). It must reach the driver's mother in Japanese, fall
   // back to grounded English where absent, and keep its safety-load-bearing
   // figures exact (a number drift in a safety instruction is a D4 event).
   group('Japanese guidance (guidance_ja)', () {

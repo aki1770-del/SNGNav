@@ -331,7 +331,7 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
     WeatherCondition condition,
     bool invisibleIce,
   ) {
-    // The precise term HER knows, from the catalog's JAF-grounded
+    // The precise term the driver knows, from the catalog's JAF-grounded
     // announcement seam — ja first (the driver this app anchors on reads
     // Japanese), EN line kept for foreign-driver legibility. The
     // looks-wet variant is spoken ONLY on the invisible-ice path; the
@@ -481,7 +481,7 @@ class WeatherStatusBarState extends State<WeatherStatusBar> {
 /// "we have no data about the road" rendered exactly like "the road is fine".
 /// That is the same green-light-on-absence defect the Measured-or-Absent
 /// contract removed from the type system, reappearing at the reach layer, on
-/// the surface HER eyes are actually on.
+/// the surface her eyes are actually on.
 ///
 /// ja FIRST: the driver this app anchors on reads Japanese, and the moment the
 /// feed dies in Akita is precisely the moment an English-only sentence becomes

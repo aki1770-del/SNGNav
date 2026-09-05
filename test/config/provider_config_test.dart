@@ -42,7 +42,7 @@ void main() {
 
   group('ProviderConfig — weather defaults', () {
     test(
-      'defaults to simulated weather (D-VGC132-1: all-simulated default)',
+      'defaults to simulated weather (all-simulated default)',
       () {
         const config = ProviderConfig();
         expect(config.weatherType, WeatherProviderType.simulated);
@@ -112,7 +112,7 @@ void main() {
     // Note: --dart-define values are compile-time constants.
     // In tests without --dart-define, defaults apply.
     test(
-      'defaults to simulated weather when no dart-define is set (D-VGC132-1)',
+      'defaults to simulated weather when no dart-define is set',
       () {
         final config = ProviderConfig.fromEnvironment();
         expect(config.weatherType, WeatherProviderType.simulated);
@@ -251,7 +251,7 @@ void main() {
   });
 
   group('ProviderConfig — routing defaults', () {
-    test('defaults to mock routing (D-VGC132-1: all-simulated default)', () {
+    test('defaults to mock routing (all-simulated default)', () {
       const config = ProviderConfig();
       expect(config.routingType, RoutingEngineType.mock);
     });
@@ -289,7 +289,7 @@ void main() {
 
   group('ProviderConfig.fromEnvironment — routing', () {
     test(
-      'defaults to mock routing when no dart-define is set (D-VGC132-1)',
+      'defaults to mock routing when no dart-define is set',
       () {
         final config = ProviderConfig.fromEnvironment();
         expect(config.routingType, RoutingEngineType.mock);

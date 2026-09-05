@@ -128,7 +128,7 @@ class GeoClueLocationProvider implements LocationProvider {
       // L2 source guard (defense-in-depth) — drop a non-finite-coordinate fix
       // at ingest so a NaN/±inf never enters the pipeline. On the degraded-GPS
       // path GeoClue can surface a non-finite Latitude/Longitude; emitting it
-      // would teleport HER dot at the map boundary (flutter_map 8.2.2 silently
+      // would teleport her dot at the map boundary (flutter_map 8.2.2 silently
       // projects a non-finite coordinate to garbage, 8.3.0 throws). We skip
       // SILENTLY — the last good fix is retained and a sustained garbage stream
       // ages to `stale`/dead-reckoning via the downstream watchdogs — rather

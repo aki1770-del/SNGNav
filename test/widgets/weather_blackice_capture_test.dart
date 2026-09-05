@@ -1,10 +1,10 @@
 // Render-and-SEE capture of the in-drive black-ice warning surfaces
-// (OPS-066 / L32 observation-grade verification).
+// (observation-grade verification).
 //
 // The radiative-frost morning (+2 °C / 70 % RH, clear) previously left the
 // status bar SILENT and, when a feed flag did fire, the message was a
 // generic English line. This captures the REAL widgets after the fix so a
-// human can go and LOOK at what HER screen shows:
+// human can go and LOOK at what the driver screen shows:
 //   1. _capture/weather_bar_radiative_frost.png — the status bar in the
 //      invisible-ice window: red hazard styling + ICE badge on a clear
 //      +2 °C morning.
@@ -55,7 +55,7 @@ Future<bool> _loadCjk() async {
   return loaded;
 }
 
-/// HER Akita radiative-frost morning: raw isHazardous FALSE, surface frozen.
+/// the driver Akita radiative-frost morning: raw isHazardous FALSE, surface frozen.
 final _radiativeFrost = WeatherCondition(
   precipType: PrecipitationType.none,
   intensity: PrecipitationIntensity.none,

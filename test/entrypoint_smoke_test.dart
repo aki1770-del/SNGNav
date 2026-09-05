@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sngnav_snow_scene/main.dart' as main_app;
 import 'package:sngnav_snow_scene/snow_scene.dart' as snow_scene;
 
-/// FDD-9 — Entrypoint smoke tests.
+/// Config-9 — Entrypoint smoke tests.
 ///
 /// Verifies that both app entrypoints can be instantiated and pumped
 /// without runtime errors. These tests catch import-graph breakage,
@@ -21,7 +21,7 @@ void main() {
       expect(find.text('SNGNav — Offline Map Demo'), findsOneWidget);
     });
 
-    // AMENDED 2026-08-29 (SDE, IVI-6). This asserted `findsWidgets` on the text
+    // AMENDED 2026-08-29 (IVI-6). This asserted `findsWidgets` on the text
     // "Initializing" — the placeholder — while its own comment said "either
     // 'Initializing...' or the actual status after init". The assertion and the
     // comment disagreed, and the assertion was the weaker of the two.

@@ -1,5 +1,5 @@
 /// Model edge case tests — computed properties, boundary conditions,
-/// Jidoka semantics, and Equatable behavior for all data models.
+/// fail-safe semantics, and Equatable behavior for all data models.
 ///
 /// These tests exercise the derived fields and helper methods on
 /// RouteResult, FleetReport, HazardZone, GeoPosition, and ConsentRecord
@@ -567,10 +567,10 @@ void main() {
   });
 
   // =========================================================================
-  // ConsentRecord — Jidoka semantics
+  // ConsentRecord — fail-safe semantics
   // =========================================================================
   group('ConsentRecord', () {
-    group('Jidoka: unknown = denied', () {
+    group('fail-safe: unknown = denied', () {
       test('isEffectivelyGranted: only true when granted', () {
         final granted = ConsentRecord(
           purpose: ConsentPurpose.fleetLocation,
@@ -591,7 +591,7 @@ void main() {
         expect(denied.isEffectivelyGranted, isFalse);
       });
 
-      test('isEffectivelyGranted: false when unknown (Jidoka)', () {
+      test('isEffectivelyGranted: false when unknown (fail-safe)', () {
         final unknown = ConsentRecord.unknown(
           purpose: ConsentPurpose.fleetLocation,
         );

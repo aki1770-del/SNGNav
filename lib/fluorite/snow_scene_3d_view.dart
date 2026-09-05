@@ -1,4 +1,4 @@
-/// SnowScene3DView — the FIRST genuine 3D pixel of HER "Snow Scene".
+/// SnowScene3DView — the FIRST genuine 3D pixel of the driver "Snow Scene".
 ///
 /// A glanceable, **perspective-projected** road-ahead view: the driver looks
 /// forward down a road that recedes to a horizon, and sees — in under a second
@@ -81,7 +81,7 @@ class SnowScene3DView extends StatelessWidget {
   /// The scene is driven by weather alone — it has no idea where the driver
   /// actually is. Left unfed, it would keep painting a confident, crisp road
   /// even when GPS is lost and the real position is drifting: the dishonest
-  /// failure D4 (and aviation RNP) forbids. When a [location] is supplied this
+  /// failure this project forbids (and aviation RNP too). When a [location] is supplied this
   /// view DEGRADES HONESTLY:
   ///
   ///  * `null` or navigation-grade [LocationQuality.fix] → no overlay; the

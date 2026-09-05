@@ -1,4 +1,4 @@
-# Ship HER offline briefing onto 32-bit ARM (embedded edge developers)
+# Ship an offline briefing onto 32-bit ARM (embedded edge developers)
 
 This is the **embedded / 32-bit ARM (`armv7`) extension** of
 [QUICKSTART.md](QUICKSTART.md). Read the QUICKSTART first — it walks you from an
@@ -24,7 +24,7 @@ levels of proof:
 | **The Flutter VISUAL render** on `armv7` | **`[GATED]`** on [`flutter/flutter#188063`](https://github.com/flutter/flutter/pull/188063) | Not yet — staged honestly in §4 |
 
 We do not claim the Flutter UI renders on `armv7`. We claim, and have run-SEEN,
-that the **decision logic that produces HER briefing** — the part that decides
+that the **decision logic that produces her briefing** — the part that decides
 *wait an hour* versus *go now* — runs offline and deterministically on 32-bit
 ARM today. You can build a real product on that layer now (headless service,
 serial/CAN output, a non-Flutter front-end) and adopt the Flutter render the day
@@ -110,7 +110,7 @@ git cherry-pick FETCH_HEAD        # or: git format-patch -1 FETCH_HEAD && apply 
 ## 2 — The pure-Dart core runs on `armv7` NOW (run-SEEN)
 
 The honest-decision core — `pretrip_decision_advisor` and the offline path that
-produces HER briefing — is **pure Dart with zero runtime dependencies.** It does
+produces her briefing — is **pure Dart with zero runtime dependencies.** It does
 not need Flutter, a GPU, a display, or a network. So it runs wherever the Dart
 VM runs, including genuine 32-bit ARM.
 
@@ -128,12 +128,12 @@ From that artifact, verbatim:
 - **Architecture:** `uname -m` → `armv7l`; the `dart` binary is `ELF 32-bit ARM`
   (`EI_CLASS = 01`, `e_machine = 0x28 = EM_ARM`); `Dart SDK ... on "linux_arm"`.
   This is real 32-bit ARM, not a 64-bit shim.
-- **Output:** HER Akita whiteout briefing, **identical to the documented x86_64 reference output** (the QUICKSTART/README briefing) —
+- **Output:** the Akita whiteout briefing, **identical to the documented x86_64 reference output** (the QUICKSTART/README briefing) —
   `verdict: waitAdvised`, `peakHazard: severe`, `strength: advisoryStrong`,
   `suggestedDelay: 1:00:00`. Exit code `0`.
 
 ```text
-=== HER Akita pre-trip briefing (offline, deterministic) ===
+=== the Akita pre-trip briefing (offline, deterministic) ===
 verdict: PretripVerdict.waitAdvised
 peakHazard: HourHazard.severe
 chips:
@@ -288,7 +288,7 @@ Akita in winter, it will.
 ## Why this exists
 
 The chain is short and it ends at a person: an embedded edge developer ships
-HER offline winter-safety briefing onto her car-class 32-bit ARM hardware, so
+an offline winter-safety briefing onto her car-class 32-bit ARM hardware, so
 that when she sets out in an Akita whiteout — net down, GPS gone — the head unit
 can still tell her *wait about an hour*. The wall in §1 is what stops that today;
 §2 is the proof the core already runs on the hardware; §1's unblock and §4's

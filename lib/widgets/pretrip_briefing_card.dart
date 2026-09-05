@@ -2,7 +2,7 @@
 ///
 /// DRIVER_VOICES.md (JAF pre-trip voice) puts the load-bearing safety weight
 /// on pre-trip preparation, not in-trip alerts. This card is that surface for
-/// HER and her family at the kitchen table: a one-glance verdict on the
+/// the driver and her family at the kitchen table: a one-glance verdict on the
 /// planned departure, plain-language reasons, and the JAF-grounded
 /// preparation checklist — equipment first, then prediction, then the
 /// whiteout plan.
@@ -39,7 +39,7 @@ class PretripBriefingCard extends StatelessWidget {
 
   /// The localized text the card renders. Defaults to English so existing
   /// callers and tests are unchanged; the running app resolves it from the
-  /// ambient locale (see `main.dart`), so HER mother in Akita reads the same
+  /// ambient locale (see `main.dart`), so the driver's mother in Akita reads the same
   /// safety verdict in Japanese.
   final BriefingStrings strings;
 

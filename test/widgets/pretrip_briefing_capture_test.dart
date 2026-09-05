@@ -323,7 +323,7 @@ void main() {
     await _loadRealFont();
     // The NEW Japan path: an Akita temp-only MET base with a REAL measured
     // AMeDAS visibility (80 m) merged into the departure hour. This is the only
-    // channel that lights the WHITEOUT band for HER mother — the JMA warning
+    // channel that lights the WHITEOUT band for the driver's mother — the JMA warning
     // merge deliberately never writes a visibility number, so without a real
     // sensor the Japan briefing could never reach severe on measured data.
     final base = WeatherForecast(
@@ -495,7 +495,7 @@ void main() {
     // The new λ-RLM offline-guidance surface: a caution briefing that ALSO
     // carries the grounded black-ice action card baked from the open corpus.
     // We render with the REAL shipped asset's blackIce card so the PNG shows
-    // exactly what HER would see, not a hand-written fixture.
+    // exactly what the driver would see, not a hand-written fixture.
     final wk = WinterKnowledge.fromJsonString(
       File('assets/winter_knowledge.json').readAsStringSync(),
     );

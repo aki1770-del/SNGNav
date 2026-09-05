@@ -7,7 +7,7 @@
 /// LocationBloc (LocationProvider), RoutingBloc (RoutingEngine),
 /// WeatherBloc (WeatherProvider).
 ///
-/// Jidoka: if loading fails or service is unavailable, all purposes
+/// Fail-safe: if loading fails or service is unavailable, all purposes
 /// are effectively denied. The pipeline stops itself.
 ///
 /// Consent is explicit, revocable, and purpose-scoped.
@@ -46,7 +46,7 @@ class ConsentBloc extends Bloc<ConsentEvent, ConsentState> {
         consents: map,
       ));
     } catch (e) {
-      // Jidoka: service error → all purposes effectively denied.
+      // Fail-safe: service error → all purposes effectively denied.
       emit(ConsentState(
         status: ConsentBlocStatus.error,
         errorMessage: e.toString(),

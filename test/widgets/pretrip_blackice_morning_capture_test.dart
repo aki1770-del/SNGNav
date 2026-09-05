@@ -1,10 +1,10 @@
-// Render-and-SEE capture of the humidity-aware black-ice morning (OPS-066).
+// Render-and-SEE capture of the humidity-aware black-ice morning (observation-grade).
 //
 // The scene: a classic Akita radiative-cooling dawn — air ABOVE freezing
 // (+0.5 °C), 95% humidity, NO precipitation, clear visibility. Before advisor
 // 0.5.0 this morning briefed CLEAR — the ambient-only frost check cannot see
 // it. Now the Magnus surface estimate (−0.21 °C) fires the caution and the
-// briefing tells HER mother, in Japanese, that the road can be ice even
+// briefing tells the driver's mother, in Japanese, that the road can be ice even
 // though the thermometer says it is not freezing.
 //
 // Run: flutter test test/widgets/pretrip_blackice_morning_capture_test.dart

@@ -1,10 +1,10 @@
 name: edge_dev_akita_briefing
 description: >-
-  Standalone EDGE-DEVELOPER example: assemble HER mother's Akita pre-trip
+  Standalone EDGE-DEVELOPER example: assemble the driver's mother's Akita pre-trip
   winter-safety briefing from ONLY the published-shaped packages
   (pretrip_decision_advisor + pretrip_source_jma) and render it in the edge
   developer's OWN minimal UI. Depends on NOTHING from the SNGNav app — proving
-  "edge developers build their own UI/XI for HER".
+  "edge developers build their own UI/XI for the driver".
 publish_to: none
 version: 0.1.0
 

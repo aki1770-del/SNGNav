@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """stale-pin-check.py — a repaired defect must not leave its warning standing.
 
-WHY (SDE, 2026-08-21):
+WHY (2026-08-21):
 
   `nav2_safety_layer` shipped SAFETY_BOUNDARY.md to consumers with two Assumptions of
   Use that had become FALSE:
@@ -38,8 +38,8 @@ WHY (SDE, 2026-08-21):
   genuinely LIVE and guarded style-(b).
 
   Therefore this is WIRED AS REPORTING, NOT AS A GATE. A gate at a 4-in-5 false-positive rate
-  would be routed around inside a week (Sakichi Vision #20 — a halt costing more than the
-  defect gets bypassed), and a routed-around gate is worse than none.
+  would be routed around inside a week (a check costing more than the defect it catches
+  gets bypassed), and a routed-around gate is worse than none.
 
   The convention that would close it, PROPOSED not imposed: name style-(b) tests with a
   `PINNED-LIVE:` prefix, and this rule skips them. That is a suite-wide change and belongs to
