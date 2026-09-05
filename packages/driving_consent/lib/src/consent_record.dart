@@ -1,7 +1,7 @@
 /// Consent record — the atomic unit of privacy consent.
 ///
-/// Fleet telemetry requires explicit, revocable consent — Jidoka semantics:
-/// UNKNOWN = DENIED. The pipeline stops itself.
+/// Fleet telemetry requires explicit, revocable consent, and the gate is
+/// fail-closed: UNKNOWN = DENIED. The pipeline stops itself.
 ///
 /// Three enums:
 ///   [ConsentStatus]  — granted / denied / unknown (3-state gate)
@@ -13,8 +13,8 @@ import 'package:equatable/equatable.dart';
 
 /// Three-state consent gate.
 ///
-/// Jidoka (自働化): UNKNOWN is treated as DENIED.
-/// The machine stops and waits for the human.
+/// Fail-closed: UNKNOWN is treated as DENIED. Nothing proceeds until
+/// the driver has explicitly decided.
 enum ConsentStatus {
   /// Driver has explicitly granted consent for this purpose.
   granted,
@@ -80,7 +80,7 @@ enum ConsentPurpose {
 ///
 /// A per-record label naming which legal regime the integrator is
 /// operating under. This package provides per-purpose, jurisdiction-aware
-/// consent STATE + Jidoka gates; it does NOT assert legal compliance.
+/// consent STATE + fail-closed gates; it does NOT assert legal compliance.
 /// Meeting GDPR / CCPA / APPI obligations is the integrator's
 /// responsibility at their persistence and jurisdiction layer.
 enum Jurisdiction {
@@ -113,7 +113,7 @@ class ConsentRecord extends Equatable {
 
   /// Creates an unknown (never-set) record for a purpose.
   ///
-  /// Used when no consent has been recorded. Jidoka: this blocks
+  /// Used when no consent has been recorded. Fail-closed: this blocks
   /// data flow — UNKNOWN is never effectively granted.
   ConsentRecord.unknown({
     required this.purpose,
@@ -123,7 +123,7 @@ class ConsentRecord extends Equatable {
 
   /// True only when the driver has explicitly granted consent.
   ///
-  /// Jidoka: UNKNOWN and DENIED both return false.
+  /// Fail-closed: UNKNOWN and DENIED both return false.
   /// The pipeline stops itself — no data leaves the device.
   bool get isEffectivelyGranted => status == ConsentStatus.granted;
 

@@ -9,10 +9,10 @@
 /// integrators implement their own with encrypted-at-rest persistence
 /// per jurisdiction.
 ///
-/// Jidoka gate enforcement: every call to [recordEvent] queries the
+/// Fail-closed gate enforcement: every call to [recordEvent] queries the
 /// supplied [ConsentService] for the purpose's consent state and throws
 /// `StateError` unless the status is `ConsentStatus.granted`. UNKNOWN
-/// equals DENIED. The line stops itself.
+/// equals DENIED, and the call is refused rather than recorded.
 library;
 
 import 'dart:math';
@@ -67,7 +67,7 @@ class InMemoryInstrumentationService implements InstrumentationService {
     ConsentPurpose purpose,
     InstrumentationEvent event,
   ) async {
-    // Jidoka gate: query consent service. UNKNOWN equals DENIED.
+    // Fail-closed gate: query consent service. UNKNOWN equals DENIED.
     final consent = await _consentService.getConsent(purpose);
     if (!consent.isEffectivelyGranted) {
       throw StateError(
@@ -92,7 +92,7 @@ class InMemoryInstrumentationService implements InstrumentationService {
     for (final p in purposes) {
       final bucket = _events[p];
       if (bucket == null) continue;
-      // Jidoka gate on read: revoking consent must stop reads, not just
+      // Fail-closed gate on read: revoking consent must stop reads, not just
       // writes. Query the consent service for each purpose independently;
       // exclude a purpose's events unless its consent is effectively
       // granted. UNKNOWN equals DENIED. Stored events are NOT deleted here

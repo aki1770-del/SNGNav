@@ -14,7 +14,7 @@ abstract class ConsentService {
   /// Get current consent for a specific purpose.
   ///
   /// Returns [ConsentRecord.unknown] if no consent has been recorded.
-  /// Jidoka: unknown = denied. The caller checks [ConsentRecord.isEffectivelyGranted].
+  /// Fail-closed: unknown = denied. The caller checks [ConsentRecord.isEffectivelyGranted].
   Future<ConsentRecord> getConsent(ConsentPurpose purpose);
 
   /// Get all consent records (one per purpose that has been set).

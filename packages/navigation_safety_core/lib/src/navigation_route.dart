@@ -3,7 +3,7 @@
 /// [NavigationRoute] and [NavigationManeuver] mirror the shape of
 /// `RouteResult` and `RouteManeuver` from `routing_engine`, but live entirely
 /// inside `navigation_safety`. This keeps the public API of `navigation_safety`
-/// free of any `routing_engine` dependency (D-SC22-4).
+/// free of any `routing_engine` dependency.
 ///
 /// Consumers convert at the application boundary using an adapter or extension
 /// (e.g. `RouteResult.toNavigationRoute()`). The navigation session state

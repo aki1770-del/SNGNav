@@ -116,8 +116,8 @@ class NavigationSafetyConfig extends Equatable {
         // The loom shifts caution further than any other profile;
         // alerts arrive earliest on weather + visibility; score floors
         // highest. Hokkaido winter accidents involve foreign self-driving
-        // tourists at meaningful rates — this profile closes a V100 gap
-        // the previous taxonomy mis-mapped to either snowZoneExperienced
+        // tourists at meaningful rates — this profile closes a coverage
+        // gap the previous taxonomy mis-mapped to either snowZoneExperienced
         // (catastrophically wrong) or noviceUrban (location-wrong).
         return NavigationSafetyConfig(
           safeScoreFloor: 0.90,
