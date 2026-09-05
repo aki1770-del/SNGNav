@@ -55,4 +55,8 @@ Do not couple a new field to an actuator path. Display only.
 
 ## Questions
 
-Open a GitHub issue or ping `@komada` in the issue thread.
+Open an issue on this repository:
+<https://github.com/aki1770-del/SNGNav/issues>
+
+Please keep questions in the issue thread rather than mentioning individual
+GitHub accounts.
