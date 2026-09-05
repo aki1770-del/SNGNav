@@ -12,7 +12,7 @@ import 'package:condition_aggregator/condition_aggregator.dart';
 // The JMA umbrella exports the IN-BAND partial-read marker: at a border point a
 // reachable prefecture's real warnings are returned ALONGSIDE a synthetic
 // incomplete-read notice (`eventClass == kJmaIncompleteReadEventClass`) naming
-// the unreachable sibling(s). We honour it so a PARTIAL read never reaches HER
+// the unreachable sibling(s). We honour it so a PARTIAL read never reaches the driver
 // dressed as a COMPLETE one.
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart'
     show kJmaIncompleteReadEventClass;
@@ -45,7 +45,7 @@ class PretripLiveResult {
   /// the official-warning check is incomplete — a real sibling warning (up to a
   /// 大雪特別警報) could be missing from [forecast]. Carried in-band from the
   /// aggregator's incomplete-read notice (`kJmaIncompleteReadEventClass`) and
-  /// NEVER silently dropped: the partial read must reach HER alongside any real
+  /// NEVER silently dropped: the partial read must reach the driver alongside any real
   /// warning that DID arrive. Always false on the global MET arm, the
   /// no-Japan-source arms, and the total-failure arm.
   final bool jmaBorderCheckIncomplete;
@@ -61,7 +61,7 @@ class PretripLiveResult {
   /// These NEVER merge a road-condition band (a downpour warning is not a
   /// road-surface state — that inference would be fabrication); they exist so
   /// a fetched in-force warning is never silently dropped between the adapter
-  /// and HER. Ordered highest severity first. Empty on the global MET arm, the
+  /// and the driver. Ordered highest severity first. Empty on the global MET arm, the
   /// JMA-failed arm, and whenever nothing beyond the snow classes is in force.
   final List<Advisory> jmaTurmoilAdvisories;
 
@@ -147,7 +147,7 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
         // IN-BAND PARTIAL-READ signal FIRST. At a border the aggregator returns
         // the reachable prefecture's real warnings AND a synthetic, low-severity
         // incomplete-read notice naming the unreachable sibling(s). It is NOT a
-        // snow advisory (the snow filter below skips it), but it MUST reach HER:
+        // snow advisory (the snow filter below skips it), but it MUST reach the driver:
         // discarding it would present a partial read as a complete all-clear at
         // the exact degraded-connectivity scenario this product exists for. We
         // detect it independently of the snow filter and honour BOTH — the real
@@ -179,7 +179,7 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
         if (snow == null) {
           // No reachable snow warning. Still honour a partial read: if a sibling
           // was unreachable, this is NOT a clean all-clear — carry the flag so
-          // HER sees the gap instead of an implied "no warnings".
+          // the driver sees the gap instead of an implied "no warnings".
           return PretripLiveResult(
             forecast: base,
             departure: departure,
@@ -188,7 +188,7 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
             jmaBorderCheckIncomplete: borderIncomplete,
             jmaUnreachableArea: unreachableArea,
             // No snow warning, but a turmoil-class warning (e.g. 大雨危険警報)
-            // may still be in force — it reaches HER as a card, never dropped.
+            // may still be in force — it reaches the driver as a card, never dropped.
             jmaTurmoilAdvisories: turmoil,
           );
         }
@@ -208,7 +208,7 @@ Future<PretripLiveResult> resolvePretripLiveForecast({
           jmaEventName: snow.eventClass,
           prefectureCode: code,
           // Surface the real warning AND the partial-read flag together: the
-          // merged 着雪注意報 is shown, and HER is told 秋田県 could not be checked.
+          // merged 着雪注意報 is shown, and the driver is told 秋田県 could not be checked.
           jmaBorderCheckIncomplete: borderIncomplete,
           jmaUnreachableArea: unreachableArea,
           jmaTurmoilAdvisories: turmoil,

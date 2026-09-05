@@ -2,11 +2,11 @@
 /// and ConsentBloc — the privacy consent gate (C-AD-11).
 ///
 /// Coverage:
-///   - ConsentRecord model: enums, Jidoka getters, equality
+///   - ConsentRecord model: enums, fail-safe getters, equality
 ///   - InMemoryConsentService: grant, revoke, getAllConsents, unknown default
-///   - ConsentState: convenience getters, Jidoka semantics
+///   - ConsentState: convenience getters, fail-safe semantics
 ///   - ConsentEvent: equality
-///   - ConsentBloc: load, grant, revoke, error handling, Jidoka defaults
+///   - ConsentBloc: load, grant, revoke, error handling, fail-safe defaults
 ///
 /// Architecture reference: A63 v3.0 §4.8, C-AD-11.
 library;
@@ -91,7 +91,7 @@ void main() {
       expect(record.isUnknown, isFalse);
     });
 
-    test('unknown record is not effectively granted — Jidoka', () {
+    test('unknown record is not effectively granted — fail-safe', () {
       final record = ConsentRecord.unknown(
         purpose: ConsentPurpose.fleetLocation,
       );
@@ -299,7 +299,7 @@ void main() {
       expect(state.isAllDenied, isTrue);
     });
 
-    test('Jidoka: getters return false when not ready', () {
+    test('fail-safe: getters return false when not ready', () {
       final state = ConsentState(
         status: ConsentBlocStatus.loading,
         consents: {
@@ -535,7 +535,7 @@ void main() {
     );
 
     blocTest<ConsentBloc, ConsentState>(
-      'Jidoka: service error on load emits error state',
+      'fail-safe: service error on load emits error state',
       build: () {
         final failing = _FailingConsentService()..shouldFail = true;
         return ConsentBloc(service: failing);
@@ -555,7 +555,7 @@ void main() {
     );
 
     blocTest<ConsentBloc, ConsentState>(
-      'Jidoka: service error on grant emits error state',
+      'fail-safe: service error on grant emits error state',
       build: () {
         final failing = _FailingConsentService()..shouldFail = true;
         return ConsentBloc(service: failing);
@@ -583,7 +583,7 @@ void main() {
     );
 
     blocTest<ConsentBloc, ConsentState>(
-      'Jidoka: service error on revoke emits error state',
+      'fail-safe: service error on revoke emits error state',
       build: () {
         final failing = _FailingConsentService()..shouldFail = true;
         return ConsentBloc(service: failing);

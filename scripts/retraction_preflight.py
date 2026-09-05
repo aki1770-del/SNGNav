@@ -150,7 +150,7 @@ def main():
 
     # ── LIMB 2b: THE CARET-ON-ITSELF CHECK ──────────────────────────────────
     # Added 2026-08-28 because this script's OWN discriminating control failed.
-    # It was built from the driving_conditions 0.6.0 case, where FSE ruled that
+    # It was built from the driving_conditions 0.6.0 case, where review found that
     # retracting would leave `^0.6.0` holders with no satisfying version -- and
     # the first version of this script returned exit 0 (SAFE) on exactly that
     # case. Why: the only PUBLISHED dependent pinned ^0.5.2 and survived, and

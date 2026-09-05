@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Published fabrication sweep — what is in HER hands RIGHT NOW.
+"""Published fabrication sweep — what is in the driver hands RIGHT NOW.
 
 WHY THIS EXISTS
 ---------------
@@ -25,7 +25,7 @@ PUBLISHED ARCHIVE for `latest`, and reads THAT.
 THE CLASS IT LOOKS FOR
     an unmeasured / absent / failed input silently resolving to a SAFE-LOOKING value.
 
-HONEST BOUNDS — what this CANNOT see (a loom sold as more than it is is false comfort)
+HONEST BOUNDS — what this CANNOT see (a check sold as more than it is is false comfort)
 --------------------------------------------------------------------------------
 1. SEMANTIC FABRICATION WITH NO LITERAL. `_default()` / `Foo.clear()` /
    `_fallbackFor(x)` — a constructor or helper whose BODY fabricates, invoked at a
@@ -68,7 +68,7 @@ source; the split is recorded here so nobody has to re-derive the noise floor:
 Each false positive took under a minute to clear by reading the enclosing
 constructor or the guard directly above. That is the trade this scanner is tuned
 for, and it is the right one: the cost of a false positive is a minute; the cost
-of a false negative is a sentence on HER screen saying the road is fine.
+of a false negative is a sentence on the driver screen saying the road is fine.
 
 WHY PYTHON AND NOT BASH
 -----------------------
@@ -90,8 +90,8 @@ USAGE
     published_fabrication_sweep.py --json OUT.json # also write machine-readable findings
     published_fabrication_sweep.py --no-net        # cache only, fail if a fetch would be needed
 
-NOT SCHEDULED. This script is BUILT and PROVEN. Wiring it to cron is a Chair/ORS
-decision, and no part of this file claims it is scheduled.
+NOT SCHEDULED. This script is BUILT and PROVEN. Wiring it to cron is a separate
+operational decision, and no part of this file claims it is scheduled.
 """
 
 from __future__ import annotations
@@ -298,7 +298,7 @@ SAFETY = (
 )
 # A value that reads as "everything is fine".
 BENIGN_ENUM = r"clear|dry|normal|none|ok|safe|good|low|proceed|passable|nominal|fine"
-# Phrases that tell HER the road is fine.
+# Phrases that tell the driver the road is fine.
 BENIGN_PHRASE = (
     r"is clear|route is clear|all clear|no hazard|no hazards|no warning|no warnings"
     r"|conditions normal|normal conditions|nothing to report|no advisory|no alerts"
@@ -347,7 +347,7 @@ R("PUB-2", rf"\bbool\s+get\s+(?:has|is|are|can|should|was|were)\w*\s*=>[^;]*"
 
 R("PUB-3", rf"['\"][^'\"]*(?:{BENIGN_PHRASE})[^'\"]*['\"]",
   "a REASSURING SENTENCE is a string literal in shipping code — if any path reaches "
-  "it without a measurement, HER screen says the road is fine on no evidence "
+  "it without a measurement, the driver screen says the road is fine on no evidence "
   "(adaptive_reroute 0.1.6 `reason = 'Route is clear'`)",
   tier=1, flags=re.I)
 
@@ -573,7 +573,7 @@ def report(findings: list[Finding], catalog: dict[str, str]) -> None:
     print()
     print("Every line above is a CANDIDATE for human adjudication, never a verdict.")
     print("The question each one asks is the same: does an absent, failed, or unmeasured")
-    print("input here become a value that reads to HER as safe?")
+    print("input here become a value that reads to the driver as safe?")
     print()
     print("WHAT THIS RUN COULD NOT SEE: semantic fabrication with no literal at the call")
     print("site; CROSS-PACKAGE composition (a consumer laundering a fabricated constant")
@@ -612,7 +612,7 @@ def main(argv: list[str]) -> int:
     if args.selftest:
         return self_test(reg)
 
-    print(">> Published fabrication sweep — what is in HER hands RIGHT NOW")
+    print(">> Published fabrication sweep — what is in the driver hands RIGHT NOW")
     print("   Source of truth is the REGISTRY. The local tree is not what a stranger holds.")
     catalog = resolve_catalog(reg, seed_candidates())
     if args.only:

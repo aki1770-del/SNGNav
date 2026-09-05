@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fabrication sweep — absence must never become a confident positive.
 #
-# WHY THIS EXISTS (BOD-19, 2026-07-11)
+# WHY THIS EXISTS (2026-07-11)
 # -----------------------------------
 # driving_weather turned an EMPTY advisory feed into `WeatherCondition.clear()`,
 # which hardcoded temperatureCelsius = 5.0 / visibilityMeters = 10000 / iceRisk =
@@ -11,18 +11,18 @@
 #
 # We found it by hand. Then an adversarial lens found the SAME CLASS in five more
 # packages nobody had scoped — including pretrip_decision_advisor, which speaks to
-# HER before she leaves the house and whose `noData` verdict hardcoded its peak
+# the driver before she leaves the house and whose `noData` verdict hardcoded its peak
 # hazard to `clear`. A no-forecast morning became a clear morning.
 #
-# That lens was a ONE-OFF AGENT. A defect class whose only detector is "somebody
-# remembers to go looking" is not caught by a loom — it is caught by vigilance, and
-# vigilance is what Sakichi's loom exists to make unnecessary. This script is the
+# That lens was a ONE-OFF REVIEW. A defect class whose only detector is "somebody
+# remembers to go looking" is not caught by a machine — it is caught by vigilance,
+# and vigilance is exactly what a machine should make unnecessary. This script is the
 # machine: it runs, it scans every package, and it EXITS NON-ZERO.
 #
 # WHAT IT CATCHES — the shape, not the instance:
 #   an unmeasured / absent / failed input silently resolving to a SAFE-LOOKING value.
 #
-# HONEST BOUNDS (a loom sold as more than it is, is false comfort):
+# HONEST BOUNDS (a check sold as more than it is, is false comfort):
 #   This is a SOUND PARTIAL. It is a lexical scanner, not a dataflow analysis. It
 #   CANNOT know whether a given `?? 0` is safety-relevant. It WILL miss a fabrication
 #   expressed in a shape not listed here, and it WILL flag benign code. Every hit is a
@@ -49,7 +49,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # scanner silently matched nothing and would have reported PASS over a catalog full of
 # fabrications — the exact defect class it exists to catch, inside the detector itself.
 # It was caught ONLY because --self-test requires the sweep to FIRE on the real defect.
-# That is the whole argument for falsification-proving a loom before trusting it.
+# That is the whole argument for falsification-proving a check before trusting it.
 RULE_IDS=(FAB-1 FAB-2 FAB-3 FAB-4 FAB-5 FAB-6)
 RULE_RES=(
   '\?\?[[:space:]]*(false|0|0\.0|1\.0)\b'
@@ -92,7 +92,7 @@ scan() {
 }
 
 if [[ "${1:-}" == "--self-test" ]]; then
-  # PROVE THE LOOM. A gate never shown to FAIL on the real defect is a green light
+  # PROVE THE CHECK. A gate never shown to FAIL on the real defect is a green light
   # with no thread behind it — that is the exact failure of 2026-07-11 (a manifest
   # guard scored 10/10 while blessing a dead voice lane).
   #

@@ -1,7 +1,7 @@
 /// Render-and-SEE capture of the SNOW_SCENE pre-trip surface AS HOSTED INSIDE
-/// the reference app, in Japanese (OPS-066 / L32 observation-grade verification).
+/// the reference app, in Japanese (observation-grade verification).
 ///
-/// This is the proof that the language reach-fix actually reaches HER in the
+/// This is the proof that the language reach-fix actually reaches the driver in the
 /// SHIPPED snow-scene app — not just in an isolated widget fixture. It mounts the
 /// REAL [SnowSceneShell] (its default `_Destination.pretrip` leg), which builds
 /// the Scaffold chrome the product shows first: a localized "出発前に" AppBar, a
@@ -133,14 +133,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
-        // Force Japanese, exactly as HER device would resolve it.
+        // Force Japanese, exactly as the driver device would resolve it.
         locale: const Locale('ja'),
         // The same delegates + supported locales the shipped SnowSceneApp wires,
         // so the briefing + chrome resolve to Japanese instead of leaking
         // English (the D4 reach failure this verifies is fixed).
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         supportedLocales: const [Locale('en'), Locale('ja')],
-        // The shipped snow-scene theme (dark, M3) so the PNG shows what HER
+        // The shipped snow-scene theme (dark, M3) so the PNG shows what the driver
         // actually sees, PLUS the CJK font family so Japanese renders as glyphs.
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(

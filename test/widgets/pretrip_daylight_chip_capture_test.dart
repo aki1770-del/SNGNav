@@ -1,5 +1,5 @@
 // Render-and-SEE capture of the pre-trip briefing card SHOWING THE DAYLIGHT
-// CHIP (OPS-066 / L32 observation-grade verification).
+// CHIP (observation-grade verification).
 //
 // The daylight chip is the offline daylight-clock low-light note. It only
 // reaches the card when the briefing is produced from a CommuteShape carrying a
@@ -37,7 +37,7 @@ const _cjkPaths = <String>[
   '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
 ];
 
-// Akita context — HER mother. Pinned offset == --dart-define PRETRIP_UTC_OFFSET_MIN=540.
+// Akita context — the driver's mother. Pinned offset == --dart-define PRETRIP_UTC_OFFSET_MIN=540.
 const _geo = TripGeo(
   latitude: 39.72,
   longitude: 140.10,

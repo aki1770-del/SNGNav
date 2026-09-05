@@ -8,7 +8,7 @@
 > **Embedded / 32-bit ARM?** → [EMBEDDED_ARMV7.md](EMBEDDED_ARMV7.md) — ship the offline core onto `armv7` car-class hardware (pure-Dart core `armv7`-proven; Flutter render gated on flutter/flutter#188063).
 
 A standalone, **edge-developer-shaped** Flutter app that assembles and RENDERS
-HER mother's Akita pre-trip winter-safety briefing using **only two
+the driver's mother's Akita pre-trip winter-safety briefing using **only two
 published-shaped packages** and the developer's **own** minimal UI widget —
 nothing from the SNGNav app.
 
@@ -98,7 +98,7 @@ Measured: 80.0 m at Akita (0.4 km away)
    data)." (on-card text is English only — the bundled font carries no CJK
    glyphs, so the agency is named in English).
 
-## Honesty (binding — BOD-13 C6, preserved verbatim)
+## Honesty (binding)
 
 This is a driver-safety surface. These rules are binding and are not relaxed by
 this example:

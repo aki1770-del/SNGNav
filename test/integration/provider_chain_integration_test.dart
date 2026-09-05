@@ -14,7 +14,7 @@
 ///
 /// Sprint 14 — S14-1: Kaizen (改善).
 /// Architecture reference: A63 v3.0 §4 (location pipeline), §5 (BLoC wiring).
-/// PHIL-001 trace: D3 (driver in snow) → D5 (evidence chain).
+/// Traces the driver-in-snow case through the evidence chain.
 library;
 
 import 'package:driving_weather/driving_weather.dart';

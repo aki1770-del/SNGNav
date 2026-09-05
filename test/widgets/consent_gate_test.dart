@@ -172,10 +172,10 @@ void main() {
       verify(() => bloc.add(const ConsentLoadRequested())).called(1);
     });
 
-    testWidgets('shows "Fleet: OFF" when no consent records (Jidoka)', (
+    testWidgets('shows "Fleet: OFF" when no consent records (fail-safe)', (
       tester,
     ) async {
-      // Ready but empty map — Jidoka: unknown = denied
+      // Ready but empty map — fail-safe: unknown = denied
       when(
         () => bloc.state,
       ).thenReturn(const ConsentState(status: ConsentBlocStatus.ready));

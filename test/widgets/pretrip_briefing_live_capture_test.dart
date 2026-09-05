@@ -136,7 +136,7 @@ void main() {
       // fixture is NOT completed here: writing those fields in would claim the
       // product ships data it does not, which is a worse lie than the one this
       // release fixes. This morning genuinely cannot be assessed, so the
-      // capture records what HER card genuinely shows — through the SAME seam
+      // capture records what the driver card genuinely shows — through the SAME seam
       // `PretripScreen` uses, so the picture is of production, not of a
       // test-only path.
       const profile = DriverProfileSpec(

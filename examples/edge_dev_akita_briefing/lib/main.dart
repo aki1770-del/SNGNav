@@ -1,6 +1,6 @@
 /// Standalone edge-developer demo app.
 ///
-/// An edge developer assembles HER mother's Akita pre-trip winter-safety
+/// An edge developer assembles the driver's mother's Akita pre-trip winter-safety
 /// briefing using ONLY the two published-shaped packages and renders it in
 /// THEIR OWN widget ([AkitaBriefingView]) — nothing from the SNGNav app.
 ///

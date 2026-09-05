@@ -338,7 +338,7 @@ void main() {
     expect(result.jmaEventName, '着雪注意報');
     final depSlot = slotAt(result.forecast!, DateTime(2026, 1, 1, 7));
     expect(depSlot.estimatedRoadCondition, RoadConditionEstimate.ice);
-    // AND the partial read reaches HER: flag set + the unreachable area named.
+    // AND the partial read reaches the driver: flag set + the unreachable area named.
     expect(result.jmaBorderCheckIncomplete, isTrue);
     expect(result.jmaUnreachableArea, '秋田県');
   });
@@ -358,7 +358,7 @@ void main() {
           buildIncompleteReadNotice(const ['050000', '060000']),
         ]),
       );
-      // No band merged, but the read is INCOMPLETE — the flag carries so HER is
+      // No band merged, but the read is INCOMPLETE — the flag carries so the driver is
       // not shown an implied "no warnings".
       expect(result.status, PretripLiveStatus.japanJmaNoAdvisory);
       expect(result.jmaBorderCheckIncomplete, isTrue);

@@ -1,7 +1,7 @@
 /// REACH tests: the ROUTE BRIDGE caution on the shipped [PretripScreen].
 ///
 /// The claim under test: when a REAL route delivered AND ≥ 1 mapped bridge
-/// cluster lies on it AND the departure window is cold enough to matter, HER
+/// cluster lies on it AND the departure window is cold enough to matter, the driver
 /// sees ONE honest, approximate line — この先、秋田県内の経路上に橋が約Nか所あります。橋は
 /// 路面より先に凍結します。 — and in EVERY other arm (no route, zero clusters,
 /// off-season with warm-or-no evidence) the section is simply ABSENT: no
@@ -88,7 +88,7 @@ WeatherForecast _cannedLive(double temp) {
 
 /// A fully OFFLINE fake DEST-AREA forecast provider (the dest_refetch_test
 /// idiom): returns a canned forecast, optionally HELD on [gate] so a test can
-/// land the read late — after HER destination changed — and prove the stale
+/// land the read late — after the driver destination changed — and prove the stale
 /// forecast is dropped, not fed into the bridge caution's cold gate.
 class _GatedMetProvider extends MetNorwayHourlyForecastProvider {
   _GatedMetProvider(this._forecast, [this._gate]);
@@ -138,7 +138,7 @@ void main() {
     if (ex != null && ex is! MissingPluginException) throw ex as Object;
   }
 
-  /// Pumps the shipped [PretripScreen] (ja locale — the surface HER sees) with
+  /// Pumps the shipped [PretripScreen] (ja locale — the surface the driver sees) with
   /// injected bridge resolve / live forecast / season clock, and flushes the
   /// one-shot inits on the real event loop. [savedPlace] pre-seeds the store
   /// (a destination SHE saved on a prior run). Pass EITHER [routeBridges]
@@ -205,7 +205,7 @@ void main() {
     await flush(tester);
   }
 
-  /// Drives the in-app typed-place entry (the HER-action _setDestination
+  /// Drives the in-app typed-place entry (the driver-action _setDestination
   /// path) on the ja surface: tile → dialog → coordinates → save.
   Future<void> setPlaceJa(
     WidgetTester tester,
@@ -241,7 +241,7 @@ void main() {
   }
 
   testWidgets(
-    '(a) route + 2 bridge clusters + FREEZING live window → HER sees 約2',
+    '(a) route + 2 bridge clusters + FREEZING live window → the driver sees 約2',
     (tester) async {
       await pumpBridge(
         tester,
@@ -256,7 +256,7 @@ void main() {
       expect(
         find.textContaining('この先、秋田県内の経路上に橋が約2か所あります'),
         findsOneWidget,
-        reason: 'the approximate (約) bridge count must reach HER in Japanese',
+        reason: 'the approximate (約) bridge count must reach the driver in Japanese',
       );
       expect(find.textContaining('橋は路面より先に凍結します'), findsOneWidget);
       // ODbL produced-work notice reaches the same surface as the count.
@@ -378,7 +378,7 @@ void main() {
   });
 
   testWidgets(
-    '(g) HER destination change clears the stale count IMMEDIATELY and '
+    '(g) the driver destination change clears the stale count IMMEDIATELY and '
     'fires exactly ONE fresh resolve for the new epoch',
     (tester) async {
       var calls = 0;
@@ -427,7 +427,7 @@ void main() {
             'never a poll',
       );
 
-      // The new epoch's resolve lands: the caution returns, for HER new route.
+      // The new epoch's resolve lands: the caution returns, for the driver new route.
       holdSecond.complete();
       await flush(tester);
       expect(
@@ -440,7 +440,7 @@ void main() {
   );
 
   testWidgets(
-    '(h) HER clearing the destination CLEARS the count and fires ZERO new '
+    '(h) the driver clearing the destination CLEARS the count and fires ZERO new '
     'resolves (no route ⇒ nothing to resolve)',
     (tester) async {
       var calls = 0;
@@ -533,7 +533,7 @@ void main() {
     );
     expect(find.textContaining('経路上に橋が約'), findsNothing);
 
-    // The NEW epoch's resolve lands: HER caution shows the NEW route's count.
+    // The NEW epoch's resolve lands: the driver caution shows the NEW route's count.
     gates[1].complete();
     await flush(tester);
     expect(
@@ -547,7 +547,7 @@ void main() {
   });
 
   testWidgets(
-    '(i2) a stale FREEZING dest-area forecast landing AFTER HER destination '
+    '(i2) a stale FREEZING dest-area forecast landing AFTER the driver destination '
     'change must NOT feed the new destination\'s cold gate',
     (tester) async {
       // Arm everything EXCEPT the cold gate: July + warm origin + 2 clusters
@@ -652,14 +652,14 @@ void main() {
       // WRONG count).
       expect(requests.single.dLat, closeTo(39.9, 1e-9));
       expect(requests.single.dLon, closeTo(140.2, 1e-9));
-      // And the real wiring delivered all the way to HER surface.
+      // And the real wiring delivered all the way to the driver surface.
       expect(find.byKey(_cautionKey), findsOneWidget);
       expect(find.textContaining('経路上に橋が約2'), findsOneWidget);
     },
   );
 
   testWidgets(
-    '(k) production arm: NO destination at initState ⇒ NO fetch; HER FIRST '
+    '(k) production arm: NO destination at initState ⇒ NO fetch; the driver FIRST '
     'set fires exactly ONE fetch, for the just-set place',
     (tester) async {
       final requests = <({double dLat, double dLon})>[];
@@ -684,7 +684,7 @@ void main() {
       expect(requests, isEmpty, reason: 'no destination ⇒ nothing to route');
       expect(find.byKey(_cautionKey), findsNothing);
 
-      // HER first destination: initState resolved nothing, so the set fires
+      // the driver first destination: initState resolved nothing, so the set fires
       // exactly ONE fetch total — no initState/first-set double-fetch.
       await setPlaceJa(tester, 39.9, 140.2, 'エリアA');
       await flush(tester);
@@ -700,7 +700,7 @@ void main() {
       expect(
         find.byKey(_cautionKey),
         findsOneWidget,
-        reason: 'and the fresh resolve reaches HER surface',
+        reason: 'and the fresh resolve reaches the driver surface',
       );
     },
   );

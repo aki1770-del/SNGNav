@@ -131,7 +131,7 @@ void main() {
     },
   );
 
-  testWidgets('reaches HER mother in Japanese, with no person token', (
+  testWidgets('reaches her mother in Japanese, with no person token', (
     tester,
   ) async {
     await _pump(
@@ -236,18 +236,18 @@ void main() {
   });
 
   // No-background guard (by source structure): the dest fetch must be invoked
-  // ONLY from initState AND from the single HER-action setter (_setDestination),
+  // ONLY from initState AND from the single driver-action setter (_setDestination),
   // with NO Timer/Stream/scheduled refresh — background polling of "her area"
-  // would be 見守り-by-proxy. The HER-action setter is the in-app typed-place
+  // would be 見守り-by-proxy. The driver-action setter is the in-app typed-place
   // entry that lets the driver set/change the destination area herself; it is a
   // ONE-SHOT user action, not a schedule. The section is still guarded by
   // `if (_destAreaRead != null)`.
-  test('dest fetch fires ONLY from initState + the single HER-action setter, '
+  test('dest fetch fires ONLY from initState + the single driver-action setter, '
       'never self-scheduled', () {
     // The dest-path orchestration was lifted into the shared PretripScreen.
     final src = File('lib/widgets/pretrip_screen.dart').readAsStringSync();
 
-    // EXACTLY TWO call sites: initState (first read) + _setDestination (the HER-
+    // EXACTLY TWO call sites: initState (first read) + _setDestination (the the driver-
     // action re-fetch). Count every `_initDestAreaCondition(` (open-paren — so a
     // closure-wrapped re-invocation such as
     // `Timer.periodic(d, (_) => _initDestAreaCondition())` is also counted) and
@@ -262,7 +262,7 @@ void main() {
       2,
       reason:
           'the dest read must have exactly TWO invocation sites — '
-          'initState + the single HER-action setter; a scheduled caller '
+          'initState + the single driver-action setter; a scheduled caller '
           'would be 見守り-by-proxy',
     );
 
@@ -277,15 +277,15 @@ void main() {
       reason: 'the dest read must be invoked from initState',
     );
 
-    // The other invocation is inside the HER-action setter _setDestination.
+    // The other invocation is inside the driver-action setter _setDestination.
     final setStart = src.indexOf('Future<void> _setDestination(');
     expect(
       setStart,
       greaterThan(-1),
-      reason: 'the single HER-action setter must exist',
+      reason: 'the single driver-action setter must exist',
     );
 
-    // Neither the read method NOR the HER-action setter may self-schedule a
+    // Neither the read method NOR the driver-action setter may self-schedule a
     // background refresh. Slice each body from its declaration to the NEXT
     // top-level method declaration (a STRUCTURAL boundary, not a hard-coded
     // sibling name), failing loudly if no following declaration is found.

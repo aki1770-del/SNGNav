@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sngnav_snow_scene/fluorite/snow_scene_3d_view.dart';
 import 'package:sngnav_snow_scene/main.dart' as main_app;
 
-/// FDD — Forward-view toggle integration test.
+/// Forward-view toggle integration test.
 ///
 /// Verifies the in-product view-mode toggle wires the existing 2D map and the
 /// 3D [SnowScene3DView] forward-view together on the home screen:

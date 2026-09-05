@@ -4,7 +4,7 @@
 // BriefingStrings.ja. None goes through the actual production resolution this
 // arc introduced — SnowAwarePretripAdvisor(messages:
 // PretripMessages.forLanguage(Localizations.localeOf(context).languageCode)).
-// So a regression that drops the `messages:` argument — silently reverting HER
+// So a regression that drops the `messages:` argument — silently reverting the driver
 // mother's reason chips to English while every other test stays green — would
 // not be caught. This test pumps the REAL app under a forced Japanese locale
 // and asserts a Japanese reason CHIP (not just card chrome) reaches the screen.

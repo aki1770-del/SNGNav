@@ -261,7 +261,7 @@ void main() {
       // icy frame is held (nothing emitted) and only the SECOND flips. One
       // entry is the debounce working.
       //
-      // ⚑ ROUTED TO SDE: the stronger test would feed a fully classifiable dry
+      // ⚑ FOLLOW-UP: the stronger test would feed a fully classifiable dry
       // baseline (add a precipitation type) so the sequence reads dry -> held
       // -> blackIce again. That is a test-input change, not an expectation
       // change, and it is the better fix. Not taken here to keep the merge

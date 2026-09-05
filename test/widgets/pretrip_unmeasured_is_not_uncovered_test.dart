@@ -1,5 +1,5 @@
 /// REACH tests: **an unmeasured morning is not the same absence as no forecast
-/// at all**, and HER card must never say the wrong one.
+/// at all**, and the driver card must never say the wrong one.
 ///
 /// `pretrip_decision_advisor` 0.6.1 refuses the affirmative all-clear it did
 /// not measure: `brief()` throws `PretripAssessmentIncompleteException` when a
@@ -139,7 +139,7 @@ void main() {
     if (ex != null && ex is! MissingPluginException) throw ex as Object;
   }
 
-  /// Pumps the shipped [PretripScreen] on the ja surface — the one HER mother
+  /// Pumps the shipped [PretripScreen] on the ja surface — the one the driver's mother
   /// in Akita reads — with the live forecast injected. No socket.
   Future<void> pumpScreen(
     WidgetTester tester,
@@ -185,11 +185,11 @@ void main() {
 
   // ── P1 ─────────────────────────────────────────────────────────────────
   // The screen must SURVIVE the refusal. Before the app-side catch the
-  // exception escapes `PretripScreen.build` and `flush` rethrows it: HER card
+  // exception escapes `PretripScreen.build` and `flush` rethrows it: the driver card
   // is not merely wrong, it is absent — a red error box where the briefing was.
   testWidgets(
     'P1 an unmeasured morning renders a card at all — the refusal never '
-    'reaches HER as a crashed screen',
+    'reaches the driver as a crashed screen',
     (tester) async {
       await pumpScreen(tester, _unmeasured());
       expect(find.text(ja.beforeYouDrive), findsOneWidget);
@@ -213,7 +213,7 @@ void main() {
       expect(
         find.textContaining('判定できませんでした'),
         findsOneWidget,
-        reason: "the package's assessmentIncomplete() chip must reach HER",
+        reason: "the package's assessmentIncomplete() chip must reach the driver",
       );
       expect(
         find.textContaining('危険がないという意味ではありません'),
@@ -253,7 +253,7 @@ void main() {
   );
 
   // Same discrimination on the English surface — the edge developer who ships
-  // this card in en must get the same honesty HER mother gets in ja.
+  // this card in en must get the same honesty the driver's mother gets in ja.
   testWidgets('P3en the English surface discriminates identically', (
     tester,
   ) async {
@@ -267,7 +267,7 @@ void main() {
   // CONTROL, passes BEFORE and AFTER. Case B is untouched: when no forecast
   // covers the window, 「予報がありません」 is TRUE and must still be said. If a
   // fix ever collapses A into B this control keeps passing while P3 fails —
-  // and if a fix collapses B into A, THIS one fails. The pair is the loom.
+  // and if a fix collapses B into A, THIS one fails. The pair is the guard.
   testWidgets(
     'C1 CONTROL — no forecast covering the window still says 予報がありません',
     (tester) async {

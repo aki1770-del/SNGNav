@@ -476,7 +476,7 @@ class _SafetyBanner extends StatelessWidget {
   String _hazardMessage(WeatherCondition c) {
     if (c.iceRisk == true) {
       // Precise term from the catalog's JAF-grounded announcement seam —
-      // ja first (HER reads Japanese), EN kept for legibility.
+      // ja first (she reads Japanese), EN kept for legibility.
       final a = RoadSurfaceState.blackIce.announcement!;
       return '${a.jaSpokenText}\n${a.enSpokenText}';
     }

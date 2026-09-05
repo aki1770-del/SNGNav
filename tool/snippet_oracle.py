@@ -2,7 +2,7 @@
 """
 Loom L35 — THE SNIPPET ORACLE.
 
-Every other loom in this unit gates whether the AUTHOR WAS HONEST.
+Every other check in this repo gates whether the AUTHOR WAS HONEST.
 This one gates whether the ARTIFACT IS TRUE FOR THE STRANGER WHO USES IT.
 
 It extracts every `dart` code block a reader is invited to copy — from README.md

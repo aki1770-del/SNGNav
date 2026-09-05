@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # package_update_gate.sh — the DETERMINISTIC gates of the multi-gate package-update method.
 #
-# A package update is never "tested" by a single pass (OPS-RULE-068). The full method has
+# A package update is never "tested" by a single pass (project policy). The full method has
 # five gates; this script runs the mechanically-checkable ones so every update candidate —
 # these and every FUTURE one — passes the same battery before a republish is even proposed:
 #
@@ -24,7 +24,7 @@
 # local AFTER publish; it never compares a "docs-only" CHANGELOG against the real lib delta
 # vs the prior published archive. G6 does — it downloads the latest published archive, diffs
 # its lib/ against the working-tree lib/, and FAILS when a no-code/docs-only changelog claim
-# rides an executable delta. The honest-declaration suppressor is negation-aware (DIA cert
+# rides an executable delta. The honest-declaration suppressor is negation-aware (review
 # 2026-06-30, GAP-1 closed): only a STRUCTURAL bullet/conventional-commit prefix (`- fix:`,
 # `feat(...)`, `BREAKING:`) or a POSITIVE non-negated "breaking"/"<code|api|source|behaviour>
 # change" declaration suppresses the check — incidental/negated prose ("(does not fix ...)",
@@ -61,10 +61,10 @@
 #                  substitute for G6 (change-class honesty) or the always-local G1/G5. See
 #                  hosted_resolve_gate().
 #
-# The JUDGMENT gate — adversarial verify, advocate!=verifier (OPS-068 §B) — is conducted by
+# The JUDGMENT gate — adversarial verify, advocate!=verifier (project policy §B) — is conducted by
 # the `multi-gate-package-update` workflow, NOT this script (free-text judgment is not
-# mechanically gateable; claiming it is would be the narration-over-reading failure, OPS-062).
-# The REPUBLISH gate is the Chair's voice (§1). This script reads only; it never publishes,
+# mechanically gateable; claiming it is would be the narration-over-reading failure, project policy).
+# The REPUBLISH gate is the project owner. This script reads only; it never publishes,
 # commits, or pushes.
 #
 # Usage:
@@ -84,10 +84,10 @@ set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # PKG_ROOT defaults to THIS checkout's own packages/ tree — the same substrate G11's
 # snippet_oracle_gate already resolves via BASH_SOURCE — never a hardcoded other
-# checkout (round-5 MUST: one invocation, two genbas; after merge the skew flips
+# checkout (round-5 MUST: one invocation, two trees; after merge the skew flips
 # fail-OPEN — a PASS vouched from an unread tree). Env override retained. Exported so
-# G5's catalog_census.sh child (which carries its own hardcoded default at its :25)
-# reads the SAME genba as this invocation.
+# G5's catalog_census.sh child (which resolves the same default from its own
+# location) reads the SAME tree as this invocation.
 PKG_ROOT="${PKG_ROOT:-$(dirname "$HERE")/packages}"
 export PKG_ROOT
 # Every future PASS/FAIL names its substrate: the banner prints the RESOLVED root.
@@ -142,7 +142,7 @@ coherence() {
   # census file missing, python3/curl absent, child killed) writes no drift lines, the
   # grep below yields zero matches, and the function printed `coherence PASS` off an
   # empty file — a clean bill vouched by a verifier that never ran. A dead verifier
-  # renders UNVERIFIED, never *cleared* (OPS-069(A)), mirroring G11 above.
+  # renders UNVERIFIED, never *cleared* (project policy), mirroring G11 above.
   #
   # Liveness is judged by the census's OWN terminal verdict marker, NOT by the exit code
   # alone: catalog_census.sh returns 1 for BOTH "drift found" (a real, parseable answer
@@ -170,7 +170,7 @@ coherence() {
 }
 
 # ---------------------------------------------------------------------------
-# G6 provenance — release-provenance gate (Andon recurrence-prevention loom).
+# G6 provenance — release-provenance gate (recurrence prevention).
 #
 # Per package: fetch the CURRENT latest published version + archive_url from pub.dev,
 # download+extract that archive's lib/, `diff -ruN` it against the working-tree lib/,
@@ -247,14 +247,14 @@ NO_CODE = ["no api change", "no code change", "no source change",
 has_nocode = any(p in el for p in NO_CODE)
 
 # An ACCOMPANYING honest code/feat/fix/BREAKING declaration suppresses the contradiction.
-# GAP-1 fix (DIA cert 2026-06-30): the honest signal must be STRUCTURAL (a changelog-bullet /
+# GAP-1 fix (2026-06-30 review): the honest signal must be STRUCTURAL (a changelog-bullet /
 # conventional-commit prefix at line start) or a POSITIVE declaration — never an incidental or
 # NEGATED word in prose. So "(does not fix ...)" and "non-breaking" must NOT disarm the no-code
 # check, while "a breaking change" / "- fix: ..." still do. This also lets an honest correction
 # entry that QUOTES a prior "no api change" mislabel pass, because it positively declares the
 # change it is documenting. A negation immediately before the token voids it.
 honest = False
-# The honest-declaration suppressor is STRUCTURAL ONLY (DIA re-cert 2026-06-30, GAP-1 final):
+# The honest-declaration suppressor is STRUCTURAL ONLY (2026-06-30 re-review, GAP-1 final):
 # free prose cannot disarm the no-code claim — incidental "breaking news" / "api change
 # request" must NOT pass, and negated "non-breaking" / "(does not fix)" must NOT pass. A real
 # code change is declared with a conventional-commit / changelog-bullet marker, an explicit
@@ -354,7 +354,7 @@ executable = net_total > 0
 print("CLAIM=%d" % (1 if claims_no_code else 0))
 print("DELTA=%s" % ('executable' if executable else 'doconly'))
 print("NETCOUNT=%d" % net_total)
-# GAP-4 (DIA cert 2026-06-30): a CHANGELOG with no `## ` version heading yields no detectable
+# GAP-4 (2026-06-30 review): a CHANGELOG with no `## ` version heading yields no detectable
 # claim, so a mislabel could pass silently. Flag the no-heading case so the gate WARNs (not a
 # silent PASS) when there is also an executable delta to ship.
 print("NOHEADING=%d" % (1 if not entry.strip() else 0))
@@ -758,7 +758,7 @@ hosted_resolve_sweep() {
 # is taken on keep/patch/publish-provenance-gate + guideline_verified_delivery
 # L63. G11 is the next free number (the round-4 brief said "G8"; measured false).
 #
-# A dead verifier renders UNVERIFIED, never *cleared* (OPS-069(A)): a missing
+# A dead verifier renders UNVERIFIED, never *cleared* (project policy): a missing
 # oracle tool / python3 / dart here is a FAIL, not a SKIP — the founding defect
 # of this very gate was the verifier existing only as a deleted one-shot.
 # ---------------------------------------------------------------------------
@@ -783,8 +783,8 @@ snippet_oracle_gate() { # <pkgdir> <name>
 
 # --child-env-probe (internal, used by --self-test assertion (iv)).
 # Reports what a CHILD PROCESS of this gate actually inherits. G5 spawns
-# catalog_census.sh as exactly this kind of child, and that child carries its OWN
-# hardcoded PKG_ROOT default (catalog_census.sh:25) — so if `export PKG_ROOT` is
+# catalog_census.sh as exactly this kind of child, and that child resolves its OWN
+# PKG_ROOT default from its own location — so if `export PKG_ROOT` is
 # absent, the census silently audits a DIFFERENT tree than the banner names, and no
 # amount of grepping this file's text can see it. Only a child can report this.
 if [[ "${1:-}" == "--child-env-probe" ]]; then
@@ -838,7 +838,7 @@ if [[ $# -lt 1 ]]; then echo "usage: $0 <pkg> [<pkg> ...]  |  --coherence-only  
 # WHY (2026-07-04 vision-alignment audit): landing is not reception. The unit
 # published 0.4.x while its ONE verified adopter pinned ^0.3.0 and its OWN
 # reference app pinned ^0.3.0 — nobody could receive what we built, and no
-# loom measured it ("repo green" had quietly become "done"). G8 reads
+# nothing measured it ("repo green" had quietly become "done"). G8 reads
 # scripts/known_consumers.list and, for each staged release, reports per
 # consumer:
 #   RECEIVES     the consumer's pin admits the staged version
@@ -1001,7 +1001,7 @@ reach_gate() { # <pkgdir> <name> <staged-version>
   #       pin) OR names the serve in words (backport / lift / in-range / …).
   # Honest scope, stated rather than sold: this is a FLOOR on effort, not a
   # judge of reasoning. It cannot tell a true serve-decision from a fluent one —
-  # that judgment is the Chair's (§1) and the adversarial review's (OPS-068).
+  # that judgment is the project owner's and the adversarial review's (project policy).
   # What it ends is the empty token clearing a dignity row in silence.
   local REACH_DISPOSITION_MIN_CHARS="${REACH_DISPOSITION_MIN_CHARS:-120}"
   while IFS=$'\t' read -r consumer source; do
@@ -1110,11 +1110,11 @@ if [[ "${1:-}" == "--g8" ]]; then
 fi
 
 # --self-test — guard THIS GATE'S OWN WIRING (repo convention: fabrication_sweep.sh /
-# pds_reach.py --self-test). PROVE THE LOOM: each assertion targets a wiring defect this
+# pds_reach.py --self-test). PROVE THE CHECK: each assertion targets a wiring defect this
 # script has ACTUALLY SHIPPED — G11 run once by hand instead of standing in the battery
 # (round 4); the plural-only G4 grep mislabeling a 1-file STAGED state FAIL (round 4);
 # PKG_ROOT hardcoded to another checkout while the G11 tool resolved via BASH_SOURCE —
-# one invocation, two genbas (round 5). A gate never shown to FAIL is a green light with
+# one invocation, two trees (round 5). A gate never shown to FAIL is a green light with
 # no thread behind it.
 #
 # RECORD CORRECTION (round 7, 2026-07-31). Commit 2346396's message states
@@ -1131,7 +1131,7 @@ fi
 # that SHA, and rewriting it to tidy a number would destroy the trail the review
 # is working from. The correction runs forward, which is where a reader is.
 #
-# ROUND 6 (2026-07-31) — countermeasure under an Andon fired on OPS-066(B),
+# ROUND 6 (2026-07-31) — countermeasure under a stop-the-line finding on observation-grade(B),
 # verification-overstatement. The round-5 (iii) assertion was a TAUTOLOGY: its positive
 # grep pattern matched its OWN source line (`grep -nF` returned :91 AND :801), so the
 # assertion vouched for itself and passed against three separate mutations of the line it
@@ -1186,7 +1186,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     echo "   PASS  (iii) PKG_ROOT resolves to this checkout: $actual_root"
     pass=$((pass+1))
   else
-    echo "   FAIL  (iii) PKG_ROOT resolved to '${actual_root:-<none>}', expected '$expect_root' — one invocation, two genbas"
+    echo "   FAIL  (iii) PKG_ROOT resolved to '${actual_root:-<none>}', expected '$expect_root' — one invocation, two trees"
   fi
 
   # (iv) BEHAVIOURAL — PKG_ROOT is EXPORTED, observed FROM A CHILD PROCESS. `export
@@ -1200,7 +1200,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     echo "   PASS  (iv)  a child process inherits PKG_ROOT=$probe_root (the export is live)"
     pass=$((pass+1))
   else
-    echo "   FAIL  (iv)  child inherited '${probe_root:-<none>}', expected '$expect_root' — the census child would audit a different genba than the banner names"
+    echo "   FAIL  (iv)  child inherited '${probe_root:-<none>}', expected '$expect_root' — the census child would audit a different source tree than the banner names"
   fi
 
   # (v) The G4 gate CALL SITES still reference the named regex variables. Round 4 hoisted
@@ -1239,7 +1239,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     echo "   PASS  (vi)  all 6 per-package substrate stamps present (banner covered behaviourally by (iii)/(iv))"
     pass=$((pass+1))
   else
-    echo "   FAIL  (vi)  substrate stamps: $stamps of 6 present — a PASS must always name its genba"
+    echo "   FAIL  (vi)  substrate stamps: $stamps of 6 present — a PASS must always name its source tree"
   fi
 
   # (vii) BEHAVIOURAL — the caret arithmetic agrees with the REAL pub solver, by CALLING
@@ -1297,7 +1297,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # UNDER GATE), never under the script's own location. Asserted by running --g8
   # against a throwaway tree and reading the registry path the verdict NAMES: with
   # the BASH_SOURCE derivation restored this prints THIS checkout's registry while
-  # gating the temp tree's package — two genbas, one banner, failing OPEN in the
+  # gating the temp tree's package — two trees, one banner, failing OPEN in the
   # D4 gate. Offline: the registry holds only a `local:` row.
   g8_root="$RUN_TMP/g8tree"
   mkdir -p "$g8_root/packages/probe_pkg" "$g8_root/scripts" "$g8_root/consumer"
@@ -1309,7 +1309,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     echo "   PASS  (ix)  G8 reads the registry under PKG_ROOT, and names it in the verdict"
     pass=$((pass+1))
   else
-    echo "   FAIL  (ix)  G8 named a registry outside the tree under gate — one PKG_ROOT, two genbas:"
+    echo "   FAIL  (ix)  G8 named a registry outside the tree under gate — one PKG_ROOT, two trees:"
     sed 's/^/          /' <<<"$g8_out" | head -3
   fi
 
@@ -1421,7 +1421,7 @@ coherence "$@"
 echo
 if [[ "$fail" -eq 0 ]]; then
   echo "ALL GATES PASS — candidates are build/test/publish-ready (STAGED items land on commit+republish)."
-  echo "Next: adversarial-verify (multi-gate-package-update workflow) + Chair republish gate (§1)."
+  echo "Next: adversarial-verify (multi-gate-package-update workflow) + owner republish gate."
 else
   echo "GATE FAILURE — do not propose a republish until red gates are green."
 fi

@@ -1,10 +1,11 @@
 # Release attestation — `nav2_safety_layer 0.1.4`
 
-**Class**: Rule 3 / OPS-RULE-042 release-class. **Executor**: FBR. **Not** a maintainer-PR
-push attestation.
+A record of exactly what was run before this version was published, and exactly what
+the release may and may not be relied on for. This is a release-class attestation, not
+a pull-request record.
 
-⚑ **SCOPE IS NARROWER THAN "GREEN" AND SAYS SO** (FBR bylaws:93 — a narrower measurement must
-never wear a broader label). The gating suite passes **with four live defects excluded by tag**.
+⚑ **THE SCOPE IS NARROWER THAN "GREEN" AND SAYS SO.** A narrower measurement must never
+wear a broader label. The gating suite passes **with four live defects excluded by tag**.
 Both results are recorded below. Neither number stands alone.
 
 ## (i) Commit
@@ -15,7 +16,7 @@ Attested against the commit recorded in the same turn as this file (see `git log
 Ubuntu 24.04.4 LTS · Linux 6.18.5 · Dart SDK **3.11.1 (stable)** · 30 GiB RAM.
 Pure-Dart package; no platform channel; no waiver class needed or claimed.
 
-## (iii)–(vi) Commands run verbatim this turn, with exit codes captured directly
+## (iii)–(vi) Commands run verbatim, with exit codes captured directly
 
 | # | command | exit | result |
 |---|---|---|---|
@@ -27,9 +28,10 @@ Pure-Dart package; no platform channel; no waiver class needed or claimed.
 | 6 | `sibling_constraint_check.py` | 0 | 17 constraints judged, pass |
 | 7 | `dart pub publish --dry-run` | — | 1 warning (uncommitted tree), cleared by committing first |
 
-⚑ **Row 3 was initially misread.** The first run reported `4 changed` and the shell captured
-`sed`'s exit code, not `dart format`'s. Re-run with the exit captured directly: 0 changed,
-exit 0. Recorded because the near-miss is the same class this release exists to fix.
+⚑ **Row 3 was initially misread.** The first run reported `4 changed` because the shell
+captured `sed`'s exit code, not `dart format`'s. Re-run with the exit captured directly:
+0 changed, exit 0. Recorded because the near-miss is the same class of error this release
+exists to fix.
 
 ## What 0.1.4 MAY claim
 - The obstacle→ice fabrication is removed; obstacle events map to `RoadSurfaceCondition.unknown`. Guarded by BI-7.
@@ -40,6 +42,8 @@ exit 0. Recorded because the near-miss is the same class this release exists to 
 - **Not** that unreadable input is detectable (PI-01…PI-04 live).
 - **Not** that action severity survives to the HMI (PI-05 live — `STOP` and `LIMIT` remain byte-identical).
 - **Not** that `polygon_name` is relayed on the monitor path (D-08 live).
-- **Not** that the package is safe as the sole path for a reflexive-stop architecture — it is QM, and has no liveness clock (AoU-3/AoU-7).
+- **Not** that the package is safe as the sole path for a reflexive-stop architecture — it is
+  QM, and has no liveness clock (see the assumptions of use, AoU-3 / AoU-7).
 
-**UNVERIFIED is never *cleared* (OPS-069(A)).** The four excluded defects are unfixed, not unmeasured.
+**Unverified is never the same as cleared.** The four excluded defects are unfixed, not
+unmeasured.

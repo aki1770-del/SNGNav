@@ -6,7 +6,7 @@ import 'package:kalman_dr/kalman_dr.dart';
 import 'package:routing_engine/routing_engine.dart';
 import 'package:sngnav_snow_scene/providers/simulated_location_provider.dart';
 
-/// FDD-8 — Config combination tests.
+/// Config-8 — Config combination tests.
 ///
 /// Verifies that all documented --dart-define flag combinations produce
 /// the expected provider types without runtime errors.
@@ -20,7 +20,7 @@ void main() {
   group('Combo: defaults (no flags)', () {
     const config = ProviderConfig();
 
-    test('weather = simulated (D-VGC132-1: all-simulated default)', () {
+    test('weather = simulated (all-simulated default)', () {
       expect(config.isSimulatedWeather, isTrue);
     });
 
@@ -29,7 +29,7 @@ void main() {
       expect(config.isKalmanDr, isTrue);
     });
 
-    test('routing = mock (D-VGC132-1: all-simulated default)', () {
+    test('routing = mock (all-simulated default)', () {
       expect(config.isMockRouting, isTrue);
     });
 

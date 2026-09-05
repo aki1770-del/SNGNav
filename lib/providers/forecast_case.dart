@@ -1,6 +1,6 @@
 /// Which of the two driver-cases a pre-trip location falls into.
 ///
-/// Komada's proposal (2026-06-13): HER drives in two distinct regions served by
+/// Design note (2026-06-13): the driver we build for drives in two distinct regions served by
 /// two distinct authoritative sources — divide them explicitly rather than
 /// stretching one global product over both. This does NOT mean covering every
 /// Japanese local area: the Japan case is honestly scoped to the snow-zone
@@ -16,7 +16,7 @@ library;
 
 import 'package:condition_aggregator_jma/condition_aggregator_jma.dart';
 
-/// The two authoritative-source cases for HER pre-trip forecast.
+/// The two authoritative-source cases for her pre-trip forecast.
 enum ForecastCase {
   /// A JMA-catalogued snow-zone prefecture: the Japan Meteorological Agency's
   /// official winter warnings are the authoritative source.

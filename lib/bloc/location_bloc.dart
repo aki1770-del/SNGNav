@@ -90,7 +90,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   ) {
     final pos = event.position;
 
-    // L1 finiteness guard — the PRIMARY guard for HER in the compound-failure
+    // L1 finiteness guard — the PRIMARY guard for the driver in the compound-failure
     // GPS scenario (Maps fail + GPS degraded). On the live GeoClue / Kalman-DR
     // path a non-finite latitude or longitude can reach the map boundary:
     // flutter_map 8.2.2 SILENTLY projects a non-finite coordinate to garbage

@@ -7,7 +7,7 @@
 ///   ready → ready (grant/revoke updates the map)
 ///   error → loading (retry)
 ///
-/// Jidoka convenience getters: `isFleetGranted`, `isWeatherGranted`,
+/// Fail-safe convenience getters: `isFleetGranted`, `isWeatherGranted`,
 /// `isDiagnosticsGranted` all return false when status is not ready
 /// or when the specific purpose has not been explicitly granted.
 ///
@@ -48,7 +48,7 @@ class ConsentState extends Equatable {
         errorMessage = null;
 
   // ---------------------------------------------------------------------------
-  // Jidoka getters — false unless explicitly granted AND state is ready
+  // Fail-safe getters — false unless explicitly granted AND state is ready
   // ---------------------------------------------------------------------------
 
   /// True only when fleet location consent is explicitly granted.

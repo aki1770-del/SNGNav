@@ -1,8 +1,8 @@
 # OSM extract provenance — how someone who is not us rebuilds the tile inputs
 
-## WHY this exists — written before the act (OPS-070(B))
+## WHY this exists — written before the act
 
-**The weaver is a named class of person: a maintainer outside this machine who
+**The reader is a named class of person: a maintainer outside this machine who
 must rebuild our map data to accept our work.** That is not hypothetical. On
 2026-04-01 `jwinarske` reverted our `meta-flutter#748` the same day it merged,
 and our own words in `#751` say why: *"Not build-tested on our end."* His

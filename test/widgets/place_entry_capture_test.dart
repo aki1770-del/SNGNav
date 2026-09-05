@@ -1,6 +1,6 @@
-// Render-and-SEE capture of the in-app PLACE-ENTRY UI (OPS-066 / L32
+// Render-and-SEE capture of the in-app PLACE-ENTRY UI (observation-grade
 // observation-grade verification). The destination-area place entry is the
-// surface that lets HER — the driver, a daughter — set her mother's-area
+// surface that lets the driver — the driver, a daughter — set her mother's-area
 // destination herself, completing the family-thread reach. A passing widget
 // test alone proves nothing about whether the Japanese is readable (blank test
 // fonts render tofu), so this writes real PNGs with the real Noto Sans CJK font

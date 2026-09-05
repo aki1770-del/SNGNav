@@ -8,7 +8,7 @@
 ///
 /// A red ring is the strongest thing this screen draws. Unlabelled, it reads
 /// as a real road report from real vehicles, and a developer evaluating the
-/// quickstart can carry that belief forward into a product HER drives behind.
+/// quickstart can carry that belief forward into a product she drives behind.
 /// This caption states what the data is, at the moment the data is drawn.
 ///
 /// It is the map-screen sibling of `BriefingStrings.simulatedForecastCaption`,
@@ -37,7 +37,7 @@ class SimulatedFleetCaption extends StatelessWidget {
 
   /// Whether the fleet data feeding the map is simulated.
   ///
-  /// Defaults to `true` — Jidoka, the same UNKNOWN-is-the-conservative-state
+  /// Defaults to `true` — the same UNKNOWN-is-the-conservative-state
   /// rule the consent gate documents. A caller that wires a real fleet
   /// telemetry feed must say so explicitly; a caller that forgets
   /// over-discloses (claims demo data while live), which under-claims reality

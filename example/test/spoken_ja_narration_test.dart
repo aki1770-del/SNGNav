@@ -1,4 +1,4 @@
-/// OPS-066 proof: HER's Japanese narration reaches the TTS engine — the full
+/// End-to-end proof: the driver's Japanese narration reaches the TTS engine — the full
 /// chain, end to end, with no seam narrated over:
 ///
 ///   OSRM HTTP bytes (mock server, ja-JP default request)
@@ -8,7 +8,7 @@
 ///     → VoiceGuidanceBloc(ManeuverAnnounced)
 ///     → TtsEngine.speak(text)   ← captured here and asserted Japanese.
 ///
-/// The audible half (does the speaker produce sound HER hears?) is honestly
+/// The audible half (does the speaker produce sound the driver hears?) is honestly
 /// out of scope for CI: this proves the exact utterance handed to the
 /// platform TTS is the Japanese instruction, byte for byte.
 library;

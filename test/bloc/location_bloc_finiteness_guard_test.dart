@@ -360,10 +360,10 @@ void main() {
   // must NOT reset the stale watchdog and masquerade as a live fix. The L1
   // drop is placed BEFORE `_resetStaleTimer`, so a garbage stream is invisible
   // to the watchdog and the state correctly AGES to `stale` — the honest "GPS
-  // stale — last known position" signal HER already trusts — instead of a dead
+  // stale — last known position" signal the driver already trusts — instead of a dead
   // GPS being held forever as a confident live fix.
   //
-  // This is an OBSERVATION-grade test (OPS-066): it does not assert "the guard
+  // This is an OBSERVATION-grade test (observation-grade): it does not assert "the guard
   // dropped the fix"; it observes the END STATE the driver sees (`stale`,
   // holding the last good position) after a sustained garbage stream.
   //

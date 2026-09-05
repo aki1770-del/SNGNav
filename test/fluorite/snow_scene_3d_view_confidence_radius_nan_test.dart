@@ -17,13 +17,13 @@
 ///     so `u` saturates to max-fog and the scrim opacity stays FINITE (0.62) —
 ///     the honest "as uncertain as it gets" reading, never a broken/garbage
 ///     scrim that flutter would fail to paint;
-///   * `NaN > 0` is false, so the label is SUPPRESSED (empty) — HER never sees a
+///   * `NaN > 0` is false, so the label is SUPPRESSED (empty) — the driver never sees a
 ///     nonsensical "±NaN m".
 ///
 /// These tests LOCK that behavior so it is ENFORCED, not accidental: a future
 /// refactor of the clamp/label expressions that reintroduced a non-finite scrim
 /// opacity or a literal "±NaN m" string would break here. They go-and-SEE the
-/// rendered widget (OPS-066 observation-grade), not just the arithmetic.
+/// rendered widget (observation-grade observation-grade), not just the arithmetic.
 library;
 
 import 'package:driving_weather/driving_weather.dart';
@@ -126,7 +126,7 @@ void main() {
       expect(tester.takeException(), isNull);
 
       // The degrade banner is present (a degraded fix), but it carries NO numeric
-      // accuracy suffix — HER must never read a nonsensical "±NaN m".
+      // accuracy suffix — the driver must never read a nonsensical "±NaN m".
       expect(
         find.textContaining('NaN'),
         findsNothing,
@@ -143,7 +143,7 @@ void main() {
         find.textContaining('GPS degraded'),
         findsOneWidget,
         reason:
-            'the degrade banner must still tell HER the position is '
+            'the degrade banner must still tell the driver the position is '
             'approximate, just without a bogus number',
       );
     },

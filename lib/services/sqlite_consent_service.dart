@@ -7,7 +7,7 @@
 ///   `consents` — current state (upsert on grant/revoke)
 ///   `consent_audit_log` — append-only audit trail
 ///
-/// Jidoka semantics preserved: getConsent returns [ConsentRecord.unknown]
+/// Fail-safe semantics preserved: getConsent returns [ConsentRecord.unknown]
 /// when no row exists. UNKNOWN = DENIED.
 ///
 /// Persistent consent with audit trail.

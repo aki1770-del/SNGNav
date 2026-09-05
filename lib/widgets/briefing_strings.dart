@@ -1,6 +1,6 @@
 /// Localized text for the pre-trip "Before you drive" safety surface.
 ///
-/// Why this exists: the briefing is the load-bearing safety surface for HER
+/// Why this exists: the briefing is the load-bearing safety surface for the driver
 /// and her family at the kitchen table — including a mother in Akita who reads
 /// Japanese, not English. A safety verdict she cannot read does not reach her,
 /// exactly as a colour-only verdict does not reach a driver who cannot see
@@ -15,7 +15,7 @@
 /// unchanged.
 ///
 /// HONEST BOUND (verified by rendering the production-faithful card and
-/// looking, per OPS-066): this localizes the card's OWN structural + safety
+/// looking at the real output): this localizes the card's OWN structural + safety
 /// strings — verdict headline, severity word, checklist, headers, switch,
 /// assistive-tech announcement, winter-card header/footer. The winter-driving
 /// action BULLETS are ALSO Japanese now: `assets/winter_knowledge.json` carries
@@ -37,12 +37,12 @@
 ///     temperature + precipitation only" limitation, and any MEASURED
 ///     departure-hour visibility reading (e.g. "visibility 80 m at a station").
 ///     These clauses are English-only today, so the known-incomplete signal —
-///     and the most concrete measured reason — do not yet reach HER mother.
+///     and the most concrete measured reason — do not yet reach the driver's mother.
 ///     Localizing them is the next reach-fix and is NOT cosmetic; it needs its
 ///     own translation-faithfulness verification, so it is a separate commit.
 /// The gap is named here rather than hidden: the verdict, checklist, whiteout
 /// plan, winter-driving guidance, reason chips, AND the demo source caption
-/// reach HER mother in Japanese today; the live source-caption caveats do not
+/// reach the driver's mother in Japanese today; the live source-caption caveats do not
 /// yet. English remains a complete fallback surface for any unsupported locale.
 library;
 
@@ -58,7 +58,7 @@ abstract class BriefingStrings {
   /// English — the default and the fallback.
   static const BriefingStrings en = _EnBriefingStrings();
 
-  /// Japanese — for HER mother in Akita and every Japanese-reading driver.
+  /// Japanese — for the driver's mother in Akita and every Japanese-reading driver.
   static const BriefingStrings ja = _JaBriefingStrings();
 
   /// Pick the table for [locale], falling back to English for any language we
@@ -71,7 +71,7 @@ abstract class BriefingStrings {
   String get beforeYouDrive;
 
   /// The shell's "start the live drive" action label. Localized so the chrome
-  /// around HER mother's Japanese briefing is also Japanese (no language split).
+  /// around the driver's mother's Japanese briefing is also Japanese (no language split).
   String get startDrive;
   String plannedDeparture(String hhmm, int minutes);
 

@@ -8,7 +8,7 @@
 ///   destination-area card + in-app place entry (via the shared [PretripScreen],
 ///   the SAME widget the full `lib/snow_scene.dart` product demo hosts)
 /// - the perspective forward-looking 3D snow scene (CPU-projected still frame)
-/// - en/ja locale: the briefing follows the device locale so it reaches HER
+/// - en/ja locale: the briefing follows the device locale so it reaches the driver
 ///   mother in Akita, who reads Japanese (English fallback for every other locale)
 ///
 /// Usage:
@@ -58,7 +58,7 @@ class SNGNavGettingStarted extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // The pre-trip safety briefing must reach HER mother in Akita, who reads
+      // The pre-trip safety briefing must reach the driver's mother in Akita, who reads
       // Japanese — the briefing follows the device locale (ja → Japanese, any
       // other → the English fallback). The Material/Widgets delegates supply
       // the framework strings for the same locales.
@@ -114,7 +114,7 @@ class OfflineMapPage extends StatefulWidget {
   /// [_OfflineMapPageState._defaultMbtilesPath] when null.
   ///
   /// This exists so the coverage/camera coupling can be exercised against an
-  /// archive OTHER than the one this checkout happens to ship. A loom that can
+  /// archive OTHER than the one this checkout happens to ship. A guard that can
   /// only ever be pointed at the one archive that already agrees with the
   /// hardcoded camera cannot fail, and a guard that cannot fail is not a guard.
   final String? mbtilesPath;
@@ -166,7 +166,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
 
   // The driving-condition picture fed to the 3D forward-view.
   //
-  // OFFLINE-FIRST (D3 worst-case — non-negotiable): this field is initialised
+  // OFFLINE-FIRST (compound-failure worst case — non-negotiable): this field is initialised
   // to a SIMULATED default so the forward-view renders IMMEDIATELY with zero
   // network and zero GPS. The compound-failure case (Google Maps fails AND GPS
   // fails) must still show a meaningful Snow Scene — so the default is always a
@@ -211,7 +211,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // or the simulated default.
   bool _liveConditionReceived = false;
 
-  // LIVE IN-VEHICLE CONDITION SOURCE (D3 worst-case — network AND GPS gone).
+  // LIVE IN-VEHICLE CONDITION SOURCE (compound-failure worst case — network AND GPS gone).
   //
   // The compound-failure path: when Google Maps fails AND GPS fails, the
   // vehicle's own ECUs are still publishing road-friction (ESC), TCS/ABS
@@ -243,11 +243,11 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // caption tells the truth about the active source.
   bool _liveVehicleReceived = false;
 
-  // HONEST GPS-LOSS DEGRADATION (D3 worst-case — GPS fails).
+  // HONEST GPS-LOSS DEGRADATION (compound-failure worst case — GPS fails).
   //
   // The 3D forward-view is driven by weather alone; on its own it would keep
   // painting a confident, crisp road even when GPS is lost and the real
-  // position is drifting — the dishonest failure D4 forbids. The fix is to feed
+  // position is drifting — the dishonest failure this project forbids. The fix is to feed
   // SnowScene3DView a LocationState so it degrades honestly (uncertainty fog +
   // "GPS lost" banner; "POSITION UNAVAILABLE" at the 500 m DR safety cap).
   //
@@ -317,7 +317,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
     maxZoom: _fallbackMaxZoom,
   );
 
-  /// Where the map is looking RIGHT NOW — updated as HER pans and pinches, so
+  /// Where the map is looking RIGHT NOW — updated as the driver pans and pinches, so
   /// the coverage badge answers "is there a map HERE", not "was there a map
   /// where we started".
   LatLng? _viewCenter;
@@ -815,7 +815,7 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
                   : null,
               // Declared explicitly (it is flutter_map's default) because
               // _coverage above must ask about the SAME tile set the renderer
-              // requests. EIE measured on target 2026-08-29: 0 visible tiles
+              // requests. Measured on the embedded target 2026-08-29: 0 visible tiles
               // took the online branch and 18 tiles in this ring did.
               panBuffer: _panBuffer,
               userAgentPackageName: 'com.sngnav.getting_started',

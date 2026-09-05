@@ -1,5 +1,5 @@
 /// Pre-trip ROUTE-BRIDGE caution provider: approximately how many mapped
-/// bridge sites lie on HER route — because bridge decks freeze before the
+/// bridge sites lie on her route — because bridge decks freeze before the
 /// road surface does, and knowing "about N bridges ahead" at the kitchen
 /// table lets her slow down BEFORE the deck, not after the slide.
 ///
@@ -11,7 +11,7 @@
 /// `--dart-define=PRETRIP_ROUTE_OSRM_URL=<url>` AND the driver has set a
 /// destination. No retries beyond the engine's own single timeout, no
 /// polling, no re-fetch on rebuild — same discipline as the destination-area
-/// read (`pretrip_screen.dart`: one-shot per HER action, no
+/// read (`pretrip_screen.dart`: one-shot per the driver action, no
 /// Timer/Stream/poll).
 ///
 /// HONEST DEGRADATION (binding, per the corridor module's contract): ANY
@@ -62,7 +62,7 @@ const double bridgeCautionTempCeilingCelsius =
 /// The compound-failure month band (Oct–Apr): with NO cold temperature
 /// evidence the caution falls back to the season in which a frozen deck is
 /// plausible — and stays silent the rest of the year. October is IN: the
-/// inland basins and passes HER route crosses (Yokote basin, 矢立峠/仙岩峠
+/// inland basins and passes her route crosses (Yokote basin, 矢立峠/仙岩峠
 /// elevations) see first frost mid-to-late October, and bridge decks are —
 /// by this feature's own physics — the FIRST surfaces to ice each season,
 /// before the road-frost climatology. The band's evidence-less arm is

@@ -1,11 +1,11 @@
-/// Render-and-SEE capture of the JMA turmoil-warnings card on HER pre-trip
-/// briefing (OPS-066 observation-grade verification).
+/// Render-and-SEE capture of the JMA turmoil-warnings card on the driver pre-trip
+/// briefing (observation-grade verification).
 ///
 /// A passing reach test (pretrip_turmoil_warnings_test.dart) proves the card
 /// is in the widget tree; it does NOT prove the Japanese is readable, that the
 /// verbatim 大雨危険警報 row sits legibly above the 強風注意報 row, or that the
 /// error-container escalation tone reads as a warning and not an alarm. This
-/// loads the real Noto CJK font and writes a PNG for a human (VAA) to go and
+/// loads the real Noto CJK font and writes a PNG for a human to go and
 /// LOOK:
 ///   test/widgets/_capture/pretrip_turmoil_warnings_ja.png
 ///

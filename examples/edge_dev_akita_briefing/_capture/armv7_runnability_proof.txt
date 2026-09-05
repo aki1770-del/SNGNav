@@ -2,7 +2,7 @@
 # Captured (UTC): 2026-06-20T12:05:02Z
 # Harness: docker run --platform linux/arm/v7 dart:stable (qemu-arm user-mode binfmt) on an x86_64 host;
 #          zero-dep advisor; offline deterministic Akita whiteout data (no network).
-# PROVES: the OFFLINE HONEST-DECISION CORE runs on HER's car-class 32-bit ARM hardware, producing HER briefing.
+# PROVES: the OFFLINE HONEST-DECISION CORE runs on a car-class 32-bit ARM hardware, producing her briefing.
 # DOES NOT PROVE: the Flutter VISUAL render on armv7 — that stays [GATED] on flutter/flutter#188063.
 
 === ARCH PROOF ===

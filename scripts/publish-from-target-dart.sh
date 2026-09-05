@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
-# Process-fix C (D-VGC218-1): publish pub.dev packages ONLY from the embedded-target Dart SDK
+# Publish pub.dev packages ONLY from the embedded-target Dart SDK
 # (Flutter 3.38.3 / Dart 3.10.1), and REFUSE to publish any package whose environment.sdk lower
 # bound is above the target. Root cause of the ^3.11.0-floor catalog skew was publishing from a
 # host SDK (Dart 3.12) that stamped a 3.11 floor, locking out the embedded IVI target. This guard
-# makes that recurrence impossible. NOTE: this is the MECHANISM only — per D-VGC218-1 tooth 6 the
-# AUTHORITY to publish is Komada-voice per-act + Vice SEO + L28-γ/register + OPS-RULE-062(C) assert.
+# makes that recurrence impossible. NOTE: this is the MECHANISM only — the decision to
+# publish a given release is taken separately, and this script does not grant it.
 set -euo pipefail
 PKG_DIR="${1:?usage: publish-from-target-dart.sh <package-dir> (set PUBLISH=1 to actually publish)}"
-SDK="${TARGET_FLUTTER_SDK:-/home/komada/flutter-sdks/flutter-3.38.3}"
+SDK="${TARGET_FLUTTER_SDK:-}"
+if [ -z "$SDK" ]; then
+  # Fall back to the Flutter SDK on PATH. Step 1 below still REFUSES unless it is
+  # the pinned target (Dart 3.10.x), so this can never widen what may be published.
+  fbin="$(command -v flutter || true)"
+  [ -n "$fbin" ] && SDK="$(cd "$(dirname "$(readlink -f "$fbin")")/.." && pwd)"
+fi
+if [ -z "$SDK" ] || [ ! -x "$SDK/bin/dart" ]; then
+  echo "REFUSE: set TARGET_FLUTTER_SDK to the pinned Flutter SDK root (Flutter 3.38.3 / Dart 3.10.1)." >&2
+  exit 1
+fi
 DART="$SDK/bin/dart"
 cd "$PKG_DIR"
 

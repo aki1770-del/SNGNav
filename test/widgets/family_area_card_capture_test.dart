@@ -1,7 +1,6 @@
-// Render-and-SEE capture of the FamilyAreaCard (OPS-066 / L32 observation-grade
-// verification). The FamilyAreaCard is the FAMILY-THREAD destination-area read —
+// Render-and-SEE capture of the FamilyAreaCard (observation-grade// verification). The FamilyAreaCard is the FAMILY-THREAD destination-area read —
 // "what conditions will SHE face in her mother's area if she drives there" — so
-// the card must be looked at, in Japanese, the way HER mother in Akita receives
+// the card must be looked at, in Japanese, the way the driver's mother in Akita receives
 // it. A passing widget test alone proves nothing about whether the Japanese is
 // readable (blank test fonts render tofu), so this writes real PNGs with the
 // real Noto Sans CJK font loaded, for a human to go and LOOK.

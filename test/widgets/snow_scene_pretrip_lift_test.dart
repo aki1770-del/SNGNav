@@ -9,7 +9,7 @@
 //   * PRE-TRIP-BEFORE-DRIVE: the drive scaffold (and its 7 BLoCs) is only built
 //     after an explicit "Start drive" — the structural pre-trip-before-drive
 //     guarantee (an IndexedStack would mount it eagerly and auto-start the drive).
-//   * JA-REACHES-HER: under a forced Japanese locale the snow-scene pre-trip
+//   * JA-REACHES-DRIVER: under a forced Japanese locale the snow-scene pre-trip
 //     briefing renders a Japanese reason chip (the D4 guard — falls to English
 //     if the snow_scene MaterialApp's delegates/locales are missing).
 //   * SEVER: the winter card follows [PretripScreen.surfaceState] (the host's
@@ -236,7 +236,7 @@ void main() {
   );
 
   testWidgets(
-    'JA-REACHES-HER: the snow-scene pre-trip briefing renders a Japanese reason '
+    'JA-REACHES-DRIVER: the snow-scene pre-trip briefing renders a Japanese reason '
     'chip under a forced ja locale',
     (tester) async {
       tester.platformDispatcher.localesTestValue = const [Locale('ja')];
@@ -267,7 +267,7 @@ void main() {
         reason: 'no English reason chip should leak under the ja locale',
       );
 
-      // The shell CHROME must reach HER mother too: the AppBar title + the
+      // The shell CHROME must reach the driver's mother too: the AppBar title + the
       // Start-drive button were hardcoded English literals (a same-screen
       // language split above the Japanese briefing). Assert the localized chrome
       // is present AND the English literals are absent under ja — so a chrome

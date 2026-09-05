@@ -2,7 +2,7 @@
 //
 // The render path in lib/main.dart#_buildPretripView constructs a
 // `TripGeo(latitude:_pretripLat, longitude:_pretripLon, utcOffset:…)` and
-// hands it to `CommuteShape(geo: geo)` so the daylight chip can reach HER. No
+// hands it to `CommuteShape(geo: geo)` so the daylight chip can reach the driver. No
 // existing test exercises that production combination — grep across test/ for
 // `geo:` / `TripGeo` / `PRETRIP_UTC_OFFSET` returns nothing, and the capture
 // tests build their OWN geo-LESS CommuteShape. So a future edit that drops

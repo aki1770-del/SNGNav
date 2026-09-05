@@ -1,5 +1,5 @@
-/// Render-and-SEE capture of the ROUTE BRIDGE caution on HER pre-trip surface
-/// (OPS-066 observation-grade verification).
+/// Render-and-SEE capture of the ROUTE BRIDGE caution on the driver pre-trip surface
+/// (observation-grade verification).
 ///
 /// A passing reach test (pretrip_bridge_caution_test.dart) proves the caution
 /// is in the widget tree; it does NOT prove the Japanese line — この先、経路上に
@@ -78,7 +78,7 @@ void main() {
     );
   });
 
-  testWidgets('CAPTURE: route bridge caution reaches HER (ja)', (tester) async {
+  testWidgets('CAPTURE: route bridge caution reaches the driver (ja)', (tester) async {
     final hasCjk = await _loadCjk();
     // ignore: avoid_print
     print('CJK font loaded: $hasCjk');

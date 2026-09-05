@@ -1,6 +1,6 @@
 /// Pure-Dart corridor match: which mapped bridge sites lie ON a route.
 ///
-/// WHY this exists (mission anchor — D3 worst-case, PHIL-001 Driver Test):
+/// WHY this exists (the compound-failure worst case — the driver test):
 /// bridge decks freeze before the road surface does. At pre-trip briefing
 /// time the driver deserves to know approximately how many bridges lie on
 /// her route so she can slow down BEFORE the deck, not after the slide.

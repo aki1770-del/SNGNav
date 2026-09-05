@@ -1,11 +1,11 @@
-/// REACH test: HER must SEE an in-force JMA turmoil-class warning
+/// REACH test: the driver must SEE an in-force JMA turmoil-class warning
 /// (0.4.0 widening: 大雨 / 暴風・強風 / 雷 / 濃霧) on the pre-trip briefing.
 ///
 /// THE GAP this guards: from `condition_aggregator_jma` 0.4.0 the adapter
 /// surfaces the non-snow turmoil classes (e.g. a 大雨危険警報 during a summer
 /// downpour), but the app's pre-trip lane only consumed the snow classes
 /// (road-condition merge) — a fetched in-force 大雨危険警報 was silently
-/// dropped between the adapter and HER while the caption said "no active
+/// dropped between the adapter and the driver while the caption said "no active
 /// winter warning" (true, but the warning she needed never rendered). This
 /// test pumps the SHIPPED [PretripScreen] at an Akita point, injects the
 /// turmoil advisories through the JMA seam, and proves they REACH the tree
@@ -91,7 +91,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        // HER reads Japanese — pin the locale so we verify the surface SHE
+        // the driver reads Japanese — pin the locale so we verify the surface SHE
         // actually sees.
         locale: const Locale('ja'),
         localizationsDelegates: const [
@@ -116,7 +116,7 @@ void main() {
     await flush();
   }
 
-  testWidgets('in-force 大雨危険警報 + 強風注意報 REACH HER verbatim, highest severity '
+  testWidgets('in-force 大雨危険警報 + 強風注意報 REACH THE DRIVER verbatim, highest severity '
       'first, with the verbatim-relay honesty note', (tester) async {
     await pumpAtAkita(
       tester,

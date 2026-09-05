@@ -3,7 +3,7 @@
 overlay declares, straight from an upstream COVESA vehicle_signal_specification
 clone at a pinned tag.
 
-WHY (OPS-070(B), written before the act):
+WHY (written before the act):
 
   On 2026-08-26 the app's KUKSA decoder was corrected to divide road friction by
   100, because Vehicle.ADAS.ESC.RoadFriction.MostProbable is PERCENT 0-100 and

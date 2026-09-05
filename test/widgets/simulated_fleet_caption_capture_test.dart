@@ -63,7 +63,7 @@ import 'package:sngnav_snow_scene/widgets/snow_scene_scaffold.dart';
 /// `simulated_fleet_caption_test.dart` asserts in 19 expectations that the
 /// caption is present, in the right language, and absent when consent is
 /// denied, when the bloc is not listening, and when the caller declares a real
-/// fleet feed. That file is the loom. This one is the camera.
+/// fleet feed. That file is the guard. This one is the camera.
 final bool _compareGoldens =
     autoUpdateGoldenFiles ||
     Platform.environment['SNGNAV_GOLDEN_COMPARE'] == '1';

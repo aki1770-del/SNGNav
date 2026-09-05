@@ -10,7 +10,7 @@
 ///   4. Full lifecycle: load → grant → revoke → re-grant through SQLite
 ///   5. Persistence: grant in one BLoC instance, load in another on same DB
 ///   6. Audit trail: BLoC operations produce audit log entries
-///   7. Jidoka: error state when SQLite service is disposed mid-operation
+///   7. fail-safe: error state when SQLite service is disposed mid-operation
 ///
 /// Sprint 8 Day 3 — ConsentBloc + SQLite integration.
 library;

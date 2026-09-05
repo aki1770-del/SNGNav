@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Does a constraint we publish exclude a sibling we publish?
 
-Mission anchor (PHIL-001 / D3 supreme): driving_weather 0.5.0 and snow_rendering
+Why this matters: driving_weather 0.5.0 and snow_rendering
 0.3.0 are the releases carrying the measured-or-absent contract - an unmeasured
 road is reported as unmeasured, never as dry. Measured 2026-08-21: a consumer
 running `pub add driving_conditions` resolves driving_weather 0.4.5 and
 snow_rendering 0.2.9, because four published constraints cap at ^0.4.x. The fix
 we published to reach her does not reach her. She is the driver in unexpected
 snow and she cannot tell the difference.
-D5: Evidence -> Contribution -> Architecture -> Edge Developer -> Driver.
+The chain: Evidence -> Contribution -> Architecture -> Edge Developer -> Driver.
 
 WHY CI DID NOT CATCH IT: the hosted-resolve lane proves a clean consumer CAN
 resolve. It does not ask WHAT they resolve. A stale cap resolves perfectly - to
 the wrong version - so resolution success is not the question.
 
 ================================================================================
-CORRECTED 2026-08-28 (PDS) - THIS GUARD CARRIED THE ARITHMETIC IT EXISTS TO CATCH.
+CORRECTED 2026-08-28 - THIS GUARD CARRIED THE ARITHMETIC IT EXISTS TO CATCH.
 ================================================================================
 From 2026-08-21 until now this file encoded **npm** caret semantics for the
 0.0.x corner and stated them in its own header:
@@ -25,7 +25,7 @@ From 2026-08-21 until now this file encoded **npm** caret semantics for the
        It means <0.0.6."~~                                              INVERTED
 
 **That first checker was RIGHT and it was corrected into being wrong.** Struck
-rather than deleted (OPS-002): a later reader must be able to see that this guard
+rather than deleted: a later reader must be able to see that this guard
 was founded on a real defect and then mis-derived the rule while fixing it.
 
 DART'S ACTUAL RULE, from the solver, not from belief. pub_semver's `nextBreaking`
@@ -56,7 +56,7 @@ never suppress one. **Every FAIL it invented was false; every FAIL it reported
 outside the 0.0.x corner was real.** Measured on backport/routing_engine-0.5.x:
 16 reported, 8 false, 8 real.
 
-WHY THAT MATTERED ANYWAY (Sakichi Vision 20): a gate that over-reports is a gate
+WHY THAT MATTERED ANYWAY: a gate that over-reports is a gate
 that gets routed around. Half the report being noise is enough for a reader to
 start discounting the whole output - which is how a real one gets missed.
 
@@ -82,7 +82,7 @@ MODES
   --local      (default) local constraints vs local sibling versions. Offline,
                deterministic, catches it BEFORE publish. This is the CI gate.
   --published  published constraints vs published versions. Needs pub.dev.
-               Catches what a weaver actually gets today.
+               Catches what a consumer actually gets today.
   --self-test  prove the arithmetic against pub_semver-anchored cases, and prove
                the suite goes RED under each defect this file has carried.
 

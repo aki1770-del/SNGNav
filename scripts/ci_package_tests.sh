@@ -68,7 +68,7 @@ for dir in packages/*/; do
     # -x pinned-live: gate on REGRESSIONS. The pinned-live suite asserts fixes
     # for defects that are still live, so it fails by design; it is run and
     # reported separately, never silently skipped. A gate that can never pass is
-    # a gate that gets routed around (Sakichi Vision #20).
+    # a gate that gets routed around.
     if [ $HAVE_COVERAGE -eq 1 ]; then
       ( cd "$dir" && rm -rf coverage && dart test -x pinned-live --coverage=coverage/raw )
       rc=$?

@@ -4,9 +4,9 @@ A listening log for the SNGNav project. Records — anonymized, with source URL 
 
 ## Why this file exists
 
-The 2026-04-27 target-drivers research synthesis (`UNTITLED/outputs/research/target_drivers_2026_04_27_vaa_synthesis.md` in the development workspace) surfaced one largest-leverage gap: **the unit doesn't actually KNOW drivers; it knows what's published about them.** Three research perspectives (strategic, ADAS, ecosystem) named the gap independently.
+A 2026-04-27 target-drivers research review surfaced one largest-leverage gap: **we don't actually KNOW drivers; we know what's published about them.** Three research perspectives (strategic, ADAS, ecosystem) named the gap independently.
 
-This file closes that gap from the LISTENING side. It does not close it by extracting attention from drivers (asking them to share their experiences) — that would be the same V96-violation that today's session ratified rescinding for cold-tooling outreach. Instead, this file records what drivers + their developers ALREADY say in public, so when the unit makes a build decision, the decision is informed by their actual voices rather than only by inferred-from-statistics personas.
+This file closes that gap from the LISTENING side. It does not close it by extracting attention from drivers — we do not ask people to share their experiences for our benefit. Instead, this file records what drivers and their developers ALREADY say in public, so that when we make a build decision, the decision is informed by their actual voices rather than only by inferred-from-statistics personas.
 
 ## What gets recorded here
 
@@ -34,9 +34,9 @@ Not recorded:
 **Substance** (≤200 words, paraphrased or quoted with attribution):
 > ...
 
-**V92 question**: which loom in SNGNav's portfolio (or potential portfolio) is made-absent by this voice? If the absence-of-loom would have caused this voice's experience, the loom is queued for build.
+**Gap question**: which capability in SNGNav's portfolio (or potential portfolio) is shown missing by this voice? If that missing capability would have caused this voice's experience, it is queued for build.
 
-**VAA disposition**: build queue addition / informs existing build / no action / hold for cluster
+**Disposition**: build queue addition / informs existing build / no action / hold for cluster
 ```
 
 ## Listening surfaces — where to look
@@ -56,12 +56,6 @@ These are the public places where drivers / developers / domain practitioners sp
 ## Cadence
 
 No required cadence. Voices are recorded when encountered in the course of normal work. The watching is opportunistic; the recording is disciplined when the watch surfaces something.
-
-## Cross-references
-
-- Listening discipline doctrine: VAA prompt Listen Frame at `skills/vision-alignment-auditor/prompt.md` (in the masterplan workspace)
-- Source synthesis: `UNTITLED/outputs/research/target_drivers_2026_04_27_vaa_synthesis.md`
-- Build queue (where loom-additions land): WOW v1 master at `UNTITLED/outputs/governance_transformation/spa_actuator_way_of_working_v1.md`
 
 ---
 
@@ -179,7 +173,7 @@ This is not anecdotal. In the SafeDrive4Deaf study of 25 deaf and hard-of-hearin
 
 *Need-grounded composite (labeled — not a real named testimony):* a deaf driver, or any driver inside a roaring-wind whiteout where speech cannot carry, receives nothing from an audio-only hazard warning.
 
-**Structural takeaway**: The audio channel is not a universal channel. A deaf or hard-of-hearing driver receives nothing from an audio-only alert; neither does a hearing driver in a roaring-wind whiteout. Therefore the haptic (tactile) hazard channel SNGNav builds must carry the **same warning set** as the audio channel, fired off the **same severity gate** — not a reduced subset that silently drops the most serious warnings for the driver who can least afford to miss them (a D4 dignity floor; OPS-RULE-059 accessibility). A single undifferentiated buzz is worse than honest: a deaf driver who feels one generic vibration cannot act on it — they cannot tell *reduce speed* from *consider turning back*. The cited evidence shows differentiated cues are both wanted (SafeDrive4Deaf color-coding) and effective (Gaffary & Lécuyer: dynamic patterns beat a static buzz). So the haptic grammar must distinguish severity, mapping one-for-one onto the existing `RecommendedResponse` tiers (proceed / reduceSpeed / considerTurningBack). **Honesty note on evidence strength**: the deaf-driver visual-reliance and emergency-detection gap is both research-documented (SafeDrive4Deaf, n=25, 100% finding) and first-person-attested (Bauman). First-person *snow-specific* deaf-driver accounts are sparse; the whiteout framing above is therefore a labeled need-grounded composite drawn from the cited deaf-driver evidence plus this file's own whiteout voices (Sapporo turn-around; "if you can't see the next arrow, you're in a real whiteout") — it is not overclaimed as a real named snow testimony.
+**Structural takeaway**: The audio channel is not a universal channel. A deaf or hard-of-hearing driver receives nothing from an audio-only alert; neither does a hearing driver in a roaring-wind whiteout. Therefore the haptic (tactile) hazard channel SNGNav builds must carry the **same warning set** as the audio channel, fired off the **same severity gate** — not a reduced subset that silently drops the most serious warnings for the driver who can least afford to miss them (an accessibility floor: equal dignity for every driver). A single undifferentiated buzz is worse than honest: a deaf driver who feels one generic vibration cannot act on it — they cannot tell *reduce speed* from *consider turning back*. The cited evidence shows differentiated cues are both wanted (SafeDrive4Deaf color-coding) and effective (Gaffary & Lécuyer: dynamic patterns beat a static buzz). So the haptic grammar must distinguish severity, mapping one-for-one onto the existing `RecommendedResponse` tiers (proceed / reduceSpeed / considerTurningBack). **Honesty note on evidence strength**: the deaf-driver visual-reliance and emergency-detection gap is both research-documented (SafeDrive4Deaf, n=25, 100% finding) and first-person-attested (Bauman). First-person *snow-specific* deaf-driver accounts are sparse; the whiteout framing above is therefore a labeled need-grounded composite drawn from the cited deaf-driver evidence plus this file's own whiteout voices (Sapporo turn-around; "if you can't see the next arrow, you're in a real whiteout") — it is not overclaimed as a real named snow testimony.
 
 ---
 

@@ -16,7 +16,7 @@
 ///   * any other  — `docker stop brokerHandle` (containerised broker)
 ///
 /// Exit 0 = all phases passed; exit 1 = a phase failed (with the actual decoded
-/// values printed so the failure is genchi-genbutsu, not narrated).
+/// values printed so the failure is measured at the source, not narrated).
 library;
 
 import 'dart:async';
