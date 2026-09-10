@@ -133,6 +133,7 @@ can close on movement that never happened.
 Gate on provenance, not on accuracy:
 
 ```dart
+// oracle:placeholders track, metresBetween, showDegradedGpsQuality
 provider.positions.listen((position) {
   if (!position.containsMeasurement) {
     // Prediction. Show it if you like — never bank it.

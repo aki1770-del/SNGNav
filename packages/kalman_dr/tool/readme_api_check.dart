@@ -66,6 +66,11 @@ void main() {
       'lib/src/location_provider.dart',
     ]),
     // `filter.predict()` returns a record; its fields are declared alongside it.
+    // `lastFix` in the worked example holds a GeoPosition off our own stream.
+    // It is NOT the reader's own type, so it is audited rather than exempted --
+    // declaring it a placeholder would blind this check to the exact
+    // fabrication (`lastFix.distanceTo`) that prompted this rewrite.
+    'lastFix': _membersOf(['lib/src/geo_position.dart']),
     'predicted': _membersOf(['lib/src/kalman_filter.dart']),
     'KalmanFilter': _membersOf(['lib/src/kalman_filter.dart']),
     'DeadReckoningMode': _membersOf(['lib/src/dead_reckoning_provider.dart']),
@@ -77,7 +82,8 @@ void main() {
   const exempt = <String>{
     'DateTime', 'Duration', // dart:core statics
     'super', 'this', 'widget', 'snapshot', // Flutter/StatefulWidget receivers
-    'track', // the reader's own collection in the worked example
+    // NOTE: page-specific receivers are NOT listed here -- they are declared
+    // inline by the page itself, see `oracle:placeholders` below.
     'kalman_dr', 'material', // `package:kalman_dr/...` on import lines
   };
 
@@ -85,6 +91,23 @@ void main() {
       .allMatches(readme)
       .map((m) => m.group(1)!)
       .join('\n');
+
+  // Placeholders the page declares about ITSELF: `// oracle:placeholders a, b`.
+  // This convention already existed in this catalog -- 7 declarations across 5
+  // packages, including `lastFix` in localization_fallback -- and NOTHING read
+  // it. The first fix here invented a tool-side exempt list instead, which is
+  // the duplication CLAUDE.md §11 test 3 forbids: the primitive existed under
+  // another name. A tool-side list also hides the declaration from the reader it
+  // is written for; an inline one sits next to the code it describes.
+  final declared = <String>{};
+  for (final m
+      in RegExp(r'//\s*oracle:placeholders\s+(.+)').allMatches(readme)) {
+    declared.addAll(m
+        .group(1)!
+        .split(RegExp(r'[,\s]+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty));
+  }
 
   final failures = <String>[];
   for (final receiver in api.entries) {
@@ -108,10 +131,15 @@ void main() {
   // map it or exempt it with a reason -- never to widen silently.
   for (final m in RegExp(r'\b([A-Za-z_]\w*)\.(\w+)').allMatches(blocks)) {
     final receiver = m.group(1)!;
-    if (api.containsKey(receiver) || exempt.contains(receiver)) continue;
+    if (api.containsKey(receiver) ||
+        exempt.contains(receiver) ||
+        declared.contains(receiver)) {
+      continue;
+    }
     failures.add('  README teaches $receiver.${m.group(2)} '
-        '— UNAUDITED RECEIVER: map it in `api` or list it in `exempt` '
-        'with the reason it is not ours');
+        '— UNAUDITED RECEIVER: declare it in the block with '
+        '`// oracle:placeholders $receiver` if it is the reader\'s own, '
+        'or map it in `api` if it is ours');
   }
 
   if (failures.isNotEmpty) {

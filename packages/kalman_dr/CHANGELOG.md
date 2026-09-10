@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.6.4
+
+**Tooling and one README line. `lib/` is byte-identical to `0.6.2` and `0.6.3`;
+no behaviour changes, no API changes.**
+
+`0.6.3` fixed the landing page and rebuilt `tool/readme_api_check.dart` so an
+unaudited receiver fails instead of passing silently. That rebuild introduced a
+**tool-side exempt list** — and it should not have. This catalog already had the
+primitive, inline and better: a `// oracle:placeholders a, b, c` comment that a
+page writes about itself, declaring which receivers belong to the reader rather
+than to us. Measured across the catalog: **seven declarations across five packages
+before this release added an eighth, and nothing anywhere parsed any of them.** One of those declarations names `lastFix`,
+which is the exact receiver `0.6.3` was drafted with a fabricated call on.
+
+So the check now reads the convention instead of duplicating it, and the
+convention stops being decorative in at least this package.
+
+One correction inside the correction, recorded because it is the more useful
+half: the first attempt declared `lastFix` a placeholder in this package's own
+README. That was wrong. `lastFix` holds a `GeoPosition` off our own stream — it
+is **our** type under a name the reader chose — and exempting it would have
+blinded the check to precisely the fabrication that prompted the rewrite. It is
+mapped and audited instead, so a bad member on it now returns *"NOT IN THE PUBLIC
+API"* rather than the weaker *"unaudited receiver"*.
+
+**Bounds.** Nothing a consumer calls has changed. `pub upgrade` on any `^0.6.0`
+dependency carries this and alters nothing at runtime. The only shipped-file
+changes are `tool/readme_api_check.dart` and one declaration line in the README's
+worked example. **An exact pin still admits exactly one version; if you pinned
+one, nothing here reaches you.**
+
 ## 0.6.3
 
 **Documentation only. `lib/` is byte-identical to `0.6.2`; no behaviour changes.**
