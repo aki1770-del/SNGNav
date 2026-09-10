@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.6.3
+
+**Documentation only. `lib/` is byte-identical to `0.6.2`; no behaviour changes.**
+
+`0.6.0` shipped `PositionSource` so a consumer holding a position could tell a
+real fix from an extrapolated one. **The README never mentioned it.** Measured on
+the published `0.6.2` archive: `PositionSource` appeared zero times, and the
+Features list pointed the reader at a section called *"Reading a position"* that
+did not exist — the file had eleven headings and none of them was that one.
+
+So the landing page warned *"never infer liveness from the accuracy number"*,
+sent the reader to nowhere for the remedy, and two bullets later advertised the
+decorator as wrapping any provider **"transparently"** — which is the precise
+word for the failure the remedy exists to prevent. A reader who trusted the
+README could not have found the escape hatch, and would have been told the thing
+that misleads.
+
+This release closes that. The README now has:
+
+- **`## Reading a position`** — what each `PositionSource` value means, and the
+  three getters (`isMeasured`, `containsMeasurement`, `isDeadReckoned`) that ask
+  the question directly. `containsMeasurement` is named as the one a safety
+  consumer usually means.
+- **`### Do not accumulate what was never travelled`** — a worked example that
+  gates on provenance rather than accuracy. Predictions keep arriving on the same
+  stream through an outage; integrating them into a distance total, a path or a
+  geofence makes a stationary device in a tunnel accumulate distance it did not
+  travel, and lets a loop close on movement that never happened.
+- The decorator bullet, corrected: it wraps without changing your wiring, **but
+  the positions it emits are not interchangeable with the ones it received.**
+- `GeoPosition` and `PositionSource` in the API Overview, which listed neither.
+
+**The oracle that should have caught this was blind, and is fixed here.**
+`tool/readme_api_check.dart` exists to prove the landing page never names a
+member we do not ship — it was written after `position.accuracyMetres` survived
+on the page for a type that never had it. It checked `<receiver>.<member>` for
+**three hardcoded receiver names** and silently passed every other one. Measured:
+the page taught fifteen distinct receivers and twelve were never looked at, so a
+fabricated `lastFix.distanceTo(position)` went straight through it while drafting
+this very release. It now reads named constructors, record fields and enum values,
+and an unaudited receiver is a failure rather than a silent pass. Proven against
+five distinct fabrications, each of which it now catches.
+
+**Bounds.** No API changed and no behaviour changed; `pub upgrade` on any `^0.6.0`
+dependency carries this and alters nothing at runtime. This fixes what we told
+you, not what the package does — if you already read `source`, you were already
+right. **And if you pinned an exact version, this does not reach you**; an exact
+pin admits exactly one version, and nothing we publish can arrive.
+
 ## 0.6.2
 
 **The filter can now be tuned for what is actually carrying the device. Until

@@ -28,7 +28,9 @@ Pure Dart, no native dependencies.
 - **Safety cap**: stops at 500m accuracy — no false confidence. **The stream
   emits a terminal error at the cap; register `onError`** (see Quick Start)
 - **Two modes**: EKF (full) and linear extrapolation (lightweight)
-- **Decorator pattern**: wraps any `LocationProvider` transparently
+- **Decorator pattern**: wraps any `LocationProvider` without changing your
+  wiring — but the positions it emits are *not* interchangeable with the ones
+  it received. Read `source` (see "Reading a position")
 
 ## Install
 
@@ -97,6 +99,56 @@ provider.positions.listen(
   },
 );
 ```
+
+## Reading a position
+
+Every `GeoPosition` states where its coordinate came from. Read `source` before
+you use the value for anything a driver depends on.
+
+| `position.source` | What you are holding |
+|---|---|
+| `PositionSource.measured` | The raw sensor value, unmodified. |
+| `PositionSource.fused` | A real reading combined with the filter's prediction. Real evidence contributed, but the blend can still sit several times its own stated `accuracy` from the truth on the first fix after an outage — `extrapolatedFor` tells you how far it has run from evidence. |
+| `PositionSource.deadReckoned` | **Pure prediction. No sensor reading contributed.** Where the driver *would* be if nothing had changed. |
+| `PositionSource.unknown` | Provenance unstated. |
+
+Three getters ask the question directly:
+
+```dart
+position.isMeasured        // raw sensor only
+position.containsMeasurement  // measured OR fused — a sensor contributed
+position.isDeadReckoned    // pure prediction, nothing behind it
+```
+
+`containsMeasurement` is the one a safety consumer usually means.
+
+### Do not accumulate what was never travelled
+
+The provider keeps emitting on the same stream through a GPS outage — that is
+the point of it. Those emissions are *predictions*. If you integrate every
+position into a distance total, a path, or a geofence, a stationary device in a
+tunnel or an underpass will accumulate distance it did not travel, and a loop
+can close on movement that never happened.
+
+Gate on provenance, not on accuracy:
+
+```dart
+provider.positions.listen((position) {
+  if (!position.containsMeasurement) {
+    // Prediction. Show it if you like — never bank it.
+    showDegradedGpsQuality();
+    return;
+  }
+  distanceMeters += metresBetween(lastFix, position); // your own haversine
+  track.add(position);
+  lastFix = position;
+});
+```
+
+**Never infer liveness from `accuracy`.** One second of dead reckoning off a
+clean 8 m fix reports about 13 m, which reads *better* than a genuine 40 m fix
+under tree cover. `accuracy` answers *"how confident?"*; only `source` answers
+*"is this real?"*.
 
 ## Integration Pattern
 
@@ -205,6 +257,8 @@ rendering instead of freezing.
 | `DeadReckoningProvider` | Wraps a location provider and emits predicted positions during GPS loss. |
 | `DeadReckoningMode` | Selects EKF or linear extrapolation mode. |
 | `KalmanPosition` | Carries predicted position, speed, heading, timestamp, and accuracy. |
+| `GeoPosition` | A coordinate that states its own provenance: `source`, `isMeasured`, `containsMeasurement`, `isDeadReckoned`, `extrapolatedFor`. |
+| `PositionSource` | `measured` / `fused` / `deadReckoned` / `unknown` — what produced this coordinate. |
 
 ## Safety
 
