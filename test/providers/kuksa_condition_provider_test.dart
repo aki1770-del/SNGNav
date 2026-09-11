@@ -190,7 +190,7 @@ void main() {
       // hysteresis hold (debounce is covered by its own test below).
       final provider = KuksaConditionProvider(
         updates: source.stream,
-        surfaceFilter: HysteresisFilter<RoadSurfaceState>(
+        surfaceFilter: HysteresisFilter<RoadSurfaceState?>(
           windowSize: 1,
           threshold: 1,
         ),

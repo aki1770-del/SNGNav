@@ -243,6 +243,19 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   // caption tells the truth about the active source.
   bool _liveVehicleReceived = false;
 
+  // WHY the in-vehicle read is not live, in the databroker's own words.
+  //
+  // `lib/` read this field ZERO times until 2026-09-11. The fusion had been
+  // putting the cause in `VehicleConditionUpdate.unavailableReason` all along
+  // and the listener below dropped it on the floor, so a driver whose vehicle
+  // simply lacked one VSS leaf got a scene with no explanation at all.
+  String? _vehicleUnavailableReason;
+
+  // The road-condition leaves THIS vehicle has no sensor for. Not the ones that
+  // are merely quiet — the databroker cannot tell us that, and pretending it
+  // can would be a fabricated distinction.
+  List<String> _vehicleAbsentSignals = const <String>[];
+
   // HONEST GPS-LOSS DEGRADATION (compound-failure worst case — GPS fails).
   //
   // The 3D forward-view is driven by weather alone; on its own it would keep
@@ -362,32 +375,96 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// in-vehicle condition is ever fabricated.
   Future<void> _initKuksaConditions() async {
     if (_kuksaHost.isEmpty) return; // not selected → offline default, no broker
+
+    // Opting into a live vehicle source RETIRES the asserted getting-started
+    // scenario immediately, before a single byte arrives. Until 2026-09-11 the
+    // scene started from — and on failure stayed on — a SIMULATED
+    // `RoadSurfaceState.blackIce` with the advisory "Black ice risk — reduce
+    // speed significantly". Measured on screen against a real databroker whose
+    // vehicle lacked one leaf: zero live signals, one confident hazard.
+    //
+    // A developer who has said "read the road from the car" must never be shown
+    // a road the car did not report. The honest floor is "not measured", which
+    // the scene renders as its own distinguishable state.
+    _dropToUnmeasuredVehicleFloor();
+
     try {
       final client = KuksaClient(host: _kuksaHost, port: _kuksaPort);
       _kuksaClient = client;
       final provider = await KuksaConditionProvider.connect(client);
       _kuksaProvider = provider;
+      if (mounted) {
+        setState(() => _vehicleAbsentSignals = provider.absentSignals);
+      } else {
+        _vehicleAbsentSignals = provider.absentSignals;
+      }
       _kuksaSub = provider.conditions.listen(
         (update) {
           if (!mounted) return;
           if (!update.isAvailable) {
-            // Honest "no live vehicle signals": keep last-good/default, never
-            // fabricate — just stop claiming the scene is live.
-            setState(() => _liveVehicleReceived = false);
+            // Honest "no live vehicle signals". We stop claiming live AND we
+            // stop showing a road nobody measured — and we say why.
+            setState(() {
+              _liveVehicleReceived = false;
+              _vehicleUnavailableReason = update.unavailableReason;
+              _dropToUnmeasuredVehicleFloor();
+            });
             return;
           }
           setState(() {
             _assessment = update.assessment!;
             _liveVehicleReceived = true;
+            _vehicleUnavailableReason = null;
           });
         },
-        onError: (Object _) {/* keep last-good assessment */},
+        onError: (Object error) {
+          if (!mounted) return;
+          setState(() {
+            _liveVehicleReceived = false;
+            _vehicleUnavailableReason = error.toString();
+            _dropToUnmeasuredVehicleFloor();
+          });
+        },
         cancelOnError: false,
       );
-    } catch (_) {
-      // Broker unreachable (the usual no-vehicle host case) → honest floor:
-      // keep the offline default assessment, never invent a vehicle condition.
+    } catch (error) {
+      // Broker unreachable, or a vehicle that has NONE of the signals. Honest
+      // floor — never an invented vehicle condition, and never a silent one.
+      if (mounted) {
+        setState(() {
+          _vehicleUnavailableReason = error.toString();
+          _dropToUnmeasuredVehicleFloor();
+        });
+      } else {
+        _vehicleUnavailableReason = error.toString();
+        _dropToUnmeasuredVehicleFloor();
+      }
     }
+  }
+
+  /// Replaces the held assessment with the honest "not measured" one — unless a
+  /// DIFFERENT live source is currently carrying it.
+  ///
+  /// The guard is load-bearing: `_assessment` is written by both this rail and
+  /// the Digitraffic rail. Blanking a current Digitraffic reading because the
+  /// vehicle bus dropped would destroy a real measurement to report the absence
+  /// of a different one. Call inside setState, or before the first frame.
+  void _dropToUnmeasuredVehicleFloor() {
+    // `_liveConditionReceived` ALONE is the wrong guard, and the reason is on
+    // line :434 below: it is set to true for `WeatherUnavailable()` too. So a
+    // Digitraffic feed that explicitly told us it has nothing would otherwise
+    // veto this rail's honest floor — an unmeasured rail overruling an
+    // unmeasured rail. `isAssessed` is the predicate that actually asks "is
+    // what is standing on the glass a measurement?"
+    //
+    // ⚑ RESIDUAL, NOT CLOSED HERE: `_liveConditionReceived` is a latch nothing
+    // ever clears, so a stale-but-assessed Digitraffic reading still survives
+    // this guard. Bounding that needs a calibrated freshness number, which is
+    // FSE's lane (they are landing asymmetric optimistic/pessimistic age bounds
+    // in `vehicle_condition_fusion` right now). Inventing a number here would
+    // be a second, uncalibrated bound competing with theirs.
+    if (_liveConditionReceived && _assessment.isAssessed) return;
+    _assessment = unmeasuredVehicleAssessment();
   }
 
   /// Subscribes the held [_assessment] to a LIVE winter-road severity feed,
@@ -857,18 +934,18 @@ class _OfflineMapPageState extends State<OfflineMapPage> {
   /// AND the feed is reachable; on any failure it stays on the simulated
   /// default. The advisory chip's text legibility at small sizes is a known gap.
   Widget _buildForwardView() {
-    final String caption;
-    if (_liveVehicleReceived) {
-      caption = 'Forward-view \u2014 CPU-projected still frame, '
-          'LIVE in-vehicle VSS signals (KUKSA databroker, offline-capable)';
-    } else if (_liveConditionReceived) {
-      caption = 'Forward-view \u2014 CPU-projected still frame, '
-          'live Digitraffic winter-road severity';
-    } else {
-      caption = 'Forward-view \u2014 CPU-projected still frame, simulated default '
-          '(live Digitraffic when WEATHER_PROVIDER=digitraffic; '
-          'live in-vehicle when KUKSA_HOST set)';
-    }
+    // The old else-branch read "...simulated default (live Digitraffic when
+    // WEATHER_PROVIDER=digitraffic; live in-vehicle when KUKSA_HOST set)" and
+    // was rendered ONLY when a live source had been selected and had failed \u2014
+    // so its parenthetical stated a condition that WAS satisfied beside a
+    // consequence that had not happened. It is now one function, tested.
+    final String caption = vehicleConditionCaption(
+      liveVehicleReceived: _liveVehicleReceived,
+      liveWeatherReceived: _liveConditionReceived,
+      absentSignals: _vehicleAbsentSignals,
+      vehicleSourceSelected: _kuksaHost.isNotEmpty,
+      unavailableReason: _vehicleUnavailableReason,
+    );
     return Stack(
       children: [
         SnowScene3DView(assessment: _assessment, location: _location),
