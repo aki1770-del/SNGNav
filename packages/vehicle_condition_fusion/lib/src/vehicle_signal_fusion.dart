@@ -202,3 +202,128 @@ WeatherCondition vehicleSignalsToWeatherCondition(
     timestamp: timestamp ?? DateTime.now(),
   );
 }
+
+// ---------------------------------------------------------------------------
+// SOTIF age bounds — ASYMMETRIC expiry of carried-forward signals.
+//
+// The partial-frame rail carries a once-seen value forward indefinitely, and
+// the fused condition is re-stamped with the CURRENT clock on every emission.
+// So a friction reading taken on the valley floor is re-published as a fresh
+// measurement while the road glazes at altitude — and `_iceRisk` reads it as
+// "we MEASURED the friction and it was fine".
+//
+// The fix is NOT a single staleness bound. A held ICE warning and a held
+// GOOD-GRIP reading are not symmetric risks:
+//
+//   * Holding a hazard witness forward over-warns. She keeps her caution; the
+//     cost is trust, and trust is recoverable.
+//   * Holding an all-clear witness forward under-warns. She SPENDS her
+//     caution on a reading taken before the pass. That cost is not recoverable
+//     at ten metres of visibility.
+//
+// So every field expires at a bound chosen by the DIRECTION OF THE INFERENCE
+// ITS CURRENT VALUE SUPPORTS, not by which field it is. An expired field
+// degrades to `null` — UNKNOWN — never to a benign value; the tri-state
+// classifier above then abstains instead of asserting.
+// ---------------------------------------------------------------------------
+
+/// How long a value that would SUPPRESS a warning may be carried forward.
+///
+/// Deliberately short. At 60 km/h this is ~1 km of road — below the scale over
+/// which a valley road glazes into an altitude ice sheet, which is the hazard
+/// this bound exists to stop us from talking over.
+const Duration kMaxOptimisticSignalAge = Duration(seconds: 60);
+
+/// How long a value that would RAISE a warning may be carried forward.
+///
+/// Deliberately long, and longer than [kMaxOptimisticSignalAge] by design:
+/// ice does not un-form in a minute, and erring here errs toward her caution.
+/// It is finite because "we saw ice once, twenty minutes ago" is eventually a
+/// claim about the past, not the road ahead.
+const Duration kMaxPessimisticSignalAge = Duration(minutes: 15);
+
+/// How long the whole stream may go silent before it stops counting as live.
+///
+/// `Vehicle.Speed` is the natural heartbeat: it is in the subscribed set and it
+/// changes continuously while the vehicle moves, so a moving vehicle on a
+/// healthy bus emits far more often than this. Silence past this bound means
+/// the transport is up but nothing is arriving — the one degradation mode that
+/// produces no error, no stream end, and no new frame.
+const Duration kMaxFrameSilence = Duration(seconds: 10);
+
+/// Per-field keys for the observation clock kept by the fusion processor.
+abstract final class VehicleSignalField {
+  static const String roadFriction = 'roadFriction';
+  static const String tcsEngaged = 'tcsEngaged';
+  static const String absEngaged = 'absEngaged';
+  static const String escEngaged = 'escEngaged';
+  static const String airTempC = 'airTempC';
+  static const String humidityRH = 'humidityRH';
+  static const String speedKmh = 'speedKmh';
+  static const String wiperIntensity = 'wiperIntensity';
+  static const String rainIntensity = 'rainIntensity';
+}
+
+/// Which direction of inference a field's CURRENT value supports.
+///
+/// Derived from the limbs of [_iceRisk] and [_precipitationLevel] above — not
+/// invented here. A value is `allClear` only when it actually drives one of
+/// those functions toward "no hazard"; everything else is `hazard` (expires
+/// slowly) or `neutral` (never expires on its own, only with the stream).
+bool _isAllClearDirection(String field, Object value) => switch (field) {
+      // Only a friction AT OR ABOVE the icy threshold reaches `return false`.
+      VehicleSignalField.roadFriction =>
+        (value as double) >= kIcyFrictionThreshold,
+      // A slip flag that is FALSE suppresses the traction-loss ice limb.
+      VehicleSignalField.tcsEngaged ||
+      VehicleSignalField.absEngaged ||
+      VehicleSignalField.escEngaged =>
+        value == false,
+      // A temperature ABOVE the cold-slip bound blocks ice attribution.
+      VehicleSignalField.airTempC => (value as double) > kColdSlipCelsius,
+      // A reported wiper/rain level of zero is the vehicle saying "not raining".
+      VehicleSignalField.wiperIntensity ||
+      VehicleSignalField.rainIntensity =>
+        (value as int) <= 0,
+      // Humidity is never read by `_iceRisk`; it can only ever RAISE a frost
+      // warning downstream, never suppress one. So it is never an all-clear.
+      VehicleSignalField.humidityRH => false,
+      // Speed is the heartbeat, not a hazard witness.
+      _ => false,
+    };
+
+/// Returns [s] with every carried-forward field older than its direction's
+/// bound replaced by `null` (UNKNOWN).
+///
+/// [observedAt] maps a [VehicleSignalField] key to the time that field was last
+/// actually SENT by the vehicle — not the time the snapshot was fused. A field
+/// with no entry is left untouched (the complete-snapshot rail never carries
+/// anything forward, so it has nothing to expire).
+VehicleConditionSignals expireStaleSignals(
+  VehicleConditionSignals s, {
+  required Map<String, DateTime> observedAt,
+  required DateTime now,
+  Duration maxOptimisticAge = kMaxOptimisticSignalAge,
+  Duration maxPessimisticAge = kMaxPessimisticSignalAge,
+}) {
+  T? keep<T extends Object>(T? value, String field) {
+    if (value == null) return null;
+    final at = observedAt[field];
+    if (at == null) return value;
+    final limit =
+        _isAllClearDirection(field, value) ? maxOptimisticAge : maxPessimisticAge;
+    return now.difference(at) <= limit ? value : null;
+  }
+
+  return VehicleConditionSignals(
+    roadFriction: keep(s.roadFriction, VehicleSignalField.roadFriction),
+    tcsEngaged: keep(s.tcsEngaged, VehicleSignalField.tcsEngaged),
+    absEngaged: keep(s.absEngaged, VehicleSignalField.absEngaged),
+    escEngaged: keep(s.escEngaged, VehicleSignalField.escEngaged),
+    airTempC: keep(s.airTempC, VehicleSignalField.airTempC),
+    humidityRH: keep(s.humidityRH, VehicleSignalField.humidityRH),
+    speedKmh: keep(s.speedKmh, VehicleSignalField.speedKmh),
+    wiperIntensity: keep(s.wiperIntensity, VehicleSignalField.wiperIntensity),
+    rainIntensity: keep(s.rainIntensity, VehicleSignalField.rainIntensity),
+  );
+}
