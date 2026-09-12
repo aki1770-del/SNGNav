@@ -218,9 +218,22 @@ const Set<String> _supportedAnnotations = {
 };
 
 List<DartField> parseDartStructFields(String source, String className) {
+  // An optional library prefix is accepted everywhere a `dart:ffi` name can
+  // appear: `extends ffi.Struct`, `@ffi.Uint8()`, `external ffi.Pointer<...>`.
+  //
+  // ADDED 2026-09-12 BY FDD, on a real miss. `import 'dart:ffi' as ffi;` is
+  // ordinary Dart and is what this repo's own bindings use. The parser required
+  // the unprefixed spelling, so on the first real binding it was pointed at —
+  // iceoryx2_ipc's `NativeRoadFriction extends ffi.Struct` — it reported
+  // "class not found" and exited 2. It never reported agreement it had not
+  // measured, so no wrong layout could pass; but a check that cannot read the
+  // idiomatic spelling is a check that does not run, and a guard that does not
+  // run is the failure this file was written against. Requiring the code to be
+  // written for the checker is backwards: the checker reads the code.
+  const pfx = r'(?:[A-Za-z_]\w*\.)?';
   final decl = RegExp(
     r'(?:final\s+|base\s+|sealed\s+)*class\s+' + RegExp.escape(className) +
-        r'\s+extends\s+Struct\s*\{',
+        r'\s+extends\s+' + pfx + r'Struct\s*\{',
   ).firstMatch(source);
   if (decl == null) {
     throw Unverifiable(
@@ -231,8 +244,8 @@ List<DartField> parseDartStructFields(String source, String className) {
   if (close < 0) throw Unverifiable('Unbalanced braces in "$className".');
   final body = source.substring(decl.end, close);
 
-  if (RegExp(r'external\s+Pointer\s*<').hasMatch(body) ||
-      RegExp(r'@Array').hasMatch(body)) {
+  if (RegExp(r'external\s+' + pfx + r'Pointer\s*<').hasMatch(body) ||
+      RegExp(r'@' + pfx + r'Array').hasMatch(body)) {
     throw Unverifiable(
       'Dart class "$className" declares a Pointer or an @Array field. This '
       'check verifies flat scalar structs only, and refuses rather than report '
@@ -242,7 +255,8 @@ List<DartField> parseDartStructFields(String source, String className) {
 
   final fields = <DartField>[];
   final pattern = RegExp(
-    r'@(\w+)\s*\(\s*\)\s*(?://[^\n]*\n|\s)*external\s+(?:double|int|bool)\s+(\w+)\s*;',
+    r'@' + pfx +
+        r'(\w+)\s*\(\s*\)\s*(?://[^\n]*\n|\s)*external\s+(?:double|int|bool)\s+(\w+)\s*;',
   );
   for (final m in pattern.allMatches(body)) {
     final annotation = m.group(1)!;
@@ -566,6 +580,46 @@ final class WideBinding extends Struct {
 }
 ''';
 
+// PREFIXED SPELLING — `import 'dart:ffi' as ffi;`. Added 2026-09-12 by FDD when
+// the parser was taught to read it. Accepting a new spelling is not the same as
+// still GUARDING it: a prefix-tolerant regex that matched the class but silently
+// captured zero annotated fields would make every prefixed binding "agree" on a
+// struct it never measured. So the prefixed form gets its own reorder fixture,
+// carrying the same defect as the unprefixed one, and it must still fire.
+const String _fixtureReorderedPrefixedDart = '''
+import 'dart:ffi' as ffi;
+final class PairBinding extends ffi.Struct {
+  @ffi.Uint32()
+  external int b;
+  @ffi.Float()
+  external double a;
+  @ffi.Float()
+  external double c;
+}
+''';
+
+const String _fixtureGoodPrefixedDart = '''
+import 'dart:ffi' as ffi;
+final class PairBinding extends ffi.Struct {
+  @ffi.Float()
+  external double a;
+  @ffi.Uint32()
+  external int b;
+  @ffi.Float()
+  external double c;
+}
+''';
+
+// A prefixed Pointer must still be REFUSED, not read as a scalar struct.
+const String _fixturePointerPrefixedDart = '''
+import 'dart:ffi' as ffi;
+final class WithPtrBinding extends ffi.Struct {
+  @ffi.Uint32()
+  external int n;
+  external ffi.Pointer<ffi.Uint8> label;
+}
+''';
+
 int runSelfTest(String compiler) {
   final work = Directory.systemTemp.createTempSync('abi_selftest');
   var failures = 0;
@@ -652,6 +706,20 @@ int runSelfTest(String compiler) {
   // a guard that fails open is not a guard.
   check('refusal/pointer-field', _fixturePointerC, _fixturePointerDart,
       'WithPtr', 'WithPtrBinding', expect: 'unverifiable');
+
+  // The same three outcomes again, on `import 'dart:ffi' as ffi;`. The real
+  // binding this tool was first pointed at is written that way, so the
+  // prefixed spelling is not an exotic case — it is the ordinary one.
+  check('negative-control/matched-pair-prefixed', _fixtureGoodC,
+      _fixtureGoodPrefixedDart, 'Pair', 'PairBinding', expect: 'agree');
+
+  check('known-bad/field-reorder-prefixed', _fixtureGoodC,
+      _fixtureReorderedPrefixedDart, 'Pair', 'PairBinding',
+      expect: 'mismatch', because: 'REORDER');
+
+  check('refusal/pointer-field-prefixed', _fixturePointerC,
+      _fixturePointerPrefixedDart, 'WithPtr', 'WithPtrBinding',
+      expect: 'unverifiable');
 
   work.deleteSync(recursive: true);
   stdout.writeln();
