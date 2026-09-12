@@ -60,14 +60,95 @@ typedef _RunBatchDart = NativeSimulationResponse Function(
   double visibilityMeters,
 );
 
+/// Native C signature for `simulation_abi_version`.
+typedef _AbiVersionNative = Uint32 Function();
+
+/// Dart-side signature for `simulation_abi_version`.
+typedef _AbiVersionDart = int Function();
+
+/// Thrown when the loaded shared library does not match the ABI this Dart code
+/// was compiled against.
+///
+/// This is deliberately a hard failure. The alternative — proceeding — is worse
+/// than a crash, because a mismatched library returns a plausible NUMBER rather
+/// than an error, and that number is a safety score a driver acts on.
+class NativeSimulationAbiMismatch implements Exception {
+  /// Creates a mismatch error describing [found] against [expected].
+  NativeSimulationAbiMismatch({required this.expected, required this.found, required this.path});
+
+  /// ABI version this Dart code requires.
+  final int expected;
+
+  /// ABI version the loaded library reported, or `null` when the library is so
+  /// old it exports no version symbol at all.
+  final int? found;
+
+  /// Path the library was loaded from.
+  final String path;
+
+  @override
+  String toString() {
+    final what = found == null
+        ? 'exports no simulation_abi_version symbol, so it predates the ABI '
+              'contract entirely (0.6.x or older)'
+        : 'reports ABI version $found';
+    return 'NativeSimulationAbiMismatch: the native simulation library at\n'
+        '  $path\n'
+        '$what, but this code requires version $expected.\n\n'
+        'A mismatched library does NOT crash — it returns a saturated, '
+        'plausible-looking safety score. Refusing to run rather than return one.\n\n'
+        'Rebuild it:\n'
+        '  (cd native && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build)';
+  }
+}
+
 /// Loads the platform-specific native simulation library and provides
 /// a typed [runBatch] method for Monte Carlo safety-score computation.
+///
+/// The ABI contract is verified at construction. See
+/// [NativeSimulationAbiMismatch] for why this fails hard rather than degrading.
 class NativeSimulationBindings {
   /// Creates bindings, loading [library] or the platform default.
+  ///
+  /// Throws [NativeSimulationAbiMismatch] if the loaded library's ABI version
+  /// is absent or does not equal [expectedAbiVersion].
   NativeSimulationBindings({DynamicLibrary? library})
-    : _library = library ?? DynamicLibrary.open(defaultLibraryPath());
+    : _library = library ?? DynamicLibrary.open(defaultLibraryPath()),
+      _path = library == null ? defaultLibraryPath() : '<injected>' {
+    _verifyAbi();
+  }
+
+  /// ABI version this Dart code requires. Must track `SIMULATION_ABI_VERSION`
+  /// in `native/native_simulation.c`.
+  static const int expectedAbiVersion = 2;
 
   final DynamicLibrary _library;
+  final String _path;
+
+  /// Reads the library's ABI version and refuses anything but an exact match.
+  ///
+  /// A library predating the contract exports no symbol at all; `lookupFunction`
+  /// throws [ArgumentError] for that, which is translated rather than leaked,
+  /// because "symbol not found" does not tell a reader what to do about it.
+  void _verifyAbi() {
+    int? found;
+    try {
+      found = _library
+          .lookupFunction<_AbiVersionNative, _AbiVersionDart>(
+            'simulation_abi_version',
+          )();
+    } on ArgumentError {
+      found = null;
+    }
+
+    if (found != expectedAbiVersion) {
+      throw NativeSimulationAbiMismatch(
+        expected: expectedAbiVersion,
+        found: found,
+        path: _path,
+      );
+    }
+  }
 
   /// Runs [runs] Monte Carlo iterations with the given driving parameters.
   ///

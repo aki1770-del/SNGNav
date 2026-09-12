@@ -18,6 +18,11 @@ export 'src/simulation/cpu_safety_score_simulation_engine.dart';
 export 'src/simulation/fleet_confidence_provider.dart';
 export 'src/simulation/fleet_hazard_confidence_adapter.dart';
 export 'src/simulation/native_safety_score_simulation_engine.dart';
+// Exported so a consumer can CATCH and act on an ABI mismatch. Without this the
+// error is unreachable by type from outside the package, and a caller could only
+// match on its message — which is not an API.
+export 'src/simulation/native_simulation_bindings.dart'
+    show NativeSimulationAbiMismatch;
 export 'src/simulation/safety_score_simulation_engine.dart';
 export 'src/simulation/safety_score_simulator.dart';
 export 'src/simulation/simulation_backend.dart';
