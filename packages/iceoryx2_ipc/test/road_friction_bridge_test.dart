@@ -63,7 +63,11 @@ void main() {
       expect(icy.reading.isIcy, isTrue);
 
       final unknown = bridge.tryNext()!;
-      expect(unknown.grip, RoadGrip.unknown, reason: 'quality 0 is not measured');
+      expect(
+        unknown.grip,
+        RoadGrip.unknown,
+        reason: 'quality 0 is not measured',
+      );
       expect(unknown.reading.percent, isNull);
       expect(unknown.sequence, 3);
     });
@@ -83,7 +87,9 @@ void main() {
       // is no sequence number, timestamp or ordering that may turn it into a
       // claim about the road.
       for (var seq = 0; seq < 200; seq++) {
-        final s = RoadFrictionBridge.classifySample(_sample(null, sequence: seq));
+        final s = RoadFrictionBridge.classifySample(
+          _sample(null, sequence: seq),
+        );
         expect(
           s.grip,
           RoadGrip.unknown,
@@ -124,7 +130,11 @@ void main() {
       expect(honoured.reading.rawValue, isNull);
 
       final leaked = RoadFrictionBridge.classifySample(_sample(-999));
-      expect(leaked.grip, RoadGrip.unknown, reason: 'same grip — that is the trap');
+      expect(
+        leaked.grip,
+        RoadGrip.unknown,
+        reason: 'same grip — that is the trap',
+      );
       expect(leaked.reading.isContractViolation, isTrue);
       expect(leaked.reading.rawValue, -999);
     });
@@ -132,20 +142,32 @@ void main() {
 
   group('a producer that violates the VSS contract is not trusted', () {
     test('out-of-range, NaN and infinite all become unknown', () {
-      for (final bad in <double>[-0.1, 100.1, 1000, double.nan,
-          double.infinity, double.negativeInfinity]) {
+      for (final bad in <double>[
+        -0.1,
+        100.1,
+        1000,
+        double.nan,
+        double.infinity,
+        double.negativeInfinity,
+      ]) {
         final s = RoadFrictionBridge.classifySample(_sample(bad));
         expect(s.grip, RoadGrip.unknown, reason: '$bad must not classify');
         expect(s.reading.isContractViolation, isTrue, reason: '$bad');
-        expect(s.reading.percent, isNull,
-            reason: '$bad must not be clamped into range');
+        expect(
+          s.reading.percent,
+          isNull,
+          reason: '$bad must not be clamped into range',
+        );
       }
     });
 
     test('a 0.0-1.0 fraction reader would misread these; we do not', () {
       // The scale trap, asserted rather than commented. On the percent scale
       // 0.5 is a near-frictionless surface, not a half-grip one.
-      expect(RoadFrictionBridge.classifySample(_sample(0.5)).grip, RoadGrip.icy);
+      expect(
+        RoadFrictionBridge.classifySample(_sample(0.5)).grip,
+        RoadGrip.icy,
+      );
       expect(RoadFrictionBridge.classifySample(_sample(1)).grip, RoadGrip.icy);
     });
   });
@@ -153,13 +175,26 @@ void main() {
   group('threshold boundaries', () {
     test('are closed at the bottom of each band', () {
       expect(RoadFrictionBridge.classifySample(_sample(0)).grip, RoadGrip.icy);
-      expect(RoadFrictionBridge.classifySample(_sample(29.9)).grip, RoadGrip.icy);
       expect(
-          RoadFrictionBridge.classifySample(_sample(30)).grip, RoadGrip.reduced);
-      expect(RoadFrictionBridge.classifySample(_sample(59.9)).grip,
-          RoadGrip.reduced);
-      expect(RoadFrictionBridge.classifySample(_sample(60)).grip, RoadGrip.grip);
-      expect(RoadFrictionBridge.classifySample(_sample(100)).grip, RoadGrip.grip);
+        RoadFrictionBridge.classifySample(_sample(29.9)).grip,
+        RoadGrip.icy,
+      );
+      expect(
+        RoadFrictionBridge.classifySample(_sample(30)).grip,
+        RoadGrip.reduced,
+      );
+      expect(
+        RoadFrictionBridge.classifySample(_sample(59.9)).grip,
+        RoadGrip.reduced,
+      );
+      expect(
+        RoadFrictionBridge.classifySample(_sample(60)).grip,
+        RoadGrip.grip,
+      );
+      expect(
+        RoadFrictionBridge.classifySample(_sample(100)).grip,
+        RoadGrip.grip,
+      );
     });
 
     test('match the published kuksa_dart_sdk, not a copy kept here', () {
@@ -188,10 +223,12 @@ void main() {
     test('a sequence gap stays visible to the consumer', () {
       // iceoryx2 does not block a publisher for a slow subscriber, so a gap is
       // real information about dropped samples. The bridge must not renumber.
-      final bridge = RoadFrictionBridge(FakeRoadFrictionSource([
-        _sample(80, sequence: 7),
-        _sample(50, sequence: 11),
-      ]));
+      final bridge = RoadFrictionBridge(
+        FakeRoadFrictionSource([
+          _sample(80, sequence: 7),
+          _sample(50, sequence: 11),
+        ]),
+      );
       expect(bridge.tryNext()!.sequence, 7);
       expect(bridge.tryNext()!.sequence, 11);
     });
@@ -204,18 +241,24 @@ void main() {
   });
 
   test('watch emits the scripted series in order', () async {
-    final bridge = RoadFrictionBridge(FakeRoadFrictionSource([
-      _sample(80, sequence: 0),
-      _sample(50, sequence: 1),
-      _sample(18, sequence: 2),
-      _sample(null, sequence: 3),
-    ]));
+    final bridge = RoadFrictionBridge(
+      FakeRoadFrictionSource([
+        _sample(80, sequence: 0),
+        _sample(50, sequence: 1),
+        _sample(18, sequence: 2),
+        _sample(null, sequence: 3),
+      ]),
+    );
     final grips = await bridge
         .watch(pollInterval: const Duration(milliseconds: 1))
         .take(4)
         .map((s) => s.grip)
         .toList();
-    expect(grips,
-        [RoadGrip.grip, RoadGrip.reduced, RoadGrip.icy, RoadGrip.unknown]);
+    expect(grips, [
+      RoadGrip.grip,
+      RoadGrip.reduced,
+      RoadGrip.icy,
+      RoadGrip.unknown,
+    ]);
   });
 }

@@ -61,93 +61,187 @@ const int iox2LogLevelWarn = 3;
 // allows, so each is annotated with the C declaration it mirrors.
 
 // iox2_node_builder_h iox2_node_builder_new(struct iox2_node_builder_t *)
-typedef _NodeBuilderNewNative = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Void>);
-typedef Iox2NodeBuilderNewDart = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Void>);
+typedef _NodeBuilderNewNative =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Void>);
+typedef Iox2NodeBuilderNewDart =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Void>);
 
 // int iox2_node_builder_create(iox2_node_builder_h, struct iox2_node_t *,
 //                              enum iox2_service_type_e, iox2_node_h *)
-typedef _NodeBuilderCreateNative = ffi.Int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, ffi.Int32, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2NodeBuilderCreateDart = int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, int, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _NodeBuilderCreateNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Int32,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
+typedef Iox2NodeBuilderCreateDart =
+    int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      int,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
 
 // void iox2_node_drop(iox2_node_h)
 typedef _DropHandleNative = ffi.Void Function(ffi.Pointer<ffi.Opaque>);
 typedef Iox2DropHandleDart = void Function(ffi.Pointer<ffi.Opaque>);
 
 // int iox2_node_wait(iox2_node_h_ref, uint64_t sec, uint32_t nsec)
-typedef _NodeWaitNative = ffi.Int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Uint64, ffi.Uint32);
-typedef Iox2NodeWaitDart = int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>, int, int);
+typedef _NodeWaitNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Uint64,
+      ffi.Uint32,
+    );
+typedef Iox2NodeWaitDart =
+    int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>, int, int);
 
 // int iox2_service_name_new(struct iox2_service_name_t *, const char *,
 //                           c_size_t, iox2_service_name_h *)
-typedef _ServiceNameNewNative = ffi.Int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint8>,
-    ffi.Size, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2ServiceNameNewDart = int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Uint8>, int,
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _ServiceNameNewNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Uint8>,
+      ffi.Size,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
+typedef Iox2ServiceNameNewDart =
+    int Function(
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Uint8>,
+      int,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
 
 // iox2_service_name_ptr iox2_cast_service_name_ptr(iox2_service_name_h)
-typedef _CastServiceNamePtrNative = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
-typedef Iox2CastServiceNamePtrDart = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
+typedef _CastServiceNamePtrNative =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
+typedef Iox2CastServiceNamePtrDart =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
 
 // iox2_service_builder_h iox2_node_service_builder(iox2_node_h_ref,
 //     struct iox2_service_builder_t *, iox2_service_name_ptr)
-typedef _NodeServiceBuilderNative = ffi.Pointer<ffi.Opaque> Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Opaque>);
-typedef Iox2NodeServiceBuilderDart = ffi.Pointer<ffi.Opaque> Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Opaque>);
+typedef _NodeServiceBuilderNative =
+    ffi.Pointer<ffi.Opaque> Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Opaque>,
+    );
+typedef Iox2NodeServiceBuilderDart =
+    ffi.Pointer<ffi.Opaque> Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Opaque>,
+    );
 
 // iox2_service_builder_pub_sub_h iox2_service_builder_pub_sub(iox2_service_builder_h)
-typedef _ServiceBuilderPubSubNative = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
-typedef Iox2ServiceBuilderPubSubDart = ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
+typedef _ServiceBuilderPubSubNative =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
+typedef Iox2ServiceBuilderPubSubDart =
+    ffi.Pointer<ffi.Opaque> Function(ffi.Pointer<ffi.Opaque>);
 
 // int iox2_service_builder_pub_sub_set_payload_type_details(
 //     iox2_service_builder_pub_sub_h_ref, enum iox2_type_variant_e,
 //     const char *, c_size_t, c_size_t size, c_size_t alignment)
-typedef _SetPayloadTypeDetailsNative = ffi.Int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
-    ffi.Int32, ffi.Pointer<ffi.Uint8>, ffi.Size, ffi.Size, ffi.Size);
-typedef Iox2SetPayloadTypeDetailsDart = int Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, int, ffi.Pointer<ffi.Uint8>, int, int, int);
+typedef _SetPayloadTypeDetailsNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Int32,
+      ffi.Pointer<ffi.Uint8>,
+      ffi.Size,
+      ffi.Size,
+      ffi.Size,
+    );
+typedef Iox2SetPayloadTypeDetailsDart =
+    int Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      int,
+      ffi.Pointer<ffi.Uint8>,
+      int,
+      int,
+      int,
+    );
 
 // int iox2_service_builder_pub_sub_open_or_create(iox2_service_builder_pub_sub_h,
 //     struct iox2_port_factory_pub_sub_t *, iox2_port_factory_pub_sub_h *)
-typedef _PubSubOpenOrCreateNative = ffi.Int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2PubSubOpenOrCreateDart = int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _PubSubOpenOrCreateNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
+typedef Iox2PubSubOpenOrCreateDart =
+    int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
 
 // iox2_port_factory_subscriber_builder_h
 //     iox2_port_factory_pub_sub_subscriber_builder(iox2_port_factory_pub_sub_h_ref,
 //         struct iox2_port_factory_subscriber_builder_t *)
-typedef _SubscriberBuilderNative = ffi.Pointer<ffi.Opaque> Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Pointer<ffi.Void>);
-typedef Iox2SubscriberBuilderDart = ffi.Pointer<ffi.Opaque> Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Pointer<ffi.Void>);
+typedef _SubscriberBuilderNative =
+    ffi.Pointer<ffi.Opaque> Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+    );
+typedef Iox2SubscriberBuilderDart =
+    ffi.Pointer<ffi.Opaque> Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+    );
 
 // int iox2_port_factory_subscriber_builder_create(
 //     iox2_port_factory_subscriber_builder_h, struct iox2_subscriber_t *,
 //     iox2_subscriber_h *)
-typedef _SubscriberCreateNative = ffi.Int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2SubscriberCreateDart = int Function(
-    ffi.Pointer<ffi.Opaque>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _SubscriberCreateNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
+typedef Iox2SubscriberCreateDart =
+    int Function(
+      ffi.Pointer<ffi.Opaque>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
 
 // int iox2_subscriber_receive(iox2_subscriber_h_ref, struct iox2_sample_t *,
 //                             iox2_sample_h *)
-typedef _SubscriberReceiveNative = ffi.Int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
-    ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2SubscriberReceiveDart = int Function(
-    ffi.Pointer<ffi.Pointer<ffi.Opaque>>, ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _SubscriberReceiveNative =
+    ffi.Int Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
+typedef Iox2SubscriberReceiveDart =
+    int Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Void>,
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+    );
 
 // void iox2_sample_payload(iox2_sample_h_ref, const void **, c_size_t *)
-typedef _SamplePayloadNative = ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
-    ffi.Pointer<ffi.Pointer<ffi.Void>>, ffi.Pointer<ffi.Size>);
-typedef Iox2SamplePayloadDart = void Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
-    ffi.Pointer<ffi.Pointer<ffi.Void>>, ffi.Pointer<ffi.Size>);
+typedef _SamplePayloadNative =
+    ffi.Void Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Pointer<ffi.Void>>,
+      ffi.Pointer<ffi.Size>,
+    );
+typedef Iox2SamplePayloadDart =
+    void Function(
+      ffi.Pointer<ffi.Pointer<ffi.Opaque>>,
+      ffi.Pointer<ffi.Pointer<ffi.Void>>,
+      ffi.Pointer<ffi.Size>,
+    );
 
 // c_size_t iox2_sample_payload_number_of_bytes(iox2_sample_h_ref)
-typedef _SamplePayloadBytesNative = ffi.Size Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
-typedef Iox2SamplePayloadBytesDart = int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef _SamplePayloadBytesNative =
+    ffi.Size Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
+typedef Iox2SamplePayloadBytesDart =
+    int Function(ffi.Pointer<ffi.Pointer<ffi.Opaque>>);
 
 // void iox2_set_log_level_from_env_or(enum iox2_log_level_e)
 typedef _SetLogLevelNative = ffi.Void Function(ffi.Int32);
@@ -223,64 +317,148 @@ class Iox2Library {
     try {
       return Iox2Library._(
         lib,
-        nodeBuilderNew: step('iox2_node_builder_new',
-            () => lib.lookupFunction<_NodeBuilderNewNative, Iox2NodeBuilderNewDart>(
-                'iox2_node_builder_new')),
-        nodeBuilderCreate: step('iox2_node_builder_create',
-            () => lib.lookupFunction<_NodeBuilderCreateNative, Iox2NodeBuilderCreateDart>(
-                'iox2_node_builder_create')),
-        nodeDrop: step('iox2_node_drop',
-            () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>('iox2_node_drop')),
-        nodeWait: step('iox2_node_wait',
-            () => lib.lookupFunction<_NodeWaitNative, Iox2NodeWaitDart>('iox2_node_wait')),
-        serviceNameNew: step('iox2_service_name_new',
-            () => lib.lookupFunction<_ServiceNameNewNative, Iox2ServiceNameNewDart>(
-                'iox2_service_name_new')),
-        serviceNameDrop: step('iox2_service_name_drop',
-            () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
-                'iox2_service_name_drop')),
-        castServiceNamePtr: step('iox2_cast_service_name_ptr',
-            () => lib.lookupFunction<_CastServiceNamePtrNative, Iox2CastServiceNamePtrDart>(
-                'iox2_cast_service_name_ptr')),
-        nodeServiceBuilder: step('iox2_node_service_builder',
-            () => lib.lookupFunction<_NodeServiceBuilderNative, Iox2NodeServiceBuilderDart>(
-                'iox2_node_service_builder')),
-        serviceBuilderPubSub: step('iox2_service_builder_pub_sub',
-            () => lib.lookupFunction<_ServiceBuilderPubSubNative, Iox2ServiceBuilderPubSubDart>(
-                'iox2_service_builder_pub_sub')),
+        nodeBuilderNew: step(
+          'iox2_node_builder_new',
+          () =>
+              lib.lookupFunction<_NodeBuilderNewNative, Iox2NodeBuilderNewDart>(
+                'iox2_node_builder_new',
+              ),
+        ),
+        nodeBuilderCreate: step(
+          'iox2_node_builder_create',
+          () =>
+              lib.lookupFunction<
+                _NodeBuilderCreateNative,
+                Iox2NodeBuilderCreateDart
+              >('iox2_node_builder_create'),
+        ),
+        nodeDrop: step(
+          'iox2_node_drop',
+          () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
+            'iox2_node_drop',
+          ),
+        ),
+        nodeWait: step(
+          'iox2_node_wait',
+          () => lib.lookupFunction<_NodeWaitNative, Iox2NodeWaitDart>(
+            'iox2_node_wait',
+          ),
+        ),
+        serviceNameNew: step(
+          'iox2_service_name_new',
+          () =>
+              lib.lookupFunction<_ServiceNameNewNative, Iox2ServiceNameNewDart>(
+                'iox2_service_name_new',
+              ),
+        ),
+        serviceNameDrop: step(
+          'iox2_service_name_drop',
+          () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
+            'iox2_service_name_drop',
+          ),
+        ),
+        castServiceNamePtr: step(
+          'iox2_cast_service_name_ptr',
+          () =>
+              lib.lookupFunction<
+                _CastServiceNamePtrNative,
+                Iox2CastServiceNamePtrDart
+              >('iox2_cast_service_name_ptr'),
+        ),
+        nodeServiceBuilder: step(
+          'iox2_node_service_builder',
+          () =>
+              lib.lookupFunction<
+                _NodeServiceBuilderNative,
+                Iox2NodeServiceBuilderDart
+              >('iox2_node_service_builder'),
+        ),
+        serviceBuilderPubSub: step(
+          'iox2_service_builder_pub_sub',
+          () =>
+              lib.lookupFunction<
+                _ServiceBuilderPubSubNative,
+                Iox2ServiceBuilderPubSubDart
+              >('iox2_service_builder_pub_sub'),
+        ),
         setPayloadTypeDetails: step(
-            'iox2_service_builder_pub_sub_set_payload_type_details',
-            () => lib.lookupFunction<_SetPayloadTypeDetailsNative, Iox2SetPayloadTypeDetailsDart>(
-                'iox2_service_builder_pub_sub_set_payload_type_details')),
-        pubSubOpenOrCreate: step('iox2_service_builder_pub_sub_open_or_create',
-            () => lib.lookupFunction<_PubSubOpenOrCreateNative, Iox2PubSubOpenOrCreateDart>(
-                'iox2_service_builder_pub_sub_open_or_create')),
-        pubSubDrop: step('iox2_port_factory_pub_sub_drop',
-            () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
-                'iox2_port_factory_pub_sub_drop')),
-        subscriberBuilder: step('iox2_port_factory_pub_sub_subscriber_builder',
-            () => lib.lookupFunction<_SubscriberBuilderNative, Iox2SubscriberBuilderDart>(
-                'iox2_port_factory_pub_sub_subscriber_builder')),
-        subscriberCreate: step('iox2_port_factory_subscriber_builder_create',
-            () => lib.lookupFunction<_SubscriberCreateNative, Iox2SubscriberCreateDart>(
-                'iox2_port_factory_subscriber_builder_create')),
-        subscriberReceive: step('iox2_subscriber_receive',
-            () => lib.lookupFunction<_SubscriberReceiveNative, Iox2SubscriberReceiveDart>(
-                'iox2_subscriber_receive')),
-        subscriberDrop: step('iox2_subscriber_drop',
-            () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
-                'iox2_subscriber_drop')),
-        samplePayload: step('iox2_sample_payload',
-            () => lib.lookupFunction<_SamplePayloadNative, Iox2SamplePayloadDart>(
-                'iox2_sample_payload')),
-        samplePayloadNumberOfBytes: step('iox2_sample_payload_number_of_bytes',
-            () => lib.lookupFunction<_SamplePayloadBytesNative, Iox2SamplePayloadBytesDart>(
-                'iox2_sample_payload_number_of_bytes')),
-        sampleDrop: step('iox2_sample_drop',
-            () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>('iox2_sample_drop')),
-        setLogLevelFromEnvOr: step('iox2_set_log_level_from_env_or',
-            () => lib.lookupFunction<_SetLogLevelNative, Iox2SetLogLevelDart>(
-                'iox2_set_log_level_from_env_or')),
+          'iox2_service_builder_pub_sub_set_payload_type_details',
+          () =>
+              lib.lookupFunction<
+                _SetPayloadTypeDetailsNative,
+                Iox2SetPayloadTypeDetailsDart
+              >('iox2_service_builder_pub_sub_set_payload_type_details'),
+        ),
+        pubSubOpenOrCreate: step(
+          'iox2_service_builder_pub_sub_open_or_create',
+          () =>
+              lib.lookupFunction<
+                _PubSubOpenOrCreateNative,
+                Iox2PubSubOpenOrCreateDart
+              >('iox2_service_builder_pub_sub_open_or_create'),
+        ),
+        pubSubDrop: step(
+          'iox2_port_factory_pub_sub_drop',
+          () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
+            'iox2_port_factory_pub_sub_drop',
+          ),
+        ),
+        subscriberBuilder: step(
+          'iox2_port_factory_pub_sub_subscriber_builder',
+          () =>
+              lib.lookupFunction<
+                _SubscriberBuilderNative,
+                Iox2SubscriberBuilderDart
+              >('iox2_port_factory_pub_sub_subscriber_builder'),
+        ),
+        subscriberCreate: step(
+          'iox2_port_factory_subscriber_builder_create',
+          () =>
+              lib.lookupFunction<
+                _SubscriberCreateNative,
+                Iox2SubscriberCreateDart
+              >('iox2_port_factory_subscriber_builder_create'),
+        ),
+        subscriberReceive: step(
+          'iox2_subscriber_receive',
+          () =>
+              lib.lookupFunction<
+                _SubscriberReceiveNative,
+                Iox2SubscriberReceiveDart
+              >('iox2_subscriber_receive'),
+        ),
+        subscriberDrop: step(
+          'iox2_subscriber_drop',
+          () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
+            'iox2_subscriber_drop',
+          ),
+        ),
+        samplePayload: step(
+          'iox2_sample_payload',
+          () => lib.lookupFunction<_SamplePayloadNative, Iox2SamplePayloadDart>(
+            'iox2_sample_payload',
+          ),
+        ),
+        samplePayloadNumberOfBytes: step(
+          'iox2_sample_payload_number_of_bytes',
+          () =>
+              lib.lookupFunction<
+                _SamplePayloadBytesNative,
+                Iox2SamplePayloadBytesDart
+              >('iox2_sample_payload_number_of_bytes'),
+        ),
+        sampleDrop: step(
+          'iox2_sample_drop',
+          () => lib.lookupFunction<_DropHandleNative, Iox2DropHandleDart>(
+            'iox2_sample_drop',
+          ),
+        ),
+        setLogLevelFromEnvOr: step(
+          'iox2_set_log_level_from_env_or',
+          () => lib.lookupFunction<_SetLogLevelNative, Iox2SetLogLevelDart>(
+            'iox2_set_log_level_from_env_or',
+          ),
+        ),
       );
     } on ArgumentError {
       throw Iox2LibraryException(

@@ -114,7 +114,8 @@ final class RoadFrictionSample {
   final int sequence;
 
   @override
-  String toString() => 'RoadFrictionSample(seq=$sequence, '
+  String toString() =>
+      'RoadFrictionSample(seq=$sequence, '
       'friction=${frictionPercent ?? "NOT MEASURED"}, at=$measuredAtUnixNs)';
 }
 
@@ -218,21 +219,27 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
     // Handle slots. An `_h_ref` argument in the C header is `const iox2_x_h *`
     // — a pointer TO the handle — so each handle that is later passed by ref
     // lives in its own native slot for the object's whole life.
-    final nodeSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+    final nodeSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
         .cast<ffi.Pointer<ffi.Opaque>>();
-    final serviceSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+    final serviceSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
         .cast<ffi.Pointer<ffi.Opaque>>();
-    final subscriberSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+    final subscriberSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
         .cast<ffi.Pointer<ffi.Opaque>>();
-    final sampleSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+    final sampleSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
         .cast<ffi.Pointer<ffi.Opaque>>();
-    final payloadSlot =
-        libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Void>>()).cast<ffi.Pointer<ffi.Void>>();
+    final payloadSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Void>>())
+        .cast<ffi.Pointer<ffi.Void>>();
 
     ffi.Pointer<ffi.Uint8> serviceNameStr = ffi.nullptr;
     ffi.Pointer<ffi.Uint8> typeNameStr = ffi.nullptr;
     ffi.Pointer<ffi.Opaque> serviceNameHandle = ffi.nullptr;
-    final serviceNameSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+    final serviceNameSlot = libc
+        .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
         .cast<ffi.Pointer<ffi.Opaque>>();
 
     void freeSlots() {
@@ -247,23 +254,39 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
       // NULL for the struct pointer: the library allocates the node builder.
       final nodeBuilder = iox2.nodeBuilderNew(ffi.nullptr);
       var rc = iox2.nodeBuilderCreate(
-          nodeBuilder, ffi.nullptr, iox2ServiceTypeIpc, nodeSlot);
+        nodeBuilder,
+        ffi.nullptr,
+        iox2ServiceTypeIpc,
+        nodeSlot,
+      );
       if (rc != iox2Ok) {
-        throw RoadFrictionWireException('iox2_node_builder_create failed, error $rc');
+        throw RoadFrictionWireException(
+          'iox2_node_builder_create failed, error $rc',
+        );
       }
 
       serviceNameStr = libc.cString(roadFrictionServiceName);
       rc = iox2.serviceNameNew(
-          ffi.nullptr, serviceNameStr, roadFrictionServiceName.length, serviceNameSlot);
+        ffi.nullptr,
+        serviceNameStr,
+        roadFrictionServiceName.length,
+        serviceNameSlot,
+      );
       if (rc != iox2Ok) {
-        throw RoadFrictionWireException('iox2_service_name_new failed, error $rc');
+        throw RoadFrictionWireException(
+          'iox2_service_name_new failed, error $rc',
+        );
       }
       serviceNameHandle = serviceNameSlot.value;
 
       final serviceNamePtr = iox2.castServiceNamePtr(serviceNameHandle);
-      final serviceBuilder =
-          iox2.nodeServiceBuilder(nodeSlot, ffi.nullptr, serviceNamePtr);
-      final pubSubSlot = libc.calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
+      final serviceBuilder = iox2.nodeServiceBuilder(
+        nodeSlot,
+        ffi.nullptr,
+        serviceNamePtr,
+      );
+      final pubSubSlot = libc
+          .calloc(1, ffi.sizeOf<ffi.Pointer<ffi.Opaque>>())
           .cast<ffi.Pointer<ffi.Opaque>>();
       pubSubSlot.value = iox2.serviceBuilderPubSub(serviceBuilder);
 
@@ -307,7 +330,14 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
       }
 
       return Iox2RoadFrictionSource._(
-          iox2, libc, nodeSlot, serviceSlot, subscriberSlot, sampleSlot, payloadSlot);
+        iox2,
+        libc,
+        nodeSlot,
+        serviceSlot,
+        subscriberSlot,
+        sampleSlot,
+        payloadSlot,
+      );
     } catch (_) {
       freeSlots();
       rethrow;
@@ -347,9 +377,15 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
     }
 
     _sampleSlot.value = ffi.nullptr;
-    final rc = _iox2.subscriberReceive(_subscriberSlot, ffi.nullptr, _sampleSlot);
+    final rc = _iox2.subscriberReceive(
+      _subscriberSlot,
+      ffi.nullptr,
+      _sampleSlot,
+    );
     if (rc != iox2Ok) {
-      throw RoadFrictionWireException('iox2_subscriber_receive failed, error $rc');
+      throw RoadFrictionWireException(
+        'iox2_subscriber_receive failed, error $rc',
+      );
     }
     if (_sampleSlot.value == ffi.nullptr) {
       return null; // nothing published since the last call
@@ -406,7 +442,8 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
     if (_disposed) return;
     _disposed = true;
     // Reverse construction order: subscriber, then service, then node.
-    if (_subscriberSlot.value != ffi.nullptr) _iox2.subscriberDrop(_subscriberSlot.value);
+    if (_subscriberSlot.value != ffi.nullptr)
+      _iox2.subscriberDrop(_subscriberSlot.value);
     if (_serviceSlot.value != ffi.nullptr) _iox2.pubSubDrop(_serviceSlot.value);
     if (_nodeSlot.value != ffi.nullptr) _iox2.nodeDrop(_nodeSlot.value);
     _libc.free(_nodeSlot.cast());
