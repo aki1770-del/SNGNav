@@ -1,0 +1,5 @@
+# Build outputs. Nothing from upstream iceoryx2 is vendored here either — the
+# library is built into a cache dir by ../tool/build_iceoryx2.sh.
+road_friction_publisher
+.iceoryx2.env
+.iceoryx2.env.tmp
