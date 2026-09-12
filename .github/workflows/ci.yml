@@ -120,6 +120,23 @@ jobs:
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build
 
+      - name: Build iceoryx2 and the road-friction publisher (packages/iceoryx2_ipc)
+        # Same lesson as the step above, one package over: iceoryx2_ipc's wire
+        # test spawns a real C publisher and opens libiceoryx2_ffi_c.so across a
+        # process boundary. Neither artifact is in git. WITHOUT THIS STEP the
+        # wire test does not skip -- by design it FAILS with UNVERIFIED, which is
+        # the honest outcome and also a red X on every push. The build script
+        # pins iceoryx2 to one SHA and re-verifies it after checkout; the
+        # Makefile compiles the publisher against that same build, so publisher
+        # and subscriber cannot silently be different libraries.
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          . "$HOME/.cargo/env"
+          bash packages/iceoryx2_ipc/tool/build_iceoryx2.sh
+          make -C packages/iceoryx2_ipc/native road_friction_publisher
+          test -x packages/iceoryx2_ipc/native/road_friction_publisher
+          grep -q '^ICEORYX2_LIB=' packages/iceoryx2_ipc/native/.iceoryx2.env
+
       - name: Install coverage tooling
         run: dart pub global activate coverage
 
