@@ -21,6 +21,13 @@ one: toward telling a driver conditions are better than they are.
 The native-vs-CPU parity test catches this, but **only if it runs, and it skips when the
 library is absent** — and nothing at runtime checked at all. This closes that.
 
+⚑ **And the skip was not hypothetical — measured 2026-09-12 in CI's own logs: BOTH native
+tests reported `(skipped)`, including the parity test.** `ci.yml` never built the shared
+library, so **CI has never once exercised the native engine.** A first draft of this entry
+said CI "builds the library fresh every run" and could not have caught the defect for that
+reason; that was wrong, and the truth is worse — CI was green because it never looked.
+`ci.yml` now builds the library before the suites run.
+
 Guarded by `test/simulation/native_abi_guard_test.dart`, which **generates** a
 pre-contract library from the real shipped source with the version symbol stripped, so the
 replica cannot drift from what actually ships, and proves the binding refuses it. The

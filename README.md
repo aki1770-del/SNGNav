@@ -664,8 +664,15 @@ log line. The doc comment on `NativeSafetyScoreSimulationEngine` says it plainly
 What caught it is the native-vs-CPU parity test
 (`test/simulation/native_simulation_engine_test.dart`), which asserts the two engines agree
 within `0.005`. **Keep that test. It is the only thing standing between a stale artifact
-and a confidently wrong safety number.** Note that CI cannot surface this class of defect
-— CI builds the library fresh every run, so CI was green on the same commit throughout.
+and a confidently wrong safety number.**
+
+⚑ **And until 2026-09-12 that test had never run in CI.** Measured in the Test job's own
+logs: both native tests reported `(skipped)`, because `ci.yml` never built the shared
+library and the tests skip when it is absent. **CI was green not because it built a fresh
+library, but because it never exercised the native engine at all — a skipped guard reads
+exactly like a passing one.** A first draft of this section asserted the opposite. `ci.yml`
+now builds the library before the suites run, so the parity test and the ABI guard's
+positive case actually execute.
 
 ---
 
