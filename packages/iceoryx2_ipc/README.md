@@ -161,8 +161,10 @@ line agree.
 
 This differs from the rest of the SNGNav catalog, which is BSD-3-Clause. It is
 deliberate: the FFI layer takes the opaque-handle path an earlier, unmerged
-Apache-2.0 Dart binding for iceoryx2 found first, and credits its author in the
-file headers. That credit says "Apache-2.0 on both sides", and for a few hours on
+Dart binding for iceoryx2 found first — contributed to a repository that is
+dual-licensed Apache-2.0 OR MIT, so his work sits under both — and credits its
+author in the file headers. That credit said "Apache-2.0 on both sides", which
+narrowed his side and, for a few hours on
 2026-09-12 it was false — this package briefly shipped a BSD-3-Clause `LICENSE`
 copied from the monorepo root, which made pub.dev stop refusing the package and
 made the crediting sentence untrue at the same time. A refusal became a

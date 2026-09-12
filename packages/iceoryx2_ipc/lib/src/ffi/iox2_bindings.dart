@@ -3,10 +3,14 @@
 // Author: rust-systems-engineer (RSE), 2026-09-12.
 // SPDX-License-Identifier: Apache-2.0
 //
-// The symbol set and the NULL-allocation pattern were proven first by
-// youndong (GitHub @youndong), whose 2025 Dart binding for iceoryx2 reached
-// the same 22-symbol shape from the other direction. Both sides Apache-2.0;
-// credit where the path was already walked.
+// The opaque-handle / NULL-allocation pattern was proven first, in Dart,
+// against this library, by youndong (GitHub @youndong) in 2025. His binding
+// reaches 22 iox2_* symbols; this file reaches 20; 16 are common. His work was
+// contributed to a repository that is dual-licensed Apache-2.0 OR MIT, so it
+// sits under both; this package is Apache-2.0. Credit where the path was
+// already walked. (A first draft of this header said "the same 22-symbol
+// shape" and "both sides Apache-2.0" -- both misstated his position, and were
+// corrected on WDA's measurement, 2026-09-12.)
 //
 // WHY THIS FILE IS WRITTEN BY HAND AND NOT BY ffigen
 // -------------------------------------------------

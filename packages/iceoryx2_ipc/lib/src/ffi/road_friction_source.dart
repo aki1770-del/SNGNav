@@ -3,8 +3,9 @@
 // Author: rust-systems-engineer (RSE), 2026-09-12.
 // SPDX-License-Identifier: Apache-2.0
 //
-// Symbol set and NULL-allocation pattern first proven in Dart by youndong
-// (GitHub @youndong), 2025; Apache-2.0 on both sides.
+// Opaque-handle / NULL-allocation pattern first proven in Dart by youndong
+// (GitHub @youndong), 2025, under Apache-2.0 OR MIT; this package is
+// Apache-2.0. See the header of iox2_bindings.dart for the symbol counts.
 //
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // THERE IS NO VERSION SYMBOL. A STALE LIBRARY IS UNDETECTABLE AT OPEN.
