@@ -18,6 +18,39 @@ the scale, where the pure-Dart engine returned `0.578`. **A saturated *safe* rea
 safety score, with no exception and no log line.** The failure direction is the dangerous
 one: toward telling a driver conditions are better than they are.
 
+⚑ **That last clause is itself too confident, and the correction runs toward caution rather
+than away from it.** Independently re-measured: the direction is **arbitrary, not reliably
+optimistic** — the aarch64 residue values sit both above and below the correct control
+(`0.112216` is *below* `0.212216`). The value is unbounded because `fleet_confidence` is
+clamped nowhere and `overall_mean` is never clamped either, which is provable from the
+published C source without running anything. **The honest statement is that the number is
+arbitrary and plausible, which is worse than a direction you could learn to expect.**
+
+⚑ **CORRECTION, measured on aarch64 2026-09-12 — "it saturates so you would notice" is FALSE on HER
+architecture.** The `1.0` above is one **x86-64** manifestation, not the defect's signature. Called
+through the mismatched ABI on aarch64 with the 4th FP argument register (`s3`) preset, `overall_mean`
+comes back **unclamped and inheriting whatever is in that register**: `0.112216` · `0.312216` ·
+`1.712216` · `200000.015625`, against a correct control of `0.212216`. **The dangerous cases are the
+PLAUSIBLE ones** — `0.312216` on a 0–1 safety scale is indistinguishable from a real reading, and no
+range check, saturation heuristic or "looks wrong" instinct catches it. The same call on x86-64
+reproduced as `-nan`. **Any reasoning of the form "we would notice because it saturates" does not
+hold on the architecture HER vehicle runs.** Separately, and stated the right way round after an
+independent re-measure caught it backwards: **0.7.0's struct SHRANK** — 0.6.0 carries seven
+fields (28 bytes, including `fleet_mean`), 0.7.0 carries six (24 bytes). So it is the
+**stale ≤0.6.0 library** that writes 28 bytes into the 24-byte buffer the 0.7.x Dart side
+expects. A hardened C caller aborts; Dart FFI has no canary. (A first draft of this
+paragraph said 0.7.0 "grew a field" — the consequence was right and the cause was
+backwards, which would send a reader hunting the wrong thing in their own diff.)
+
+⚑ **AND 0.7.0 IS THE TRAP — the hazard is any `.so` built from ≤0.6.0.** Measured across
+published archives: `0.5.5`, `0.5.6`, `0.5.7` **and** `0.6.0` all ship the identical 7-arg
+signature and 28-byte struct, each self-consistent with its own Dart side. **The single ABI
+break in this package's history is at 0.7.0.**
+`0.7.1` is guarded. **`0.7.0` has the 6-arg C and NO version symbol — the defect is reachable there
+with nothing to catch it**, and it is published and live. A consumer who upgrades 0.6.0 → 0.7.0 and
+reuses a previously built `.so` hits the founding defect unguarded. Both versions ship the C source.
+
+
 The native-vs-CPU parity test catches this, but **only if it runs, and it skips when the
 library is absent** — and nothing at runtime checked at all. This closes that.
 
