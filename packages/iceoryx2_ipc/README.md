@@ -11,6 +11,9 @@ disagree about whether a road is icy. There is no second threshold table here â€
 a second place to decide "the road is fine" is a second place to be wrong.
 
 ```dart
+import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart'; // RoadGrip lives here, not in this package
+
 final source = Iox2RoadFrictionSource.open();
 final bridge = RoadFrictionBridge(source);
 
