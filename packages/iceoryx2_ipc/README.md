@@ -106,6 +106,23 @@ Stated here rather than in a commit message, because a consumer reads this file.
   single-publisher assumption is currently enforced by nothing, and the failure
   it produces is a plausible wrong reading, not an error.
 
+## What you are binding to, and what the build needs
+
+- **The pin is a commit on `main`, not a release.** `tool/build_iceoryx2.sh`
+  pins iceoryx2 to `05a3a8fa` (2026-09-11). Every iceoryx2 release to date is
+  flagged prerelease — 17 of 17 as of 2026-09-12, newest `v0.9.3` from
+  2026-07-08, two months behind the pin. There is no stable line to track yet,
+  and the C API exports no version symbol (0 of 660), so if the pin moves and
+  you keep an old `.so`, nothing at `open` will tell you.
+- **The build fetches over the network.** Nothing from iceoryx2 is vendored; the
+  script does a bare-SHA shallow fetch from GitHub and re-verifies the SHA after
+  checkout. If that SHA ever becomes unfetchable the package is unbuildable. To
+  build from a local clone or a mirror instead, set `SNGNAV_ICEORYX2_URL`
+  (`build_iceoryx2.sh:31`); `SNGNAV_ICEORYX2_BUILD_DIR` and
+  `SNGNAV_ICEORYX2_PROFILE` are the other two knobs.
+- **A Rust toolchain and a C compiler are required on the machine that builds.**
+  Consumers who cannot have either cannot use this package today.
+
 ## The layout check
 
 `sngnav_road_friction_t` is the one layout in this package declared twice, in C
@@ -139,4 +156,14 @@ identical in a CI summary.
 
 ## Licence
 
-Apache-2.0.
+Apache-2.0 — the `LICENSE` file, every `SPDX-License-Identifier` header, and this
+line agree.
+
+This differs from the rest of the SNGNav catalog, which is BSD-3-Clause. It is
+deliberate: the FFI layer takes the opaque-handle path an earlier, unmerged
+Apache-2.0 Dart binding for iceoryx2 found first, and credits its author in the
+file headers. That credit says "Apache-2.0 on both sides", and for a few hours on
+2026-09-12 it was false — this package briefly shipped a BSD-3-Clause `LICENSE`
+copied from the monorepo root, which made pub.dev stop refusing the package and
+made the crediting sentence untrue at the same time. A refusal became a
+contradiction. Corrected the same evening.
