@@ -4,7 +4,6 @@ description: >-
   the same VSS-conformant rule the KUKSA path uses. Eclipse iceoryx2 on the
   publisher side, Dart on the subscriber side. Host Linux only.
 version: 0.0.1
-publish_to: none
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 
