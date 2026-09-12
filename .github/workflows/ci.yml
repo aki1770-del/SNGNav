@@ -104,6 +104,22 @@ jobs:
             liblzma-dev \
             libsqlite3-dev
 
+      - name: Build the native simulation library
+        # driving_conditions' safety-score engine is C behind dart:ffi, and the
+        # .so is gitignored. WITHOUT THIS STEP the native tests do not fail --
+        # they SKIP, which reads exactly like passing.
+        #
+        # Measured 2026-09-12 on this very workflow: BOTH native tests reported
+        # "(skipped)" in the Test job, including the native-vs-CPU parity test --
+        # the only guard standing between a stale shared library and a silently
+        # wrong safety score. A stale .so does not crash; it returned overall =
+        # 1.0, the TOP of the scale, where the Dart engine returned 0.578, and
+        # saturated toward "safe". CI has never once exercised that path.
+        run: |
+          cd packages/driving_conditions/native
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
       - name: Install coverage tooling
         run: dart pub global activate coverage
 

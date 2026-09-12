@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased
+
+**The native library must now declare its ABI, and a mismatch is REFUSED rather than read.**
+
+`native_simulation.c` exports `simulation_abi_version()`; `NativeSimulationBindings`
+verifies it at construction and throws `NativeSimulationAbiMismatch` — exported from the
+public surface so a consumer can catch it by type — when the value is absent or wrong.
+The error carries the library path and the rebuild command, because a guard that fires
+without saying how to clear it only moves the confusion.
+
+**Why, measured 2026-09-12 and not hypothetical.** A `libsimulation_engine.so` **166 days
+older** than the source it must match was loaded and called. `simulation_run_batch` had
+gone from seven arguments to six in 0.7.0, so the call crossed a mismatched ABI — and it
+**did not crash and did not fail to load.** It returned `overall = 1.0` exactly, the top of
+the scale, where the pure-Dart engine returned `0.578`. **A saturated *safe* reading on a
+safety score, with no exception and no log line.** The failure direction is the dangerous
+one: toward telling a driver conditions are better than they are.
+
+The native-vs-CPU parity test catches this, but **only if it runs, and it skips when the
+library is absent** — and nothing at runtime checked at all. This closes that.
+
+⚑ **And the skip was not hypothetical — measured 2026-09-12 in CI's own logs: BOTH native
+tests reported `(skipped)`, including the parity test.** `ci.yml` never built the shared
+library, so **CI has never once exercised the native engine.** A first draft of this entry
+said CI "builds the library fresh every run" and could not have caught the defect for that
+reason; that was wrong, and the truth is worse — CI was green because it never looked.
+`ci.yml` now builds the library before the suites run.
+
+Guarded by `test/simulation/native_abi_guard_test.dart`, which **generates** a
+pre-contract library from the real shipped source with the version symbol stripped, so the
+replica cannot drift from what actually ships, and proves the binding refuses it. The
+replica keeps the current six-argument signature, making it strictly harder to detect than
+the real 0.6.x case — the guard does not rely on a call failing.
+
+⚑ Not a breaking change for existing consumers: nothing outside this package constructs
+the native engine, and the CPU engine is untouched.
+
 ## 0.7.0
 
 **BREAKING. The fleet term is removed from the safety score.**

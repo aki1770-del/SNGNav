@@ -19,7 +19,8 @@ Questions, bugs, and feature ideas belong in GitHub Issues. Use the built-in tem
 
 The CI badge tracks `main` only — that is a property of the badge, not of the pipeline:
 CI runs on a push to **any** branch, and on pull requests to `main`.
-Green on `main` at `6acd265`, 2026-08-28. Before that it had last run green on
+Green on `main` at `8df6567`, 2026-09-11 — re-measured 2026-09-12, both `CI` and
+`ARM64 Scene Render` reporting `success` on that SHA. Before 2026-08-28 it had last run green on
 2026-07-23: work was being committed to feature branches and packages published from
 them, so nothing shipped in between passed through CI and the badge meant "main was
 green", not "everything shipped was gated".
@@ -31,7 +32,7 @@ shipped that day from two such branches. Merging to `main` does not fix this in 
 because `backport/**` is a maintenance line that by design never merges — meaning the
 branch we cut in-range patches from, for consumers who cannot take a major bump, was the
 one branch with no gate at all. **CI now runs on every branch.** And its test job now
-runs **every package's suite** (36 with tests), choosing `dart test` or `flutter test` by
+runs **every package's suite** (37 with tests), choosing `dart test` or `flutter test` by
 package type; it previously covered 12 of 35 across two hardcoded allow-lists, leaving 23
 suites that existed and never executed.
 
@@ -39,8 +40,9 @@ suites that existed and never executed.
 Status:    packages version independently on pub.dev — the registry is current state.
            Last repo-wide release tag v0.6.0, 2026-03-15 (it describes an 11-package
            ecosystem and is well behind the catalog).
-Tests:     3,181 passing on main, re-measured 2026-08-08 (root 1,263 + 1,918 across all
-           37 package suites; count drifts as the suite grows). `flutter test` at the repo
+Tests:     3,584 passing on main, re-measured 2026-09-12 at `8df6567` (root 1,312 with 3
+           skipped, + 2,272 across all 37 package suites, every suite green; count drifts
+           as the suite grows). `flutter test` at the repo
            root also runs the live-network probe tests — see Testing for the deterministic
            invocation.
 Platform:  Linux desktop, x64 — the only target built and tested in CI (Flutter 3.41.4
@@ -63,8 +65,10 @@ Embedded:  ARM IVI is the design target. THE APP NOW RENDERS on an emulated targ
            different stack, and no board has been booted. See Platform before planning a
            deployment.
 Safety:    ASIL-QM (display-only, no vehicle control) — see SAFETY.md
-Ecosystem: 36 packages on pub.dev (+ 1 publish_to:none = 37 monorepo total), versioned
-           independently. This tree can run EITHER WAY against the registry — on
+Ecosystem: 37 publishable package trees (+ 1 `publish_to: none`, navigation_lend_mode_experiment
+           = 38 in the monorepo), versioned independently. ⚑ Tree counts re-measured
+           2026-09-12; the number actually LIVE on pub.dev was not re-measured and may be
+           lower — a publishable tree is not a published one. This tree can run EITHER WAY against the registry — on
            2026-08-28 nine package trees were found BEHIND their own published versions,
            each missing a `latlong2` widen, so committing from the tree would have
            regressed them. Reconciled. Check the package page for what `pub add` actually
@@ -389,11 +393,21 @@ flutter run -d linux -t lib/snow_scene.dart \
 # Offline-first reference entrypoint (map + pre-trip briefing + forward scene;
 # LocationBloc only, no routing). As cloned there is no data/*.mbtiles (gitignored),
 # so this runs on online OSM tiles and renders.
-# KNOWN DEFECT 2026-08-08 — supply an MBTiles archive and the 2D map view dies: any tile
-# outside the archive (the pan-buffer edge, or any tile below the archive's minzoom)
-# throws "urlTemplate must be provided", replacing the map with an error box while the
-# status bar still reads "Offline — MBTiles loaded". Tracked at lib/main.dart:539-541.
-# Do not use this entrypoint to evaluate the offline map until it is fixed.
+# FIXED 2026-08-29 — the 2026-08-08 defect below is resolved; this entrypoint is usable
+# with an MBTiles archive. Kept rather than deleted, because the root cause is worth
+# knowing before you set `allowOnlineFallback: true`.
+#   WAS: supply an archive and the 2D map view died — any tile outside it (the pan-buffer
+#   edge, or below the archive's minzoom) resolved to RuntimeTileSource.online, reached
+#   NetworkTileProvider with `urlTemplate: null`, and threw "urlTemplate must be provided"
+#   (flutter_map 8.2.2, tile_provider/base_tile_provider.dart:233-237). One throw takes
+#   down the whole layer, while the status bar still read "Offline — MBTiles loaded".
+#   THE ENUMERATION WAS THE POINT: root-caused from the on-target journal 2026-08-29,
+#   0 of the VISIBLE tiles took that branch and 18 tiles in the panBuffer ring did. The
+#   map was blank because of eighteen tiles nobody could see.
+#   NOW: the entrypoint sets `allowOnlineFallback: false`, so an uncovered tile resolves
+#   to a transparent placeholder — same blank square, no thrown exception — and the badge
+#   says WHY it is blank. Guarded by a regression test that builds a one-tile archive to
+#   force the ring to miss: test/offline_camera_coupling_test.dart.
 flutter run -d linux -t lib/main.dart
 ```
 
@@ -584,9 +598,14 @@ flutter test
 # Example package-level validation (subshells, so each starts from the repo root)
 (cd packages/offline_tiles && flutter test)
 (cd packages/routing_engine && dart test)
+
+# driving_conditions carries a NATIVE (C FFI) engine. Build it BEFORE testing that
+# package — see "Native simulation engine" below for why a stale one is dangerous.
+(cd packages/driving_conditions/native && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build)
+(cd packages/driving_conditions && dart test)
 ```
 
-Coverage areas in the workspace, re-measured 2026-08-08 on main (106 root test files
+Coverage areas in the workspace, re-measured 2026-09-12 on main (114 root test files
 in total; the table lists the largest directories, and `test/` also holds `benchmark`,
 `dignity`, `fluorite`, `navigation`, `quant`, and `tool`):
 
@@ -610,11 +629,50 @@ English, so a plain `flutter test` reports one failure that says nothing about t
 code. For a deterministic run:
 
 ```bash
-flutter test --exclude-tags=probe   # 1,258 passing, 0 failing (measured 2026-08-08)
+flutter test --exclude-tags=probe   # 1,312 passing, 3 skipped, 0 failing (measured 2026-09-12)
 ```
 
 CI uses exactly that exclusion. When README statistics drift, treat the live test run
 as authoritative.
+
+### Native simulation engine (`driving_conditions`)
+
+`driving_conditions` runs its Monte Carlo safety-score simulation through a compiled C
+library via `dart:ffi`. The build is CMake and the artifact is gitignored, so **a fresh
+clone has no library at all** and `dart test` in that package will not pass until you
+build it:
+
+```bash
+(cd packages/driving_conditions/native && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build)
+```
+
+Verified from a true fresh-clone state (no `native/build/` directory) on 2026-09-12:
+the CMake path builds and the package suite then reports `+141: All tests passed!`.
+A bare `cc -shared -o build/…` fails on a fresh clone — `cannot open output file` —
+because nothing creates `build/` first.
+
+**⚑ WHY THIS IS NOT A COSMETIC BUILD STEP: a stale library does not crash. It lies.**
+Measured 2026-09-12 on this tree: `native/build/libsimulation_engine.so` was dated
+2026-03-29 while `native/native_simulation.c` was dated 2026-09-11 — **the binary was
+166 days older than the source it must match.** `simulation_run_batch` changed from seven
+arguments to six in 0.7.0, so the call went through a mismatched ABI and the engine
+returned **exactly `1.0`** where the pure-Dart engine returned `0.578` — a difference of
+`0.42` on a **safety score**, saturating toward *"safe"*. No exception, no load error, no
+log line. The doc comment on `NativeSafetyScoreSimulationEngine` says it plainly: an
+`0.6.x` binary left in `native/build/` is **an ABI mismatch, not a slightly-stale one**.
+
+What caught it is the native-vs-CPU parity test
+(`test/simulation/native_simulation_engine_test.dart`), which asserts the two engines agree
+within `0.005`. **Keep that test. It is the only thing standing between a stale artifact
+and a confidently wrong safety number.**
+
+⚑ **And until 2026-09-12 that test had never run in CI.** Measured in the Test job's own
+logs: both native tests reported `(skipped)`, because `ci.yml` never built the shared
+library and the tests skip when it is absent. **CI was green not because it built a fresh
+library, but because it never exercised the native engine at all — a skipped guard reads
+exactly like a passing one.** A first draft of this section asserted the opposite. `ci.yml`
+now builds the library before the suites run, so the parity test and the ABI guard's
+positive case actually execute.
 
 ---
 

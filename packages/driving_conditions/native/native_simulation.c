@@ -2,6 +2,27 @@
 #include <stdint.h>
 #include <time.h>
 
+/* ABI CONTRACT. Bump this whenever `simulation_run_batch`'s signature OR the
+ * SimulationResponse layout changes. The Dart binding refuses to run against a
+ * library whose version it does not recognise.
+ *
+ * WHY THIS EXISTS (measured 2026-09-12): a `libsimulation_engine.so` 166 days
+ * older than this source was loaded and called through a mismatched ABI. It did
+ * not crash and it did not fail to load — it returned overall = exactly 1.000,
+ * the TOP of the scale, where the pure-Dart engine returned 0.578. A saturated
+ * "safe" reading on a SAFETY score, with no exception and no log line. The
+ * parity test caught it; nothing at runtime would have.
+ *
+ *   1 = 0.6.x — seven args, SimulationResponse carried fleet_mean
+ *   2 = 0.7.0 — six args, fleet term removed
+ */
+#define SIMULATION_ABI_VERSION 2u
+
+/* Exported so a loader can verify the contract BEFORE trusting a number. */
+uint32_t simulation_abi_version(void) {
+  return SIMULATION_ABI_VERSION;
+}
+
 typedef struct {
   float overall_mean;
   float grip_mean;
