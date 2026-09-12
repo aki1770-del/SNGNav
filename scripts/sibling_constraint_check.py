@@ -310,9 +310,158 @@ def self_test():
     return ok == n
 
 
-def main():
-    if '--self-test' in sys.argv:
-        return 0 if self_test() else 1
+# ===========================================================================
+# EXAMPLE LANE — added 2026-09-12 (FDD).
+#
+# WHY: this guard ran GREEN — "pass  every constraint admits the sibling
+# version it will be resolved against", 37 packages, 43 constraints — on the
+# same day that ALL SIX published packages shipping an example/ failed
+# `pub get` INSIDE that example with exit 66. It globs
+# `packages/*/pubspec.yaml`. It never looked one directory deeper, so the
+# example surface was invisible to it. That is a scope gap in an existing
+# loom, not a missing loom: the question below is the question this file was
+# founded on, asked of `example/`.
+#
+# Three things are judged, each measured on the real catalog on 2026-09-12:
+#
+#   1. SHIPS-PATH-OVERRIDES — pub does NOT strip `dependency_overrides` when
+#      publishing. vehicle_condition_fusion 0.5.0 shipped
+#      `driving_conditions: path: ../../driving_conditions` plus three more
+#      inside its archive. A reader who extracted it and ran `dart pub get` in
+#      example/ got exit 66, "path which doesn't exist", and NEVER REACHED the
+#      version constraint at all. 6 of 6 examples carried this shape.
+#      Remedy: move them to `example/pubspec_overrides.yaml` (pub honours it
+#      for local development) and exclude that file via `.pubignore`.
+#
+#   2. NARROWER-THAN-PARENT — vehicle_condition_fusion's example pinned
+#      `driving_conditions: ^0.6.0` (= >=0.6.0 <0.7.0) while the package it
+#      demonstrates declares ">=0.6.0 <0.8.0". The example refused the
+#      BREAKING 0.7.0 that its own parent accepts. An example must never be
+#      narrower than the package it exists to demonstrate.
+#
+#   3. EXCLUDES-SIBLING — routing_bloc's and voice_guidance's examples pin
+#      `navigation_safety: ^0.5.0`. pub.dev has never carried a 0.5.x; the
+#      published line goes 0.4.0 -> 0.7.0. That constraint could not have
+#      resolved on any day it existed.
+# ===========================================================================
+
+
+def example_catalog(root):
+    """parent-package-dir -> {path, deps, inline_overrides}."""
+    out = {}
+    for pj in sorted(glob.glob(os.path.join(root, 'packages/*/example/pubspec.yaml'))):
+        pkgdir = os.path.basename(os.path.dirname(os.path.dirname(pj)))
+        deps, inline_ov, blk = {}, [], None
+        for line in open(pj, errors='replace'):
+            if re.match(r'^dependencies:', line):
+                blk = 'deps'; continue
+            if re.match(r'^dependency_overrides:', line):
+                blk = 'ov'; continue
+            if re.match(r'^[A-Za-z_]', line):
+                blk = None; continue
+            if blk == 'deps':
+                m = re.match(r'^  ([a-z0-9_]+):\s*(\S.*)?$', line)
+                if m and m.group(2):
+                    deps[m.group(1)] = m.group(2).strip()
+            elif blk == 'ov':
+                m = re.match(r'^  ([a-z0-9_]+):\s*$', line)
+                if m:
+                    inline_ov.append(m.group(1))
+        out[pkgdir] = {'path': pj, 'deps': deps, 'inline_overrides': inline_ov}
+    return out
+
+
+def example_lane(root, cat, own):
+    ex = example_catalog(root)
+    if not ex:
+        print('\nexample lane: no packages/*/example/pubspec.yaml found — '
+              'nothing judged. This is not a clean bill.')
+        return 2
+    print(f'\nsibling-constraint check — EXAMPLES ({len(ex)} example pubspecs)')
+    bad, judged, unjudged = [], 0, []
+    for pkg, info in sorted(ex.items()):
+        if info['inline_overrides']:
+            bad.append(('SHIPS-PATH-OVERRIDES', pkg,
+                        ', '.join(info['inline_overrides']), '', ''))
+        pdeps = (cat.get(pkg) or {}).get('deps') or {}
+        for d, c in sorted(info['deps'].items()):
+            if d not in own or d not in cat or 'error' in cat[d]:
+                continue
+            dv = cat[d]['version']
+            a = admits(c, dv)
+            if a is None:
+                unjudged.append((pkg, d, c, dv)); continue
+            judged += 1
+            if a:
+                continue
+            if d in pdeps and admits(pdeps[d], dv) is True:
+                bad.append(('NARROWER-THAN-PARENT', pkg, d, c, pdeps[d]))
+            else:
+                bad.append(('EXCLUDES-SIBLING', pkg, d, c, dv))
+    print(f'  example constraints judged: {judged}   (not judged: {len(unjudged)})')
+    for pkg, d, c, dv in unjudged:
+        print(f'    ?     {pkg}/example  declares  {d}: {c}   (sibling at {dv})')
+    if not bad:
+        if unjudged:
+            print('  UNVERIFIABLE — some example constraints were not judged.')
+            return 2
+        print('  pass  every example resolves the way the package it demonstrates does')
+        return 0
+    print()
+    for kind, pkg, d, c, extra in bad:
+        if kind == 'SHIPS-PATH-OVERRIDES':
+            print(f'  FAIL  {pkg}/example/pubspec.yaml SHIPS path dependency_overrides: {d}')
+            print('          pub does NOT strip these when publishing. A consumer who')
+            print('          runs `dart pub get` in the published example/ gets exit 66,')
+            print('          "path which doesn\'t exist", and never reaches any constraint.')
+            print('          Move them to example/pubspec_overrides.yaml and exclude that')
+            print('          file in .pubignore.')
+        elif kind == 'NARROWER-THAN-PARENT':
+            print(f'  FAIL  {pkg}/example  declares  {d}: {c}')
+            print(f'          but {pkg} itself declares  {d}: {extra}  — the example is')
+            print('          NARROWER than the package it demonstrates. A reader whose app')
+            print(f'          already resolves a {d} the parent accepts cannot run it.')
+        else:
+            print(f'  FAIL  {pkg}/example  declares  {d}: {c}')
+            print(f'          but {d} is at {extra} — EXCLUDED')
+        print()
+    print(f'{len(bad)} example defect(s). An example that cannot resolve is worse')
+    print('than one pinned wrong: it is the first thing an edge developer copies.')
+    return 1
+
+
+def example_self_test():
+    """Prove-it-fails: every case below is REAL, measured 2026-09-12."""
+    ok = True
+
+    def check(label, got, want):
+        nonlocal ok
+        good = got == want
+        ok = ok and good
+        print(f'  {"PASS" if good else "FAIL"}  {label}  got={got} want={want}')
+
+    print('\n  -- example lane, on the defects actually found --')
+    # routing_bloc + voice_guidance examples, measured: pub.dev navigation_safety
+    # goes 0.4.0 -> 0.7.0, so ^0.5.0 matched no version that ever existed.
+    check('^0.5.0 does NOT admit navigation_safety 0.9.6',
+          admits('^0.5.0', '0.9.6'), False)
+    # vehicle_condition_fusion example, the B-2 defect.
+    check('^0.6.0 does NOT admit driving_conditions 0.7.1',
+          admits('^0.6.0', '0.7.1'), False)
+    # ...while its parent DOES — which is what makes it NARROWER-THAN-PARENT.
+    check('parent ">=0.6.0 <0.8.0" DOES admit 0.7.1',
+          admits('">=0.6.0 <0.8.0"', '0.7.1'), True)
+    # the fix, verified end-to-end at both ends of the range.
+    check('fixed example ">=0.6.0 <0.8.0" admits floor 0.6.0',
+          admits('">=0.6.0 <0.8.0"', '0.6.0'), True)
+    # navigation_safety example: routing_engine ^0.4.0 vs published 0.6.3.
+    check('^0.4.0 does NOT admit routing_engine 0.6.3',
+          admits('^0.4.0', '0.6.3'), False)
+    return ok
+
+
+
+def _sibling_main():
 
     mode = 'published' if '--published' in sys.argv else 'local'
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -384,6 +533,24 @@ def main():
     print(f'{len(bad)} constraint(s) exclude a sibling that exists.')
     print('A consumer resolves the OLD version, successfully and silently.')
     return 1
+
+
+def main():
+    if '--self-test' in sys.argv:
+        return 0 if (self_test() and example_self_test()) else 1
+    rc_sib = _sibling_main()
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+    mode = 'published' if '--published' in sys.argv else 'local'
+    local = local_catalog(root)
+    own = set(local)
+    cat = local if mode == 'local' else published_catalog(sorted(own))
+    rc_ex = example_lane(root, cat, own)
+    # A FAIL is louder than an UNVERIFIABLE: 1 wins over 2.
+    if 1 in (rc_sib, rc_ex):
+        return 1
+    if 2 in (rc_sib, rc_ex):
+        return 2
+    return 0
 
 
 if __name__ == '__main__':

@@ -1,0 +1,14 @@
+# Mirrors .gitignore (a .pubignore REPLACES .gitignore for publishing, so the
+# entries below must be restated here, not merely inherited).
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Monorepo-development path overrides. These MUST NOT ship: they point at
+# sibling directories that exist only inside this monorepo, and in
+# vehicle_condition_fusion 0.5.0 the equivalent block — then inline in
+# example/pubspec.yaml — shipped to pub.dev and made the example unresolvable
+# (`dart pub get` exit 66, "path which doesn't exist") for every consumer.
+pubspec_overrides.yaml
+example/pubspec_overrides.yaml
