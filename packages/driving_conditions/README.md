@@ -296,13 +296,51 @@ compiled `libsimulation_engine` (`.so` / `.dylib` / `.dll`) exists under
 there is none. Stick with the CPU engine unless you have explicitly built and
 shipped the native library yourself.
 
+**Build it:**
+
+```bash
+(cd native && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build)
+```
+
+#### `NativeSimulationAbiMismatch` — the library must declare its ABI
+
+The Dart binding and the C library share an ABI contract. The C side exports
+`simulation_abi_version()`; `NativeSimulationBindings` reads it **at
+construction** and throws **`NativeSimulationAbiMismatch`** — exported from this
+package, so you can catch it by type — if the value is absent or not the one
+this release requires.
+
+**Why this refuses instead of degrading.** A mismatched library does **not**
+crash and does **not** fail to load. Measured on a library 166 days older than
+its source: the call crossed a changed signature and returned `overall = 1.0`
+exactly — the top of the scale — where the pure-Dart engine returned `0.578`.
+A saturated *"safe"* reading on a safety score, with no exception and no log
+line. **Refusing to run beats returning a number we cannot vouch for.**
+
+The thrown error carries the library path and the remedy. **If you vendored this
+package, take `native_simulation.c` and `CMakeLists.txt` from the upgraded
+package before rebuilding** — rebuilding your existing copy recompiles the old C
+and is refused again, indefinitely.
+
 ## Validation
 
 Current package status:
 
 - Pure Dart — no Flutter dependency
-- 105 passing tests
-- Distributed as a monorepo path package within [SNGNav](https://github.com/aki1770-del/SNGNav) — use via path dependency or copy into your project
+- Published on pub.dev — **depend on the published version**, not on a path or a copy
+
+> ### ⚑ Do not vendor this package by path or by copying it
+>
+> An earlier version of this section said *"use via path dependency or copy into your
+> project."* **That advice is withdrawn, and it was wrong on a safety package.**
+>
+> A path or copied consumer cannot be reached by **any** version we publish — not a patch,
+> not a major, not a retraction. If a defect is found in code you copied, **the fix cannot
+> arrive and we will never know you have it.** This package computes a safety score a driver
+> acts on, and it carries a **native C library you build yourself**, which is exactly the
+> part that can go stale silently (see *Native engine* below).
+>
+> Depend on the published version so a fix has a route to you.
 
 ## Works With
 

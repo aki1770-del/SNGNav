@@ -123,6 +123,15 @@ void main() {
       expect(text, contains('cmake --build build'));
       expect(text, contains('/somewhere/libsimulation_engine.so'));
       expect(text, contains('predates the ABI contract'));
+      // A vendored consumer's native/ is the OLD one, so "rebuild" alone
+      // recompiles the old C and is refused again, forever. The remedy must
+      // name the re-copy FIRST or it is an infinite loop with instructions.
+      expect(text, contains('UPGRADED package'));
+      expect(text, contains('native_simulation.c'));
+      // Must NOT name a version range: a correctly-built library from before
+      // the contract also exports no symbol, so "0.6.x or older" would state
+      // something untrue about a sound build.
+      expect(text, isNot(contains('0.6.x')));
     });
 
     test('a WRONG version is refused as firmly as a missing one', () {

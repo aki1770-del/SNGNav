@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.1
 
 **The native library must now declare its ABI, and a mismatch is REFUSED rather than read.**
 
@@ -34,8 +34,18 @@ replica cannot drift from what actually ships, and proves the binding refuses it
 replica keeps the current six-argument signature, making it strictly harder to detect than
 the real 0.6.x case — the guard does not rely on a call failing.
 
-⚑ Not a breaking change for existing consumers: nothing outside this package constructs
-the native engine, and the CPU engine is untouched.
+⚑ **If you construct the native engine, READ THIS — it is the one behaviour change.**
+`NativeSimulationBindings()` could not previously throw for ABI reasons; now it can.
+Code that started up and returned a number will, with a mismatched library, **refuse at
+construction instead**. That is the intended direction — a saturated *"safe"* score is worse
+than a stop — but it is a new failure mode on an existing constructor, and
+`NativeSafetyScoreSimulationEngine` is **publicly exported**, so it is supported API.
+
+**No consumer we can see constructs it**, and the CPU engine is untouched. That is what we
+can measure, not a guarantee about you: if you build the native path and your C source
+predates this release, **take `native_simulation.c` and `CMakeLists.txt` from the upgraded
+package before rebuilding** — rebuilding your existing copy recompiles the old source and is
+refused again.
 
 ## 0.7.0
 

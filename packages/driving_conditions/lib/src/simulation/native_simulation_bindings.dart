@@ -88,16 +88,27 @@ class NativeSimulationAbiMismatch implements Exception {
 
   @override
   String toString() {
+    // NOT "0.6.x or older". A CORRECTLY built library from any release before
+    // the contract existed also exports no version symbol, so naming a version
+    // range here would state something untrue about a sound build. Say what was
+    // observed, not what it implies about which release someone has.
     final what = found == null
-        ? 'exports no simulation_abi_version symbol, so it predates the ABI '
-              'contract entirely (0.6.x or older)'
+        ? 'exports no simulation_abi_version symbol, so it was built from a C '
+              'source that predates the ABI contract'
         : 'reports ABI version $found';
     return 'NativeSimulationAbiMismatch: the native simulation library at\n'
         '  $path\n'
         '$what, but this code requires version $expected.\n\n'
         'A mismatched library does NOT crash — it returns a saturated, '
         'plausible-looking safety score. Refusing to run rather than return one.\n\n'
-        'Rebuild it:\n'
+        // REBUILDING ALONE CAN LOOP FOREVER. If you vendored this package by
+        // path or by copying it, your native/ directory is the OLD one: a
+        // rebuild recompiles the old C and produces the same refused library,
+        // and you can repeat that indefinitely. The C source must come from the
+        // upgraded package FIRST. Stated because we ship this package with
+        // "use via path dependency or copy into your project" in its own README.
+        'Take native_simulation.c and CMakeLists.txt from the UPGRADED package —\n'
+        'a rebuild alone recompiles the old source and is refused again — then:\n'
         '  (cd native && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build)';
   }
 }
