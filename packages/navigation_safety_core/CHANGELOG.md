@@ -9,6 +9,11 @@ value, and the rest of the override is checked on its own. This entry also
 corrects two statements in the 0.11.6 entry; see **Correction to the 0.11.6
 entry** below.
 
+**Even if you use no override, read Earlier documentation that the code
+contradicts, below.** It names four things that 0.11.6 and earlier releases
+said and the code does not do. One of them can keep the ice advisory from
+firing in an app that copied `example/can_bus_integration.dart`.
+
 **If you use `VehicleThresholdOverrides`, read this first.** If you register
 no override, or only `withKeiCarDefault()`, you receive exactly the configs
 0.11.6 gave you, and nothing is printed. If your registry's class implements
@@ -82,6 +87,64 @@ emptied, while critical alerts still fired. The throw lands where you
 construct the throttle. An infinite cap is still accepted, and then no alert
 is dropped.
 
+**Earlier documentation that the code contradicts.** 0.11.6 and earlier
+releases shipped the statements below. This release does not change what the
+package's code does in any of these cases.
+
+- **If your app copied `example/can_bus_integration.dart`,** check which
+  temperature it passes. The example passed engine coolant temperature as
+  `ambientTempCelsius` and compared the coolant temperature with
+  `warningTemperatureCelsius`. Wired as the example wires it, or with no
+  registry, its ice advisory could not fire for any driver profile once the
+  coolant was above 5 °C, whatever the temperature of the air outside. Pass a
+  measured outside-air temperature. The example also passed a fixed 85 %
+  relative humidity and a fixed 30 minutes since precipitation on every
+  frame, which are not readings. In any weather, the fixed precipitation held
+  its warning visibility at 409 m at 80 km/h, where its profile and registry
+  give 250 m without those two. Leave out what you do not measure, and
+  `DrivingContext` adds nothing for it.
+- **If your app relies on the warning temperature to cover a road colder than
+  the air,** the documentation of `forProfileWithContext` and the README said
+  that the effective road-surface temperature "replaces ambient when it
+  crosses the warning threshold earlier". It does not always. For
+  `snowZoneExperienced` at 3.0 °C and 70 % relative humidity, the effective
+  temperature is −1.9 °C, `warningTemperatureCelsius` comes back as 2, and
+  3.0 °C is above it, although `isRadiativeFrostBlackIce` in
+  `navigation_safety_calibration` 0.1.3 returns `true` for those readings. To
+  warn whenever the effective temperature is at or below the per-profile
+  warning temperature, also compare `computeEffectiveTemperatureCelsius`,
+  which this package re-exports, with the `warningTemperatureCelsius` that
+  `forProfileWithContext` returns. The README also said the effective
+  temperature can be several degrees below the air temperature when humidity
+  is high; it is further below when humidity is low: at 2.0 °C it is 1.3 °C
+  at 95 % and −7.3 °C at 50 % relative humidity.
+- **If your app relies on the warning visibility to cover the distance needed
+  to stop on snow or ice,** `KNOWN_LIMITATIONS.md` said to pass a lower
+  braking deceleration for those surfaces, but `forProfileWithContext`,
+  `forDriverContext` and `DrivingContext` take none. The speed-adjusted
+  warning visibility always uses 5.5 m/s², which the calibration package gives
+  as a dry-pavement value and the README counted among its worst-case
+  constants. Speed raises the warning visibility only where the reaction and
+  braking distance at 5.5 m/s² is longer than the per-profile floor, which for
+  no profile happens below 133 km/h; below that, the README's "additional
+  visibility margin" from speed is nothing. At 100 km/h `snowZoneExperienced`
+  gets 200 m, and the same formula at 1.5 m/s², the calibration package's
+  value for glare ice, gives 307 m.
+- **If your app passes a `DriverState` or a `Confidence` to
+  `forDriverContext`,** their documentation called these adjustments
+  conservative-only or caution-adding. They never move a threshold later, but
+  `DriverState.impairedVisibility` moves the info and critical visibility
+  thresholds earlier along with the warning threshold, and `Confidence.low`
+  lowers `effectiveAlertsPerMinuteCap`: a throttle built from it admits one
+  advisory alert per window instead of two for `ageingRural`, and three
+  instead of four for `professional`. Info and critical alerts take slots in
+  `AlertDensityThrottle`'s window, so either can drop a later warning. For
+  `ageingRural`, visibility readings of 1600 m, 1600 m and 250 m ten seconds
+  apart fire the 250 m warning in `DriverState.alert`, while in
+  `DriverState.impairedVisibility` the first two are info alerts and the
+  warning is dropped; with `Confidence.low`, an info alert followed ten
+  seconds later by a warning drops the warning.
+
 **Correction to the 0.11.6 entry.** A published entry cannot be edited, so it
 is corrected here.
 
@@ -109,7 +172,7 @@ is corrected here.
   five fields were discarded with the rest of the override. Neither of its
   descriptions of `.validated(...)` mentioned that limit.
 
-**Honest bounds**
+**Bounds**
 
 - Refusing an earlier critical or info threshold, and not only a later one,
   is a precaution: whether moving a given threshold earlier drops more
