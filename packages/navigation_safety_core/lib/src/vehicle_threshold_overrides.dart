@@ -198,15 +198,42 @@ class VehicleOverrideRejection {
             'invariant violated -- a vehicle-class override may only '
             'make the warning fire EARLIER, never later';
       case VehicleOverrideInvariant.severityNotProfile:
-        return 'overrides["$token"] modified $field '
-            '($baselineValue -> $rejectedValue); severity-not-profile '
-            'invariant violated -- a vehicle-class override adjusts '
-            'TIMING, never SEVERITY';
+        final rule = _mayNotChangeRule(field);
+        if (rule == null) {
+          return 'overrides["$token"] modified $field '
+              '($baselineValue -> $rejectedValue); severity-not-profile '
+              'invariant violated -- a vehicle-class override adjusts '
+              'TIMING, never SEVERITY';
+        }
+        return 'overrides["$token"] changed $field '
+            '($baselineValue -> $rejectedValue); $rule';
       case VehicleOverrideInvariant.transformThrew:
         return 'overrides["$token"] threw while transforming the '
             'baseline config: $error';
     }
   }
+
+  /// The rule a changed critical threshold, info threshold or
+  /// alerts-per-minute cap override broke, in the words a developer
+  /// fixing the transform needs; `null` for any other field.
+  ///
+  /// These fields are reported as
+  /// [VehicleOverrideInvariant.severityNotProfile] so that no enum value
+  /// is added, but "adjusts TIMING, never SEVERITY" would not tell the
+  /// developer which rule a refused cap broke. The score floors keep
+  /// that wording: it is their rule.
+  static String? _mayNotChangeRule(String field) => switch (field) {
+    'criticalVisibilityMeters' || 'criticalTemperatureCelsius' =>
+      'a vehicle-class override may not change a critical threshold, '
+          'in either direction',
+    'infoVisibilityMeters' || 'infoTemperatureCelsius' =>
+      'a vehicle-class override may not change an info threshold, '
+          'in either direction',
+    'alertsPerMinuteCapOverride' =>
+      'a vehicle-class override may not change the alerts-per-minute '
+          "cap override: return the baseline's value, null included",
+    _ => null,
+  };
 
   /// One line, always: the explanation, what was applied instead, and
   /// for a transform that threw, its [stackTrace].
@@ -316,19 +343,25 @@ class VehicleThresholdOverrides {
       for (final probe in _registrationProbes) {
         final rejections = _evaluate(entry.key, entry.value, probe).rejections;
         if (rejections.isNotEmpty) {
-          final rejection = rejections.first;
+          // Every field this probe refused is named, not only the first,
+          // so one run shows the developer everything to fix.
           throw ArgumentError.value(
             entry.key,
             'overrides',
-            'rejected at registration -- ${rejection.explanation}. '
+            'rejected at registration -- '
+                '${rejections.map((r) => r.explanation).join('. ')}. '
                 'Probe baseline: warningVisibilityMeters='
                 '${probe.warningVisibilityMeters}, '
                 'warningTemperatureCelsius='
                 '${probe.warningTemperatureCelsius}, '
-                'safeScoreFloor=${probe.safeScoreFloor}. '
+                'safeScoreFloor=${probe.safeScoreFloor}, '
+                'alertsPerMinuteCapOverride='
+                '${probe.alertsPerMinuteCapOverride}. '
                 'Fix the transform: a vehicle-class override may only '
-                'move warning thresholds toward EARLIER warning, and '
-                'must preserve every score floor',
+                'move the two warning thresholds, and only toward EARLIER '
+                'warning; it may not change a score floor, a critical '
+                'threshold, an info threshold or the alerts-per-minute cap '
+                'override',
           );
         }
       }
