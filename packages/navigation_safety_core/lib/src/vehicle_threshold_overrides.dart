@@ -124,14 +124,26 @@ library;
 import 'driver_profile.dart';
 import 'navigation_safety_config.dart';
 
-/// Which load-bearing invariant a rejected override violated.
+/// Which load-bearing invariant a refused field of an override violated,
+/// or that the transform itself threw.
 enum VehicleOverrideInvariant {
   /// A warning threshold moved toward LATER warning. Vehicle-class
   /// overrides may only make the warning fire earlier.
   cautionAddOnly,
 
-  /// A score-floor tier moved. Vehicle-class adjusts TIMING, never
-  /// SEVERITY.
+  /// A field a vehicle-class override may not change was changed, in
+  /// either direction: a score floor (`safeScoreFloor`,
+  /// `infoScoreFloor`, `warningScoreFloor`), a critical threshold
+  /// (`criticalVisibilityMeters`, `criticalTemperatureCelsius`), an info
+  /// threshold (`infoVisibilityMeters`, `infoTemperatureCelsius`) or
+  /// `alertsPerMinuteCapOverride`. Vehicle-class tunes the two warning
+  /// thresholds, and nothing else.
+  ///
+  /// Through 0.11.6 only the three score floors were checked and
+  /// reported here. The critical thresholds, the info thresholds and the
+  /// cap were added in 0.11.7 under this same value, not a new one, so
+  /// an exhaustive `switch` over this enum keeps compiling; read
+  /// [VehicleOverrideRejection.field] to tell them apart.
   severityNotProfile,
 
   /// The registered transform itself threw. Not an invariant on the
