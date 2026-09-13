@@ -52,6 +52,7 @@
 /// Typical wiring:
 ///
 /// ```dart
+/// // oracle:placeholders myUiState, driverContext, ctx, provider
 /// class MyConfidenceProvider implements ConfidenceProvider {
 ///   @override
 ///   Confidence? get confidence => myUiState.selfReportedConfidence;

@@ -42,6 +42,7 @@
 /// Typical wiring:
 ///
 /// ```dart
+/// // oracle:placeholders integratorTracker, driverContext, ctx, provider
 /// class MySessionStateProvider implements SessionStateProvider {
 ///   @override
 ///   SessionState? get sessionState => SessionState(

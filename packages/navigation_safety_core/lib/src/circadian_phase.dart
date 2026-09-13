@@ -39,7 +39,8 @@
 /// Typical wiring (integrator-supplied):
 ///
 /// ```dart
-/// final phase = CircadianPhase.fromHour(DateTime.now().hour);
+/// // oracle:placeholders driverContext, ctx
+/// final phase = circadianPhaseFromHour(DateTime.now().hour);
 /// final config = NavigationSafetyConfig.forDriverContext(
 ///   driverContext,
 ///   environmentalContext: ctx,

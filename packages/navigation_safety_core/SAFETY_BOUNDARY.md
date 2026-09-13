@@ -113,21 +113,29 @@ threshold-override surface added in 0.9.0
 
 **Caution-add-only invariant**: vehicle-class adjustments may make
 warning thresholds fire EARLIER than the per-profile baseline + the
-live-context floor; NEVER later. The factory enforces this at runtime
-via debug-mode assertions in
-`VehicleThresholdOverrides.applyOverrideForToken`. Negative-test
-coverage in `test/vehicle_threshold_overrides_test.dart` confirms
-the assertions fire on relaxing transforms (visibility-relaxing,
-temperature-relaxing, score-floor-modifying).
+live-context floor; NEVER later. This is refused in every build mode,
+in two places: `VehicleThresholdOverrides.validated(...)` probes each
+registered transform and throws `ArgumentError` at registration, and
+`VehicleThresholdOverrides.applyOverrideForToken` checks the produced
+config again on the drive path, where it never throws: a violating
+override is refused whole, the un-overridden baseline is returned,
+and the rejection is reported. Negative-test coverage in
+`test/vehicle_threshold_overrides_test.dart` confirms both refusals
+on relaxing transforms (visibility-relaxing, temperature-relaxing,
+score-floor-modifying), and `tool/release_mode_proof.dart` exercises
+the drive path with assertions elided.
 
 **Severity-not-profile invariant** (load-bearing per §6 above):
 vehicle-class tunes warning TIMING only (warn-earlier-floors). It
 does NOT modify the score-floor tiers (`safeScoreFloor` /
 `infoScoreFloor` / `warningScoreFloor`), the critical thresholds,
-or the alerts-per-minute cap override. Score-floor preservation is
-asserted at runtime in the same `applyOverrideForToken` enforcer,
-preserving the existing severity-driven (not profile-driven, not
-vehicle-class-driven) plane-allocation discipline. The vehicle-class
+or the alerts-per-minute cap override. A score-floor change is refused
+by the same two checks, in every build mode, preserving the existing
+severity-driven (not profile-driven, not vehicle-class-driven)
+plane-allocation discipline. **The critical thresholds and the
+alerts-per-minute cap override are checked by neither**: a transform
+that changes them is applied as written, so for those fields this
+invariant rests on the transform's author. The vehicle-class
 dimension lives entirely in the threshold-tuning layer; it does NOT
 enter the visibility / preemption / severity-ordering paths.
 

@@ -24,9 +24,17 @@
 /// `warningScoreFloor`), the critical thresholds, or the
 /// alerts-per-minute cap override.
 ///
+/// **What the checks below cover, exactly: five fields.**
+/// `warningVisibilityMeters` and `warningTemperatureCelsius` may not
+/// decrease, and the three score floors may not change. A transform
+/// that changes a critical threshold or `alertsPerMinuteCapOverride`
+/// is **not detected** by either check and is applied as written, so
+/// for those fields the MUST NOT above is kept by the transform's
+/// author, not by this class.
+///
 /// ## Where the refusal lives — registration, not the drive path
 ///
-/// Both invariants are refused at **registration** by
+/// The checks run at **registration** in
 /// [VehicleThresholdOverrides.validated], which probes every
 /// registered transform against a battery of baselines and throws
 /// [ArgumentError] naming the token, the field and the probe. That is
@@ -35,11 +43,12 @@
 /// throwing is safe.
 ///
 /// [applyOverrideForToken] runs on the **drive path**, potentially
-/// once per vehicle-bus frame while the car is moving. It re-checks
-/// both invariants and **never throws**. A violating override is
+/// once per vehicle-bus frame while the car is moving. It runs the
+/// same checks again and **never throws**. A violating override is
 /// refused whole: the method returns the unmodified `baseline` and
-/// reports the rejection through [onRejected] (or, absent a handler,
-/// [rejectionReporter], once per token+field).
+/// reports the rejection to the `onRejected` handler passed to the
+/// constructor (or, absent a handler, to [rejectionReporter], once per
+/// token, field and invariant).
 ///
 /// The history is worth keeping, because both previous shapes were
 /// wrong and they were wrong in opposite directions:
@@ -161,6 +170,15 @@ class VehicleOverrideRejection {
   /// [VehicleOverrideInvariant.transformThrew]; otherwise `null`.
   final Object? error;
 
+  /// The stack trace captured with [error], when [invariant] is
+  /// [VehicleOverrideInvariant.transformThrew]; otherwise `null`.
+  ///
+  /// Its top frames are the integrator's own transform. Through 0.11.5
+  /// the exception propagated and carried this trace with it; catching
+  /// the exception without keeping the trace would take that line away
+  /// from the developer who has to fix the transform.
+  final StackTrace? stackTrace;
+
   const VehicleOverrideRejection({
     required this.token,
     required this.field,
@@ -168,6 +186,7 @@ class VehicleOverrideRejection {
     this.baselineValue,
     this.rejectedValue,
     this.error,
+    this.stackTrace,
   });
 
   /// Human-readable explanation, including what was applied instead.
@@ -189,10 +208,27 @@ class VehicleOverrideRejection {
     }
   }
 
+  /// One line, always: the explanation, what was applied instead, and
+  /// for a transform that threw, its [stackTrace].
+  ///
+  /// Line breaks inside the error text and the stack trace are written
+  /// as the two characters `\n`. A `FormatException` from `int.parse`,
+  /// for example, prints its source and caret on following lines; left
+  /// as they are, one report would become several stdout lines, and a
+  /// log reader that takes one line per entry would split the stack
+  /// trace away from the `navigation_safety_core:` prefix that says
+  /// where it came from.
   @override
-  String toString() =>
-      'VehicleOverrideRejection($explanation; the override was REFUSED '
-      'WHOLE and the un-overridden baseline was applied instead)';
+  String toString() {
+    final trace = stackTrace;
+    final text =
+        'VehicleOverrideRejection($explanation; the override was REFUSED '
+        'WHOLE and the un-overridden baseline was applied instead)'
+        '${trace == null ? '' : '; stack trace: $trace'}';
+    return text.trimRight().replaceAll(_lineBreak, r'\n');
+  }
+
+  static final RegExp _lineBreak = RegExp(r'\r\n|\r|\n');
 }
 
 /// Registry of vehicle-class-token → threshold-transform-function
@@ -217,7 +253,8 @@ class VehicleThresholdOverrides {
   >
   overrides;
 
-  /// Integrator-supplied sink for overrides refused on the drive path.
+  /// Integrator-supplied sink for overrides refused on the drive path,
+  /// passed as `onRejected` to any constructor.
   ///
   /// When non-null this handler replaces the default reporter and is
   /// called on EVERY rejection, with no de-duplication — the
@@ -225,27 +262,25 @@ class VehicleThresholdOverrides {
   /// swallowed: moving the throw from this package into the
   /// integrator's logger would kill the driver's advisory stream just
   /// as surely, and this method's whole contract is that it does not.
-  final void Function(VehicleOverrideRejection rejection)? onRejected;
-
-  /// Whether this registry was probed by
-  /// [VehicleThresholdOverrides.validated] at construction.
   ///
-  /// Informational. The drive-path check in [applyOverrideForToken]
-  /// runs either way, because registration-time probing is a filter
-  /// and not a proof (see library docs).
-  final bool validatedAtRegistration;
+  /// Private on purpose. A public field is part of the class's implicit
+  /// interface, so a class that `implements VehicleThresholdOverrides`
+  /// would have to add it and would stop compiling on upgrade. Such a
+  /// class supplies its own [applyOverrideForToken], which is the only
+  /// reader of this field, so it would gain nothing for the break.
+  final void Function(VehicleOverrideRejection rejection)? _onRejected;
 
   /// Construct a registry WITHOUT registration-time validation.
   ///
-  /// `const`-capable and unchanged since 0.9.0, so existing consumers
-  /// keep compiling. Prefer [VehicleThresholdOverrides.validated]: a
-  /// registry built this way defers every refusal to the drive path,
-  /// where the override is discarded and reported rather than fixed.
-  const VehicleThresholdOverrides(this.overrides, {this.onRejected})
-    : validatedAtRegistration = false;
-
-  const VehicleThresholdOverrides._validated(this.overrides, {this.onRejected})
-    : validatedAtRegistration = true;
+  /// `const`-capable, with the same positional signature since 0.9.0,
+  /// so existing consumers keep compiling. Prefer
+  /// [VehicleThresholdOverrides.validated]: a registry built this way
+  /// defers every refusal to the drive path, where the override is
+  /// discarded and reported rather than fixed.
+  const VehicleThresholdOverrides(
+    this.overrides, {
+    void Function(VehicleOverrideRejection rejection)? onRejected,
+  }) : _onRejected = onRejected;
 
   /// Construct a registry, probing every registered transform against
   /// a battery of baselines FIRST and throwing [ArgumentError] if any
@@ -290,10 +325,12 @@ class VehicleThresholdOverrides {
         }
       }
     }
-    return VehicleThresholdOverrides._validated(
+    final registry = VehicleThresholdOverrides(
       overrides,
       onRejected: onRejected,
     );
+    _probedAtRegistration[registry] = true;
+    return registry;
   }
 
   /// Construct a registry pre-loaded with the HER kei-car-at-65
@@ -335,12 +372,14 @@ class VehicleThresholdOverrides {
   /// car is moving, and in an `async*` body an uncaught throw
   /// terminates the stream, taking the driver's advisories with it.
   ///
-  /// When the registered transform violates the caution-add-only or
-  /// severity-not-profile invariant, or throws, the override is
-  /// **refused whole**: this method returns the unmodified [baseline]
-  /// and reports a [VehicleOverrideRejection] through [onRejected], or
-  /// absent a handler through [rejectionReporter] once per
-  /// token+field+invariant.
+  /// When the registered transform lowers a warning threshold, changes
+  /// a score floor, or throws, the override is **refused whole**: this
+  /// method returns the unmodified [baseline] and reports a
+  /// [VehicleOverrideRejection] to the `onRejected` handler passed to
+  /// the constructor, or absent a handler to [rejectionReporter] once
+  /// per token, field and invariant. A change to a critical threshold
+  /// or to `alertsPerMinuteCapOverride` is not checked and is applied
+  /// (see library docs).
   ///
   /// Refusing WHOLE rather than repairing field-by-field is deliberate
   /// and is the safer of the two:
@@ -378,7 +417,7 @@ class VehicleThresholdOverrides {
   }
 
   void _report(VehicleOverrideRejection rejection) {
-    final handler = onRejected;
+    final handler = _onRejected;
     if (handler != null) {
       try {
         handler(rejection);
@@ -413,16 +452,21 @@ class VehicleThresholdOverrides {
     final NavigationSafetyConfig adjusted;
     try {
       adjusted = transform(baseline);
-    } catch (error) {
+    } catch (error, stackTrace) {
       // A transform that throws kills an `async*` caller exactly as
       // an invariant throw did. Guarded here rather than left to
       // escape; through 0.11.5 nothing covered this case at all.
+      //
+      // The stack trace is kept. Through 0.11.5 the exception
+      // propagated, and its top frame was the integrator's own
+      // transform; a catch that drops the trace takes that line away.
       return _OverrideOutcome.rejected(
         VehicleOverrideRejection(
           token: token,
           field: '(transform)',
           invariant: VehicleOverrideInvariant.transformThrew,
           error: error,
+          stackTrace: stackTrace,
         ),
       );
     }
@@ -554,7 +598,7 @@ class VehicleThresholdOverrides {
   // ── Default rejection reporting ────────────────────────────────────
 
   /// Process-wide sink for drive-path rejections on registries that
-  /// supplied no [onRejected] handler.
+  /// supplied no `onRejected` handler.
   ///
   /// Defaults to [printRejection]. Deliberately `print`-based and NOT
   /// `dart:developer`'s `log`: measured 2026-09-13 on Dart 3.11.1,
@@ -569,7 +613,9 @@ class VehicleThresholdOverrides {
   static void Function(VehicleOverrideRejection rejection) rejectionReporter =
       printRejection;
 
-  /// The default [rejectionReporter]: one line to stdout.
+  /// The default [rejectionReporter]: one line to stdout, prefixed
+  /// `navigation_safety_core:`, carrying the transform's stack trace
+  /// when it threw (see [VehicleOverrideRejection.toString]).
   static void printRejection(VehicleOverrideRejection rejection) {
     // ignore: avoid_print
     print('navigation_safety_core: $rejection');
@@ -577,8 +623,18 @@ class VehicleThresholdOverrides {
 
   static final Set<String> _reportedKeys = <String>{};
 
-  /// Clear the once-per-token+field de-duplication state and restore
-  /// [rejectionReporter] to [printRejection].
+  /// Registries built by [VehicleThresholdOverrides.validated].
+  ///
+  /// An [Expando] rather than a field, for the same reason `_onRejected`
+  /// is private: a public field would join the implicit interface and
+  /// break every hand-written implementer. It keeps nothing alive, and
+  /// a registry that never went through `validated` is simply absent.
+  static final Expando<bool> _probedAtRegistration = Expando<bool>(
+    'VehicleThresholdOverrides.validated',
+  );
+
+  /// Clear the once-per-token, field and invariant de-duplication state
+  /// and restore [rejectionReporter] to [printRejection].
   ///
   /// Intended for tests, which need each case to observe its own
   /// report. De-duplication exists because the drive path may run at
@@ -608,6 +664,25 @@ class VehicleThresholdOverrides {
       alertsPerMinuteCapOverride: baseline.alertsPerMinuteCapOverride,
     );
   }
+}
+
+/// Registration status of a [VehicleThresholdOverrides] registry.
+///
+/// An extension, not a member, so it stays off the class's implicit
+/// interface: a class that `implements VehicleThresholdOverrides`
+/// compiles exactly as it did on 0.11.5.
+extension VehicleThresholdOverridesRegistration on VehicleThresholdOverrides {
+  /// Whether this registry was probed by
+  /// [VehicleThresholdOverrides.validated] at construction.
+  ///
+  /// Informational. The drive-path check in
+  /// [VehicleThresholdOverrides.applyOverrideForToken] runs either way,
+  /// because registration-time probing is a filter and not a proof (see
+  /// library docs). `false` for a registry built with the plain
+  /// constructor, and for any class that implements or extends
+  /// [VehicleThresholdOverrides]; it never throws.
+  bool get validatedAtRegistration =>
+      VehicleThresholdOverrides._probedAtRegistration[this] ?? false;
 }
 
 /// Result of evaluating one transform against one baseline: either an

@@ -70,16 +70,24 @@
 /// **Composition pattern**:
 ///
 /// ```dart
+/// // oracle:placeholders profile, now, severity, thresholdId, _consumingAppAnalytics
 /// final throttle = AlertDensityThrottle.forProfile(profile);
 /// final telemetry = LoomFitTelemetry();
 /// telemetry.records.listen(_consumingAppAnalytics.record);
 ///
+/// // The throttle does not expose the timestamps it has fired, so keep
+/// // your own rolling copy for `alertSequence`, purged the way the
+/// // throttle purges its window.
+/// final firedAt = <DateTime>[];
+///
 /// // At alert-firing seam:
 /// final fired = throttle.shouldFire(now, severity);
+/// if (fired) firedAt.add(now);
+/// firedAt.removeWhere((t) => !t.isAfter(now.subtract(throttle.window)));
 /// telemetry.record(LoomFitTelemetryRecord(
 ///   profileClass: profile,
 ///   ambientThreshold: thresholdId,
-///   alertSequence: throttle.recentFireTimestamps(now),
+///   alertSequence: firedAt,
 ///   responseLatency: null,
 ///   outcome: fired
 ///       ? (severity == AlertSeverity.critical

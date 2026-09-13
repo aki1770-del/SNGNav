@@ -13,6 +13,32 @@ the driver's advisories for the rest of the journey. Measured on a per-frame
 harness: **0 of 5 advisories delivered, nav surface dead.** A guard that
 removes the warning is not a stronger halt; it is the absence of one.
 
+**If you use `VehicleThresholdOverrides`, read this first.** If you register
+no override, or only `withKeiCarDefault()`, you receive exactly the configs
+0.11.5 gave you, and nothing is printed.
+
+- **A relaxing override is now refused in every build mode.** In a 0.11.5
+  release build it was silently applied, and the driver was warned later than
+  this package designed. You now receive the un-overridden baseline and the
+  refusal is reported. If your release build has been running with a relaxing
+  override, your warnings will move earlier after this upgrade. That is the fix.
+- **An exception thrown inside your transform no longer reaches your code.** In
+  0.11.5 it propagated to whoever called `forProfileWithContext`,
+  `forDriverContext` or `applyOverrideForToken`. It is now caught, the baseline
+  is returned, and the exception is passed with its stack trace to
+  `onRejected`. A `try`/`catch` you wrapped around those calls to handle a
+  failing override will not fire; move that handling into `onRejected`. To meet
+  a broken transform at startup instead, build the registry with
+  `VehicleThresholdOverrides.validated(...)`, which throws `ArgumentError`
+  there.
+- **Tests that expect `AssertionError` from a relaxing override now fail,**
+  because nothing on that path throws any more, in any mode. Test that
+  `.validated(...)` throws `ArgumentError`, or that `onRejected` receives a
+  `VehicleOverrideRejection`.
+- **A refusal prints one line to stdout** (prefix `navigation_safety_core:`),
+  once per token, field and invariant. If stdout carries data for you, pass
+  `onRejected` or assign `VehicleThresholdOverrides.rejectionReporter`.
+
 Three states of the same relaxing override, one harness, `dart run` with
 assertions elided:
 
@@ -31,8 +57,8 @@ assertions elided:
   can read the stack trace.
 - **`VehicleOverrideRejection`** and **`VehicleOverrideInvariant`** — the
   refusal, reported rather than raised.
-- **`onRejected`** on the registry, plus the process-wide
-  `VehicleThresholdOverrides.rejectionReporter` and
+- **`onRejected`**, a named parameter on every registry constructor, plus
+  the process-wide `VehicleThresholdOverrides.rejectionReporter` and
   `resetRejectionReporting()`.
 - **`registrationProbeCount`** — the probe-battery size as a number an
   integrator can read.
@@ -77,14 +103,10 @@ assertions elided:
   under either `dart run` or `dart compile exe` without an attached VM
   service. Routing the report there would have made it silent in exactly the
   shipped build where it matters.
-- Reports de-duplicate per token+field on the default channel so a broken
-  override cannot flood an IVI log for a whole journey. A supplied
-  `onRejected` is **not** de-duplicated; the integrator owns that policy.
-
-**Compatibility**: additive. The `const VehicleThresholdOverrides(map)`
-constructor is unchanged, and no package in this workspace calls
-`applyOverrideForToken`. The single behavioural change is that it no longer
-throws.
+- Reports de-duplicate per token, field and invariant on the default channel
+  so a broken override cannot flood an IVI log for a whole journey. A
+  supplied `onRejected` is **not** de-duplicated; the integrator owns that
+  policy.
 
 ## 0.11.5
 

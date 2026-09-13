@@ -161,10 +161,7 @@ Future<void> main() async {
     withRelaxing.delivered.toString() == baselineRun.delivered.toString(),
     detail: '${withRelaxing.delivered} vs ${baselineRun.delivered}',
   );
-  _check(
-    'the refusal was REPORTED, not silent',
-    reported.isNotEmpty,
-  );
+  _check('the refusal was REPORTED, not silent', reported.isNotEmpty);
   _check(
     'the report names the field and the invariant',
     reported.isNotEmpty &&
@@ -184,7 +181,9 @@ Future<void> main() async {
     baselineRun.died == null && baselineRun.delivered.length == 5,
   );
 
-  final keiDefault = await _drain(VehicleThresholdOverrides.withKeiCarDefault());
+  final keiDefault = await _drain(
+    VehicleThresholdOverrides.withKeiCarDefault(),
+  );
   _check(
     'legal kei-car default: 5 advisories, stream alive',
     keiDefault.died == null && keiDefault.delivered.length == 5,
@@ -245,7 +244,10 @@ Future<void> main() async {
   } catch (_) {
     legalRegistrationHeld = false;
   }
-  _check('.validated() accepts the shipped kei-car default', legalRegistrationHeld);
+  _check(
+    '.validated() accepts the shipped kei-car default',
+    legalRegistrationHeld,
+  );
 
   VehicleThresholdOverrides.resetRejectionReporting();
 
