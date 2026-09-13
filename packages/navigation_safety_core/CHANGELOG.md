@@ -25,10 +25,15 @@ no override, or only `withKeiCarDefault()`, you receive exactly the configs
   call now throws `ArgumentError`, naming the token and the field. On 0.11.6 a
   registry whose transforms changed only these fields was accepted, and
   `validatedAtRegistration` returned `true`, although these fields were never
-  checked. If you build the registry at startup, you will meet the error on
-  your first run. If you validate a registry built later from settings or
-  remote configuration, it throws there, on the device, so catch
-  `ArgumentError` at that call.
+  checked. Two of the probe baselines carry a cap, 10.0 and 0.5, although the
+  configs `forProfileWithContext` and `forDriverContext` pass to a transform
+  carry a `null` cap. So a transform that leaves out the
+  `alertsPerMinuteCapOverride` argument makes the call throw even if nothing
+  else in it is refused; the message then shows `(10.0 -> null)`. Return the
+  baseline's value for it. 0.11.6 accepted such a transform. If you build the
+  registry at startup, you will meet the error on your first run. If you
+  validate a registry built later from settings or remote configuration, it
+  throws there, on the device, so catch `ArgumentError` at that call.
 - **If your override moved a critical or info threshold, or set the cap, on
   purpose,** that value is no longer applied. If you raised a critical
   threshold, a reading between the un-overridden threshold and yours no longer
