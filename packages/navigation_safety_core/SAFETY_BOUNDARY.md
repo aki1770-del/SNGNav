@@ -1,12 +1,12 @@
 # navigation_safety_core — Safety-Class Boundary Record
 
 **Package**: `navigation_safety_core`
-**Version**: 0.10.0 (DEPLOY)
-**Boundary record version**: 1.3 (0.10.0 addendum: DriverState-axis scaffolding — CircadianPhase + SessionStateProvider + ConfidenceProvider)
+**Version**: 0.11.7 (first written for 0.10.0)
+**Boundary record version**: 1.4 (0.11.7: the vehicle-class refusal in section 7.2 covers every threshold field; corrections in sections 1, 3, 5, 6, 7, 7.1, 7.3, 8 and 9)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-05
+**Date**: 2026-05-05; revised for 0.11.7
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-**Related**: README.md §Standards mapping (L153-168) + KNOWN_LIMITATIONS.md §Standards-mapping-current-advisory-framing + LICENSE BSD-3-Clause
+**Related**: README.md §Standards mapping + KNOWN_LIMITATIONS.md §Standards mapping (current advisory framing) + LICENSE BSD-3-Clause
 
 ---
 
@@ -14,7 +14,7 @@
 
 **Level**: L0 / L1 supportive use only.
 **Driver-task assignment**: the driver performs the dynamic driving task at all times. The package's surfaces inform the driver but **never actuate the vehicle and never close a control loop**.
-**No L2+ claim.** Any handover-class or supervision-class deployment requires the integrator to add their own driver-attention monitoring, take-over-request signalling, and minimum-risk-manoeuvre fallback per L2+ standards. See README.md §What this is NOT (L170-188).
+**No L2+ claim.** Any handover-class or supervision-class deployment requires the integrator to add their own driver-attention monitoring, take-over-request signalling, and minimum-risk-manoeuvre fallback per L2+ standards. See README.md §What this is NOT.
 
 ## 2 — ISO 26262 ASIL classification
 
@@ -25,7 +25,7 @@
 ## 3 — SOTIF (ISO 21448) posture
 
 **Stance**: **advisory not control.** SOTIF addresses Safety Of The Intended Functionality at automated-driving-feature scope. This package does not deliver an automated driving feature; it delivers advisory threshold + vocabulary substrate consumed by integrator HMI surfaces. SOTIF triage is performed by the integrator at their HMI scope where the alert is rendered.
-**Equal-dignity invariant** (load-bearing): per README.md §Equal-dignity invariant (L189-197) — alert visibility, severity ordering, and plane-allocation priority MUST be **severity-driven, never profile-driven**. Per-profile differentiation belongs in verbosity, locale, and density-cap; it MUST NOT enter the visibility or preemption path. This invariant is the package's SOTIF-class operational discipline.
+**Equal-dignity invariant** (load-bearing): per README.md §Equal-dignity invariant — alert visibility, severity ordering, and plane-allocation priority MUST be **severity-driven, never profile-driven**. Per-profile differentiation belongs in verbosity, locale, and density-cap; it MUST NOT enter the visibility or preemption path. This invariant is the package's SOTIF-class operational discipline.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
@@ -35,16 +35,16 @@
 ## 5 — JIS / JASO conformance
 
 **Conformance status**: **not mapped at this scope.**
-**Reasoning**: Japanese-domestic certification is integrator-class concern. Per README.md L164: *"Consult a qualified Japanese-domestic functional-safety partner before any IVI-vendor or OEM-pilot integration that targets the Japanese-domestic certification surface."*
+**Reasoning**: Japanese-domestic certification is integrator-class concern. Per README.md §Standards mapping: *"Consult a qualified Japanese-domestic functional-safety partner before any IVI-vendor or OEM-pilot integration that targets the Japanese-domestic certification surface."*
 **AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to advisory-class navigation packages; surfaces relevant publication deltas to AAA at next monthly cycle.
 
 ## 6 — Severity-not-profile invariant
 
 **Status**: **applies in scope by design** per AAA bylaws Article 17 (β) safe-default boundary.
 **Concrete locus**:
-- README.md L189-197 §Equal-dignity invariant
-- KNOWN_LIMITATIONS.md L465+ Equal-dignity invariant: severity-driven, not profile-driven
-- CHANGELOG.md L146 0.4.2 founding declaration: *"plane-allocation priority MUST be severity-driven, never profile-driven"*
+- README.md §Equal-dignity invariant
+- KNOWN_LIMITATIONS.md §Equal-dignity invariant: severity-driven, not profile-driven
+- CHANGELOG.md 0.4.2 entry, founding declaration: *"plane-allocation priority MUST be severity-driven, never profile-driven"*
 - 0.4.2 founding commit `61b06e3` (per VAA spawn -29 carry-forward MEMORY)
 
 **Operational consequence**: load gates DELIVERY MODE not severity. Per-profile differentiation lives in `AlertExplainer` (verbosity, locale) + `AlertDensityThrottle` (per-profile alerts/min cap with critical-bypass invariant) — never in the visibility or preemption path.
@@ -53,9 +53,9 @@
 
 **Status**: **applies in scope by design.**
 **Concrete locus**:
-- README.md L155-158 §Standards mapping: *"the driver performs the dynamic driving task at all times; the package's surfaces inform the driver but never actuate the vehicle and never close a control loop"*
-- README.md L182-184 §What this is NOT: *"Action verbs in `AlertExplainer` are advisory; speed numbers are published reference points, not system-enforced limits. The driver retains full control authority."*
-- `lib/src/alert_explainer.dart` L19-34 advisory-mood discipline: *"Action verbs are advisory ('reduce' / 'avoid' / 'maintain'). This is a Pure Dart, advisory-only surface. It does not actuate the vehicle."*
+- README.md §Standards mapping: *"the driver performs the dynamic driving task at all times; the package's surfaces inform the driver but never actuate the vehicle and never close a control loop"*
+- README.md §What this is NOT: *"Action verbs in `AlertExplainer` are advisory; speed numbers are published reference points, not system-enforced limits. The driver retains full control authority."*
+- `lib/src/alert_explainer.dart` class documentation, advisory-mood discipline: *"Action verbs are advisory ("reduce" / "avoid" / "maintain"), never imperative-on-control … This is a Pure Dart, advisory-only surface. It does not actuate the vehicle."*
 
 **Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object; the agency to choose what to do next remains with the driver. This package's surfaces are designed for that cognitive moment of choice, never around it.
 
@@ -72,6 +72,13 @@ under which the loom is permitted to fire.
   invariant preserves credibility of safety-critical alerts.* The
   throttle gates info / warning tiers against alarm-fatigue;
   `AlertSeverity.critical` always fires regardless of in-window count.
+  The rolling window is shared across severities: every alert that
+  fires takes a slot, critical and info alike, and the cap does not
+  rank a warning above an info alert. A warning can therefore be
+  dropped because info or critical alerts fired shortly before it
+  (measured with the `ageingRural` default cap of 1.2: two info
+  alerts, or two critical alerts, 10 s apart, then a warning 10 s
+  later: the warning is dropped).
   Severity-not-profile invariant preserved: the throttle modulates
   density per profile, never gates severity-class. ASIL-QM advisory
   per §2.
@@ -90,8 +97,11 @@ under which the loom is permitted to fire.
   of `LoomFitTelemetryRecord` observations. Operational discipline:
   *the telemetry surfaces calibration-class observations to the
   consuming-app's analytics layer; no driver-competence judgment.*
-  The stream emits one record per `shouldFire` decision (outcomes:
-  `fired`, `droppedByThrottle`, `criticalBypass`, `coldStart`); the
+  The stream carries one record per call to `LoomFitTelemetry.record`.
+  `AlertDensityThrottle` does not call it, so an integrator who wants
+  one record per `shouldFire` decision records it at the seam where it
+  fires alerts, as the class documentation shows (outcomes: `fired`,
+  `droppedByThrottle`, `criticalBypass`, `coldStart`); the
   schema names the loom's outcome, not the driver's response. The
   package does not classify "fit" vs "misfit" itself, does not enact
   any policy change in response, and does not harvest driver-identity
@@ -113,29 +123,44 @@ threshold-override surface added in 0.9.0
 
 **Caution-add-only invariant**: vehicle-class adjustments may make
 warning thresholds fire EARLIER than the per-profile baseline + the
-live-context floor; NEVER later. This is refused in every build mode,
-in two places: `VehicleThresholdOverrides.validated(...)` probes each
-registered transform and throws `ArgumentError` at registration, and
+live-context floor; NEVER later. This, and the severity-not-profile
+invariant below, are refused in every build mode, in two places.
+`VehicleThresholdOverrides.validated(...)` probes each registered
+transform against a finite battery of baselines and throws
+`ArgumentError` at registration when any probe breaks either
+invariant; the whole registry is refused. On the drive path,
 `VehicleThresholdOverrides.applyOverrideForToken` checks the produced
-config again on the drive path, where it never throws: a violating
-override is refused whole, the un-overridden baseline is returned,
-and the rejection is reported. Negative-test coverage in
-`test/vehicle_threshold_overrides_test.dart` confirms both refusals
-on relaxing transforms (visibility-relaxing, temperature-relaxing,
-score-floor-modifying), and `tool/release_mode_proof.dart` exercises
-the drive path with assertions elided.
+config again and never throws: each field that breaks an invariant
+is reset to its baseline value and reported, every other field of
+the override is kept, and the result is always a config that a fully
+legal transform could have produced. A transform that throws is
+refused whole: the baseline is returned and the error is reported.
+Negative-test coverage in `test/vehicle_threshold_overrides_test.dart`
+and `test/vehicle_threshold_overrides_all_fields_test.dart` confirms
+both refusals on relaxing warning floors, on a changed score floor,
+and on changes in either direction to the critical thresholds, the
+info thresholds and the cap override; `tool/release_mode_proof.dart`
+exercises the drive path with assertions elided.
 
 **Severity-not-profile invariant** (load-bearing per §6 above):
-vehicle-class tunes warning TIMING only (warn-earlier-floors). It
-does NOT modify the score-floor tiers (`safeScoreFloor` /
-`infoScoreFloor` / `warningScoreFloor`), the critical thresholds,
-or the alerts-per-minute cap override. A score-floor change is refused
-by the same two checks, in every build mode, preserving the existing
-severity-driven (not profile-driven, not vehicle-class-driven)
-plane-allocation discipline. **The critical thresholds and the
-alerts-per-minute cap override are checked by neither**: a transform
-that changes them is applied as written, so for those fields this
-invariant rests on the transform's author. The vehicle-class
+vehicle-class tunes warning TIMING only (warn-earlier-floors). An
+override may not change any other threshold field, in either
+direction: the score-floor tiers (`safeScoreFloor` /
+`infoScoreFloor` / `warningScoreFloor`), the critical thresholds
+(`criticalVisibilityMeters` / `criticalTemperatureCelsius`), the info
+thresholds (`infoVisibilityMeters` / `infoTemperatureCelsius`), or
+the alerts-per-minute cap override (`alertsPerMinuteCapOverride`,
+where `null` must stay `null` and `NaN` counts as a change). A tighter
+value is not safe by construction either: a critical alert bypasses
+the density cap but still takes a slot in its rolling window, info
+alerts share the cap with warnings, and a transform receives no
+`DriverProfile`, so a cap it writes replaces the per-profile default
+with a constant that ignores the driver. Through 0.11.6 the critical
+thresholds, the info thresholds and the cap override were checked by
+neither and were applied as written; from 0.11.7 an override that
+tightened one of them has that field reset to the baseline. This
+preserves the existing severity-driven (not profile-driven, not
+vehicle-class-driven) plane-allocation discipline. The vehicle-class
 dimension lives entirely in the threshold-tuning layer; it does NOT
 enter the visibility / preemption / severity-ordering paths.
 
@@ -173,9 +198,26 @@ the existing state-delta.
 **Caution-add-only invariant**: circadian-phase + session-state
 adjustments may make warning thresholds fire EARLIER than the
 per-profile baseline + live-context + state-delta floor; NEVER
-later. The factory enforces the multiplier `>= 1.0` floor (circadian)
-and the visibility lift `>= 0` floor (session-state) at runtime via
-debug-mode assertions in `forDriverContext`. The
+later. Both floors, the multiplier `>= 1.0` (circadian) and the
+visibility lift `>= 0` (session-state), hold in every build mode.
+The two inputs are closed enums whose values are fixed inside this
+package: every `CircadianPhase` multiplier is between 1.0 and 1.5,
+and the `CumulativeFatigueClass` lifts are 0, 25, 50 and 100 m, so no
+caller can supply a relaxing value. `forDriverContext` also applies a
+circadian result only when it raises the warning visibility floor,
+and a fatigue lift only when it is positive; those two checks are
+ordinary `if` statements, not assertions, so release builds keep
+them. Its debug-mode assertions additionally flag a multiplier or
+lift edited below its floor inside this package; no public input can
+make them fire, and no test does. `test/circadian_phase_test.dart`
+checks that every multiplier is `>= 1.0`;
+`test/session_state_provider_test.dart` checks that `rested` adds no
+lift and that the lift rises with each fatigue class; and
+`test/navigation_safety_config_driver_state_inputs_test.dart` checks
+that the warning visibility floor stays at or above the profile
+baseline across the 16 phase, fatigue and confidence combinations it
+runs, that the critical thresholds are preserved, and that an
+unconfirmed `Confidence.high` never changes the cap. The
 cap-override-with-confirmation pattern (#30) is the ONLY exception
 to the warn-thresholds-only-add-caution rule and applies only to the
 alerts-per-minute cap (rate-limit), never to the warning visibility
@@ -203,12 +245,17 @@ the integrator must build a confirmation surface and set
 `isHighConfidenceConfirmed = true` ONLY after the driver has
 affirmatively confirmed. Without the affirmative confirmation flag,
 `Confidence.high` is treated as `Confidence.medium` (no-op). The
-factory carries a runtime debug-assertion that catches any divergence
+confidence step returns the baseline cap for an unconfirmed
+`Confidence.high` in every build mode, and the factory also carries a
+debug-mode assertion that catches any divergence
 (*"Confidence.high without isHighConfidenceConfirmed must NOT modify
 alertsPerMinuteCapOverride; driver-always-drives invariant violated."*).
-The driver retains full control authority over cap-loosening
-decisions; the system never auto-relaxes the safety cap from a
-high-confidence reading alone.
+Within this package's factories the cap is loosened only through this
+pattern: the system never auto-relaxes the safety cap from a
+high-confidence reading alone, and from 0.11.7 a vehicle-class
+override may not change the cap (section 7.2); through 0.11.6 it
+could, without the driver's confirmation. An integrator that sets
+`alertsPerMinuteCapOverride` directly owns that decision.
 
 **UNVERIFIED-magnitude flags**: per-phase circadian multipliers,
 per-class fatigue lifts, and confidence cap modifiers are
@@ -227,7 +274,7 @@ this layer).
 ## 8 — Driver-facing loom (D-VGC189-1)
 
 **What HER experiences when this package fires**: *the alert that arrives in time + makes sense + is calm enough to ignore safely.* When `navigation_safety_core` fires through an integrator HMI, HER sees an alert that:
-- **arrives in time** — threshold-tuned to her profile (snowZoneExperienced gets earlier visibility-warning floor than ageingRural; per `forProfile` factory) AND adjusted upward for live driving conditions where they exceed the per-profile floor (`forProfileWithContext`).
+- **arrives in time** — threshold-tuned to her profile (ageingRural gets an earlier visibility-warning floor than snowZoneExperienced, 300 m against 200 m, per the `forProfile` factory; a higher floor warns earlier) AND adjusted upward for live driving conditions where they exceed the per-profile floor (`forProfileWithContext`).
 - **makes sense** — vocabulary in her language (`AlertExplainer` locale-class differentiation), at action-coupled granularity (advisory verbs not raw severity codes), with the action she can take (*"reduce", "avoid", "maintain"*) coupled to the condition.
 - **is calm enough to ignore safely** — `AlertDensityThrottle` per-profile alerts/min cap prevents desensitization. Critical alerts always fire (documented invariant); info and warning gates against alarm-fatigue.
 
@@ -237,9 +284,9 @@ this layer).
 
 ## 9 — Cross-references
 
-- README.md §Standards mapping L153-168 + §What this is NOT L170-188 + §Equal-dignity invariant L189-197
-- KNOWN_LIMITATIONS.md §Standards-mapping-current-advisory-framing + §Equal-dignity invariant L465+
-- CHANGELOG.md 0.4.2 founding entry L146
+- README.md §Standards mapping + §What this is NOT + §Equal-dignity invariant
+- KNOWN_LIMITATIONS.md §Standards mapping (current advisory framing) + §Equal-dignity invariant: severity-driven, not profile-driven
+- CHANGELOG.md 0.4.2 entry
 - LOOMS.md (runtime-loom catalog: AlertDensityThrottle + AlertExplainer pair)
 - LICENSE BSD-3-Clause
 - D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
