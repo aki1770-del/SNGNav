@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 void main() {
   group('AlertExplainer.forConditionAndProfile — exhaustive coverage', () {
     test('every (profile × condition) pair returns a non-null entry', () {
-      // L7 lock — exhaustive coverage. 6 profiles × 8 conditions = 48
+      // Locks exhaustive coverage. 6 profiles × 8 conditions = 48
       // combinations must each produce a non-null AlertExplainer with a
       // non-empty action string.
       for (final profile in DriverProfile.values) {
@@ -160,14 +160,14 @@ void main() {
     });
   });
 
-  group('AlertExplainer spot-check table cells (AAA brief)', () {
+  group('AlertExplainer spot-check table cells', () {
     test('ageingRural ICE includes 30km speed advisory reference', () {
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.ice,
         DriverProfile.ageingRural,
       );
       expect(e.action, contains('30km'));
-      // Per AAA brief: "時速30km以下に減速し、急ブレーキは避けてください".
+      // By design: "時速30km以下に減速し、急ブレーキは避けてください".
       expect(e.action, contains('減速'));
     });
 
@@ -181,7 +181,7 @@ void main() {
     });
 
     test('professional WET_ICE is terse (≤25 chars)', () {
-      // Per AAA brief: professional → terse one-line "アイスバーン、20km/h".
+      // By design: professional → terse one-line "アイスバーン、20km/h".
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.wetIce,
         DriverProfile.professional,
@@ -196,7 +196,7 @@ void main() {
     });
 
     test('snowZoneExperienced SNOW is brief (≤30 chars)', () {
-      // Per AAA brief: brief format "圧雪、低速ギア、急操作回避".
+      // By design: brief format "圧雪、低速ギア、急操作回避".
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.snow,
         DriverProfile.snowZoneExperienced,
@@ -206,7 +206,7 @@ void main() {
     });
 
     test('agriculturalForestry SLUSH includes 轍 (off-road consideration)', () {
-      // Per AAA brief: "シャーベット、轍（わだち）に注意".
+      // By design: "シャーベット、轍（わだち）に注意".
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.slush,
         DriverProfile.agriculturalForestry,
@@ -215,7 +215,7 @@ void main() {
     });
 
     test('noviceUrban WET_ICE includes "極めて危険" hazard tag', () {
-      // Per AAA brief: noviceUrban gets explicit hazard framing.
+      // By design: noviceUrban gets explicit hazard framing.
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.wetIce,
         DriverProfile.noviceUrban,
@@ -240,7 +240,7 @@ void main() {
       expect(e.action, isNot(contains('気温0°C以下')));
       // The corrected string states the above-zero-air possibility.
       expect(e.action, contains('0°Cより高くても'));
-      // Speed advisory retained per the AAA brief.
+      // Speed advisory retained.
       expect(e.action, contains('30km'));
       expect(e.action, contains('減速'));
     });
@@ -264,7 +264,7 @@ void main() {
 
   group('AlertExplainer profile-flat conditions (UNKNOWN, DRY)', () {
     test('UNKNOWN: foreignTouristSnowZone uses EN, others JA', () {
-      // Per AAA brief: profile-flat content but locale still applies.
+      // By design: profile-flat content but locale still applies.
       final tourist = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.unknown,
         DriverProfile.foreignTouristSnowZone,
@@ -319,7 +319,7 @@ void main() {
 
   group('VerbosityLevel enum value set', () {
     test('contains the 4 levels in expected order', () {
-      // L7 lock — verbosity-level taxonomy must be stable for downstream
+      // Locked: the verbosity-level taxonomy must be stable for downstream
       // UX layers that switch on this enum.
       expect(
         VerbosityLevel.values,

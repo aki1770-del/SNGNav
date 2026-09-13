@@ -2,8 +2,8 @@ import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('forDriverContext — cross-feature integration of '
-      '#28+#29+#30 with existing context layering', () {
+  group('forDriverContext — cross-feature integration of circadianPhase, '
+      'sessionState and confidence with existing context layering', () {
     const dc = DriverContext(
       profile: DriverProfile.ageingRural,
       state: DriverState.alert,

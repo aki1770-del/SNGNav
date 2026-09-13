@@ -9,7 +9,7 @@
 /// function, two opposite treatments of one missing input.
 ///
 /// These tests lock the property that makes the residual-moisture branch
-/// honest without changing a single number a consumer sees today:
+/// invent no temperature, without changing any number a consumer sees today:
 ///
 ///  1. the surface-moisture calibration ignores `ambientCelsius`, so an
 ///     absent ambient costs the driver nothing and no temperature needs to
@@ -20,7 +20,7 @@
 ///     per-profile baseline stands, rather than deriving a driver-facing
 ///     threshold from a temperature nobody read (`absent ambient` group).
 ///
-/// **Honest bound, stated so it is not mistaken for more than it is.**
+/// **Limit, stated so it is not mistaken for more than it is.**
 /// Because the calibration ignores `ambientCelsius` today, no test here can
 /// distinguish *which* double the old code passed: `5.0` and `-273.15`
 /// produce identical output, and so does not passing one at all. What is
@@ -140,10 +140,10 @@ void main() {
             // The calibration reads ambient and we have none, so this
             // release answers with the per-profile baseline.
             //
-            // The baseline is the honest INPUT, not the honest ANSWER, and
-            // this assertion must not be read as claiming otherwise.
+            // The baseline is an INPUT nobody invented, not the true ANSWER,
+            // and this assertion must not be read as claiming otherwise.
             // Measured against a calibration whose half-life lengthens in
-            // the cold: 30 minutes after rain, ageingRural's honest floor
+            // the cold: 30 minutes after rain, ageingRural's correct floor
             // at a true −5 °C is 560 m; 0.11.3's invented 5.0 reached
             // 554 m; the baseline asserted here is 300 m. Withholding is
             // 260 m short — further from the truth than the fabrication it

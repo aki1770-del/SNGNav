@@ -112,15 +112,15 @@ class AlertExplainer {
     required this.localeTag,
   });
 
-  /// Look up the AAA-designed (condition, action) tuple for the active
+  /// Look up the (condition, action) tuple for the active
   /// profile.
   ///
   /// Returns the verbosity level that profile expects and the
   /// pre-localized action string. The 36 high-action cells (6 profiles
   /// × 6 high-action conditions: WET, SNOW, ICE, SLUSH, WET_ICE,
-  /// LOOSE_GRAVEL) come from the AAA design brief, sourced from JAF /
+  /// LOOSE_GRAVEL) are sourced from JAF /
   /// MLIT public driving-guidance materials. UNKNOWN and DRY get
-  /// profile-flat content per the brief (no per-profile differentiation
+  /// profile-flat content (no per-profile differentiation
   /// for those two conditions in v0.4).
   factory AlertExplainer.forConditionAndProfile(
     RoadSurfaceCondition condition,
@@ -137,7 +137,7 @@ class AlertExplainer {
     );
   }
 
-  /// Verbosity level for [profile] per the AAA design brief mapping.
+  /// Verbosity level for [profile].
   static VerbosityLevel _verbosityFor(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.professional:
@@ -163,7 +163,7 @@ class AlertExplainer {
 
   /// Per-(condition, profile) action string.
   ///
-  /// 36 high-action cells from the AAA design brief table; UNKNOWN
+  /// 36 high-action cells; UNKNOWN
   /// and DRY get profile-flat content (one string per profile).
   /// Sources: JAF snow-driving safety, MLIT Hokkaido snow-road guide,
   /// NEXCO public driver-guidance.
@@ -206,7 +206,7 @@ class AlertExplainer {
             // nothing: measured through open_jtalk it renders as SILENCE, so a
             // professional driver hears 「（無音）、注意」— a caution with no
             // hazard named. Terse is right for this profile; unpronounceable is
-            // not. Terminology per 表記規準 v1 (2026-07-21) §V2.
+            // not.
             return '濡れた路面、注意';
           case DriverProfile.agriculturalForestry:
             return '濡れた路面、未舗装路では泥濘に注意';

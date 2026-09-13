@@ -15,7 +15,7 @@
 /// describe the vehicle population they serve. Tokens are advisory
 /// strings, NOT control inputs: returning `'kei-car'` does not change
 /// vehicle behaviour, it only sharpens the threshold-tuning floor for
-/// a known under-served cohort (e.g. HER kei-car-at-65 default).
+/// a known under-served cohort (e.g. kei-car drivers over 65).
 ///
 /// **Driver-always-drives invariant** (load-bearing): the provider
 /// returns advisory tokens consumed for threshold tuning. It does NOT

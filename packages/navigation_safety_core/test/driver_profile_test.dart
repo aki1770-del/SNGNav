@@ -156,7 +156,7 @@ void main() {
     });
 
     test('foreignTouristSnowZone is most-conservative on every dimension', () {
-      // 0.3.0: closes the V100 gap where foreign-tourist-in-snow-zone was
+      // 0.3.0: closes the gap where foreign-tourist-in-snow-zone was
       // previously mis-mapped. Combines novice-equivalent unfamiliarity with
       // the local conditions + likely non-winterised rental vehicle +
       // language-localization gaps in road signage. The loom shifts caution

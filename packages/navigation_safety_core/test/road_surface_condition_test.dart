@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 void main() {
   group('RoadSurfaceCondition enum value set', () {
     test('contains the 8 VSS allowed values', () {
-      // L7 (Taxonomy-Cross-Reference Gate) lock — VSS PR #892 ships
+      // Taxonomy cross-reference lock — VSS PR #892 ships
       // exactly these 8 values; any addition / removal / reorder requires
       // deliberate audit (consuming code may switch on this enum).
       expect(
@@ -100,7 +100,7 @@ void main() {
 
   group('RoadSurfaceConditionGlossary.forConditionAndProfile', () {
     test('every (profile × condition) pair returns non-empty entry', () {
-      // L7 lock — exhaustive coverage. 6 profiles × 8 conditions = 48
+      // Locks exhaustive coverage. 6 profiles × 8 conditions = 48
       // combinations must each produce a non-null, non-empty glossary
       // entry. Per-profile overrides apply for ICE / SNOW / WET_ICE /
       // SLUSH (the high-risk subset where vocabulary precision matters;
@@ -126,7 +126,7 @@ void main() {
     });
 
     test('foreignTouristSnowZone ICE uses EN-default + simplified JA', () {
-      // EN-default policy per AAA design brief (2026-04-27): foreign
+      // EN-default policy: foreign
       // tourists cannot parse kanji-only output mid-drive; EN string
       // is TTS-default; simplified JA is available as secondary.
       final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
@@ -223,7 +223,7 @@ void main() {
 
     test('SLUSH foreignTouristSnowZone uses EN-default + simplified JA '
         '(0.7.1)', () {
-      // EN-default policy per AAA design brief: foreign tourists
+      // EN-default policy: foreign tourists
       // cannot parse kanji-only output mid-drive; EN string is
       // TTS-default; simplified JA available as secondary.
       final g = RoadSurfaceConditionGlossary.forConditionAndProfile(

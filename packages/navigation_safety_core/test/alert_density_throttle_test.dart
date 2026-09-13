@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 void main() {
   group('AlertDensityThrottle.defaultCapFor — per-profile defaults', () {
     test('every profile has a literature-anchored default cap', () {
-      // L7 lock — exhaustive coverage of all 6 profiles. Each cap is
+      // Locks exhaustive coverage of all 6 profiles. Each cap is
       // documented with a literature anchor in alert_density_throttle.dart
       // (defaultCapFor doc-comment).
       expect(

@@ -79,8 +79,8 @@ import 'driver_profile.dart';
 ///    throttle; the inverse would under-throttle.
 /// 6. Suppression telemetry: `shouldFire` returns the firing decision;
 ///    a returned `false` for a non-critical alert is the consuming
-///    app's signal to log a blame-free, context-rich drop record (per
-///    insight #105 — drop-records inform the L8 calibration cycle on
+///    app's signal to log a blame-free, context-rich drop record
+///    (drop-records inform calibration on
 ///    whether per-profile caps are actually too sensitive).
 class AlertDensityThrottle {
   /// Cap on advisory alerts in a single rolling [window]. An advisory

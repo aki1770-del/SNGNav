@@ -3,7 +3,7 @@
 /// Couples a [DriverProfile] (trait — who the driver is) with a
 /// [DriverState] (live state — what state the driver is in right now).
 /// This is the v0.6.0 spike implementation of the trait/state matrix
-/// per Regan-Hallett-Gordon 2011 PMC4001671 (insight #23, HER Pivot 100).
+/// per Regan-Hallett-Gordon 2011 PMC4001671.
 ///
 /// `DriverContext` is **opt-in** and **additive**. v0.5.0 callers that
 /// continue to pass [DriverProfile] alone to existing factories

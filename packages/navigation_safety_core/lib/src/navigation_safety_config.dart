@@ -54,7 +54,7 @@ class NavigationSafetyConfig extends Equatable {
         // 0.3.0 calibration corrections per published literature.
         // - infoTemperatureCelsius: 0.2.0 had 5°C; combined with
         //   infoVisibilityMeters 1500m this fired alert-fatigue on
-        //   most autumn evenings in Hokkaido/Tohoku (V14 silent
+        //   most autumn evenings in Hokkaido/Tohoku (a silent
         //   safety failure per arxiv 2410.06388 + AAA-FTS). Lowered
         //   to 4°C to preserve information-tier signal without
         //   firing on routine cold autumn evenings.
@@ -355,7 +355,7 @@ class NavigationSafetyConfig extends Equatable {
   /// docs say may happen "without an API break", behind the caret range
   /// this package depends through.
   ///
-  /// **Honest bounds.** Agreement across [_ambientProbesCelsius] is
+  /// **Limits.** Agreement across [_ambientProbesCelsius] is
   /// evidence of independence, not proof of it: a calibration that
   /// modulated the half-life while returning identical values at exactly
   /// these three temperatures would pass. And the durable fix is not
@@ -446,17 +446,17 @@ class NavigationSafetyConfig extends Equatable {
   ///   that one returns; otherwise its result reaches this config
   ///   unchecked. A throw from its method leaves this factory.
   /// - [circadianPhase] — time-of-day circadian classification
-  ///   (#28). When supplied, the per-phase multiplier
+  ///   (0.10.0). When supplied, the per-phase multiplier
   ///   ([CircadianPhaseMultiplier.multiplier], always `>= 1.0`) is
   ///   applied to the warning-tier visibility floor
   ///   (caution-add-only).
   /// - [sessionState] — driving-session-state with consecutive-day
-  ///   counter + cumulative-fatigue classification (#29). When
+  ///   counter + cumulative-fatigue classification (0.10.0). When
   ///   supplied, a per-class lift adjusts the warning-tier visibility
   ///   floor (caution-add-only; `rested` no-op).
   /// - [confidence] + [isHighConfidenceConfirmed] —
   ///   self-assessed-confidence signal with cap-override-with-
-  ///   confirmation pattern (#30). [Confidence.low] multiplies the
+  ///   confirmation pattern (0.10.0). [Confidence.low] multiplies the
   ///   alerts-per-minute cap by 0.75 automatically, but never below
   ///   1.0, so `foreignTouristSnowZone`'s default cap of 1.0 does not
   ///   change. [Confidence.high]

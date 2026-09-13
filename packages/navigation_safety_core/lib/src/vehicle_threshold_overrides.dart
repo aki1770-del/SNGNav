@@ -85,7 +85,7 @@
 /// registration), and the place it is exercised (every frame) is
 /// non-fatal but never silent.
 ///
-/// ## Honest bound on registration-time validation
+/// ## Limit of registration-time validation
 ///
 /// [VehicleThresholdOverrides.validated] probes each transform against
 /// a finite battery of baselines (see [registrationProbeCount]). It is
@@ -102,7 +102,7 @@
 /// is therefore refused at registration, even if every config it meets
 /// through this package's own factories carries a `null` cap.
 ///
-/// **HER kei-car-at-65 cohort default**: the [withKeiCarDefault]
+/// **Kei-car cohort default (drivers over 65)**: the [withKeiCarDefault]
 /// factory ships a built-in override for the `'kei-car'` token. The
 /// override raises `warningVisibilityMeters` by `+50m` and
 /// `warningTemperatureCelsius` by `+1°C` relative to the input
@@ -305,7 +305,7 @@ class VehicleOverrideRejection {
 /// [NavigationSafetyConfig.forProfileWithContext]. See library
 /// documentation for the caution-add-only invariant, the
 /// severity-not-profile invariant, where each is refused, and the
-/// HER kei-car-at-65 cohort default.
+/// kei-car cohort default (drivers over 65).
 class VehicleThresholdOverrides {
   /// Map of vehicle-class token (e.g. `'kei-car'`) to a function that
   /// produces a caution-adding-only override of the supplied baseline
@@ -415,8 +415,8 @@ class VehicleThresholdOverrides {
     return registry;
   }
 
-  /// Construct a registry pre-loaded with the HER kei-car-at-65
-  /// cohort default override. The default keys on the `'kei-car'`
+  /// Construct a registry pre-loaded with the kei-car cohort
+  /// default override (drivers over 65). The default keys on the `'kei-car'`
   /// token and applies caution-adding-only deltas:
   ///
   /// - `warningVisibilityMeters` += 50m (kei-car windscreen +
@@ -807,7 +807,7 @@ class VehicleThresholdOverrides {
     rejectionReporter = printRejection;
   }
 
-  /// Built-in HER kei-car-at-65 default override. See
+  /// Built-in kei-car cohort default override (drivers over 65). See
   /// [VehicleThresholdOverrides.withKeiCarDefault] for delta semantics
   /// and the design-default-hypothesis flag.
   static NavigationSafetyConfig _keiCarOverride(

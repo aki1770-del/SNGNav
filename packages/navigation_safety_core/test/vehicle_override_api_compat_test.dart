@@ -13,7 +13,7 @@
 // enum gains a value or the constructor changes its parameters, this file
 // stops compiling and every test in the package fails to load with it.
 //
-// Honest bound: a new OPTIONAL named parameter on the constructor would
+// Limit: a new OPTIONAL named parameter on the constructor would
 // still compile here, and so would a new public static member. Those are
 // not breaking for a caller, and this file does not detect them.
 

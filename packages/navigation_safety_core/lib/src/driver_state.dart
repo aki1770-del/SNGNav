@@ -9,8 +9,8 @@
 /// [DriverProfile] continue to receive the v0.5.0 behaviour.
 ///
 /// State is intentionally coarse-grained at this spike. The full
-/// trait × state matrix (Regan T3) is a v1.0 architecture decision
-/// per insight #23 of the HER Pivot 100. This enum is a forward-
+/// trait × state matrix (Regan T3) is a v1.0 architecture decision.
+/// This enum is a forward-
 /// compatible foothold, not the final shape.
 ///
 /// State adjustments are **conservative-only** for thresholds — they

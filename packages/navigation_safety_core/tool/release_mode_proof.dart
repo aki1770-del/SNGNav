@@ -44,7 +44,7 @@ final List<String> _failures = <String>[];
 ///
 /// It did not, until 2026-09-13. The author reported "16 cases" for a
 /// run that emits 15, having counted the `_check` DEFINITION as a call
-/// site by eye; ORS caught it by running `grep -c '^  ok '` against the
+/// site by eye; it was caught by running `grep -c '^  ok '` against the
 /// real output. A proof whose case count comes from a person reading
 /// its source is a proof with an unmeasured number in it -- which is
 /// the defect class this whole file exists to catch, one level up.

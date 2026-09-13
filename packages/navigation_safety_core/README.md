@@ -215,7 +215,7 @@ Per-formula citations live in each calibration source file's header
 comment in the `navigation_safety_calibration` package.
 
 **Determinism note (safety-class).** These constants are the
-design-default baseline HER relies on (Magnus black-ice constants; the
+design-default baseline the driver relies on (Magnus black-ice constants; the
 surface-moisture half-life; the braking-distance default, 5.5 m/s², a
 dry-pavement value and not a worst case for snow or ice; the
 per-profile visibility floor). The calibration package is **caution-add-only — the per-profile
