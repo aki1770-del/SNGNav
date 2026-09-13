@@ -59,14 +59,26 @@ design-default hypotheses pending field-measurement validation.
   permitted to relax (loosen) and only via the
   cap-override-with-confirmation pattern; the cap-loosen direction
   requires `isHighConfidenceConfirmed == true` (driver-always-drives
-  invariant). Verified by the negative-assertion tests in the four
-  new test files.
-- **Driver-always-drives contract** — the runtime debug-assertion in
-  `forDriverContext` catches any path where `Confidence.high`
-  without confirmation modifies the cap. Verified by the cap-flow
-  test in `test/confidence_provider_test.dart`.
+  invariant). The four new test files check this, but none of them
+  makes an assertion fire, and none of their checks of the cap
+  passes a vehicle-class override: from 0.10.0 through 0.11.6 that
+  layer could loosen the cap without confirmation (next item).
+- **Driver-always-drives contract** — for `Confidence.high` without
+  confirmation, the confidence step in `forDriverContext` returns the
+  cap it received, unchanged, in every build mode; the cap-flow tests
+  in `test/confidence_provider_test.dart` check this with no
+  vehicle-class override. The runtime debug-assertion beside that
+  step compares the step's result with the cap it received, so a cap
+  raised before the step passes it. From 0.10.0 through 0.11.6 a
+  vehicle-class override could raise the cap before the step, with no
+  confirmation and without tripping the assertion (10.0 against the
+  `ageingRural` default of 1.2, on every published version in that
+  range). From 0.11.7 `VehicleThresholdOverrides` refuses any change
+  to the cap; a registry whose class implements
+  `VehicleThresholdOverrides` is not checked and can still change it
+  (see `SAFETY_BOUNDARY.md` section 7.2).
 - **Back-compat** — `forProfile`, `forProfileWithContext`, and
-  `forDriverContext` (without the four new optional parameters)
+  `forDriverContext` (without the five new optional parameters)
   unchanged from 0.9.x.
 
 ### Out of scope at 0.10.0
@@ -243,11 +255,12 @@ earlier); the magnitudes have known calibration issues:
 
 ### Unverifiable (kept at 0.2.0 values)
 
-- **`safeScoreFloor` / `infoScoreFloor` / `warningScoreFloor` shifts of
-  +0.05** per profile (ageingRural / noviceUrban) — no published
-  mapping exists between numerical safety scores and reaction-time /
-  cognitive-load deltas. Score floors stay at 0.2.0 values pending
-  evidence that justifies a specific magnitude.
+- **`safeScoreFloor` / `infoScoreFloor` / `warningScoreFloor` shifts**
+  per profile (+0.05 on all three for ageingRural; +0.05, +0.05 and
+  +0.02 for noviceUrban) — no published mapping exists between
+  numerical safety scores and reaction-time / cognitive-load deltas.
+  Score floors stay at 0.2.0 values pending evidence that justifies a
+  specific magnitude.
 
 ### Wrong dimensions tuned (deferred to broader v0.x or v1.x design)
 
@@ -276,15 +289,22 @@ the package boundary, not a Pure Dart core unilateral change.
 `navigation_safety_core` (Pure Dart) sets thresholds per profile.
 **UX behavior** — voice-guidance verbosity, modal-alert duration,
 glance-time targets, alert-explainer surfaces — lives in consuming
-Flutter packages (`navigation_safety`, `voice_guidance`) and is **not
-yet differentiated per profile** in those packages.
+Flutter packages (`navigation_safety`, `voice_guidance`), and when this
+section was written for 0.3.0 it was **not differentiated per
+profile** in those packages.
 
-Consequence: today an app developer who calls
+Consequence at 0.3.0: an app developer who called
 `NavigationSafetyConfig.forProfile(DriverProfile.ageingRural)` and
-integrates with `navigation_safety` (Flutter wrapper) gets EARLIER
+integrated with `navigation_safety` (Flutter wrapper) got EARLIER
 alerts but in the SAME format as for `snowZoneExperienced`. Same voice
 verbosity. Same modal duration. Same glance-time. Same explainer
-(none).
+(none). Both packages have added per-profile behaviour since:
+`navigation_safety` 0.9.6 scales the modal-alert duration per profile
+(`modalAlertDurationFor`) and, when an alert carries a road-surface
+condition, builds its message with
+`AlertExplainer.forConditionAndProfile` for the driver profile it is
+given; `voice_guidance` 0.7.7 sets a per-profile speaking rate
+(`VoiceGuidanceConfig.forProfile`).
 
 The format-mismatch can erase the earlier-alert benefit
 ([Bian et al PubMed 38669900](https://pubmed.ncbi.nlm.nih.gov/38669900/)
@@ -293,11 +313,12 @@ long enough to be processed; [Strayer/AAA PMC7283540](https://pmc.ncbi.nlm.nih.g
 shows identical voice formats cost older drivers 8+ seconds more
 eyes-off-road than younger).
 
-**0.3.0 adds `assertUxDifferentiated()` scaffolding** — a runtime
-advisory that fires when a profile is selected but the consuming UX
-layer has not registered a differentiator. Today the advisory is a
-no-op stub; full implementation requires coordination with consuming
-Flutter packages and lands in v0.4+.
+**0.3.0 added `assertUxDifferentiated()`** as a no-op stub. It is no
+longer a stub: calling `assertUxDifferentiated(profile)` throws an
+`AssertionError` in a debug build when no UX differentiator is
+registered for that profile (`registerUxDifferentiator`), and does
+nothing in a release build. Selecting a profile does not call it;
+integration code has to.
 
 ---
 
@@ -317,9 +338,9 @@ If you are an app developer integrating `navigation_safety_core`:
    filing an issue describing your use case so the next iteration can
    incorporate it.
 4. **For UX-differentiated alert formatting** (voice verbosity, modal
-   timing, glance-budget), you must implement profile-aware UX
-   yourself in v0.x. The profile-aware UX layer in consuming Flutter
-   packages lands in v0.4+ pending coordination.
+   timing, glance-budget), check what the consuming Flutter package
+   you use already differentiates per profile (see "Threshold-only
+   differentiation" above) and implement the rest yourself.
 
 ---
 
@@ -344,7 +365,8 @@ TTS-ready phrases (`jaSpeakString`, `enSpeakString`). It does NOT
 actuate any vehicle behavior and is NOT safety-critical in the control
 sense (per the package's ASIL-QM display-only stance). Speed
 advisories, action-coupled explanations, and alert-density throttling
-are separate surfaces planned for the next minor release.
+were planned as separate surfaces for the next minor release, and
+shipped in 0.4.0 as `AlertExplainer` and `AlertDensityThrottle`.
 
 ### Per-profile vocabulary tested but not yet population-validated
 
@@ -426,10 +448,11 @@ strict integer caps should pass an integer literal as the override.
 
 ### No runtime registry
 
-The 0.4.1 `lib/src/looms.dart` barrel re-exports the runtime looms
-(`AlertDensityThrottle`, `AlertExplainer`) under a category-level
-doc-comment, and `LOOMS.md` documents each loom's 3-slot vision
-attribution. The catalog does NOT auto-discover its members: there is
+The `lib/src/looms.dart` barrel, added in 0.4.1, re-exports the
+runtime looms (`AlertDensityThrottle`, `AlertExplainer` and
+`LoomFitTelemetry`) under a category-level doc-comment, and `LOOMS.md`
+describes `AlertDensityThrottle` and `AlertExplainer`. The catalog
+does NOT auto-discover its members: there is
 no runtime registry, no introspection at app start, and no
 auto-instantiation. Integrating apps instantiate each loom explicitly
 where they wire it into their alert pipeline. A reflection-based or
@@ -437,28 +460,14 @@ code-generated registry is **deferred** to a future minor release
 (likely v0.5+) — once enough runtime looms exist that explicit wiring
 becomes a meaningful integration cost.
 
-### No cross-language Loom Protocol verification
+### No vision attribution on the looms today
 
-The 3-slot vision attribution (`sakichi_vision_id` /
-`method_vision_ids` / `stance_vision_ids`) on each runtime loom is a
-**documentation convention** today. No runtime check enforces that a
-Dart loom and a Python loom (in the SPA AI build-time loom kit)
-sharing the same conceptual `loom_id` declare matching attribution
-slots. There is also no schema validator that the values land in the
-documented `1..100` range. **Deferred** — cross-language verification
-requires a shared schema registry that does not exist yet (the
-`LoomProtocolJsonSchema` candidate is in the SPA AI roadmap,
-unscheduled).
-
-### Vision IDs are documentation, not type-checked
-
-The 3-slot attribution is plain doc-comment text. Mistyping a vision
-number, omitting a slot, or letting a slot drift out of date as the
-loom evolves will not be caught at compile time. Reviewers should
-treat the attribution slots like any other doc-comment field. A future
-package release may add a custom Dart `analyzer_plugin` rule that
-parses these slots; for v0.4.1 the responsibility lives with
-reviewers.
+From 0.4.1 each runtime loom carried a 3-slot vision attribution
+(`sakichi_vision_id` / `method_vision_ids` / `stance_vision_ids`) in
+its doc comment and in `LOOMS.md`, as documentation. The loom doc
+comments and `LOOMS.md` no longer carry those slots, so there is no
+attribution left for a runtime check, a schema validator or an
+analyzer rule to verify.
 
 ---
 

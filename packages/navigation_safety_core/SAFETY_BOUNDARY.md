@@ -1,10 +1,10 @@
 # navigation_safety_core — Safety-Class Boundary Record
 
 **Package**: `navigation_safety_core`
-**Version**: 0.11.7 (first written for 0.10.0)
-**Boundary record version**: 1.4 (0.11.7: the vehicle-class refusal in section 7.2 covers every threshold field; corrections in sections 1, 3, 5, 6, 7, 7.1, 7.3, 8 and 9)
+**Version**: 0.11.7 (first written for 0.8.0)
+**Boundary record version**: 1.4 (0.11.7: the vehicle-class refusal in section 7.2 covers every threshold field; corrections in sections 1, 3, 5, 6, 7, 7.1, 7.2, 7.3, 8 and 9)
 **Authoring skill**: AAA (automotive-adas-analyst)
-**Date**: 2026-05-05; revised for 0.11.7
+**Date**: 2026-05-04; revised for 0.11.7
 **Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 **Related**: README.md §Standards mapping + KNOWN_LIMITATIONS.md §Standards mapping (current advisory framing) + LICENSE BSD-3-Clause
 
@@ -36,7 +36,7 @@
 
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. Per README.md §Standards mapping: *"Consult a qualified Japanese-domestic functional-safety partner before any IVI-vendor or OEM-pilot integration that targets the Japanese-domestic certification surface."*
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to advisory-class navigation packages; surfaces relevant publication deltas to AAA at next monthly cycle.
+**JIS / JASO watch**: no output from a watch on JIS / JASO publications has been recorded for this package, so do not rely on this section to reflect later changes to those standards.
 
 ## 6 — Severity-not-profile invariant
 
@@ -135,6 +135,17 @@ is reset to its baseline value and reported, every other field of
 the override is kept, and the result is always a config that a fully
 legal transform could have produced. A transform that throws is
 refused whole: the baseline is returned and the error is reported.
+Both checks belong to `VehicleThresholdOverrides` itself
+(`validated` and `applyOverrideForToken`), and the factories call the
+registry's own `applyOverrideForToken`. A registry whose class
+implements `VehicleThresholdOverrides`, or extends it and replaces
+that method, therefore gets neither check: what it returns is
+applied unchecked and unreported, in every build mode (measured: a
+warning visibility floor lowered from 300 m to 250 m, a halved
+critical visibility threshold and a cap of 10.0 all reach the
+`ageingRural` config). A registry built with
+`VehicleThresholdOverrides.validated` gets both checks; one built
+with its plain constructor gets the drive-path check.
 Negative-test coverage in `test/vehicle_threshold_overrides_test.dart`
 and `test/vehicle_threshold_overrides_all_fields_test.dart` confirms
 both refusals on relaxing warning floors, on a changed score floor,
@@ -155,10 +166,15 @@ value is not safe by construction either: a critical alert bypasses
 the density cap but still takes a slot in its rolling window, info
 alerts share the cap with warnings, and a transform receives no
 `DriverProfile`, so a cap it writes replaces the per-profile default
-with a constant that ignores the driver. Through 0.11.6 the critical
-thresholds, the info thresholds and the cap override were checked by
-neither and were applied as written; from 0.11.7 an override that
-tightened one of them has that field reset to the baseline. This
+with a constant that ignores the driver. Through 0.11.6 no check
+covered the critical thresholds, the info thresholds or the cap
+override, in any build mode, so a change to one of them took effect
+whenever the rest of the override did: in 0.11.6, only when the
+override broke none of the five fields that version checked (the two
+warning thresholds and the three score floors), because an override
+that broke one was refused whole, the unchecked change with it. From
+0.11.7 a change to any of them, in either direction and a tightening
+included, is refused in both places described above. This
 preserves the existing severity-driven (not profile-driven, not
 vehicle-class-driven) plane-allocation discipline. The vehicle-class
 dimension lives entirely in the threshold-tuning layer; it does NOT
@@ -189,7 +205,7 @@ package consumes only the typed token at this layer).
 This section addends the safety-class boundary for the DriverState-
 axis scaffolding added in 0.10.0 (`CircadianPhase` +
 `SessionStateProvider` + `SessionState` + `CumulativeFatigueClass` +
-`ConfidenceProvider` + `Confidence` + four new optional named
+`ConfidenceProvider` + `Confidence` + five new optional named
 parameters on `NavigationSafetyConfig.forDriverContext`). All three
 inputs compose as caution-adding adjustments AFTER the trait
 baseline, the live-context layering, the vehicle-class override, AND
@@ -216,8 +232,9 @@ lift and that the lift rises with each fatigue class; and
 `test/navigation_safety_config_driver_state_inputs_test.dart` checks
 that the warning visibility floor stays at or above the profile
 baseline across the 16 phase, fatigue and confidence combinations it
-runs, that the critical thresholds are preserved, and that an
-unconfirmed `Confidence.high` never changes the cap. The
+runs, that the critical thresholds are preserved, and that, with no
+vehicle-class override passed, an unconfirmed `Confidence.high` never
+changes the cap. The
 cap-override-with-confirmation pattern (#30) is the ONLY exception
 to the warn-thresholds-only-add-caution rule and applies only to the
 alerts-per-minute cap (rate-limit), never to the warning visibility
@@ -244,18 +261,23 @@ explicitly encodes the driver-always-drives invariant for #30:
 the integrator must build a confirmation surface and set
 `isHighConfidenceConfirmed = true` ONLY after the driver has
 affirmatively confirmed. Without the affirmative confirmation flag,
-`Confidence.high` is treated as `Confidence.medium` (no-op). The
-confidence step returns the baseline cap for an unconfirmed
-`Confidence.high` in every build mode, and the factory also carries a
-debug-mode assertion that catches any divergence
-(*"Confidence.high without isHighConfidenceConfirmed must NOT modify
-alertsPerMinuteCapOverride; driver-always-drives invariant violated."*).
-Within this package's factories the cap is loosened only through this
-pattern: the system never auto-relaxes the safety cap from a
-high-confidence reading alone, and from 0.11.7 a vehicle-class
-override may not change the cap (section 7.2); through 0.11.6 it
-could, without the driver's confirmation. An integrator that sets
-`alertsPerMinuteCapOverride` directly owns that decision.
+`Confidence.high` is treated as `Confidence.medium` (no-op). For an
+unconfirmed `Confidence.high` the confidence step returns the cap it
+received, unchanged, in every build mode. The factory's debug-mode
+assertion (*"Confidence.high without isHighConfidenceConfirmed must
+NOT modify alertsPerMinuteCapOverride; driver-always-drives invariant
+violated."*) compares that step's result with the cap the step
+received, so a cap raised before that step passes it. The system
+never auto-relaxes the safety cap from a high-confidence reading
+alone. From 0.10.0 through 0.11.6 a vehicle-class override could
+raise the cap before that step, without the driver's confirmation
+and without tripping the assertion (10.0 against the `ageingRural`
+default of 1.2, on every published version in that range); from
+0.11.7 `VehicleThresholdOverrides` refuses any change to the cap
+(section 7.2), but a registry whose class implements it can still
+change the cap unchecked. An integrator that sets
+`alertsPerMinuteCapOverride` directly, or supplies such a registry,
+owns that decision.
 
 **UNVERIFIED-magnitude flags**: per-phase circadian multipliers,
 per-class fatigue lifts, and confidence cap modifiers are
