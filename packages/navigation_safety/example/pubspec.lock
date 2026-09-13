@@ -169,7 +169,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.9.5"
+    version: "0.9.6"
   navigation_safety_calibration:
     dependency: transitive
     description:
@@ -184,7 +184,7 @@ packages:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.4"
+    version: "0.11.6"
   nested:
     dependency: transitive
     description:
@@ -213,10 +213,10 @@ packages:
     dependency: "direct main"
     description:
       name: routing_engine
-      sha256: "8fc21ca36714d4205aa70c8f2bcfcd00585ddf93069400e6ba2a6d72a8f61508"
+      sha256: "80318a589a2adffdbc26c20d9a4811579043a0d0c529649a8cc85370ad1ac3e3"
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.0"
+    version: "0.6.3"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -303,5 +303,5 @@ packages:
     source: hosted
     version: "1.1.1"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.10.0 <4.0.0"
   flutter: ">=3.18.0-18.0.pre.54"
