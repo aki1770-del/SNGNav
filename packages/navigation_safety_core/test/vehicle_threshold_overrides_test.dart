@@ -100,67 +100,46 @@ void main() {
   group(
     'VehicleThresholdOverrides — caution-add-only invariant (negative)',
     () {
-      test('relaxing warningVisibilityMeters trips the debug assertion', () {
-        final baseline = NavigationSafetyConfig.forProfile(
-          DriverProfile.snowZoneExperienced,
-        );
-        final reg = VehicleThresholdOverrides({
-          'relaxing-vis': (b) => NavigationSafetyConfig(
-            safeScoreFloor: b.safeScoreFloor,
-            infoScoreFloor: b.infoScoreFloor,
-            warningScoreFloor: b.warningScoreFloor,
-            infoTemperatureCelsius: b.infoTemperatureCelsius,
-            warningTemperatureCelsius: b.warningTemperatureCelsius,
-            criticalTemperatureCelsius: b.criticalTemperatureCelsius,
-            infoVisibilityMeters: b.infoVisibilityMeters,
-            warningVisibilityMeters: b.warningVisibilityMeters - 50,
-            criticalVisibilityMeters: b.criticalVisibilityMeters,
-            alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
-          ),
-        });
-        expect(
-          () => reg.applyOverrideForToken('relaxing-vis', baseline),
-          throwsA(isA<AssertionError>()),
-        );
-      });
-
-      test('relaxing warningTemperatureCelsius trips the debug assertion', () {
-        final baseline = NavigationSafetyConfig.forProfile(
-          DriverProfile.snowZoneExperienced,
-        );
-        final reg = VehicleThresholdOverrides({
-          'relaxing-temp': (b) => NavigationSafetyConfig(
-            safeScoreFloor: b.safeScoreFloor,
-            infoScoreFloor: b.infoScoreFloor,
-            warningScoreFloor: b.warningScoreFloor,
-            infoTemperatureCelsius: b.infoTemperatureCelsius,
-            warningTemperatureCelsius: b.warningTemperatureCelsius - 1,
-            criticalTemperatureCelsius: b.criticalTemperatureCelsius,
-            infoVisibilityMeters: b.infoVisibilityMeters,
-            warningVisibilityMeters: b.warningVisibilityMeters,
-            criticalVisibilityMeters: b.criticalVisibilityMeters,
-            alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
-          ),
-        });
-        expect(
-          () => reg.applyOverrideForToken('relaxing-temp', baseline),
-          throwsA(isA<AssertionError>()),
-        );
-      });
-
       test(
-        'modifying safeScoreFloor trips the severity-not-profile assertion',
+        'relaxing warningVisibilityMeters is REFUSED in every build mode',
         () {
           final baseline = NavigationSafetyConfig.forProfile(
             DriverProfile.snowZoneExperienced,
           );
           final reg = VehicleThresholdOverrides({
-            'severity-modifying': (b) => NavigationSafetyConfig(
-              safeScoreFloor: 0.95, // changed
+            'relaxing-vis': (b) => NavigationSafetyConfig(
+              safeScoreFloor: b.safeScoreFloor,
               infoScoreFloor: b.infoScoreFloor,
               warningScoreFloor: b.warningScoreFloor,
               infoTemperatureCelsius: b.infoTemperatureCelsius,
               warningTemperatureCelsius: b.warningTemperatureCelsius,
+              criticalTemperatureCelsius: b.criticalTemperatureCelsius,
+              infoVisibilityMeters: b.infoVisibilityMeters,
+              warningVisibilityMeters: b.warningVisibilityMeters - 50,
+              criticalVisibilityMeters: b.criticalVisibilityMeters,
+              alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
+            ),
+          });
+          expect(
+            () => reg.applyOverrideForToken('relaxing-vis', baseline),
+            throwsA(isA<ArgumentError>()),
+          );
+        },
+      );
+
+      test(
+        'relaxing warningTemperatureCelsius is REFUSED in every build mode',
+        () {
+          final baseline = NavigationSafetyConfig.forProfile(
+            DriverProfile.snowZoneExperienced,
+          );
+          final reg = VehicleThresholdOverrides({
+            'relaxing-temp': (b) => NavigationSafetyConfig(
+              safeScoreFloor: b.safeScoreFloor,
+              infoScoreFloor: b.infoScoreFloor,
+              warningScoreFloor: b.warningScoreFloor,
+              infoTemperatureCelsius: b.infoTemperatureCelsius,
+              warningTemperatureCelsius: b.warningTemperatureCelsius - 1,
               criticalTemperatureCelsius: b.criticalTemperatureCelsius,
               infoVisibilityMeters: b.infoVisibilityMeters,
               warningVisibilityMeters: b.warningVisibilityMeters,
@@ -169,11 +148,35 @@ void main() {
             ),
           });
           expect(
-            () => reg.applyOverrideForToken('severity-modifying', baseline),
-            throwsA(isA<AssertionError>()),
+            () => reg.applyOverrideForToken('relaxing-temp', baseline),
+            throwsA(isA<ArgumentError>()),
           );
         },
       );
+
+      test('modifying safeScoreFloor is REFUSED in every build mode', () {
+        final baseline = NavigationSafetyConfig.forProfile(
+          DriverProfile.snowZoneExperienced,
+        );
+        final reg = VehicleThresholdOverrides({
+          'severity-modifying': (b) => NavigationSafetyConfig(
+            safeScoreFloor: 0.95, // changed
+            infoScoreFloor: b.infoScoreFloor,
+            warningScoreFloor: b.warningScoreFloor,
+            infoTemperatureCelsius: b.infoTemperatureCelsius,
+            warningTemperatureCelsius: b.warningTemperatureCelsius,
+            criticalTemperatureCelsius: b.criticalTemperatureCelsius,
+            infoVisibilityMeters: b.infoVisibilityMeters,
+            warningVisibilityMeters: b.warningVisibilityMeters,
+            criticalVisibilityMeters: b.criticalVisibilityMeters,
+            alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
+          ),
+        });
+        expect(
+          () => reg.applyOverrideForToken('severity-modifying', baseline),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
 
       test('caution-equal (no change) override is permitted', () {
         // The invariant is caution-add-only, so equal values must pass

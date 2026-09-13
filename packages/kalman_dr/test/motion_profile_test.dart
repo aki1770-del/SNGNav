@@ -47,29 +47,33 @@ void main() {
       expect(MotionProfile.roadVehicle.asVector, [1e-10, 1e-10, 0.5, 1.0]);
     });
 
-    test('the default constructor is roadVehicle — upgrading changes nothing',
-        () {
-      expect(KalmanFilter().profile, same(MotionProfile.roadVehicle));
-    });
+    test(
+      'the default constructor is roadVehicle — upgrading changes nothing',
+      () {
+        expect(KalmanFilter().profile, same(MotionProfile.roadVehicle));
+      },
+    );
 
-    test('⚑ pedestrian tracks a 90-degree corner that roadVehicle smooths away',
-        () {
-      final road = _headingAfterCorner(MotionProfile.roadVehicle);
-      final ped = _headingAfterCorner(MotionProfile.pedestrian);
+    test(
+      '⚑ pedestrian tracks a 90-degree corner that roadVehicle smooths away',
+      () {
+        final road = _headingAfterCorner(MotionProfile.roadVehicle);
+        final ped = _headingAfterCorner(MotionProfile.pedestrian);
 
-      // Truth after the corner is 0 deg (due north). Lower residual = better.
-      final roadError = (road - 0.0).abs();
-      final pedError = (ped - 0.0).abs();
+        // Truth after the corner is 0 deg (due north). Lower residual = better.
+        final roadError = (road - 0.0).abs();
+        final pedError = (ped - 0.0).abs();
 
-      expect(
-        pedError,
-        lessThan(roadError),
-        reason:
-            'the pedestrian profile exists to stop the filter cutting corners; '
-            'if it does not track the turn better it is doing nothing. '
-            'road=$road ped=$ped',
-      );
-    });
+        expect(
+          pedError,
+          lessThan(roadError),
+          reason:
+              'the pedestrian profile exists to stop the filter cutting corners; '
+              'if it does not track the turn better it is doing nothing. '
+              'road=$road ped=$ped',
+        );
+      },
+    );
 
     test('CONTROL: on a STRAIGHT run the two profiles agree closely', () {
       // If the profiles differed everywhere, the corner test above would prove
@@ -102,19 +106,72 @@ void main() {
       );
     });
 
-    test('a non-positive process-noise term is refused, not silently absorbed',
-        () {
+    test(
+      'a non-positive process-noise term is refused, not silently absorbed',
+      () {
+        expect(
+          () => KalmanFilter(
+            profile: const MotionProfile(
+              latVariancePerSecond: 0,
+              lonVariancePerSecond: 1e-10,
+              speedVariancePerSecond: 0.5,
+              headingVariancePerSecond: 1.0,
+            ),
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      },
+    );
+
+    test('an INFINITE process-noise term is refused too', () {
+      // The assert this replaced claimed the terms "must all be finite and
+      // positive" and only ever checked `> 0`. `double.infinity > 0` is true,
+      // so an infinite term sailed through the guard that said it would not --
+      // in debug as well as release.
       expect(
         () => KalmanFilter(
           profile: const MotionProfile(
-            latVariancePerSecond: 0,
+            latVariancePerSecond: double.infinity,
             lonVariancePerSecond: 1e-10,
             speedVariancePerSecond: 0.5,
             headingVariancePerSecond: 1.0,
           ),
         ),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
+    });
+
+    test('a NaN process-noise term is refused', () {
+      expect(
+        () => KalmanFilter(
+          profile: const MotionProfile(
+            latVariancePerSecond: 1e-10,
+            lonVariancePerSecond: double.nan,
+            speedVariancePerSecond: 0.5,
+            headingVariancePerSecond: 1.0,
+          ),
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('the refusal NAMES the offending term', () {
+      // The old message escaped its own interpolation and printed the literal
+      // text `$profile`, so it never told the caller which term was wrong.
+      try {
+        KalmanFilter(
+          profile: const MotionProfile(
+            latVariancePerSecond: 1e-10,
+            lonVariancePerSecond: 1e-10,
+            speedVariancePerSecond: -1.0,
+            headingVariancePerSecond: 1.0,
+          ),
+        );
+        fail('expected a refusal');
+      } on ArgumentError catch (e) {
+        expect(e.name, contains('speedVariancePerSecond'));
+        expect(e.invalidValue, -1.0);
+      }
     });
 
     test('isValid rejects non-finite and non-positive terms', () {

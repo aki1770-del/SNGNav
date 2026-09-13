@@ -165,18 +165,40 @@ class KalmanFilter {
   /// [MotionProfile.roadVehicle], so this constructor behaves exactly as it did
   /// before the parameter existed.
   KalmanFilter({this.profile = MotionProfile.roadVehicle})
-    : assert(
-        profile.latVariancePerSecond > 0 &&
-            profile.lonVariancePerSecond > 0 &&
-            profile.speedVariancePerSecond > 0 &&
-            profile.headingVariancePerSecond > 0,
-        'MotionProfile terms must all be finite and positive: a non-positive '
-        'process noise breaks the covariance update silently rather than '
-        'loudly. Got: \$profile',
-      ),
-      _x = [0, 0, 0, 0],
+    : _x = [0, 0, 0, 0],
       _p = _identity(1e6), // large initial uncertainty
-      _lastTime = DateTime.fromMillisecondsSinceEpoch(0);
+      _lastTime = DateTime.fromMillisecondsSinceEpoch(0) {
+    // REFUSAL, not a post-condition: it rejects a CALLER's MotionProfile
+    // before the filter is ever used. As an `assert` it was absent from every
+    // shipped build and from `dart run` -- and a non-positive process-noise
+    // term breaks the covariance update SILENTLY, so her fused position keeps
+    // reporting a confidence it has not earned.
+    //
+    // `isFinite` is load-bearing HERE, unlike at an `int` parameter: every
+    // MotionProfile term is a `double`. The assert this replaces CLAIMED the
+    // terms "must all be finite and positive" and never checked finiteness --
+    // `double.infinity > 0` is true and sailed straight through. NaN was
+    // refused only by accident, because `NaN > 0` is false. Both are now
+    // refused on purpose, and the offending term is named: the old message
+    // escaped its own interpolation (`\$profile`) and printed the literal
+    // text instead of the value, so it never told the caller what was wrong.
+    for (final entry in <MapEntry<String, double>>[
+      MapEntry('latVariancePerSecond', profile.latVariancePerSecond),
+      MapEntry('lonVariancePerSecond', profile.lonVariancePerSecond),
+      MapEntry('speedVariancePerSecond', profile.speedVariancePerSecond),
+      MapEntry('headingVariancePerSecond', profile.headingVariancePerSecond),
+    ]) {
+      if (!(entry.value > 0) || !entry.value.isFinite) {
+        throw ArgumentError.value(
+          entry.value,
+          'profile.${entry.key}',
+          'MotionProfile terms must each be finite and positive; a '
+              'non-positive, infinite or NaN process-noise term breaks the '
+              'covariance update silently rather than loudly',
+        );
+      }
+    }
+  }
 
   /// Creates a Kalman filter initialised to a known state (for testing).
   KalmanFilter.withState({
@@ -489,7 +511,8 @@ class KalmanFilter {
     // compounded. The bare `accuracyMetres < 1.0 ? 1.0 : accuracyMetres` floor
     // that used to live here was also FALSE for NaN (`NaN < 1.0` is false), so
     // a NaN walked straight through and poisoned the whole covariance.
-    final accDeg = _effectiveAccuracyMetres(accuracyMetres) / _metresPerDegreeLat;
+    final accDeg =
+        _effectiveAccuracyMetres(accuracyMetres) / _metresPerDegreeLat;
     return _diag([
       accDeg * accDeg, // lat variance
       accDeg * accDeg, // lon variance

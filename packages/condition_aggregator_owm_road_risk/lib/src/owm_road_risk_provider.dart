@@ -52,8 +52,19 @@ class OwmRoadRiskClient {
     required this.apiKey,
     this.baseUrl = kOwmRoadRiskDefaultBaseUrl,
     http.Client? httpClient,
-  }) : httpClient = httpClient ?? http.Client(),
-       assert(apiKey != '', 'OWM Road Risk: apiKey must be non-empty.');
+  }) : httpClient = httpClient ?? http.Client() {
+    // REFUSAL, not a post-condition: it rejects a CALLER's argument before
+    // any request is made. As an `assert` it was absent from every shipped
+    // build and from `dart run`, so an empty key produced a stream of
+    // opaque 401s at the network layer instead of one clear error here.
+    if (apiKey.isEmpty) {
+      throw ArgumentError.value(
+        apiKey,
+        'apiKey',
+        'OWM Road Risk: apiKey must be non-empty',
+      );
+    }
+  }
 
   /// Fetches alerts for a single point.
   Future<List<OwmRoadRiskAlert>> fetchPoint({

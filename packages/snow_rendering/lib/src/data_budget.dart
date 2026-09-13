@@ -200,13 +200,16 @@ abstract class DataMeterProvider {
 /// FORBIDDEN within a cycle; only an integrator-supplied confirmation
 /// token may loosen the budget. The token must be constructed by the
 /// integrator with affirmative reasoning (the integrator confirms
-/// network-condition improved, user requested high-fidelity, etc.); a
-/// default-constructed token is rejected at runtime via debug-mode
-/// assertion. Mirrors the cap-override-with-confirmation pattern from
+/// network-condition improved, user requested high-fidelity, etc.); an
+/// unconfirmed token is refused in EVERY build mode -- [DataBudget.relax]
+/// throws [ArgumentError]. This was an `assert` until 2026-09-13, which
+/// meant every shipped integrator build GRANTED the auto-relax this
+/// invariant forbids. Mirrors the cap-override-with-confirmation pattern from
 /// `navigation_safety_core` 0.10.0 #30.
 class BudgetRelaxConfirmation {
-  /// Reason the integrator is loosening the budget. Required; empty
-  /// string is rejected at runtime.
+  /// Reason the integrator is loosening the budget. Required; an empty
+  /// string is refused in every build mode by [DataBudget.relax],
+  /// which throws [ArgumentError].
   final String reason;
 
   /// Wall-clock timestamp at which the integrator confirmed the relax.
@@ -214,7 +217,8 @@ class BudgetRelaxConfirmation {
 
   /// `true` when the integrator has affirmatively confirmed the relax
   /// at the integrator's own decision surface (e.g. user-tapped
-  /// confirm). `false` is rejected at runtime via debug-mode assertion.
+  /// confirm). `false` is refused in every build mode by
+  /// [DataBudget.relax], which throws [ArgumentError].
   final bool isConfirmed;
 
   const BudgetRelaxConfirmation({
@@ -373,18 +377,39 @@ class DataBudget {
   ///
   /// **Caution-add-only**: the new budget must be `<=` the active
   /// budget (= toward LESS data = toward fidelity-drop = toward MORE
-  /// caution). Calling with a larger budget is rejected at runtime via
-  /// debug-mode assertion. Use [relax] (with confirmation token) for
+  /// caution). Calling with a larger budget is refused in every build
+  /// mode. Use [relax] (with confirmation token) for
   /// integrator-affirmed loosening.
+  ///
+  /// Throws [RangeError] when [newBudgetBytes] is not positive, or when
+  /// it exceeds the active budget.
   void tighten(int newBudgetBytes) {
     if (_disposed) return;
-    assert(newBudgetBytes > 0, 'DataBudget.tighten newBudgetBytes must be > 0');
-    assert(
-      newBudgetBytes <= _config.budgetBytes,
-      'DataBudget.tighten newBudgetBytes ($newBudgetBytes) must be <= '
-      'active budgetBytes (${_config.budgetBytes}); caution-add-only '
-      'invariant violated.',
-    );
+    // REFUSALS, not post-conditions. They run before the budget moves,
+    // on a caller's request. Stripped, they do not risk a crash -- they
+    // let a method NAMED `tighten` silently RELAX the budget, which is
+    // the caution-add-only invariant inverted. `int` cannot be NaN or
+    // infinite, so `> 0` is the whole check here; `isFinite` on an
+    // `int` is always true and would be ornament.
+    if (newBudgetBytes <= 0) {
+      throw RangeError.value(
+        newBudgetBytes,
+        'newBudgetBytes',
+        'DataBudget.tighten requires a positive budget; a zero or '
+            'negative budget makes the consumed-ratio meaningless and '
+            'silently disables BudgetWarning and BudgetExhausted',
+      );
+    }
+    if (!(newBudgetBytes <= _config.budgetBytes)) {
+      throw RangeError.value(
+        newBudgetBytes,
+        'newBudgetBytes',
+        'DataBudget.tighten must not exceed the active budget '
+            '(${_config.budgetBytes}); caution-add-only invariant '
+            'violated -- use relax() with an affirmative '
+            'BudgetRelaxConfirmation to loosen',
+      );
+    }
     _config = DataBudgetConfig(
       budgetBytes: newBudgetBytes,
       warningRatio: _config.warningRatio,
@@ -394,23 +419,48 @@ class DataBudget {
   /// Relax (loosen) the budget within an active cycle. Requires an
   /// integrator-supplied affirmative confirmation token.
   ///
-  /// **Driver-always-drives invariant**: this method REJECTS any
-  /// confirmation that is not affirmative at runtime via debug-mode
-  /// assertion. The integrator MUST construct the token with
-  /// `isConfirmed: true` and a non-empty `reason`.
+  /// **Driver-always-drives invariant**: this method REFUSES any
+  /// confirmation that is not affirmative, in EVERY build mode. The
+  /// integrator MUST construct the token with `isConfirmed: true` and a
+  /// non-empty `reason`.
+  ///
+  /// Throws [ArgumentError] when `confirmation.isConfirmed` is `false`
+  /// or `confirmation.reason` is empty; throws [RangeError] when
+  /// [newBudgetBytes] is not positive.
   void relax(int newBudgetBytes, BudgetRelaxConfirmation confirmation) {
     if (_disposed) return;
-    assert(
-      confirmation.isConfirmed,
-      'DataBudget.relax requires confirmation.isConfirmed == true; '
-      'driver-always-drives invariant: auto-relax forbidden.',
-    );
-    assert(
-      confirmation.reason.isNotEmpty,
-      'DataBudget.relax requires non-empty confirmation.reason; '
-      'driver-always-drives invariant: blank-relax forbidden.',
-    );
-    assert(newBudgetBytes > 0, 'DataBudget.relax newBudgetBytes must be > 0');
+    // REFUSALS, not post-conditions. Each runs BEFORE the budget is
+    // loosened, on a caller's request. Stripped, they do not risk a
+    // crash -- they hand the caller the relaxation the
+    // driver-always-drives invariant exists to forbid, with no signal
+    // to anyone. These were `assert`s until 2026-09-13, so every
+    // shipped integrator build granted an UNCONFIRMED auto-relax.
+    if (!confirmation.isConfirmed) {
+      throw ArgumentError.value(
+        confirmation.isConfirmed,
+        'confirmation.isConfirmed',
+        'DataBudget.relax requires an affirmative integrator '
+            'confirmation; driver-always-drives invariant: auto-relax '
+            'forbidden',
+      );
+    }
+    if (confirmation.reason.isEmpty) {
+      throw ArgumentError.value(
+        confirmation.reason,
+        'confirmation.reason',
+        'DataBudget.relax requires a non-empty reason; '
+            'driver-always-drives invariant: blank-relax forbidden',
+      );
+    }
+    if (newBudgetBytes <= 0) {
+      throw RangeError.value(
+        newBudgetBytes,
+        'newBudgetBytes',
+        'DataBudget.relax requires a positive budget; a zero or '
+            'negative budget makes the consumed-ratio meaningless and '
+            'silently disables BudgetWarning and BudgetExhausted',
+      );
+    }
     _config = DataBudgetConfig(
       budgetBytes: newBudgetBytes,
       warningRatio: _config.warningRatio,

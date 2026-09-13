@@ -170,8 +170,9 @@ class NavigationSafetyConfig extends Equatable {
   /// invariant — it may make warning thresholds fire EARLIER, never
   /// later, than the post-context baseline. The score-floor tiers and
   /// the critical thresholds MUST be preserved (severity-not-profile
-  /// invariant). Both invariants are enforced at runtime via debug
-  /// assertions in [VehicleThresholdOverrides.applyOverrideForToken].
+  /// invariant). Both invariants are enforced in EVERY build mode by
+  /// [VehicleThresholdOverrides.applyOverrideForToken], which throws
+  /// [ArgumentError] rather than applying a relaxing override.
   ///
   /// Citations for each formula are documented in the
   /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
@@ -266,8 +267,9 @@ class NavigationSafetyConfig extends Equatable {
 
     // Vehicle-class override (0.9.0). Applied AFTER per-profile baseline
     // AND AFTER live-context adjustment. Caution-add-only +
-    // severity-not-profile invariants asserted in debug builds within
-    // [VehicleThresholdOverrides.applyOverrideForToken].
+    // severity-not-profile invariants are refused in EVERY build mode
+    // within [VehicleThresholdOverrides.applyOverrideForToken] -- it
+    // throws ArgumentError rather than applying a relaxing override.
     if (vehicleOverrides == null) return postContext;
     return vehicleOverrides.applyOverrideForToken(
       context.vehicleClassToken,
@@ -429,8 +431,9 @@ class NavigationSafetyConfig extends Equatable {
     // here. The vehicle-class override (if any) applies AFTER the
     // per-profile baseline AND AFTER the live-context adjustment in
     // `forProfileWithContext`; the caution-add-only +
-    // severity-not-profile invariants are enforced there at runtime
-    // via debug-mode assertions.
+    // severity-not-profile invariants are enforced there in EVERY build
+    // mode -- a relaxing override throws ArgumentError, it is never
+    // silently applied.
     final base = NavigationSafetyConfig.forProfileWithContext(
       driverContext.profile,
       context: environmentalContext,

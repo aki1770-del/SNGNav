@@ -152,7 +152,7 @@ void main() {
       await tracker.dispose();
     });
 
-    test('tighten() accepts smaller budget; rejects larger via assert', () {
+    test('tighten() accepts smaller budget; REFUSES larger in every mode', () {
       final tracker = DataBudget(
         config: const DataBudgetConfig(budgetBytes: 4 * 1024 * 1024),
       );
@@ -161,11 +161,20 @@ void main() {
       tracker.tighten(2 * 1024 * 1024);
       expect(tracker.config.budgetBytes, 2 * 1024 * 1024);
 
-      // Larger is rejected (would relax).
+      // Larger is refused (would relax a method named `tighten`).
+      // RangeError, never AssertionError -- an AssertionError here would
+      // mean the guard regressed to an `assert` and is therefore absent
+      // from every shipped build.
       expect(
         () => tracker.tighten(8 * 1024 * 1024),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<RangeError>()),
       );
+      expect(tracker.config.budgetBytes, 2 * 1024 * 1024, reason: 'refused');
+
+      // Non-positive is refused too: it would silently disable warning
+      // and exhaustion by making the consumed-ratio meaningless.
+      expect(() => tracker.tighten(0), throwsA(isA<RangeError>()));
+      expect(() => tracker.tighten(-1), throwsA(isA<RangeError>()));
 
       tracker.dispose();
     });
@@ -183,8 +192,9 @@ void main() {
       );
       expect(
         () => tracker.relax(4 * 1024 * 1024, unconfirmed),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
+      expect(tracker.config.budgetBytes, 2 * 1024 * 1024, reason: 'unmoved');
 
       // empty reason rejected.
       final blankReason = BudgetRelaxConfirmation(
@@ -194,8 +204,9 @@ void main() {
       );
       expect(
         () => tracker.relax(4 * 1024 * 1024, blankReason),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
+      expect(tracker.config.budgetBytes, 2 * 1024 * 1024, reason: 'unmoved');
 
       // affirmative + non-empty accepted.
       final ok = BudgetRelaxConfirmation(

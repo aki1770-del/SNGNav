@@ -77,6 +77,34 @@ jobs:
       - name: Sibling-constraint check
         run: python3 scripts/sibling_constraint_check.py
 
+      - name: Release-guard inventory — prove the instrument first
+        # Dart strips `assert` from AOT builds AND from `dart run`, keeping it
+        # only under `dart test` / `flutter test`. Measured with a compiled
+        # probe on Dart 3.11.1, 2026-09-13. So every guard written as an assert
+        # is present in our test results and absent from what an edge developer
+        # actually ships or scripts against.
+        #
+        # That was not theoretical. On 2026-09-13, DataBudget.relax handed an
+        # UNCONFIRMED caller the relaxation its own message called forbidden,
+        # and a vehicle-class override that moved a score floor was accepted
+        # silently. Both suites were green the whole time, because they run in
+        # the one mode where the guards exist.
+        #
+        # Proven before it is trusted, matching the step above. If this exits 2
+        # saying SKIP, the tree is ALREADY failing the real check below and the
+        # self-test cannot tell its own injection from the standing failure --
+        # read the next step's output, not this one.
+        run: python3 scripts/release_guard_inventory.py --self-test
+
+      - name: Release-guard inventory
+        # Fails on: an undeclared assert in a shipped lib/; a declared assert
+        # whose text changed (the written reason was about different code); a
+        # declaration for an assert no longer on disk; and any assert still
+        # classed REFUSAL, which by definition is absent from every shipped
+        # build. Exemptions live in scripts/release_guard_inventory.md, where a
+        # person reads them, rather than inside a regex nobody audits.
+        run: python3 scripts/release_guard_inventory.py
+
   test:
     name: Test
     runs-on: ubuntu-24.04

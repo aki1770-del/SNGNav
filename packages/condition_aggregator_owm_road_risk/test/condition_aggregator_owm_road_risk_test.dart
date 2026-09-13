@@ -16,10 +16,10 @@ import 'package:test/test.dart';
 
 void main() {
   group('OwmRoadRiskClient', () {
-    test('rejects empty apiKey at construction time', () {
+    test('rejects empty apiKey at construction time, in every build mode', () {
       expect(
         () => OwmRoadRiskClient(apiKey: ''),
-        throwsA(isA<AssertionError>()),
+        throwsA(isA<ArgumentError>()),
       );
     });
 
