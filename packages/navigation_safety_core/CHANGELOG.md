@@ -11,7 +11,16 @@ entry** below.
 
 **If you use `VehicleThresholdOverrides`, read this first.** If you register
 no override, or only `withKeiCarDefault()`, you receive exactly the configs
-0.11.6 gave you, and nothing is printed.
+0.11.6 gave you, and nothing is printed. If your registry's class implements
+`VehicleThresholdOverrides`, or extends it and replaces
+`applyOverrideForToken`, then `forProfileWithContext` and `forDriverContext`
+call your method, and the checks in this entry reach your registry only if
+that method returns what this package's `applyOverrideForToken` returns.
+Otherwise, as on 0.11.6, a field your method changes is applied as written in
+every build mode, nothing is reported, and an exception your method throws
+reaches whoever called those factories. To have the checks, build a registry
+from your transforms with `VehicleThresholdOverrides.validated(...)` and
+return its `applyOverrideForToken` result from your method.
 
 - **The critical thresholds, the info thresholds and the cap may not be
   changed by an override, in either direction:** `criticalVisibilityMeters`,
