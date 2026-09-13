@@ -4,20 +4,20 @@ This document lists known limitations of the current `navigation_safety_core`
 package, with citations to public sources, so that consumers can integrate
 with eyes open and contribute corrections from informed positions.
 
-The list is honest by intent — surfacing what we don't yet know rather
-than letting silent gaps reach drivers.
+The list names what we don't yet know rather than letting silent gaps
+reach drivers.
 
 ---
 
-## DriverState-axis scaffolding (#28+#29+#30, added in 0.10.0) — UNVERIFIED magnitudes
+## DriverState-axis scaffolding (added in 0.10.0) — UNVERIFIED magnitudes
 
 The 0.10.0 release scaffolds three additional state-axis inputs onto
-the existing `forDriverContext` factory: time-of-day circadian-phase
-(#28), driving-session-state (#29), and self-assessed-confidence with
-cap-override-with-confirmation pattern (#30). The **API shapes** are
-load-bearing for the #23 DriverState complete-class graduation
-(Wave 3); the **magnitudes** in the per-input lookup tables are
-design-default hypotheses pending field-measurement validation.
+the existing `forDriverContext` factory: time-of-day circadian-phase,
+driving-session-state, and self-assessed-confidence with the
+cap-override-with-confirmation pattern. The **API shapes** are the
+base for a planned, complete `DriverState` class; the **magnitudes** in
+the per-input lookup tables are design-default hypotheses pending
+field-measurement validation.
 
 ### What is UNVERIFIED at 0.10.0
 
@@ -55,7 +55,7 @@ design-default hypotheses pending field-measurement validation.
   every input is opt-in (defaults preserve 0.9.x behaviour exactly).
 - **Caution-add-only contract** — circadian + session-state may make
   warning thresholds fire earlier than the post-state-delta floor,
-  never later. The cap-modifier under #30 is the ONLY layer
+  never later. The confidence cap-modifier is the ONLY layer
   permitted to relax (loosen) and only via the
   cap-override-with-confirmation pattern; the cap-loosen direction
   requires `isHighConfidenceConfirmed == true` (driver-always-drives
@@ -178,9 +178,9 @@ calibration.
 ### Out of scope at 0.6.0
 
 - The full trait × state matrix (`DriverProfile` × `DriverState`)
-  with per-cell calibration is a v1.0 architecture decision per
-  insight #23 of the HER Pivot 100. 0.6.0 ships the orthogonal axes
-  and the composition factory; per-cell calibration is deferred.
+  with per-cell calibration is a v1.0 architecture decision. 0.6.0
+  ships the orthogonal axes and the composition factory; per-cell
+  calibration is deferred.
 - Live state detection (drowsiness from steering entropy, distraction
   from gaze trackers, etc.) is out of scope. The state value is
   caller-supplied; this package does not infer it.
@@ -261,7 +261,7 @@ earlier); the magnitudes have known calibration issues:
 - **`ageingRural infoTemperatureCelsius`**: 0.2.0 set this at 5°C
   (+2°C over standard). Combined with `infoVisibilityMeters` at 1500m,
   this fires the "info" tier on most autumn evenings in Hokkaido /
-  Tohoku — V14 alert-fatigue risk ([arxiv 2410.06388](https://arxiv.org/html/2410.06388),
+  Tohoku — an alert-fatigue risk ([arxiv 2410.06388](https://arxiv.org/html/2410.06388),
   [AAA-FTS ADAS-exposure report](https://aaafoundation.org/wp-content/uploads/2023/09/202309-AAAFTS-ADAS-Exposure-and-Driver-Workload.pdf)).
   Over-warning is a silent safety failure: by the actual black-ice
   morning, the driver has been desensitized. **0.3.0 lowers to 4°C**
@@ -429,7 +429,7 @@ documented contract is that this stays `true`. Changing the default
 to `false` would alter the package's safety contract: the throttle
 exists to prevent advisory-tier desensitization, not to mask
 high-severity warnings. Any change to this default in a future
-release requires governance ratification.
+release requires an explicit decision by the package maintainers.
 
 ### Action-string speed references are advisory, not enforced
 
@@ -476,15 +476,6 @@ where they wire it into their alert pipeline. A reflection-based or
 code-generated registry is **deferred** to a future minor release
 (likely v0.5+) — once enough runtime looms exist that explicit wiring
 becomes a meaningful integration cost.
-
-### No vision attribution on the looms today
-
-From 0.4.1 each runtime loom carried a 3-slot vision attribution
-(`sakichi_vision_id` / `method_vision_ids` / `stance_vision_ids`) in
-its doc comment and in `LOOMS.md`, as documentation. The loom doc
-comments and `LOOMS.md` no longer carry those slots, so there is no
-attribution left for a runtime check, a schema validator or an
-analyzer rule to verify.
 
 ---
 
@@ -766,14 +757,12 @@ not the severity of the resulting alerts.
 
 ---
 
-## Why we publish this honestly
+## Why this list is published
 
-The package serves drivers — including drivers in HER cohort (the
-named-weaver of the SNGNav project). Silent gaps are a worse failure
-than acknowledged ones. Per the project's principle that *the absence
-of a loom is the fault, never any individual*: this document is
-itself a loom — it catches the gaps the package alone cannot, by
-naming them where any consumer can see.
+The package is meant to help drivers, including drivers caught by
+unexpected snow. Silent gaps are a worse failure than acknowledged
+ones, so this document names, where any consumer can see them, the
+gaps the package cannot show by itself.
 
 If you spot a gap not listed here, please open an issue. The list grows
 with what we hear, not with what we hide.

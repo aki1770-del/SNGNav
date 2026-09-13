@@ -3,9 +3,7 @@
 **Package**: `navigation_safety_core`
 **Version**: 0.11.7 (first written for 0.8.0)
 **Boundary record version**: 1.4 (0.11.7: the vehicle-class refusal in section 7.2 covers every threshold field; corrections in sections 1, 3, 5, 6, 7, 7.1, 7.2, 7.3, 8 and 9)
-**Authoring skill**: AAA (automotive-adas-analyst)
 **Date**: 2026-05-04; revised for 0.11.7
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
 **Related**: README.md §Standards mapping + KNOWN_LIMITATIONS.md §Standards mapping (current advisory framing) + LICENSE BSD-3-Clause
 
 ---
@@ -40,12 +38,12 @@
 
 ## 6 — Severity-not-profile invariant
 
-**Status**: **applies in scope by design** per AAA bylaws Article 17 (β) safe-default boundary.
+**Status**: **applies in scope by design** (a safe-default boundary).
 **Concrete locus**:
 - README.md §Equal-dignity invariant
 - KNOWN_LIMITATIONS.md §Equal-dignity invariant: severity-driven, not profile-driven
 - CHANGELOG.md 0.4.2 entry, founding declaration: *"plane-allocation priority MUST be severity-driven, never profile-driven"*
-- 0.4.2 founding commit `61b06e3` (per VAA spawn -29 carry-forward MEMORY)
+- 0.4.2 founding commit `61b06e3`
 
 **Operational consequence**: load gates DELIVERY MODE not severity. Per-profile differentiation lives in `AlertExplainer` (verbosity, locale) + `AlertDensityThrottle` (per-profile alerts/min cap with critical-bypass invariant) — never in the visibility or preemption path.
 
@@ -57,7 +55,7 @@
 - README.md §What this is NOT: *"Action verbs in `AlertExplainer` are advisory; speed numbers are published reference points, not system-enforced limits. The driver retains full control authority."*
 - `lib/src/alert_explainer.dart` class documentation, advisory-mood discipline: *"Action verbs are advisory ("reduce" / "avoid" / "maintain"), never imperative-on-control … This is a Pure Dart, advisory-only surface. It does not actuate the vehicle."*
 
-**Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object; the agency to choose what to do next remains with the driver. This package's surfaces are designed for that cognitive moment of choice, never around it.
+**Design intent**: the agency to choose what to do next remains with the driver. This package's surfaces are designed for that cognitive moment of choice, never around it.
 
 ## 7.1 — Driver-facing looms (0.8.0)
 
@@ -250,14 +248,14 @@ baseline across the 16 phase, fatigue and confidence combinations it
 runs, that the critical thresholds are preserved, and that, with no
 vehicle-class override passed, an unconfirmed `Confidence.high` never
 changes the cap. The
-cap-override-with-confirmation pattern (#30) is the ONLY exception
+cap-override-with-confirmation pattern is the ONLY exception
 to the warn-thresholds-only-add-caution rule and applies only to the
 alerts-per-minute cap (rate-limit), never to the warning visibility
 / temperature floors.
 
 **Severity-not-profile invariant** (load-bearing per §6 above): all
 three inputs tune warning TIMING (warn-earlier-floors) + alert
-DENSITY (cap modification under #30) only. They do NOT modify the
+DENSITY (the confidence cap modification) only. They do NOT modify the
 score-floor tiers (`safeScoreFloor` / `infoScoreFloor` /
 `warningScoreFloor`), the critical thresholds, or the
 critical-bypass behaviour (`AlertSeverity.critical` always fires
@@ -271,7 +269,7 @@ signals consumed for threshold tuning. They do NOT actuate the
 vehicle, NOT close any control loop, NOT modulate alert severity.
 `CircadianPhase` is a purely-typed advisory enum carrying no
 side-effect surface. The **cap-override-with-confirmation pattern**
-explicitly encodes the driver-always-drives invariant for #30:
+explicitly encodes the driver-always-drives invariant for the confidence input:
 `Confidence.high` does NOT auto-loosen the alerts-per-minute cap;
 the integrator must build a confirmation surface and set
 `isHighConfidenceConfirmed = true` ONLY after the driver has
@@ -310,16 +308,16 @@ analytics boundary, not at this package (per §4; the
 consumer-implemented; the package consumes only the typed value at
 this layer).
 
-## 8 — Driver-facing loom (D-VGC189-1)
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *the alert that arrives in time + makes sense + is calm enough to ignore safely.* When `navigation_safety_core` fires through an integrator HMI, HER sees an alert that:
+**What the driver experiences when this package fires**: *the alert that arrives in time + makes sense + is calm enough to ignore safely.* When `navigation_safety_core` fires through an integrator HMI, the driver sees an alert that:
 - **arrives in time** — threshold-tuned to her profile (ageingRural gets an earlier visibility-warning floor than snowZoneExperienced, 300 m against 200 m, per the `forProfile` factory; a higher floor warns earlier) AND adjusted upward for live driving conditions where they exceed the per-profile floor (`forProfileWithContext`).
 - **makes sense** — vocabulary in her language (`AlertExplainer` locale-class differentiation), at action-coupled granularity (advisory verbs not raw severity codes), with the action she can take (*"reduce", "avoid", "maintain"*) coupled to the condition.
 - **is calm enough to ignore safely** — `AlertDensityThrottle` per-profile alerts/min cap prevents desensitization. Critical alerts always fire (documented invariant); info and warning gates against alarm-fatigue.
 
-**Sakichi reading**: the loom serves HER without requiring HER vigilance. HER agency is preserved (*"the driver retains full control authority"*) — the loom catches the broken thread (the unexpected snow, the dropping visibility), HER does not have to scan for it.
+**The driver stays in control**: the alert brings a change in conditions (the unexpected snow, the dropping visibility) to the driver's attention. It does not replace the driver's own attention to the road: the driver performs the dynamic driving task at all times and retains full control authority (sections 1 and 7).
 
-**Audible-to-edge-developer**: an integrator reading `AlertExplainer` source today sees the action-mood discipline + locale + verbosity mapping. Nothing in the API surface is patronizing-to-developer; the trait+state separation respects the integrator's modeling choices (Regan, Hallett & Gordon 2011-class anchoring is published-literature substrate not unit-internal vocabulary).
+**For the integrator**: an integrator reading `AlertExplainer` source today sees the action-mood discipline + locale + verbosity mapping. The trait+state separation follows published literature (Regan, Hallett & Gordon, 2011) and leaves modeling choices to the integrator.
 
 ## 9 — Cross-references
 
@@ -328,10 +326,3 @@ this layer).
 - CHANGELOG.md 0.4.2 entry
 - LOOMS.md (runtime-loom catalog: AlertDensityThrottle + AlertExplainer pair)
 - LICENSE BSD-3-Clause
-- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-- D-VGC188-1 / D-VGC188-2 (Driver Sovereignty axis + 5-test framework)
-- AAA bylaws Article 17 (β) safe-default boundary
-
----
-
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization (spawn -50 Task 1). Subject = We / AAA. OPS-RULE-055 verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
