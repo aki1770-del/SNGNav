@@ -170,9 +170,15 @@ class NavigationSafetyConfig extends Equatable {
   /// invariant — it may make warning thresholds fire EARLIER, never
   /// later, than the post-context baseline. The score-floor tiers and
   /// the critical thresholds MUST be preserved (severity-not-profile
-  /// invariant). Both invariants are enforced in EVERY build mode by
-  /// [VehicleThresholdOverrides.applyOverrideForToken], which throws
-  /// [ArgumentError] rather than applying a relaxing override.
+  /// invariant). Both invariants are refused at REGISTRATION by
+  /// [VehicleThresholdOverrides.validated], which throws
+  /// [ArgumentError] there. On this drive path
+  /// [VehicleThresholdOverrides.applyOverrideForToken] re-checks them
+  /// and NEVER throws: a violating override is refused whole and the
+  /// un-overridden config is returned, with the rejection reported.
+  /// This factory therefore cannot throw on account of a registered
+  /// override -- a caller deriving a config per vehicle-bus frame
+  /// inside an `async*` body keeps its stream.
   ///
   /// Citations for each formula are documented in the
   /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
@@ -267,9 +273,12 @@ class NavigationSafetyConfig extends Equatable {
 
     // Vehicle-class override (0.9.0). Applied AFTER per-profile baseline
     // AND AFTER live-context adjustment. Caution-add-only +
-    // severity-not-profile invariants are refused in EVERY build mode
-    // within [VehicleThresholdOverrides.applyOverrideForToken] -- it
-    // throws ArgumentError rather than applying a relaxing override.
+    // severity-not-profile invariants are refused at REGISTRATION by
+    // VehicleThresholdOverrides.validated (which throws there) and
+    // re-checked here by applyOverrideForToken, which does NOT throw:
+    // it discards a violating override, returns the un-overridden
+    // config, and reports the rejection. This call site can be inside
+    // a per-frame loop, so it must not be able to kill the caller.
     if (vehicleOverrides == null) return postContext;
     return vehicleOverrides.applyOverrideForToken(
       context.vehicleClassToken,
@@ -391,8 +400,10 @@ class NavigationSafetyConfig extends Equatable {
   ///
   /// - [vehicleOverrides] — vehicle-class threshold-override registry
   ///   (0.9.0). When supplied, the registry composes through
-  ///   `forProfileWithContext` (caution-add-only invariant enforced
-  ///   in `VehicleThresholdOverrides.applyOverrideForToken`).
+  ///   `forProfileWithContext` (caution-add-only invariant refused at
+  ///   registration by `VehicleThresholdOverrides.validated`, and
+  ///   re-checked without throwing in
+  ///   `VehicleThresholdOverrides.applyOverrideForToken`).
   /// - [circadianPhase] — time-of-day circadian classification
   ///   (#28). When supplied, the per-phase multiplier
   ///   ([CircadianPhaseMultiplier.multiplier], always `>= 1.0`) is

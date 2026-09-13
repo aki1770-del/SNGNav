@@ -33,6 +33,30 @@
 // composition pattern is the load-bearing part, not the specific PGN
 // payload decoder.
 //
+// ── Where work goes, and why it matters here ─────────────────────────
+//
+// A CAN frame loop runs at vehicle-bus rate for the whole journey, and
+// this stream is an `async*` body: anything that throws inside the
+// `await for` terminates the stream, and the driver stops receiving
+// advisories entirely for the rest of the drive. So the rule this
+// example teaches is:
+//
+//   ONCE, at startup   — build the VehicleThresholdOverrides registry
+//                        with `.validated()`. Registration is where a
+//                        wrong transform is refused, loudly, in front
+//                        of the developer who can fix it.
+//   PER FRAME          — derive only what genuinely depends on live
+//                        context, and only when a sample actually
+//                        changed. `forProfileWithContext` cannot throw
+//                        on account of a registered override; a
+//                        violating one is discarded and reported.
+//
+// The config itself cannot be fully hoisted — it is a function of
+// live speed and temperature, which is the entire point of a CAN
+// integration. What CAN be hoisted is the registry, which is the part
+// capable of being wrong. Earlier revisions of this file rebuilt
+// everything per frame and taught the opposite.
+//
 // SPDX-License-Identifier: BSD-3-Clause
 
 import 'dart:async';
@@ -86,12 +110,14 @@ DrivingContext driveContextFromCanSamples({
   required double coolantTempCelsius,
   double humidityRH = 0.85,
   Duration timeSincePrecipitation = const Duration(minutes: 30),
+  String? vehicleClassToken,
 }) {
   return DrivingContext(
     speedMps: speedKmh / 3.6,
     humidityRH: humidityRH,
     ambientTempCelsius: coolantTempCelsius,
     timeSincePrecipitation: timeSincePrecipitation,
+    vehicleClassToken: vehicleClassToken,
   );
 }
 
@@ -101,10 +127,34 @@ DrivingContext driveContextFromCanSamples({
 /// speed and coolant samples, and yields the advisory action an app
 /// can surface to the driver. Profile is fixed here for clarity; in
 /// production it comes from the active driver session.
-Stream<String> safetyAdvisoryStream(_J1939EcuLike ecu) async* {
+///
+/// [vehicleOverrides] is built ONCE by the caller (see [main]) and
+/// passed in. It is never constructed inside the loop below: a
+/// registry is startup configuration, not per-frame data, and
+/// `.validated()` has already refused any transform that would relax
+/// a warning threshold.
+Stream<String> safetyAdvisoryStream(
+  _J1939EcuLike ecu, {
+  VehicleThresholdOverrides? vehicleOverrides,
+  String? vehicleClassToken,
+}) async* {
   double? lastSpeedKmh;
   double? lastCoolantC;
   const profile = DriverProfile.snowZoneExperienced;
+
+  // Hoisted: the explainer depends only on condition + profile, both
+  // fixed for the session. Rebuilding it per frame bought nothing.
+  final explainer = AlertExplainer.forConditionAndProfile(
+    RoadSurfaceCondition.ice,
+    profile,
+  );
+
+  // Memoised config: recomputed only when a sample actually moved.
+  // A J1939 bus repeats PGNs at a fixed rate whether or not the value
+  // changed, so most frames need no new config at all.
+  double? configSpeedKmh;
+  double? configCoolantC;
+  NavigationSafetyConfig? config;
 
   await for (final frame in ecu.frames) {
     final speed = decodeWheelSpeedKmh(frame);
@@ -114,20 +164,27 @@ Stream<String> safetyAdvisoryStream(_J1939EcuLike ecu) async* {
 
     if (lastSpeedKmh == null || lastCoolantC == null) continue;
 
-    final ctx = driveContextFromCanSamples(
-      speedKmh: lastSpeedKmh,
-      coolantTempCelsius: lastCoolantC,
-    );
-    final config = NavigationSafetyConfig.forProfileWithContext(
-      profile,
-      context: ctx,
-    );
+    if (config == null ||
+        configSpeedKmh != lastSpeedKmh ||
+        configCoolantC != lastCoolantC) {
+      final ctx = driveContextFromCanSamples(
+        speedKmh: lastSpeedKmh,
+        coolantTempCelsius: lastCoolantC,
+        vehicleClassToken: vehicleClassToken,
+      );
+      // Cannot throw on account of a registered override: a violating
+      // transform is discarded and reported, not raised. That is what
+      // keeps this `async*` stream alive for the whole journey.
+      config = NavigationSafetyConfig.forProfileWithContext(
+        profile,
+        context: ctx,
+        vehicleOverrides: vehicleOverrides,
+      );
+      configSpeedKmh = lastSpeedKmh;
+      configCoolantC = lastCoolantC;
+    }
 
     if (lastCoolantC <= config.warningTemperatureCelsius) {
-      final explainer = AlertExplainer.forConditionAndProfile(
-        RoadSurfaceCondition.ice,
-        profile,
-      );
       yield explainer.action;
     }
   }
@@ -168,8 +225,20 @@ class _MockEcu implements _J1939EcuLike {
 
 Future<void> main() async {
   print('--- navigation_safety_core: example/can_bus_integration.dart ---\n');
+
+  // ONCE, at startup, before a single frame is read. `.validated()`
+  // probes every registered transform against a battery of baselines
+  // and throws here — on the developer's machine, at wiring time — if
+  // one would relax a warning threshold. Nothing is left to refuse
+  // later, on the road.
+  final overrides = VehicleThresholdOverrides.withKeiCarDefault();
+
   final ecu = _MockEcu();
-  await for (final advisory in safetyAdvisoryStream(ecu)) {
+  await for (final advisory in safetyAdvisoryStream(
+    ecu,
+    vehicleOverrides: overrides,
+    vehicleClassToken: 'kei-car',
+  )) {
     print('Advisory: $advisory');
   }
   ecu.dispose();

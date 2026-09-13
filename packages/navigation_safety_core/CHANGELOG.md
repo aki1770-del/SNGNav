@@ -1,3 +1,91 @@
+# Changelog
+
+## 0.11.6
+
+A vehicle-class override is now refused where it is REGISTERED, not on the
+drive path.
+
+`VehicleThresholdOverrides.applyOverrideForToken` **no longer throws.** It can
+run once per vehicle-bus frame while the car is moving — this package's own
+`example/can_bus_integration.dart` derives its config inside an `await for` in
+an `async*` body — and there an uncaught throw terminates the stream, ending
+the driver's advisories for the rest of the journey. Measured on a per-frame
+harness: **0 of 5 advisories delivered, nav surface dead.** A guard that
+removes the warning is not a stronger halt; it is the absence of one.
+
+Three states of the same relaxing override, one harness, `dart run` with
+assertions elided:
+
+| | advisories | warning visibility | stream |
+|---|---|---|---|
+| published `0.11.5` (`assert`, elided) | 5/5 | **10 m — relaxation APPLIED** | alive |
+| unreleased guard repair (`throw`) | **0/5** | — | **dead (`ArgumentError`)** |
+| this release | 5/5 | **359 m — baseline, relaxation REFUSED** | alive, reported |
+
+**Added**
+
+- **`VehicleThresholdOverrides.validated(...)`** — a non-`const` factory that
+  probes every registered transform against a battery of baselines and throws
+  `ArgumentError` at registration, naming the token, the field and the probe.
+  Registration is where the mistake is actually made, once, by a developer who
+  can read the stack trace.
+- **`VehicleOverrideRejection`** and **`VehicleOverrideInvariant`** — the
+  refusal, reported rather than raised.
+- **`onRejected`** on the registry, plus the process-wide
+  `VehicleThresholdOverrides.rejectionReporter` and
+  `resetRejectionReporting()`.
+- **`registrationProbeCount`** — the probe-battery size as a number an
+  integrator can read.
+- **`tool/release_mode_proof.dart`** — a plain Dart program that exercises the
+  per-frame path with assertions ELIDED, and **refuses to run** when they are
+  enabled. Through 0.11.5 the suite was green in the one mode the guards
+  existed in; a check that can only run in that mode cannot see this defect.
+
+**Changed**
+
+- `applyOverrideForToken` refuses a violating override **whole**: it returns
+  the un-overridden baseline and reports the rejection. It does not
+  half-repair the config field-by-field — a transform that got one field wrong
+  has not earned trust on the others, and a partial application looks nearly
+  right, which makes the defect harder to notice. It does not silently apply
+  the relaxation either; that is the `0.11.5` defect.
+- A transform that **itself throws** is now caught on both paths. Through
+  `0.11.5` nothing guarded this: the integrator's own exception escaped
+  straight through and killed an `async*` caller exactly as an invariant throw
+  did.
+- An `onRejected` handler that throws is caught and swallowed — otherwise the
+  stream-killing throw has merely moved into the integrator's logger.
+- `withKeiCarDefault()` routes through `.validated()`. We do not ask
+  integrators to validate what we decline to validate ourselves.
+- `example/can_bus_integration.dart` builds the registry **once, at startup**,
+  and memoises the per-frame config so it is re-derived only when a sample
+  actually moves. The example teaches the pattern, and it taught the wrong
+  one. The config itself cannot be fully hoisted — it is a function of live
+  speed and temperature, which is the point of a CAN integration; what is
+  hoisted is the part capable of being wrong.
+
+**Honest bounds**
+
+- Registration-time validation is a **strong filter, not a proof**. The probe
+  battery is finite (`registrationProbeCount`): a transform that branches on a
+  field the battery does not vary, or that is discontinuous between probe
+  points, can pass registration and still violate an invariant on a live
+  config. That is why the drive-path check remains — it refuses rather than
+  crashes.
+- The default reporter uses `print`, deliberately **not** `dart:developer`'s
+  `log`: measured 2026-09-13 on Dart 3.11.1, `developer.log` emits nothing
+  under either `dart run` or `dart compile exe` without an attached VM
+  service. Routing the report there would have made it silent in exactly the
+  shipped build where it matters.
+- Reports de-duplicate per token+field on the default channel so a broken
+  override cannot flood an IVI log for a whole journey. A supplied
+  `onRejected` is **not** de-duplicated; the integrator owns that policy.
+
+**Compatibility**: additive. The `const VehicleThresholdOverrides(map)`
+constructor is unchanged, and no package in this workspace calls
+`applyOverrideForToken`. The single behavioural change is that it no longer
+throws.
+
 ## 0.11.5
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.
@@ -7,7 +95,6 @@
   `version solving failed` for every published version. No source change; the cap was
   gratuitous. Verified on `latlong2 0.10.1`: analyze clean, **319/319 tests pass**.
 
-# Changelog
 
 ## 0.11.4
 
