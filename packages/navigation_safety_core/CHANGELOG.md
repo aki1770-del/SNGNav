@@ -1,5 +1,110 @@
 # Changelog
 
+## 0.11.7
+
+A vehicle-class override may no longer change the critical thresholds, the
+info thresholds or the alerts-per-minute cap. When a field of an override is
+refused on the drive path, that field alone goes back to its un-overridden
+value, and the rest of the override is checked on its own. This entry also
+corrects two statements in the 0.11.6 entry; see **Correction to the 0.11.6
+entry** below.
+
+**If you use `VehicleThresholdOverrides`, read this first.** If you register
+no override, or only `withKeiCarDefault()`, you receive exactly the configs
+0.11.6 gave you, and nothing is printed.
+
+- **The critical thresholds, the info thresholds and the cap may not be
+  changed by an override, in either direction:** `criticalVisibilityMeters`,
+  `criticalTemperatureCelsius`, `infoVisibilityMeters`,
+  `infoTemperatureCelsius` and `alertsPerMinuteCapOverride`. A `null` cap must
+  stay `null`, and NaN counts as a change. 0.11.6 did not check these fields.
+  On the drive path each of them now comes back at its un-overridden value and
+  the refusal is reported; nothing throws.
+- **If you build your registry with `VehicleThresholdOverrides.validated(...)`**
+  and a transform changes one of those five fields on any probe baseline, the
+  call now throws `ArgumentError`, naming the token and the field. On 0.11.6 a
+  registry whose transforms changed only these fields was accepted, and
+  `validatedAtRegistration` returned `true`, although these fields were never
+  checked. If you build the registry at startup, you will meet the error on
+  your first run. If you validate a registry built later from settings or
+  remote configuration, it throws there, on the device, so catch
+  `ArgumentError` at that call.
+- **If your override moved a critical or info threshold, or set the cap, on
+  purpose,** that value is no longer applied. If you raised a critical
+  threshold, a reading between the un-overridden threshold and yours no longer
+  meets the critical threshold, and by default only critical alerts bypass
+  `AlertDensityThrottle`'s cap. Moving either threshold earlier has its own
+  cost: critical alerts still take a slot in the throttle's rolling window,
+  and info alerts take slots exactly as warnings do, so a later warning can be
+  dropped. A transform is never shown the driver's profile, so a cap it writes
+  replaces the per-profile default for every profile. In 0.11.5 and 0.11.6 a
+  cap raised that way also came out of `forDriverContext` without the driver
+  confirmation (`isHighConfidenceConfirmed`) that `forDriverContext` requires
+  before it raises a cap itself. The `NavigationSafetyConfig` constructor does
+  not check these five fields: if your integration needs a different value,
+  build a config with it from the one this package's factory returns, knowing
+  the above.
+- **One refused field no longer discards the rest of the override.** 0.11.6
+  returned the whole un-overridden config when any field was refused, so a
+  legal raise of a warning floor in the same override was lost. That raise is
+  now kept. Every refused field is reported, not only the first, so
+  `onRejected` can be called more than once for a single call, and the default
+  reporter can print one line for each refused field.
+- **Refusals of these five fields are reported as
+  `VehicleOverrideInvariant.severityNotProfile`.** No value was added to the
+  enum, so an exhaustive `switch` over it still compiles, and a branch you
+  wrote for `severityNotProfile` now also receives these fields.
+- **Tests that expect your transform's critical, info or cap value in the
+  result now fail;** expect the un-overridden value. Tests that expect the
+  whole un-overridden config back from an override that also raises a warning
+  floor now fail, because the raise is kept.
+
+**If you construct `AlertDensityThrottle` with your own cap,** it now throws
+`ArgumentError` for a NaN `alertsPerMinuteCap`, as it already did for zero or
+below. On 0.11.6 a NaN cap was accepted without a report and made exactly the
+decisions of a cap of 1.0, whatever cap the driver's profile was designed for:
+after any alert, no info or warning alert fired until the rolling window had
+emptied, while critical alerts still fired. The throw lands where you
+construct the throttle. An infinite cap is still accepted, and then no alert
+is dropped.
+
+**Correction to the 0.11.6 entry.** A published entry cannot be edited, so it
+is corrected here.
+
+- 0.11.6 said: *"If your release build has been running with a relaxing
+  override, your warnings will move earlier after this upgrade."* That was
+  true only for the fields your override relaxed. 0.11.6 refused an override
+  whole whenever it lowered a warning floor or changed a score floor in either
+  direction, so every other change in that override went back to its
+  un-overridden value. That reached overrides that relaxed nothing: raising
+  `warningScoreFloor` makes more scores critical, yet an override that raised
+  it by 0.01 and raised `warningTemperatureCelsius` by 1 °C lost the
+  temperature raise. Measured with the `ageingRural` profile against a 0.11.5
+  build with assertions elided, reading the thresholds in order (critical,
+  then warning, then info): in that override, 2.5 °C moved from the warning
+  tier to the info tier; an override that raised `warningVisibilityMeters` by
+  50 m and lowered `warningTemperatureCelsius` by 1 °C lost the raise, and
+  320 m visibility moved from the warning tier to the info tier; an override
+  that lowered `warningVisibilityMeters` by 150 m and raised
+  `criticalVisibilityMeters` by 40 m lost the raise, and 100 m visibility
+  moved from the critical tier to the warning tier. This release gives back
+  the warning-floor raises. It does not give back the critical raise.
+- 0.11.6 also said that a transform changing those five fields *"is not
+  detected and is applied as written, as it was in 0.11.5"*. That held only
+  when the same transform broke none of the checked fields; when it did, the
+  five fields were discarded with the rest of the override. Neither of its
+  descriptions of `.validated(...)` mentioned that limit.
+
+**Honest bounds**
+
+- Refusing an earlier critical or info threshold, and not only a later one,
+  is a precaution: whether moving a given threshold earlier drops more
+  warnings than it delivers alerts depends on the conditions on the road, and
+  it has not been measured.
+- On the two warning floors this release is never later than 0.11.6, or than
+  a 0.11.5 build with assertions elided, for any transform: each warning floor
+  is the higher of your transform's value and the un-overridden value.
+
 ## 0.11.6
 
 A vehicle-class override is now refused where it is REGISTERED, not on the
