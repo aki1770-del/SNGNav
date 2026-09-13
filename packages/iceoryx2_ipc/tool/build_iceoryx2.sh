@@ -64,11 +64,19 @@ log "source verified at $actual"
 # crate `iceoryx2-ffi-c` declares crate-type = ["rlib", "cdylib", "staticlib"];
 # the cdylib is libiceoryx2_ffi_c.so. Its build script also emits the cbindgen
 # header used by native/road_friction_publisher.c.
+#
+# --locked, and why it is not cosmetic. The SHA pins the SOURCES. It does not pin
+# the DEPENDENCY GRAPH -- Cargo.lock does, and only --locked enforces it. Without
+# it cargo may resolve a newer dependency than the one upstream tested at this
+# commit, and the resulting .so has NO VERSION SYMBOL to tell anyone (0 of 660
+# exported iox2_* symbols), which is this script's own stated reason for pinning.
+# Named latent by FBR 2026-09-13 after its drift hypothesis was REFUTED on the
+# cell it tested: no drift was observed, and the guard costs one word.
 log "cargo build --profile=$PROFILE -p iceoryx2-ffi-c"
 if [ "$PROFILE" = "release" ]; then
-  ( cd "$SRC_DIR" && CARGO_TARGET_DIR="$BUILD_DIR/target" cargo build --release -p iceoryx2-ffi-c )
+  ( cd "$SRC_DIR" && CARGO_TARGET_DIR="$BUILD_DIR/target" cargo build --locked --release -p iceoryx2-ffi-c )
 else
-  ( cd "$SRC_DIR" && CARGO_TARGET_DIR="$BUILD_DIR/target" cargo build --profile "$PROFILE" -p iceoryx2-ffi-c )
+  ( cd "$SRC_DIR" && CARGO_TARGET_DIR="$BUILD_DIR/target" cargo build --locked --profile "$PROFILE" -p iceoryx2-ffi-c )
 fi
 
 SO="$BUILD_DIR/target/$PROFILE/libiceoryx2_ffi_c.so"
