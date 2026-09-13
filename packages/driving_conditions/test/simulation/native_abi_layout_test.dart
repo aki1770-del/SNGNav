@@ -33,40 +33,44 @@ void main() {
   }
 
   group('FFI struct layout', () {
-    test('the check fires on a known-bad pair and stays quiet on a good one', () {
-      if (!tool.existsSync() || findCompiler() == null) {
-        markTestSkipped('needs tool/abi_layout_check.dart and a C compiler');
-        return;
-      }
-      final result = Process.runSync(
-        Platform.resolvedExecutable,
-        ['run', tool.path, '--self-test'],
-        workingDirectory: root,
-      );
-      // The self-test proves three things at once: it FIRES on a field reorder
-      // that size-and-alignment alone cannot see, it FIRES on a dropped
-      // __attribute__((aligned(n))), and it does NOT fire on a matched pair.
-      // Each expectation names the reason, so a tool that merely chokes on
-      // every input cannot pass by throwing.
-      expect(
-        result.exitCode,
-        0,
-        reason:
-            'the layout check failed its own self-test, so nothing it says '
-            'about the real struct can be trusted:\n${result.stdout}\n'
-            '${result.stderr}',
-      );
-      expect(result.stdout, contains('SELF-TEST PASSED'));
-    }, timeout: const Timeout(Duration(minutes: 2)));
+    test(
+      'the check fires on a known-bad pair and stays quiet on a good one',
+      () {
+        if (!tool.existsSync() || findCompiler() == null) {
+          markTestSkipped('needs tool/abi_layout_check.dart and a C compiler');
+          return;
+        }
+        final result = Process.runSync(Platform.resolvedExecutable, [
+          'run',
+          tool.path,
+          '--self-test',
+        ], workingDirectory: root);
+        // The self-test proves three things at once: it FIRES on a field reorder
+        // that size-and-alignment alone cannot see, it FIRES on a dropped
+        // __attribute__((aligned(n))), and it does NOT fire on a matched pair.
+        // Each expectation names the reason, so a tool that merely chokes on
+        // every input cannot pass by throwing.
+        expect(
+          result.exitCode,
+          0,
+          reason:
+              'the layout check failed its own self-test, so nothing it says '
+              'about the real struct can be trusted:\n${result.stdout}\n'
+              '${result.stderr}',
+        );
+        expect(result.stdout, contains('SELF-TEST PASSED'));
+      },
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
 
-    test('the shipped C struct and the Dart binding agree field by field', () {
-      if (!tool.existsSync() || findCompiler() == null) {
-        markTestSkipped('needs tool/abi_layout_check.dart and a C compiler');
-        return;
-      }
-      final result = Process.runSync(
-        Platform.resolvedExecutable,
-        [
+    test(
+      'the shipped C struct and the Dart binding agree field by field',
+      () {
+        if (!tool.existsSync() || findCompiler() == null) {
+          markTestSkipped('needs tool/abi_layout_check.dart and a C compiler');
+          return;
+        }
+        final result = Process.runSync(Platform.resolvedExecutable, [
           'run',
           tool.path,
           '--c',
@@ -75,23 +79,23 @@ void main() {
           'lib/src/simulation/native_simulation_bindings.dart',
           '--pair',
           'SimulationResponse=NativeSimulationResponse',
-        ],
-        workingDirectory: root,
-      );
-      expect(
-        result.exitCode,
-        0,
-        reason:
-            'the Dart binding does not describe the C struct it calls. A call '
-            'across this boundary returns a plausible number, not an error:\n'
-            '${result.stdout}\n${result.stderr}',
-      );
-      // Assert the measurement actually happened. Exit 0 alone would also be
-      // returned by a check that verified nothing, and "verified" that reported
-      // no field is the failure mode this whole file exists to refuse.
-      expect(result.stdout, contains('overall_mean@0+4'));
-      expect(result.stdout, contains('execution_ms@20+4'));
-      expect(result.stdout, contains('every field offset'));
-    }, timeout: const Timeout(Duration(minutes: 2)));
+        ], workingDirectory: root);
+        expect(
+          result.exitCode,
+          0,
+          reason:
+              'the Dart binding does not describe the C struct it calls. A call '
+              'across this boundary returns a plausible number, not an error:\n'
+              '${result.stdout}\n${result.stderr}',
+        );
+        // Assert the measurement actually happened. Exit 0 alone would also be
+        // returned by a check that verified nothing, and "verified" that reported
+        // no field is the failure mode this whole file exists to refuse.
+        expect(result.stdout, contains('overall_mean@0+4'));
+        expect(result.stdout, contains('execution_ms@20+4'));
+        expect(result.stdout, contains('every field offset'));
+      },
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
   });
 }

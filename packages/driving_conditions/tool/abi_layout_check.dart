@@ -127,7 +127,9 @@ List<String> parseCStructFields(String source, String typeName) {
     }
     final match = RegExp(r'([A-Za-z_]\w*)\s*$').firstMatch(line);
     if (match == null) {
-      throw Unverifiable('Cannot read field declaration "$line" in "$typeName".');
+      throw Unverifiable(
+        'Cannot read field declaration "$line" in "$typeName".',
+      );
     }
     fields.add(match.group(1)!);
   }
@@ -212,9 +214,17 @@ class DartField {
 }
 
 const Set<String> _supportedAnnotations = {
-  'Int8', 'Int16', 'Int32', 'Int64',
-  'Uint8', 'Uint16', 'Uint32', 'Uint64',
-  'Float', 'Double', 'Bool',
+  'Int8',
+  'Int16',
+  'Int32',
+  'Int64',
+  'Uint8',
+  'Uint16',
+  'Uint32',
+  'Uint64',
+  'Float',
+  'Double',
+  'Bool',
 };
 
 List<DartField> parseDartStructFields(String source, String className) {
@@ -232,8 +242,11 @@ List<DartField> parseDartStructFields(String source, String className) {
   // written for the checker is backwards: the checker reads the code.
   const pfx = r'(?:[A-Za-z_]\w*\.)?';
   final decl = RegExp(
-    r'(?:final\s+|base\s+|sealed\s+)*class\s+' + RegExp.escape(className) +
-        r'\s+extends\s+' + pfx + r'Struct\s*\{',
+    r'(?:final\s+|base\s+|sealed\s+)*class\s+' +
+        RegExp.escape(className) +
+        r'\s+extends\s+' +
+        pfx +
+        r'Struct\s*\{',
   ).firstMatch(source);
   if (decl == null) {
     throw Unverifiable(
@@ -255,7 +268,8 @@ List<DartField> parseDartStructFields(String source, String className) {
 
   final fields = <DartField>[];
   final pattern = RegExp(
-    r'@' + pfx +
+    r'@' +
+        pfx +
         r'(\w+)\s*\(\s*\)\s*(?://[^\n]*\n|\s)*external\s+(?:double|int|bool)\s+(\w+)\s*;',
   );
   for (final m in pattern.allMatches(body)) {
@@ -279,7 +293,8 @@ List<DartField> parseDartStructFields(String source, String className) {
       'struct.',
     );
   }
-  if (fields.isEmpty) throw Unverifiable('Dart class "$className" has no fields.');
+  if (fields.isEmpty)
+    throw Unverifiable('Dart class "$className" has no fields.');
   return fields;
 }
 
@@ -304,7 +319,9 @@ StructLayout measureC({
     ..writeln('#include <stddef.h>')
     ..writeln('#include "$abs"')
     ..writeln('int main(void){')
-    ..writeln('  printf("STRUCT %zu %zu\\n", sizeof($typeName), _Alignof($typeName));');
+    ..writeln(
+      '  printf("STRUCT %zu %zu\\n", sizeof($typeName), _Alignof($typeName));',
+    );
   for (final f in fieldNames) {
     buf.writeln(
       '  printf("FIELD $f %zu %zu\\n", offsetof($typeName, $f), '
@@ -313,19 +330,23 @@ StructLayout measureC({
   }
   buf.writeln('  return 0; }');
 
-  final src = File('${work.path}/abi_c_probe.c')..writeAsStringSync(buf.toString());
+  final src = File('${work.path}/abi_c_probe.c')
+    ..writeAsStringSync(buf.toString());
   final bin = '${work.path}/abi_c_probe';
   final args = <String>[
     '-O0',
     ...extraCcArgs,
-    '-o', bin,
+    '-o',
+    bin,
     src.path,
     for (final inc in includes) '-I$inc',
     '-lm',
   ];
   final build = Process.runSync(compiler, args);
   if (build.exitCode != 0) {
-    throw Unverifiable('C probe failed to build with $compiler:\n${build.stderr}');
+    throw Unverifiable(
+      'C probe failed to build with $compiler:\n${build.stderr}',
+    );
   }
   if (!runIt) return StructLayout(typeName, -1, -1, const []);
 
@@ -378,10 +399,14 @@ StructLayout measureDart({
       ..writeln('  {')
       ..writeln('    var first = -1; var count = 0; var last = -1;')
       ..writeln('    for (var i = 0; i < size; i++) {')
-      ..writeln('      if (bytes[i] == 0x00) { if (first < 0) first = i; last = i; count++; }')
+      ..writeln(
+        '      if (bytes[i] == 0x00) { if (first < 0) first = i; last = i; count++; }',
+      )
       ..writeln('    }')
       ..writeln('    final gap = count > 0 && (last - first + 1) != count;')
-      ..writeln("    print('FIELD ${f.name} \$first \$count \${gap ? 'GAPPED' : 'OK'}');")
+      ..writeln(
+        "    print('FIELD ${f.name} \$first \$count \${gap ? 'GAPPED' : 'OK'}');",
+      )
       ..writeln('  }');
   }
   buf
@@ -417,7 +442,9 @@ StructLayout _parseProbeOutput(String name, String stdout) {
       size = int.parse(parts[1]);
       align = int.parse(parts[2]);
     } else if (parts[0] == 'FIELD' && parts.length >= 4) {
-      fields.add(FieldLayout(parts[1], int.parse(parts[2]), int.parse(parts[3])));
+      fields.add(
+        FieldLayout(parts[1], int.parse(parts[2]), int.parse(parts[3])),
+      );
     }
   }
   if (size < 0) throw Unverifiable('Probe for "$name" emitted no STRUCT line.');
@@ -490,7 +517,7 @@ Report compare(StructLayout c, StructLayout d) {
         'FIELD ${cf.name}: C @${cf.offset}+${cf.width} != '
         'Dart ${df.name} @${df.offset}+${df.width}'
         '${i != dIndex ? "  (declared at position $i in C, $dIndex in Dart — "
-            "a REORDER: this field reads another field's bytes)" : ""}',
+                  "a REORDER: this field reads another field's bytes)" : ""}',
       );
     } else if (i != dIndex) {
       r.warnings.add(
@@ -503,7 +530,8 @@ Report compare(StructLayout c, StructLayout d) {
   return r;
 }
 
-String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+String _normalize(String s) =>
+    s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
 // ---------------------------------------------------------------------------
 // Self-test. A gate never shown to fire is decoration.
@@ -685,59 +713,109 @@ int runSelfTest(String compiler) {
     stdout.writeln('        $verdict');
   }
 
-  stdout.writeln('SELF-TEST — proving this check fires, and does not cry wolf.\n');
+  stdout.writeln(
+    'SELF-TEST — proving this check fires, and does not cry wolf.\n',
+  );
 
   // NEGATIVE CONTROL. A check that fires on everything protects nothing.
-  check('negative-control/matched-pair', _fixtureGoodC, _fixtureGoodDart,
-      'Pair', 'PairBinding', expect: 'agree');
+  check(
+    'negative-control/matched-pair',
+    _fixtureGoodC,
+    _fixtureGoodDart,
+    'Pair',
+    'PairBinding',
+    expect: 'agree',
+  );
 
   // The case a size-and-alignment check CANNOT see: identical size (12) and
   // identical alignment (4); only the declaration order moved. This is the
   // shape live on this package's own struct, where six 4-byte fields make every
   // permutation collide.
-  check('known-bad/field-reorder', _fixtureGoodC, _fixtureReorderedDart,
-      'Pair', 'PairBinding', expect: 'mismatch', because: 'REORDER');
+  check(
+    'known-bad/field-reorder',
+    _fixtureGoodC,
+    _fixtureReorderedDart,
+    'Pair',
+    'PairBinding',
+    expect: 'mismatch',
+    because: 'REORDER',
+  );
 
   // RSE's original catch: ffigen silently drops __attribute__((aligned(n))).
-  check('known-bad/dropped-align-attribute', _fixtureAlignedC, _fixtureAlignedDart,
-      'Wide', 'WideBinding', expect: 'mismatch', because: 'ALIGN');
+  check(
+    'known-bad/dropped-align-attribute',
+    _fixtureAlignedC,
+    _fixtureAlignedDart,
+    'Wide',
+    'WideBinding',
+    expect: 'mismatch',
+    because: 'ALIGN',
+  );
 
   // The check must REFUSE what it cannot read rather than call it agreement —
   // a guard that fails open is not a guard.
-  check('refusal/pointer-field', _fixturePointerC, _fixturePointerDart,
-      'WithPtr', 'WithPtrBinding', expect: 'unverifiable');
+  check(
+    'refusal/pointer-field',
+    _fixturePointerC,
+    _fixturePointerDart,
+    'WithPtr',
+    'WithPtrBinding',
+    expect: 'unverifiable',
+  );
 
   // The same three outcomes again, on `import 'dart:ffi' as ffi;`. The real
   // binding this tool was first pointed at is written that way, so the
   // prefixed spelling is not an exotic case — it is the ordinary one.
-  check('negative-control/matched-pair-prefixed', _fixtureGoodC,
-      _fixtureGoodPrefixedDart, 'Pair', 'PairBinding', expect: 'agree');
+  check(
+    'negative-control/matched-pair-prefixed',
+    _fixtureGoodC,
+    _fixtureGoodPrefixedDart,
+    'Pair',
+    'PairBinding',
+    expect: 'agree',
+  );
 
-  check('known-bad/field-reorder-prefixed', _fixtureGoodC,
-      _fixtureReorderedPrefixedDart, 'Pair', 'PairBinding',
-      expect: 'mismatch', because: 'REORDER');
+  check(
+    'known-bad/field-reorder-prefixed',
+    _fixtureGoodC,
+    _fixtureReorderedPrefixedDart,
+    'Pair',
+    'PairBinding',
+    expect: 'mismatch',
+    because: 'REORDER',
+  );
 
-  check('refusal/pointer-field-prefixed', _fixturePointerC,
-      _fixturePointerPrefixedDart, 'WithPtr', 'WithPtrBinding',
-      expect: 'unverifiable');
+  check(
+    'refusal/pointer-field-prefixed',
+    _fixturePointerC,
+    _fixturePointerPrefixedDart,
+    'WithPtr',
+    'WithPtrBinding',
+    expect: 'unverifiable',
+  );
 
   work.deleteSync(recursive: true);
   stdout.writeln();
   if (failures == 0) {
-    stdout.writeln('SELF-TEST PASSED — fires on both known-bad pairs for the '
-        'stated reason, stays quiet on the matched one, and refuses what it '
-        'cannot read.');
+    stdout.writeln(
+      'SELF-TEST PASSED — fires on both known-bad pairs for the '
+      'stated reason, stays quiet on the matched one, and refuses what it '
+      'cannot read.',
+    );
     return exitOk;
   }
-  stdout.writeln('SELF-TEST FAILED: $failures case(s) behaved wrongly. '
-      'This check cannot be trusted until that is fixed.');
+  stdout.writeln(
+    'SELF-TEST FAILED: $failures case(s) behaved wrongly. '
+    'This check cannot be trusted until that is fixed.',
+  );
   return exitMismatch;
 }
 
 // ---------------------------------------------------------------------------
 
 void _usage() {
-  stdout.writeln('''
+  stdout.writeln(
+    '''
 abi_layout_check — differential C/Dart FFI struct layout check
   method by rust-systems-engineer (RSE), 2026-09-12; per-field offsets by FDD
 
@@ -755,7 +833,8 @@ abi_layout_check — differential C/Dart FFI struct layout check
   --self-test         prove the check fires on known-bad pairs, then exit
   -h, --help          this text
 
-Exit 0 agree · 1 mismatch · 2 could not verify (never reported as agreement).''');
+Exit 0 agree · 1 mismatch · 2 could not verify (never reported as agreement).''',
+  );
 }
 
 void main(List<String> argv) {
@@ -839,10 +918,12 @@ void main(List<String> argv) {
     stdout.writeln('  Dart $dartPath\n');
 
     if (cOnly) {
-      stdout.writeln('C-SIDE ONLY. This compares NOTHING. It reports how the C\n'
-          'compiler lays the struct out, so a target architecture can be read\n'
-          'without a Dart SDK for that target. The Dart half of the check is\n'
-          'NOT run and this result must not be called agreement.\n');
+      stdout.writeln(
+        'C-SIDE ONLY. This compares NOTHING. It reports how the C\n'
+        'compiler lays the struct out, so a target architecture can be read\n'
+        'without a Dart SDK for that target. The Dart half of the check is\n'
+        'NOT run and this result must not be called agreement.\n',
+      );
       pairs.forEach((cType, _) {
         final cl = measureC(
           cPath: cPath!,
@@ -906,13 +987,17 @@ void main(List<String> argv) {
 
   work.deleteSync(recursive: true);
   if (failed) {
-    stdout.writeln('RESULT: MISMATCH. The Dart binding does not describe the C '
-        'struct it calls. A call across this boundary returns a plausible '
-        'number, not an error.');
+    stdout.writeln(
+      'RESULT: MISMATCH. The Dart binding does not describe the C '
+      'struct it calls. A call across this boundary returns a plausible '
+      'number, not an error.',
+    );
     exit(exitMismatch);
   }
-  stdout.writeln('RESULT: layouts agree on ${_hostTriple()}. This says nothing '
-      'about any other architecture — run it there too.');
+  stdout.writeln(
+    'RESULT: layouts agree on ${_hostTriple()}. This says nothing '
+    'about any other architecture — run it there too.',
+  );
   exit(exitOk);
 }
 
