@@ -10,10 +10,12 @@
 /// **Cap-override-with-confirmation pattern** (load-bearing for the
 /// driver-always-drives invariant):
 ///
-/// - `Confidence.low` → automatically TIGHTENS the
-///   alerts-per-minute cap (caution-add direction; the
-///   less-confident driver gets fewer advisory alerts per minute to
-///   reduce overload).
+/// - `Confidence.low` → automatically multiplies the alerts-per-minute
+///   cap by 0.75, never below 1.0. `AlertDensityThrottle` admits
+///   advisory alerts up to the cap rounded up, so with the per-profile
+///   defaults the less-confident driver is admitted fewer per window
+///   only under `ageingRural` (2 to 1) and `professional` (4 to 3);
+///   `foreignTouristSnowZone`'s cap stays 1.0.
 /// - `Confidence.medium` → no-op (no cap modification).
 /// - `Confidence.high` → does NOT auto-loosen the cap. The integrator
 ///   must build a confirmation surface (e.g. an explicit "I am
@@ -26,13 +28,15 @@
 ///   cap-loosening NEVER auto-fires from a high-confidence reading
 ///   alone; the driver must affirmatively confirm.
 ///
-/// **Caution-add-only invariant** (load-bearing): the cap-tighten
-/// direction (lower alertsPerMinuteCap) is a caution-adding
-/// adjustment. The cap-loosen direction (higher alertsPerMinuteCap)
-/// is gated by the confirmation flag and is the ONLY exception to
-/// the warn-thresholds-only-add-caution invariant; it applies only
-/// to the alerts-per-minute cap (rate-limit), never to the warning
-/// visibility / temperature floors.
+/// **What a lower cap costs** (load-bearing): the cap moves no
+/// threshold, in either direction; the warning visibility /
+/// temperature floors stay where they are. A lower cap is not
+/// caution-adding by construction: `AlertDensityThrottle` gives info
+/// alerts slots in its rolling window exactly as warnings, so where a
+/// lower cap admits fewer alerts per window, an earlier info alert can
+/// take the last slot and a later warning is dropped. The cap-loosen
+/// direction (higher alertsPerMinuteCap) is gated by the confirmation
+/// flag.
 ///
 /// **Severity-not-profile invariant** (load-bearing): cap modification
 /// adjusts ALERT DENSITY only. It does NOT modify the score-floor
@@ -93,9 +97,10 @@ enum Confidence {
   medium,
 
   /// Driver self-reports low confidence (unfamiliar route, novel
-  /// conditions, fatigue, etc.). Cap is automatically TIGHTENED to
-  /// reduce advisory-alert overload (caution-add direction). No
-  /// confirmation flag required for the tightening direction.
+  /// conditions, fatigue, etc.). The cap is automatically multiplied
+  /// by 0.75, never below 1.0, with no confirmation flag required;
+  /// see the library documentation for what that admits and what it
+  /// can drop.
   low,
 }
 

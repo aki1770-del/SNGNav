@@ -111,20 +111,27 @@ final config = NavigationSafetyConfig.forProfileWithContext(
 The built-in `withKeiCarDefault()` registry adds caution to the
 warning visibility floor (+50m) and warning temperature (+1°C) for
 the `'kei-car'` token; integrators with their own measured
-vehicle-class data should compose their own
-`VehicleThresholdOverrides`. Tokens are advisory strings, NOT
-control inputs: vehicle-class tunes the warning TIMING only, never
-the alert SEVERITY.
+vehicle-class data should build their own registry with
+`VehicleThresholdOverrides.validated(...)`. Tokens are advisory
+strings, NOT control inputs.
 
-Every context input is **conservative-only**: it can make the
-thresholds warn earlier than the per-profile baseline, never later.
-The per-profile baseline is the floor; vehicle-class overrides apply
-AFTER the baseline AND AFTER the live-context adjustments and are
-themselves caution-add-only. That is checked in every build mode, not
-only in debug builds: `VehicleThresholdOverrides.validated(...)`
-refuses a violating transform at registration, and on the drive path
-each refused field goes back to its un-overridden value and is
-reported.
+The live driving conditions and the driver state are
+**conservative-only**: they can make the thresholds warn earlier than
+the per-profile baseline, never later. Vehicle-class overrides apply
+AFTER the baseline AND AFTER the live-context adjustments. For a
+registry built with a `VehicleThresholdOverrides` constructor, an
+override may move only the two warning thresholds, and only earlier;
+every other field comes back at its un-overridden value. That is
+checked in every build mode, not only in debug builds:
+`VehicleThresholdOverrides.validated(...)` refuses a violating
+transform at registration, and on the drive path each refused field
+goes back to its un-overridden value and is reported. A registry whose
+class implements `VehicleThresholdOverrides`, or extends it and
+replaces `applyOverrideForToken`, gets these checks only if its method
+returns what this package's `applyOverrideForToken` returns. Otherwise
+what it returns is applied unchecked and unreported, in every build
+mode, even a warning threshold below the per-profile baseline or a
+changed critical threshold or cap.
 
 A runnable end-to-end walkthrough lives in
 [`example/main.dart`](example/main.dart).
@@ -174,16 +181,30 @@ available directly via
 not need a separate import:
 
 - **Speed-dependent visibility** (`computeSpeedAdjustedVisibilityMeters`)
-  — at higher speed the warning visibility floor must cover reaction
-  time + braking distance; the per-profile reaction-time default is
-  used to translate a live speed sample into an additional visibility
-  margin.
+  — the reaction distance (the per-profile reaction-time default times
+  the live speed) plus the braking distance at the default deceleration
+  of 5.5 m/s², a dry-pavement value, REPLACES the per-profile warning
+  visibility floor when it is longer; it is not added to it. With the
+  per-profile floors that happens only above about 134 km/h
+  (`agriculturalForestry`) to 179 km/h (`foreignTouristSnowZone`), so at
+  ordinary speeds a speed sample leaves the floor unchanged, and
+  `forProfileWithContext` has no parameter for a lower snow or ice
+  deceleration. (`forDriverContext` adds a further margin of speed
+  times a reaction-time penalty for a fatigued or distracted driver.)
 - **Humidity-dependent effective temperature**
   (`computeEffectiveTemperatureCelsius`) — black ice forms at
-  road-surface temperature ≤ 0 °C, which can be several degrees below
-  ambient when humidity is high; the dew-point-aware effective
-  temperature replaces ambient when it crosses the warning threshold
-  earlier.
+  road-surface temperature ≤ 0 °C. The effective temperature is the
+  dew point (Magnus formula), which sits further below ambient the
+  DRIER the air: at 2 °C ambient it is 1.28 °C at 95 % RH and
+  −7.35 °C at 50 % RH. It therefore covers the dry-to-moderate-humidity
+  radiative-frost case and, as the calibration package states, not
+  saturated freezing fog above about +1 °C. When the effective
+  temperature is at or below the per-profile warning temperature, the
+  warning temperature rises by `baseline − floor(effective)`, at most
+  10 °C. The effective temperature does not replace ambient in the
+  comparison: at 3.0 °C and 70 % RH the effective temperature is
+  −1.94 °C, the warning temperature rises from 0 °C to 2 °C, and a
+  3.0 °C ambient reading is still above it.
 - **Time-since-precipitation surface moisture**
   (`computeSurfaceMoistureFraction`) — surface moisture decays
   exponentially after the last rain or snowfall; the residual moisture
@@ -193,10 +214,11 @@ not need a separate import:
 Per-formula citations live in each calibration source file's header
 comment in the `navigation_safety_calibration` package.
 
-**Determinism note (safety-class).** These constants are the worst-case
-baseline HER relies on (Magnus black-ice constants; the surface-moisture
-half-life; the braking-distance default; the per-profile visibility
-floor). The calibration package is **caution-add-only — the per-profile
+**Determinism note (safety-class).** These constants are the
+design-default baseline HER relies on (Magnus black-ice constants; the
+surface-moisture half-life; the braking-distance default, 5.5 m/s², a
+dry-pavement value and not a worst case for snow or ice; the
+per-profile visibility floor). The calibration package is **caution-add-only — the per-profile
 floor never lowers** across its releases. Core pins it at `^0.1.2`;
 integrators shipping a product SHOULD commit a `pubspec.lock` so the
 exact calibration version is reproducible across builds rather than
@@ -229,15 +251,24 @@ CAN traffic, [`j1939`](https://pub.dev/packages/j1939) and the wider
 plumbing — address claiming, multi-packet transport, DM1 diagnostics
 — as Pure-Dart packages on pub.dev. `navigation_safety_core`
 composes downstream of those bus events: an integrator decodes the
-PGN payloads they care about (vehicle speed, engine coolant, ambient
-air temperature, ABS / TCS engagement, wiper status), maps them into
-a `DrivingContext`, and the safety vocabulary handles the rest.
+signals `DrivingContext` has fields for (vehicle speed, ambient air
+temperature, relative humidity, time since precipitation), leaves
+`null` any it does not measure, which keeps the per-profile baseline
+for that dimension, and the safety vocabulary handles the rest. Engine
+coolant temperature is not ambient air temperature: passed as
+`ambientTempCelsius`, it compares the engine's temperature with the
+warning temperature, so once the engine has warmed past it the
+temperature warning cannot fire, whatever the air outside. ABS / TCS
+engagement and wiper status have no `DrivingContext` field.
 
-`example/can_bus_integration.dart` walks through the pattern end to
-end with two J1939/71 PGNs (CCVS1 0xFEF1 wheel-based vehicle speed;
-ET1 0xFEEE engine coolant temperature) as illustrative anchors. The
-composition seam is the load-bearing part — the same shape applies
-to other vehicle-bus signal sources.
+`example/can_bus_integration.dart` walks through the pattern with one
+J1939/71 PGN decoded from the bus (CCVS1 0xFEF1 wheel-based vehicle
+speed) as an illustrative anchor. It decodes no ambient-air, humidity
+or precipitation signal: the ambient-air reading comes from a
+placeholder labelled as one, for the integrator to replace, and
+humidity and precipitation history stay `null`. The composition seam
+is the load-bearing part — the same shape applies to other vehicle-bus
+signal sources.
 
 ## What this is NOT
 
@@ -295,17 +326,31 @@ for the full discussion.
   order is load-bearing.
 - **`RoadSurfaceCondition`** — eight road-surface vocabulary values
   with a published glossary.
-- **`SafetyScore`** — composite score across road-surface,
-  visibility, hazard-density, and route-condition axes.
-- **`SafetyScenario`** — enumeration of driving-condition scenarios
-  used by the score computation.
+- **`SafetyScore`** — an `overall` score the caller supplies, carried
+  with `gripScore`, `visibilityScore` and `fleetConfidenceScore`; each
+  is clamped to 0–1, and a non-finite value becomes 0.
+  `toAlertSeverity` maps `overall` alone against a config's score
+  floors.
+- **`SafetyScenario`** — a named, versioned id for the kind of hazard
+  an alert describes (a class, not an enum); `WellKnownScenarios`
+  holds ready-made ids in the sensing, routing, signal, dynamics and
+  hmi categories. Nothing in this package's score uses it.
 - **`NavigationRoute`** — typed route representation independent of
   any specific routing engine.
 
 ## Further reading
 
 - [`example/main.dart`](example/main.dart) — runnable walkthrough of
-  every public surface.
+  the threshold factories (profile, live context, driver state),
+  `AlertDensityThrottle`, `AlertExplainer` and `AlertSeverity`
+  ordering. It does not cover `VehicleThresholdOverrides`,
+  `VehicleClassProvider`, the circadian, session and confidence
+  inputs, `SafetyScore`, `SafetyScenario`, `NavigationRoute`,
+  `RoadSurfaceConditionGlossary`, `LoomFitTelemetry`,
+  `registerUxDifferentiator` or the calibration functions.
+- [`example/can_bus_integration.dart`](example/can_bus_integration.dart)
+  — `VehicleThresholdOverrides.withKeiCarDefault()` on a vehicle-bus
+  frame stream.
 - [`CHANGELOG.md`](CHANGELOG.md) — per-version behaviour deltas.
 - [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) — UNVERIFIED-magnitude
   disclosures, standards-mapping detail, and the full

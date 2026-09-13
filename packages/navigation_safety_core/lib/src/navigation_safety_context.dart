@@ -27,14 +27,20 @@
 ///   `'compact-sedan'`, `'4wd'`, `'commercial-light'`) sourced from
 ///   an integrator-supplied `VehicleClassProvider`. When a matching
 ///   override is registered in a `VehicleThresholdOverrides` passed
-///   to the factory, the warning thresholds adjust caution-add-only
-///   AFTER the per-profile baseline AND AFTER the live-context
-///   adjustments. `null` (the default) means no vehicle-class signal
-///   is available; thresholds fall back to the per-profile baseline.
+///   to the factory, it applies AFTER the per-profile baseline AND
+///   AFTER the live-context adjustments. Through a registry built with
+///   a `VehicleThresholdOverrides` constructor it can only move the
+///   warning thresholds earlier. A registry whose class implements
+///   `VehicleThresholdOverrides`, or extends it and replaces
+///   `applyOverrideForToken`, is applied unchecked unless its method
+///   returns what that one returns. `null` (the default) means no
+///   vehicle-class signal is available; thresholds fall back to the
+///   per-profile baseline.
 ///
-/// All adjustments are additive in conservatism: context can only make
-/// the thresholds warn earlier, never later, than the per-profile
-/// baseline. The per-profile baseline acts as a floor.
+/// The live-condition fields are additive in conservatism: they can only
+/// make the thresholds warn earlier, never later, than the per-profile
+/// baseline, which acts as their floor. A vehicle-class registry of the
+/// integrator's own class, as above, can take a threshold below it.
 library;
 
 import 'package:equatable/equatable.dart';
@@ -76,14 +82,21 @@ class DrivingContext extends Equatable {
   /// `'commercial-light'`) sourced from an integrator-supplied
   /// `VehicleClassProvider`. Consumed by
   /// `NavigationSafetyConfig.forProfileWithContext` together with an
-  /// optional `VehicleThresholdOverrides` registry to apply
-  /// caution-adding-only threshold adjustments AFTER the per-profile
-  /// baseline AND AFTER the live-context adjustments.
+  /// optional `VehicleThresholdOverrides` registry, whose override
+  /// applies AFTER the per-profile baseline AND AFTER the live-context
+  /// adjustments.
   ///
-  /// Tokens are advisory strings, NOT control inputs. They modulate
-  /// threshold TIMING only; they do NOT modify alert SEVERITY (per
-  /// the severity-not-profile invariant) and they do NOT close any
-  /// control loop (per the driver-always-drives invariant).
+  /// Tokens are advisory strings, NOT control inputs, and they do NOT
+  /// close any control loop (per the driver-always-drives invariant).
+  /// Through a registry built with a `VehicleThresholdOverrides`
+  /// constructor a token can only move the two warning thresholds
+  /// earlier; a score floor, critical or info threshold, or the
+  /// alerts-per-minute cap comes back at its un-overridden value (per
+  /// the severity-not-profile invariant). A registry whose class
+  /// implements `VehicleThresholdOverrides`, or extends it and replaces
+  /// `applyOverrideForToken`, gets none of that unless its method
+  /// returns what that one returns: what its method returns is applied
+  /// as it comes, in every build mode.
   ///
   /// `null` (the default) means the integrator does not have a
   /// vehicle-class signal in this trip / session; thresholds fall

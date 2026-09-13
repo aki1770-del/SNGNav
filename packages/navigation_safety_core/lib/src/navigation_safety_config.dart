@@ -145,10 +145,17 @@ class NavigationSafetyConfig extends Equatable {
   ///   per-profile baseline acts as a lower bound: context can only
   ///   warn earlier (longer visibility floor), never later.
   /// - If both `context.humidityRH` and `context.ambientTempCelsius`
-  ///   are non-null, the warning temperature raises to cover
-  ///   dew-point-driven black-ice risk: the effective road-surface
-  ///   temperature (ambient minus dew-point depression) replaces
-  ///   ambient when it crosses the warning threshold earlier.
+  ///   are non-null and the effective road-surface temperature
+  ///   (ambient minus dew-point depression, i.e. the dew point) is at
+  ///   or below the per-profile warning temperature, the warning
+  ///   temperature rises by `baseline - floor(effective)`, at most
+  ///   10 °C, to cover dew-point-driven black-ice risk. The effective
+  ///   temperature does not replace ambient in the comparison: an
+  ///   ambient reading compared with the raised warning temperature
+  ///   can stay above it while the effective temperature is at or
+  ///   below the baseline. At 3.0 °C and 70% RH the effective
+  ///   temperature is -1.94 °C and the warning temperature rises from
+  ///   0 to 2 °C, so the 3.0 °C reading does not meet it.
   /// - If `context.timeSincePrecipitation` is non-null, the warning
   ///   visibility additionally raises by a residual-moisture margin
   ///   proportional to the surface-moisture fraction (longer
@@ -258,10 +265,12 @@ class NavigationSafetyConfig extends Equatable {
         ambientCelsius: context.ambientTempCelsius!,
         humidityRH: context.humidityRH!,
       );
-      // If the effective temperature reaches the baseline warning
-      // temperature earlier than ambient, raise the warning so the
-      // alert fires on ambient-temperature inputs that would today
-      // pass the baseline check.
+      // If the effective temperature is at or below the baseline
+      // warning temperature, raise the warning by the whole degrees it
+      // sits below the baseline, at most 10. That moves the ambient
+      // comparison by the lift only: an ambient reading more than the
+      // lift above the baseline still passes (1.5 C at 84% RH:
+      // effective -0.91 C, warning temperature 1 C).
       if (effective <= base.warningTemperatureCelsius.toDouble()) {
         // .toInt() portability hardening: num.clamp is declared to return
         // `num`; current SDKs special-case int.clamp(int, int) as int, but

@@ -17,8 +17,8 @@ void main() {
         DriverProfile.noviceUrban,
         context: const DrivingContext(speedMps: 50.0),
       );
-      // Novice 3.58s × 50 = 179m + 50²/11 ≈ 113.6 → 292.6m, less than
-      // 320 baseline → stays at baseline. Try faster.
+      // Novice 3.58s × 50 = 179m + 50²/11 ≈ 227.3 → 406.3m, above the
+      // 320 baseline → the floor rises to 407m (rounded up).
       expect(
         adj.warningVisibilityMeters,
         greaterThanOrEqualTo(base.warningVisibilityMeters),

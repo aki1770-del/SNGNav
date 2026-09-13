@@ -58,17 +58,18 @@ final Map<DriverProfile, Set<UxDifferentiatorTag>> _registry =
 /// Registers a UX differentiator for [profile] under the descriptive
 /// [tag]. Idempotent: registering the same tag twice is a no-op.
 ///
-/// Consuming Flutter packages call this at app-bootstrap time. The
-/// registration tells [assertUxDifferentiated] that the consuming UX
-/// layer has wired profile-aware behavior for [profile] under [tag].
+/// Call this at app-bootstrap time for each profile-aware UX surface
+/// the app wires. The registration tells [assertUxDifferentiated] that
+/// the consuming UX layer has wired profile-aware behavior for
+/// [profile] under [tag].
 ///
-/// **What to register**, by package:
-///
-/// - `voice_guidance` registers per-profile speakingRate / verbosity
-///   under tags like `'voice_guidance:speakingRate'`.
-/// - `navigation_safety` registers per-profile modal-alert duration +
-///   alert-explainer surfaces under tags like
-///   `'navigation_safety:modalDuration'`.
+/// **No consuming package calls this for you.** As of this release,
+/// neither `voice_guidance` nor `navigation_safety` registers anything,
+/// so an app must register its own tags, for example
+/// `'voice_guidance:speakingRate'` where it sets a per-profile speaking
+/// rate, or `'navigation_safety:modalDuration'` where it sets a
+/// per-profile modal-alert duration. Without a registration,
+/// [assertUxDifferentiated] throws in a debug build for that profile.
 ///
 /// **What does not need registering**: anything purely threshold-class
 /// (covered by `NavigationSafetyConfig.forProfile`).

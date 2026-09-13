@@ -49,7 +49,9 @@
 ///   analytics layer treats the record as "outcome-only without
 ///   latency."
 /// - `outcome` — one of `fired`, `droppedByThrottle`, `criticalBypass`,
-///   `coldStart`. Disjoint and exhaustive over `shouldFire` decisions.
+///   `coldStart`. `shouldFire` returns only a bool, so the integrator
+///   assigns the label; built as the composition pattern below builds
+///   it, every `shouldFire` decision gets exactly one.
 ///
 /// **Boundary discipline** (load-bearing):
 ///
@@ -82,20 +84,25 @@
 /// // throttle purges its window.
 /// final firedAt = <DateTime>[];
 ///
-/// // At alert-firing seam:
+/// // At alert-firing seam. Purge first: the throttle admits any alert
+/// // that finds its window empty on its cold-start path, before the
+/// // critical bypass, and `shouldFire` does not say which path it took.
+/// firedAt.removeWhere((t) => !t.isAfter(now.subtract(throttle.window)));
+/// final windowWasEmpty = firedAt.isEmpty;
 /// final fired = throttle.shouldFire(now, severity);
 /// if (fired) firedAt.add(now);
-/// firedAt.removeWhere((t) => !t.isAfter(now.subtract(throttle.window)));
 /// telemetry.record(LoomFitTelemetryRecord(
 ///   profileClass: profile,
 ///   ambientThreshold: thresholdId,
 ///   alertSequence: firedAt,
 ///   responseLatency: null,
-///   outcome: fired
-///       ? (severity == AlertSeverity.critical
-///             ? LoomFitOutcome.criticalBypass
-///             : LoomFitOutcome.fired)
-///       : LoomFitOutcome.droppedByThrottle,
+///   outcome: !fired
+///       ? LoomFitOutcome.droppedByThrottle
+///       : windowWasEmpty
+///           ? LoomFitOutcome.coldStart
+///           : (severity == AlertSeverity.critical
+///                 ? LoomFitOutcome.criticalBypass
+///                 : LoomFitOutcome.fired),
 /// ));
 /// ```
 ///
@@ -112,10 +119,14 @@ import 'driver_profile.dart';
 
 /// Outcome class for a single `shouldFire` decision.
 ///
-/// Disjoint and exhaustive: every `shouldFire` call resolves to exactly
-/// one of these four. The integrator's analytics layer aggregates by
-/// this enum to compute fit-class metrics (drop-rate, critical-share,
-/// cold-start-share).
+/// The four are disjoint. The throttle does not assign them:
+/// `shouldFire` returns only a bool. Records built as in the library
+/// documentation's composition pattern give every `shouldFire` call
+/// exactly one; a pattern that does not check, before the call, whether
+/// the window was empty never produces [coldStart], and cold-start-share
+/// cannot be computed from its records. The integrator's analytics layer
+/// aggregates by this enum to compute fit-class metrics (drop-rate,
+/// critical-share, cold-start-share).
 enum LoomFitOutcome {
   /// Alert fired under the per-profile cap (non-critical, non-coldStart).
   fired,
@@ -128,9 +139,11 @@ enum LoomFitOutcome {
   /// (sudden critical-share growth is a calibration-class signal).
   criticalBypass,
 
-  /// First alert in the session bypassed the window check (no
-  /// historical context). Tracked separately so cold-start-share can
-  /// be excluded from steady-state fit analysis.
+  /// The throttle's window was empty, so the alert was admitted without
+  /// a window check, whatever its severity: the first alert in a
+  /// session, and any alert after the window has emptied. Tracked
+  /// separately so cold-start-share can be excluded from steady-state
+  /// fit analysis.
   coldStart,
 }
 

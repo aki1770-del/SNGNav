@@ -12,9 +12,11 @@
 /// change. The new factory `NavigationSafetyConfig.forDriverContext`
 /// is the only way to opt into state-axis tuning.
 ///
-/// State adjustments are conservative-only (per the 0.5.0 contract):
-/// they may make thresholds warn earlier than the per-profile baseline,
-/// never later. See `driver_state.dart` and `KNOWN_LIMITATIONS.md`
+/// State adjustments are conservative-only for thresholds (per the 0.5.0
+/// contract): they may make thresholds warn earlier than the per-profile
+/// baseline, never later. An earlier info or critical threshold can
+/// still cost a later warning its slot in `AlertDensityThrottle`'s
+/// window; see `driver_state.dart`. See `KNOWN_LIMITATIONS.md`
 /// (state-axis section) for the per-state delta shapes and the
 /// UNVERIFIED-magnitude disclosure on every state-effect.
 library;

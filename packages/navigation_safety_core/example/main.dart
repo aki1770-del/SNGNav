@@ -79,7 +79,7 @@ void _showProfileWithContext() {
   print(
     '  context-tuned warning visibility: '
     '${tuned.warningVisibilityMeters} m   '
-    '(speed + recent-rain margin)',
+    '(recent-rain margin; 80 km/h leaves the floor as it is)',
   );
   print(
     '  baseline warning temperature:     '

@@ -8,20 +8,27 @@
 //
 // Composition seam:
 //
-//   j1939.J1939Ecu.events  ──► PGN decode (here, for J1939/71 vehicle
-//                              speed and engine coolant temperature)
-//                          ──► DrivingContext mapping
+//   j1939.J1939Ecu.events  ──► PGN decode (here, J1939/71 vehicle
+//                              speed only)
+//   ambient-air reading    ──► (a labelled PLACEHOLDER in main below)
+//                          ──► DrivingContext mapping (a signal this
+//                              integration does not measure stays null)
 //                          ──► NavigationSafetyConfig
 //                              .forProfileWithContext
-//                          ──► AlertExplainer.explain(...)
+//                          ──► AlertExplainer.forConditionAndProfile(...)
+//                              .action
 //                          ──► driver-facing advisory string
 //
-// The mapping below uses two J1939/71 PGNs as illustrative anchors:
+// The mapping below decodes one J1939/71 PGN as an illustrative anchor:
 //
 //   * 0xFEF1 — Cruise Control / Vehicle Speed (CCVS1).
 //     Byte offset 1..2 = wheel-based vehicle speed, 1/256 km/h per bit.
-//   * 0xFEEE — Engine Temperature 1 (ET1).
-//     Byte offset 0 = engine coolant temperature, 1 °C per bit, offset −40.
+//
+// It decodes no ambient-air, humidity or precipitation signal. Engine
+// coolant temperature is NOT ambient air temperature and must not be
+// passed as `ambientTempCelsius`: an earlier revision of this file did,
+// so once the engine warmed past the warning temperature (1 °C here)
+// the advisory could not fire, whatever the air outside.
 //
 // Real integrations should consult SAE J1939/71 for the full SPN /
 // PGN catalog and apply the same composition pattern to other
@@ -98,29 +105,26 @@ double? decodeWheelSpeedKmh(_FrameReceivedLike frame) {
   return raw / 256.0;
 }
 
-/// ET1 PGN 0xFEEE — engine coolant temperature in °C.
-double? decodeCoolantTempCelsius(_FrameReceivedLike frame) {
-  if (frame.pgn != 0xFEEE || frame.data.isEmpty) return null;
-  return frame.data[0] - 40.0;
-}
-
 // ── DrivingContext bridge ────────────────────────────────────────────
 
-/// Builds a [DrivingContext] from the most-recent vehicle-bus samples.
-/// Engine coolant temperature is used here as a proxy for ambient
-/// temperature once the engine is cold-started; production code should
-/// prefer a dedicated ambient-air PGN where available.
+/// Builds a [DrivingContext] from what this integration actually
+/// measures. Only speed is required: pass `null` for any other signal
+/// you do not measure, and the factory keeps the per-profile baseline
+/// for that dimension. Never substitute a constant or another sensor
+/// for a missing one: engine coolant temperature is not
+/// [ambientAirTempCelsius], and a fixed humidity or precipitation
+/// history tells the factory about weather nobody observed.
 DrivingContext driveContextFromCanSamples({
   required double speedKmh,
-  required double coolantTempCelsius,
-  double humidityRH = 0.85,
-  Duration timeSincePrecipitation = const Duration(minutes: 30),
+  double? ambientAirTempCelsius,
+  double? humidityRH,
+  Duration? timeSincePrecipitation,
   String? vehicleClassToken,
 }) {
   return DrivingContext(
     speedMps: speedKmh / 3.6,
     humidityRH: humidityRH,
-    ambientTempCelsius: coolantTempCelsius,
+    ambientTempCelsius: ambientAirTempCelsius,
     timeSincePrecipitation: timeSincePrecipitation,
     vehicleClassToken: vehicleClassToken,
   );
@@ -129,9 +133,16 @@ DrivingContext driveContextFromCanSamples({
 // ── Composition: vehicle-CAN → safety advisory ───────────────────────
 
 /// Listens for J1939 frames, builds a [DrivingContext] from the latest
-/// speed and coolant samples, and yields the advisory action an app
-/// can surface to the driver. Profile is fixed here for clarity; in
-/// production it comes from the active driver session.
+/// speed sample and the latest ambient-air reading, and yields the
+/// advisory action an app can surface to the driver. Profile is fixed
+/// here for clarity; in production it comes from the active driver
+/// session.
+///
+/// [readAmbientAirTempCelsius] returns the vehicle's current ambient
+/// air temperature, or `null` when there is none. This example has no
+/// ambient-air source, so [main] passes a placeholder labelled as one.
+/// With `null`, no temperature advisory is yielded: an unmeasured
+/// temperature is never treated as a cold one.
 ///
 /// [vehicleOverrides] is built ONCE by the caller (see [main]) and
 /// passed in. It is never constructed inside the loop below: a
@@ -141,11 +152,11 @@ DrivingContext driveContextFromCanSamples({
 /// override may not change.
 Stream<String> safetyAdvisoryStream(
   _J1939EcuLike ecu, {
+  required double? Function() readAmbientAirTempCelsius,
   VehicleThresholdOverrides? vehicleOverrides,
   String? vehicleClassToken,
 }) async* {
   double? lastSpeedKmh;
-  double? lastCoolantC;
   const profile = DriverProfile.snowZoneExperienced;
 
   // Hoisted: the explainer depends only on condition + profile, both
@@ -159,23 +170,26 @@ Stream<String> safetyAdvisoryStream(
   // A J1939 bus repeats PGNs at a fixed rate whether or not the value
   // changed, so most frames need no new config at all.
   double? configSpeedKmh;
-  double? configCoolantC;
+  double? configAmbientC;
   NavigationSafetyConfig? config;
 
   await for (final frame in ecu.frames) {
     final speed = decodeWheelSpeedKmh(frame);
     if (speed != null) lastSpeedKmh = speed;
-    final coolant = decodeCoolantTempCelsius(frame);
-    if (coolant != null) lastCoolantC = coolant;
+    final ambientC = readAmbientAirTempCelsius();
 
-    if (lastSpeedKmh == null || lastCoolantC == null) continue;
+    if (lastSpeedKmh == null) continue;
 
     if (config == null ||
         configSpeedKmh != lastSpeedKmh ||
-        configCoolantC != lastCoolantC) {
+        configAmbientC != ambientC) {
+      // Humidity and precipitation history are left null: this
+      // integration measures neither, so the factory keeps the
+      // per-profile baseline for them rather than acting on weather
+      // nobody observed.
       final ctx = driveContextFromCanSamples(
         speedKmh: lastSpeedKmh,
-        coolantTempCelsius: lastCoolantC,
+        ambientAirTempCelsius: ambientC,
         vehicleClassToken: vehicleClassToken,
       );
       // Cannot throw on account of a registry built with a
@@ -192,10 +206,12 @@ Stream<String> safetyAdvisoryStream(
         vehicleOverrides: vehicleOverrides,
       );
       configSpeedKmh = lastSpeedKmh;
-      configCoolantC = lastCoolantC;
+      configAmbientC = ambientC;
     }
 
-    if (lastCoolantC <= config.warningTemperatureCelsius) {
+    // The measured AMBIENT AIR temperature, compared with the warning
+    // temperature the config returns. `null` yields nothing.
+    if (ambientC != null && ambientC <= config.warningTemperatureCelsius) {
       yield explainer.action;
     }
   }
@@ -203,28 +219,20 @@ Stream<String> safetyAdvisoryStream(
 
 // ── Local mock for analyzer-only runs ────────────────────────────────
 
-/// Synthetic ECU that emits one warm-up sample then one cold-cabin
-/// sample. Replace with `J1939Ecu.create(...)` from the j1939 package
-/// in production.
+/// Synthetic ECU that emits one CCVS1 wheel-speed frame (80 km/h).
+/// Replace with `J1939Ecu.create(...)` from the j1939 package in
+/// production.
 class _MockEcu implements _J1939EcuLike {
   final _controller = StreamController<_FrameReceivedLike>();
   _MockEcu() {
     Future<void>.microtask(() async {
-      _controller
-        ..add(
-          _FrameReceivedLike(
-            pgn: 0xFEF1,
-            source: 0x00,
-            data: Uint8List.fromList([0, 0x00, 0x50, 0, 0, 0, 0, 0]),
-          ),
-        )
-        ..add(
-          _FrameReceivedLike(
-            pgn: 0xFEEE,
-            source: 0x00,
-            data: Uint8List.fromList([35, 0, 0, 0, 0, 0, 0, 0]),
-          ),
-        );
+      _controller.add(
+        _FrameReceivedLike(
+          pgn: 0xFEF1,
+          source: 0x00,
+          data: Uint8List.fromList([0, 0x00, 0x50, 0, 0, 0, 0, 0]),
+        ),
+      );
       await _controller.close();
     });
   }
@@ -246,9 +254,16 @@ Future<void> main() async {
   // reported, not thrown.
   final overrides = VehicleThresholdOverrides.withKeiCarDefault();
 
+  // PLACEHOLDER, not a bus sample and not a measurement: this example
+  // decodes no ambient-air signal. Replace it with your vehicle's
+  // ambient air temperature reading, or return `null` when you have
+  // none. The fixed value is here only so the run shows an advisory.
+  double? placeholderAmbientAirTempCelsius() => -1.0;
+
   final ecu = _MockEcu();
   await for (final advisory in safetyAdvisoryStream(
     ecu,
+    readAmbientAirTempCelsius: placeholderAmbientAirTempCelsius,
     vehicleOverrides: overrides,
     vehicleClassToken: 'kei-car',
   )) {

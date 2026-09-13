@@ -193,8 +193,9 @@ void main() {
         isFalse,
       );
 
-      // At t=61s, the t=0 alert ages out (61s > 60s window). Window
-      // count = 1. New alert fires.
+      // At t=61s both earlier entries are purged: t=0 is 61s old, and
+      // t=1 is exactly 60s old, at the cutoff, which also purges. Window
+      // count = 0, so the new alert fires on the empty-window path.
       expect(
         t.shouldFire(
           t0.add(const Duration(seconds: 61)),
@@ -203,8 +204,8 @@ void main() {
         isTrue,
       );
 
-      // The t=1 alert is still inside (61 - 1 = 60s, on the boundary
-      // and counted as expired by isAtSameMomentAs(cutoff) rule).
+      // The t=1 alert is not inside: 61 - 1 = 60s is exactly the cutoff,
+      // and the isAtSameMomentAs(cutoff) rule purges it.
       // After admission of the new alert at t=61, window count is now
       // 1 (the t=61 one) since the t=1 entry is at exactly cutoff;
       // but the t=58 result above already proved the window slides.

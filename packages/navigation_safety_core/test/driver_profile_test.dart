@@ -231,8 +231,10 @@ void main() {
 
     test('every profile produces a valid config', () {
       for (final profile in DriverProfile.values) {
-        // Constructor validates ordering invariants; if any profile produced
-        // invalid thresholds the constructor would have thrown.
+        // The constructor checks only the three score floors (finite, in
+        // 0..1, safe >= info >= warning); it does not check the ordering of
+        // the visibility or temperature tiers, so this test checks only the
+        // score floors.
         final c = NavigationSafetyConfig.forProfile(profile);
         expect(c.safeScoreFloor, inInclusiveRange(0, 1));
         expect(c.infoScoreFloor, inInclusiveRange(0, 1));

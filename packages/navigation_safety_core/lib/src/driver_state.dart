@@ -13,8 +13,13 @@
 /// per insight #23 of the HER Pivot 100. This enum is a forward-
 /// compatible foothold, not the final shape.
 ///
-/// State adjustments are **conservative-only** — they may make the
-/// thresholds warn earlier than the per-profile baseline, never later.
+/// State adjustments are **conservative-only** for thresholds — they
+/// may make the thresholds warn earlier than the per-profile baseline,
+/// never later. An earlier threshold has its own cost:
+/// [DriverState.impairedVisibility] also moves the info and critical
+/// visibility thresholds earlier, and info and critical alerts take
+/// slots in `AlertDensityThrottle`'s rolling window as warnings do, so
+/// a later warning can be dropped.
 /// See `KNOWN_LIMITATIONS.md` (state-axis section, 0.6.0) for the
 /// UNVERIFIED-magnitude flag on every state-effect delta below.
 library;

@@ -46,7 +46,7 @@ void main() {
     });
   });
 
-  group('Confidence.low — auto-tightens cap (caution-add)', () {
+  group('Confidence.low — cap × 0.75, never below 1.0', () {
     test('low tightens cap below baseline', () {
       final base = NavigationSafetyConfig.forDriverContext(dc);
       final tightened = NavigationSafetyConfig.forDriverContext(

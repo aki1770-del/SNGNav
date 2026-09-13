@@ -95,8 +95,9 @@ class AlertDensityThrottle {
   final double alertsPerMinuteCap;
 
   /// Rolling window duration. Default `Duration(seconds: 60)`. The
-  /// window slides — every call to [shouldFire] purges entries older
-  /// than `now - window` before evaluating the cap.
+  /// window slides — every call to [shouldFire] purges entries at or
+  /// before `now - window` before evaluating the cap, so an entry
+  /// exactly one window old no longer counts.
   final Duration window;
 
   /// When true (default and recommended invariant),
@@ -200,7 +201,7 @@ class AlertDensityThrottle {
   ///
   /// Side-effect: when the alert is permitted to fire, its [now]
   /// timestamp is recorded in the rolling window. Calls to this method
-  /// purge entries older than `now - window` before evaluating the
+  /// purge entries at or before `now - window` before evaluating the
   /// cap.
   ///
   /// Critical-bypass: when [bypassForCritical] is true and [severity]
@@ -212,7 +213,7 @@ class AlertDensityThrottle {
   /// the window check (no historical context to throttle against). The
   /// firing timestamp is still recorded.
   bool shouldFire(DateTime now, AlertSeverity severity) {
-    // Purge entries older than `now - window` before any evaluation.
+    // Purge entries at or before `now - window` before any evaluation.
     final cutoff = now.subtract(window);
     _firedAt.removeWhere(
       (t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff),
