@@ -180,12 +180,16 @@ are design-default hypotheses pending field-measurement validation.
   debug-mode assertion. `tighten(int)` rejects newBudgetBytes larger
   than active budget. Auto-relax forbidden; only `relax(int,
   BudgetRelaxConfirmation)` with affirmative confirmation may loosen
-  the budget. Verified by negative-assertion tests.
+  the budget. Verified at 0.2.0 by negative-assertion tests. Since
+  2026-09-13 `tighten` and `relax` refuse in every build mode, and
+  those tests expect `RangeError` and `ArgumentError` instead of
+  `AssertionError`.
 
 - **Driver-always-drives contract** — `relax` rejects
-  `confirmation.isConfirmed == false` and empty `confirmation.reason`
-  at runtime via debug-mode assertion. Verified by the relax-flow
-  test in `test/data_budget_test.dart`.
+  `confirmation.isConfirmed == false` and empty `confirmation.reason`:
+  at 0.2.0 via debug-mode assertion; since 2026-09-13 in every build
+  mode, by throwing `ArgumentError`. Verified by the relax-flow test in
+  `test/data_budget_test.dart`, which expects `ArgumentError`.
 
 - **Severity-not-profile contract** — the tracker is bandwidth-class
   only; it does not modify alert severity tiers. Verified at
@@ -225,8 +229,9 @@ are design-default hypotheses pending field-measurement validation.
   confirmation surface (e.g. user-tap dialog). The package does not
   invent the surface. The discipline is: relax(...)
   must NEVER be called from a code path that does not pass through
-  affirmative driver-confirmed input. The `assert` is a backstop, not
-  a substitute for the discipline.
+  affirmative driver-confirmed input. The refusal in `relax` (it
+  throws `ArgumentError` for an unconfirmed token or an empty reason)
+  is a backstop, not a substitute for the discipline.
 
 ---
 
