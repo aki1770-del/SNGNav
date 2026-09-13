@@ -60,12 +60,14 @@ class PositionIntegrityMonitor {
     // in place, which is the multipath case in a snow-walled canyon — is
     // simply off, and the monitor keeps returning `trusted`.
     //
-    // Throwing is safe for the driver here because these are CONFIGURATION
-    // values, fixed at construction. An invalid one fails on the edge
-    // developer's first run, on their machine, where they can fix it — never
-    // mid-drive on a live fix. Runtime fix data is handled the opposite way:
-    // `update` rejects a non-finite fix with a `failed` verdict and never
-    // throws.
+    // These are CONFIGURATION values, fixed at construction, so an invalid one
+    // throws wherever the integrator's code constructs the monitor. This
+    // library cannot see where that is. Constructed at startup, it fails on
+    // the developer's first run; constructed later from settings or remote
+    // configuration, it throws at that moment, on the device. We do not
+    // promise it lands off the drive. Runtime fix data is handled the
+    // opposite way: `update` rejects a non-finite fix with a `failed` verdict
+    // and never throws.
     _requireFinitePositive(maxPlausibleSpeed, 'maxPlausibleSpeed');
     _requireFinitePositive(maxPlausibleAccel, 'maxPlausibleAccel');
     _requireFinitePositive(
@@ -147,7 +149,7 @@ class PositionIntegrityMonitor {
         value,
         name,
         'must be a finite number greater than 0 (NaN and infinity silently '
-            'disable the gate that uses it)',
+        'disable the gate that uses it)',
       );
     }
   }
@@ -159,7 +161,7 @@ class PositionIntegrityMonitor {
         value,
         name,
         'must be a finite number greater than or equal to 0 (NaN and infinity '
-            'silently disable the gate that uses it)',
+        'silently disable the gate that uses it)',
       );
     }
   }

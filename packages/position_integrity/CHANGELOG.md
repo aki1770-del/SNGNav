@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 **Configuration is now validated in release builds, not only in tests.**
 
@@ -11,15 +11,23 @@ Dart strips `assert` from AOT builds (`dart compile exe`,
 present in every test run and in no shipped build, and no test had ever
 constructed an invalid monitor in any mode.
 
-The guards are now real `ArgumentError` / `RangeError` throws and fire in every
-mode. They land on the edge developer at construction, on their first run,
-never on a driver mid-drive: these are configuration values fixed at
-construction, and runtime fix data is still handled the opposite way — `update`
-rejects a non-finite fix with a `failed` verdict and never throws.
+The guards are now real `ArgumentError` / `RangeError` throws and fire in every mode.
+They throw wherever your code constructs the monitor. If you construct it at
+startup, you will meet any of them on your first run. If you build a monitor
+later from settings or remote configuration, for example when navigation
+starts, it throws there, on the device, so validate those values or catch
+`ArgumentError` at that call. `update` still never throws: a non-finite fix
+returns a `failed` verdict.
 
 - **BEHAVIOUR CHANGE.** An invalid configuration that a release build silently
   accepted in 0.1.0 now throws. `RangeError` extends `ArgumentError`, so one
   `on ArgumentError` catch covers every guard.
+- **If you passed `double.infinity`, NaN, zero or a negative value to switch a
+  gate off,** that configuration now throws. In 0.1.0 it did not switch the
+  gate off in any way you could see: with infinite speed, acceleration and
+  teleport thresholds, a 400 m jump in one second came back `trusted`, with
+  both gates reported as passed. No value turns a gate off silently any more.
+  If you need a looser gate, pass the largest finite value you actually mean.
 - Four parameters gained guards they never had, in any mode:
   `stationaryRadiusMetres` (at `<= 0` the stationary-jitter gate can never
   fire), `minSpeedDelta` (at `<= 0` the teleport gate is never evaluated and

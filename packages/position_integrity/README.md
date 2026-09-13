@@ -1,6 +1,6 @@
 # position_integrity
 
-> **0.1.0. The calibration-free floor: turn a fused location stream into a trust verdict.**
+> **0.1.1. The calibration-free floor: turn a fused location stream into a trust verdict.**
 
 The platform tells you GPS **accuracy**. It never tells you when GPS has started
 **lying**. In a snow-loaded urban canyon a reflected signal can teleport the dot
@@ -48,6 +48,7 @@ testable with synthetic fixes.
 
 ```dart
 import 'package:position_integrity/position_integrity.dart';
+// oracle:placeholders pos, deadReckoning, showGpsPosition, switchToDeadReckoning, holdLastKnownGood
 
 final monitor = PositionIntegrityMonitor(); // sensible road defaults
 
@@ -90,6 +91,7 @@ Wiring the whole stream (the monitor is stateful — feed it one `update()` per
 fix, in order, from a single non-broadcast subscription):
 
 ```dart
+// oracle:placeholders positionStream, monitor, toFix
 positionStream
     .map((p) => monitor.update(toFix(p)))
     .listen((v) { /* act on v.status / v.recommendedSource */ });
@@ -149,8 +151,8 @@ Up to 0.1.0 these guards were asserts, and that is exactly what happened.
 `test/release_mode_guard_test.dart` now compiles a probe to a native
 executable and runs it, so the guards are proven in the mode that ships.
 
-The check lands on **you, at construction, on your first run** — never on a
-driver mid-drive. Runtime fix data is handled the opposite way: `update` never
+The check lands wherever your code constructs the monitor: at startup, that is your first run; if you construct one later from runtime values, it is that moment, on the device.
+Runtime fix data is handled the opposite way: `update` never
 throws, and returns a `failed` verdict for a non-finite or out-of-range fix.
 
 ## Honesty bound (read this)
@@ -180,6 +182,6 @@ protecting even if that finer layer is mistuned.
 
 ## Status
 
-0.1.0. The calibration-free plausibility floor. Pure Dart, no dependencies.
+0.1.1. The calibration-free plausibility floor. Pure Dart, no dependencies.
 Interface may evolve before 1.0 as the NIS layer lands; changes will follow
 semver and the honesty bounds above are permanent.
