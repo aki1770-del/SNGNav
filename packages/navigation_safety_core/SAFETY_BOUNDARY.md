@@ -137,15 +137,20 @@ legal transform could have produced. A transform that throws is
 refused whole: the baseline is returned and the error is reported.
 Both checks belong to `VehicleThresholdOverrides` itself
 (`validated` and `applyOverrideForToken`), and the factories call the
-registry's own `applyOverrideForToken`. A registry whose class
-implements `VehicleThresholdOverrides`, or extends it and replaces
-that method, therefore gets neither check: what it returns is
-applied unchecked and unreported, in every build mode (measured: a
-warning visibility floor lowered from 300 m to 250 m, a halved
-critical visibility threshold and a cap of 10.0 all reach the
-`ageingRural` config). A registry built with
+registry's own `applyOverrideForToken`. A registry built with
 `VehicleThresholdOverrides.validated` gets both checks; one built
-with its plain constructor gets the drive-path check.
+with its plain constructor gets the drive-path check. If a
+registry's class implements `VehicleThresholdOverrides`, or extends
+it and replaces that method, the factories call that class's method,
+and the checks reach it only if that method returns what this
+package's `applyOverrideForToken` returns. It is then checked as the
+registry whose result it returns is checked, so returning the result
+of a registry built with `VehicleThresholdOverrides.validated` gives
+both checks. Otherwise what the method returns is applied unchecked
+and unreported, in every build mode (measured: a warning visibility
+floor lowered from 300 m to 250 m, a halved critical visibility
+threshold and a cap of 10.0 all reach the `ageingRural` config), and
+an exception the method throws reaches whoever called the factory.
 Negative-test coverage in `test/vehicle_threshold_overrides_test.dart`
 and `test/vehicle_threshold_overrides_all_fields_test.dart` confirms
 both refusals on relaxing warning floors, on a changed score floor,
@@ -207,9 +212,19 @@ axis scaffolding added in 0.10.0 (`CircadianPhase` +
 `SessionStateProvider` + `SessionState` + `CumulativeFatigueClass` +
 `ConfidenceProvider` + `Confidence` + five new optional named
 parameters on `NavigationSafetyConfig.forDriverContext`). All three
-inputs compose as caution-adding adjustments AFTER the trait
-baseline, the live-context layering, the vehicle-class override, AND
-the existing state-delta.
+inputs apply AFTER the trait baseline, the live-context layering, the
+vehicle-class override, AND the existing state-delta. The circadian
+phase and the session state change only the warning visibility
+threshold, and only upward, so that threshold is met earlier, never
+later. The confidence input changes only the alerts-per-minute cap:
+`Confidence.low` multiplies it by 0.75, never below 1.0, and a
+confirmed `Confidence.high` multiplies it by 1.25. A tighter cap
+does not only add caution: every alert
+that fires takes a slot in the throttle's rolling window (section
+7.1), so a warning can be dropped that the default cap would have let
+through (measured with `ageingRural`: an info alert, then a warning
+10 s later; the warning fires under the default cap of 1.2 and is
+dropped under the `Confidence.low` cap of 1.0).
 
 **Caution-add-only invariant**: circadian-phase + session-state
 adjustments may make warning thresholds fire EARLIER than the
@@ -274,8 +289,10 @@ raise the cap before that step, without the driver's confirmation
 and without tripping the assertion (10.0 against the `ageingRural`
 default of 1.2, on every published version in that range); from
 0.11.7 `VehicleThresholdOverrides` refuses any change to the cap
-(section 7.2), but a registry whose class implements it can still
-change the cap unchecked. An integrator that sets
+(section 7.2), but a registry whose class implements it, or extends
+it and replaces `applyOverrideForToken`, can still change the cap
+unchecked unless that method returns what this package's
+`applyOverrideForToken` returns. An integrator that sets
 `alertsPerMinuteCapOverride` directly, or supplies such a registry,
 owns that decision.
 

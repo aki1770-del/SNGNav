@@ -74,9 +74,12 @@ design-default hypotheses pending field-measurement validation.
   confirmation and without tripping the assertion (10.0 against the
   `ageingRural` default of 1.2, on every published version in that
   range). From 0.11.7 `VehicleThresholdOverrides` refuses any change
-  to the cap; a registry whose class implements
-  `VehicleThresholdOverrides` is not checked and can still change it
-  (see `SAFETY_BOUNDARY.md` section 7.2).
+  to the cap. A registry whose class implements
+  `VehicleThresholdOverrides`, or extends it and replaces
+  `applyOverrideForToken`, is checked only if that method returns
+  what this package's `applyOverrideForToken` returns; otherwise it
+  can still change the cap, unchecked and unreported (see
+  `SAFETY_BOUNDARY.md` section 7.2).
 - **Back-compat** — `forProfile`, `forProfileWithContext`, and
   `forDriverContext` (without the five new optional parameters)
   unchanged from 0.9.x.
@@ -160,7 +163,15 @@ calibration.
   by tests that compare `forDriverContext(ctx)` against
   `forProfile(ctx.profile)` for every state and assert
   warningTemperatureCelsius monotonic-up and visibility-tier
-  monotonic-up.
+  monotonic-up. An earlier threshold does not only add caution:
+  `impairedVisibility` also moves the info and critical visibility
+  thresholds earlier, every alert that fires takes a slot in
+  `AlertDensityThrottle`'s rolling window, and a later warning can be
+  dropped (measured with `ageingRural` and its default cap of 1.2,
+  readings of 1600 m, 1600 m and 250 m, 10 s apart: in the `alert`
+  state the warning fires; under
+  `impairedVisibility`, with the info threshold at 1875 m, two info
+  alerts fire and the warning is dropped).
 - **Back-compat** — `forProfile` and `forProfileWithContext`
   unchanged from 0.5.0.
 
@@ -180,8 +191,10 @@ calibration.
 
 ### Missing classes
 
-The 5 v1 profiles (`ageingRural`, `snowZoneExperienced`, `noviceUrban`,
-`professional`, `agriculturalForestry`) do not yet cover:
+The 5 profiles of 0.2.0 (`ageingRural`, `snowZoneExperienced`,
+`noviceUrban`, `professional`, `agriculturalForestry`) did not cover
+the two classes below. There are six profiles now: 0.3.0 added
+`foreignTouristSnowZone` for the first.
 
 - **Foreign-tourist driver in unfamiliar snow-zone.** Hokkaido winter
   accidents involve foreign self-driving tourists at meaningful rates
@@ -201,13 +214,15 @@ The 5 v1 profiles (`ageingRural`, `snowZoneExperienced`, `noviceUrban`,
 
 ### Trait-only taxonomy
 
-The 5 profiles encode driver **trait** (who-the-driver-is). Industry
+The six profiles encode driver **trait** (who-the-driver-is). Industry
 literature (Regan, Hallett & Gordon 2011 —
 [PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
 separates trait from **state** (drowsy / distracted / alert / asleep).
 A `DriverState` axis crossed with `DriverProfile` would match how risk
-is actually modeled. **Deferred** — adding a state axis is a v1.0
-architecture decision, not a v0.x patch.
+is actually modeled. **Addressed in 0.6.0** with `DriverState` and
+`DriverContext` (see the DriverState section above); the full trait ×
+state matrix with per-cell calibration remains a v1.0 architecture
+decision.
 
 ### Frailty-vs-robust split inside `ageingRural`
 
@@ -332,11 +347,13 @@ If you are an app developer integrating `navigation_safety_core`:
 2. **Pin the patch version**, not the minor version, if you need
    stability. Threshold magnitudes are still being calibrated per
    ongoing literature review; minor versions may adjust them.
-3. **If you serve a driver-class not in the 5 profiles**, fall back to
-   `DriverProfile.snowZoneExperienced` (the standard default) and
-   document the mapping in your own integration layer — and consider
-   filing an issue describing your use case so the next iteration can
-   incorporate it.
+3. **If you serve a driver-class that none of the six profiles
+   fits**, fall back to `DriverProfile.snowZoneExperienced` (the
+   standard default) and document the mapping in your own integration
+   layer — and consider filing an issue describing your use case so
+   the next iteration can incorporate it. A foreign tourist driving in
+   an unfamiliar snow zone is not such a class: that driver's profile
+   is `DriverProfile.foreignTouristSnowZone`.
 4. **For UX-differentiated alert formatting** (voice verbosity, modal
    timing, glance-budget), check what the consuming Flutter package
    you use already differentiates per profile (see "Threshold-only
@@ -650,10 +667,20 @@ Same defer pattern as the 0.3.1 per-profile vocabulary speak-strings
 and the 0.4.0 density caps — these are literature-informed defaults,
 not field-validated population values.
 
-The default braking deceleration is 5.5 m/s² (typical dry pavement).
-For snow / ice surfaces the consumer should pass a lower value; surface
-friction is the dominant variable and no single default fits every road
-condition.
+The factories compute this floor with the calibration's default
+braking deceleration, 5.5 m/s² (typical dry pavement). No parameter of
+`forProfileWithContext`, `forDriverContext` or `DrivingContext` takes
+a different value, so the speed floor they return assumes dry-pavement
+braking on every surface. Surface friction is the dominant variable
+and no single default fits every road condition: on compacted snow
+(about 3.0 m/s²) or glare ice (about 1.5 m/s², the calibration's own
+figures), reacting and stopping takes more distance than the floor
+the factories return in 19 of the 30 cases measured (each profile at
+60, 80, 100, 110 and 130 km/h, with speed the only input). At 80 km/h
+`snowZoneExperienced` gets a 200 m floor, and stopping on glare ice
+after its 1.8 s reaction time takes 204.6 m.
+`computeSpeedAdjustedVisibilityMeters`, which this package re-exports,
+accepts `brakingDecelerationMps2`; the factories do not pass it.
 
 ### Humidity-dependent effective temperature (`humidity_dependent_temperature.dart`)
 
@@ -721,7 +748,14 @@ The new `forProfileWithContext(profile, context: ...)` factory adds
 context-aware adjustments alongside the existing factory. The
 per-profile baseline acts as a floor for every threshold: context can
 only warn earlier (raise the floor / shift toward conservative), never
-later. Consumers that do not pass a context, or pass a context with
+later. That does not hold when the context carries a vehicle-class
+token (0.9.0) and the registry's class implements
+`VehicleThresholdOverrides`, or extends it and replaces
+`applyOverrideForToken`, with a method that does not return what this
+package's `applyOverrideForToken` returns: what that method returns
+is applied unchecked, even a warning threshold below the baseline
+(see `SAFETY_BOUNDARY.md` section 7.2). Consumers that do not pass a
+context, or pass a context with
 all fields null, receive the same configuration as
 `forProfile(profile)` — no behaviour change.
 
