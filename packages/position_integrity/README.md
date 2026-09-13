@@ -128,6 +128,31 @@ t   status    source         reason
 7   trusted   gps            no fault detected
 ```
 
+## Configuration is checked in release builds
+
+Every constructor parameter is validated with a real `ArgumentError` (or
+`RangeError`, which extends it), so one `on ArgumentError` catch covers all of
+them:
+
+```dart
+// throws: below 3 the stationary-jitter window is degenerate and the gate
+// could never fire — so the monitor would keep saying `trusted` with one of
+// its four gates silently off.
+PositionIntegrityMonitor(jitterWindow: 1);
+```
+
+These are deliberately **not** `assert`s. Dart strips `assert` from AOT builds
+(`dart compile exe`, `flutter build --release`) and from plain `dart run`,
+keeping it only under `dart test` / `flutter test` / Flutter debug — so an
+assert-based guard is present in your tests and absent in what you ship.
+Up to 0.1.0 these guards were asserts, and that is exactly what happened.
+`test/release_mode_guard_test.dart` now compiles a probe to a native
+executable and runs it, so the guards are proven in the mode that ships.
+
+The check lands on **you, at construction, on your first run** — never on a
+driver mid-drive. Runtime fix data is handled the opposite way: `update` never
+throws, and returns a `failed` verdict for a non-finite or out-of-range fix.
+
 ## Honesty bound (read this)
 
 - **`trusted` ≠ correct.** It means "no fault detected by *these* tests", never

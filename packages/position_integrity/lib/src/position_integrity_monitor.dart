@@ -40,13 +40,129 @@ class PositionIntegrityMonitor {
     this.jitterWindow = 4,
     this.stationaryRadiusMetres = 5.0,
     this.jitterAccuracyMultiplier = 3.0,
-  })  : assert(maxPlausibleSpeed > 0),
-        assert(maxPlausibleAccel > 0),
-        assert(teleportMaxDistanceMetres > 0),
-        assert(failAfterConsecutiveSoft >= 1),
-        // < 3 makes the stationary-jitter window degenerate (net == the single
-        // step), so the gate could never fire; require at least 3.
-        assert(jitterWindow >= 3);
+  }) {
+    // These are RELEASE-MODE guards, deliberately not `assert`s.
+    //
+    // Until 2026-09-13 this constructor validated its configuration with five
+    // asserts in the initializer list. Dart strips asserts from AOT builds
+    // (`dart compile exe`, `flutter build --release`) AND from plain
+    // `dart run`; they survive only under `dart test` / `flutter test` /
+    // Flutter debug. Every test this package has ever produced was taken in
+    // the one mode where those guards were present, and none of them existed
+    // on a driver's device. `PositionIntegrityMonitor(jitterWindow: 1)` was
+    // caught in every test run and in no shipped build.
+    //
+    // The failure was SILENT, which is what makes it worth an exception. A
+    // degenerate `jitterWindow` does not crash: `_evaluateJitter` compares the
+    // first and last fix of the window, so with a window of 1 or 2 the net
+    // displacement IS the single step and `maxStep > threshold` can never be
+    // true. The stationary-jitter gate — the one that catches a fix wandering
+    // in place, which is the multipath case in a snow-walled canyon — is
+    // simply off, and the monitor keeps returning `trusted`.
+    //
+    // Throwing is safe for the driver here because these are CONFIGURATION
+    // values, fixed at construction. An invalid one fails on the edge
+    // developer's first run, on their machine, where they can fix it — never
+    // mid-drive on a live fix. Runtime fix data is handled the opposite way:
+    // `update` rejects a non-finite fix with a `failed` verdict and never
+    // throws.
+    _requireFinitePositive(maxPlausibleSpeed, 'maxPlausibleSpeed');
+    _requireFinitePositive(maxPlausibleAccel, 'maxPlausibleAccel');
+    _requireFinitePositive(
+        teleportMaxDistanceMetres, 'teleportMaxDistanceMetres');
+    // Not previously guarded at all. `_evaluateJitter` returns early when the
+    // net displacement is >= this radius; at <= 0 that is every window, so the
+    // jitter gate never fires — the same silent hole as a degenerate
+    // `jitterWindow`, by a different door.
+    _requireFinitePositive(stationaryRadiusMetres, 'stationaryRadiusMetres');
+    // Not previously guarded. At <= 0 the multiplier drops out of
+    // `math.max(stationaryRadiusMetres, multiplier * accuracy)`, which makes
+    // the gate STRICTER rather than blind, so this is the lenient bound: a
+    // negative or non-finite multiplier is nonsense, zero is merely useless.
+    _requireFiniteNonNegative(
+        jitterAccuracyMultiplier, 'jitterAccuracyMultiplier');
+    if (failAfterConsecutiveSoft < 1) {
+      // At 0, `_consecutiveSoft >= failAfterConsecutiveSoft` is already true on
+      // the first soft fault, so the debounce this parameter exists to provide
+      // is gone and one acceleration glitch fails the fix outright.
+      throw RangeError.range(
+        failAfterConsecutiveSoft,
+        1,
+        null,
+        'failAfterConsecutiveSoft',
+        'a soft fault must be allowed to occur at least once before it '
+            'escalates; 0 or less defeats the debounce entirely',
+      );
+    }
+    if (jitterWindow < 3) {
+      // < 3 makes the stationary-jitter window degenerate (net == the single
+      // step), so the gate could never fire; require at least 3.
+      throw RangeError.range(
+        jitterWindow,
+        3,
+        null,
+        'jitterWindow',
+        'below 3 the window net displacement equals its single step, so the '
+            'stationary-jitter gate can never fire and is silently disabled',
+      );
+    }
+    if (minSpeedDelta <= Duration.zero) {
+      // Not previously guarded. `update` only reaches the teleport gate when
+      // dt < minSpeedDelta, and dt is always > 0 (a non-monotonic fix is
+      // rejected earlier), so at <= 0 the teleport gate is never evaluated and
+      // never appears in `gateResults` — indistinguishable, to a caller
+      // auditing that map, from a gate that passed.
+      throw ArgumentError.value(
+        minSpeedDelta,
+        'minSpeedDelta',
+        'must be a positive duration; at zero or less the teleport gate is '
+            'never evaluated',
+      );
+    }
+    if (deadReckoningMaxAge < Duration.zero) {
+      throw ArgumentError.value(
+        deadReckoningMaxAge,
+        'deadReckoningMaxAge',
+        'must not be negative; a negative maximum age can never be satisfied, '
+            'so the monitor would always recommend SourceHint.hold',
+      );
+    }
+  }
+
+  /// Rejects NaN, infinity and non-positive values for a threshold.
+  ///
+  /// The `isFinite` test is the load-bearing half, and it is why this is not
+  /// written as a bare `value <= 0`:
+  ///
+  ///  * `double.infinity > 0` is TRUE, so infinity passed the assert this
+  ///    replaced — and then `impliedSpeed > double.infinity` is always false,
+  ///    so the gate using it is silently off. The original assert never caught
+  ///    this.
+  ///  * `double.nan <= 0` is FALSE, so a rewrite to a plain `value <= 0` would
+  ///    LOSE the NaN rejection the assert did have. NaN propagates the same
+  ///    way: every `x > nan` is false, gate off, verdict still `trusted`.
+  static void _requireFinitePositive(double value, String name) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'must be a finite number greater than 0 (NaN and infinity silently '
+            'disable the gate that uses it)',
+      );
+    }
+  }
+
+  /// As [_requireFinitePositive], but zero is permitted.
+  static void _requireFiniteNonNegative(double value, String name) {
+    if (!value.isFinite || value < 0) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'must be a finite number greater than or equal to 0 (NaN and infinity '
+            'silently disable the gate that uses it)',
+      );
+    }
+  }
 
   /// Maximum plausible road-vehicle speed, in metres/second (default 50 m/s ≈
   /// 180 km/h). The implied speed between two fixes above this fails the
