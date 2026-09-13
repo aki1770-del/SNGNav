@@ -39,9 +39,10 @@
 //   replaces a per-profile default with a profile-blind constant (measured:
 //   3.0 for an ageingRural driver whose default is 1.2). Loosening the cap
 //   otherwise requires the driver's affirmative confirmation
-//   (`forDriverContext`, `isHighConfidenceConfirmed`). NaN is accepted by
-//   AlertDensityThrottle and drops every non-critical alert after the first;
-//   0.0 makes the AlertDensityThrottle constructor throw.
+//   (`forDriverContext`, `isHighConfidenceConfirmed`). On 0.11.6, NaN is
+//   accepted by AlertDensityThrottle and then lets one non-critical alert
+//   through per rolling window, the same decisions as a cap of 1.0; 0.0 makes
+//   the AlertDensityThrottle constructor throw.
 //
 // ## When one field of an override is refused
 //

@@ -118,7 +118,14 @@ class AlertDensityThrottle {
     this.window = const Duration(seconds: 60),
     this.bypassForCritical = true,
   }) {
-    if (alertsPerMinuteCap <= 0) {
+    // Written as the NEGATION of the rule, never as `<= 0`. `NaN <= 0` is
+    // false, so through 0.11.6 a NaN cap constructed, and made exactly the
+    // decisions of a cap of 1.0 whatever the driver's profile, with no
+    // report; `!(NaN > 0)` is true, so NaN is now refused here.
+    //
+    // `double.infinity` still passes this guard, exactly as before, and a
+    // throttle built with it never drops an alert. That is unchanged here.
+    if (!(alertsPerMinuteCap > 0)) {
       throw ArgumentError.value(
         alertsPerMinuteCap,
         'alertsPerMinuteCap',
