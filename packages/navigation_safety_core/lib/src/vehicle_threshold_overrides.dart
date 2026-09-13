@@ -221,9 +221,16 @@ class VehicleOverrideRejection {
   @override
   String toString() {
     final trace = stackTrace;
+    // Only a transform that threw is refused whole: there is no produced
+    // config to check field by field. Any other rejection names one
+    // field, and the rest of the override was judged on its own.
+    final appliedInstead = invariant == VehicleOverrideInvariant.transformThrew
+        ? 'the override was REFUSED WHOLE and the un-overridden baseline '
+              'was applied instead'
+        : 'this field alone went back to its un-overridden value, and the '
+              'rest of the override was checked on its own';
     final text =
-        'VehicleOverrideRejection($explanation; the override was REFUSED '
-        'WHOLE and the un-overridden baseline was applied instead)'
+        'VehicleOverrideRejection($explanation; $appliedInstead)'
         '${trace == null ? '' : '; stack trace: $trace'}';
     return text.trimRight().replaceAll(_lineBreak, r'\n');
   }
@@ -307,8 +314,9 @@ class VehicleThresholdOverrides {
   }) {
     for (final entry in overrides.entries) {
       for (final probe in _registrationProbes) {
-        final rejection = _evaluate(entry.key, entry.value, probe).rejection;
-        if (rejection != null) {
+        final rejections = _evaluate(entry.key, entry.value, probe).rejections;
+        if (rejections.isNotEmpty) {
+          final rejection = rejections.first;
           throw ArgumentError.value(
             entry.key,
             'overrides',
@@ -406,14 +414,10 @@ class VehicleThresholdOverrides {
     if (transform == null) return baseline;
 
     final outcome = _evaluate(token, transform, baseline);
-    final rejection = outcome.rejection;
-    if (rejection != null) {
+    for (final rejection in outcome.rejections) {
       _report(rejection);
-      return baseline;
     }
-    // A null rejection guarantees a non-null adjusted config; the
-    // fallback keeps this method total rather than asserting it.
-    return outcome.adjusted ?? baseline;
+    return outcome.config;
   }
 
   void _report(VehicleOverrideRejection rejection) {
@@ -438,11 +442,11 @@ class VehicleThresholdOverrides {
 
   // ── Shared invariant evaluation ────────────────────────────────────
   //
-  // ONE checker, used by BOTH `.validated()` (which throws on the
-  // returned rejection) and `applyOverrideForToken` (which reports it
-  // and returns the baseline). Registration and drive-path cannot
-  // drift apart, because there is only one statement of the
-  // invariant to drift from.
+  // ONE checker, used by BOTH `.validated()` (which throws when a probe
+  // produces any rejection) and `applyOverrideForToken` (which reports
+  // every rejection and returns the checked config). Registration and
+  // drive-path cannot drift apart, because there is only one statement
+  // of the invariant to drift from.
 
   static _OverrideOutcome _evaluate(
     String token,
@@ -460,7 +464,10 @@ class VehicleThresholdOverrides {
       // The stack trace is kept. Through 0.11.5 the exception
       // propagated, and its top frame was the integrator's own
       // transform; a catch that drops the trace takes that line away.
-      return _OverrideOutcome.rejected(
+      //
+      // There is no produced config to check field by field, so this
+      // one case is still refused whole: the baseline is returned.
+      return _OverrideOutcome(baseline, [
         VehicleOverrideRejection(
           token: token,
           field: '(transform)',
@@ -468,83 +475,142 @@ class VehicleThresholdOverrides {
           error: error,
           stackTrace: stackTrace,
         ),
-      );
+      ]);
     }
 
-    // Caution-add-only invariant: warning thresholds may only move
-    // toward earlier-warn (higher visibility floor, higher
+    // Every field is checked, and every field that breaks its rule is
+    // collected, not only the first. A refused field goes back to its
+    // baseline value; every other field is judged on its own.
+    final rejections = <VehicleOverrideRejection>[];
+
+    // Caution-add-only invariant: the two warning thresholds may only
+    // move toward earlier-warn (higher visibility floor, higher
     // temperature floor). Lower values mean later-warn = relaxing.
     //
-    // Each is written as the NEGATION of the invariant, never as `<`.
-    // Both fields are `int` today, so the two forms agree; if either
-    // is ever widened to `double`, `a < b` silently stops rejecting
-    // NaN while `!(a >= b)` keeps rejecting it.
-    if (!(adjusted.warningVisibilityMeters >=
-        baseline.warningVisibilityMeters)) {
-      return _OverrideOutcome.rejected(
-        VehicleOverrideRejection(
-          token: token,
-          field: 'warningVisibilityMeters',
-          invariant: VehicleOverrideInvariant.cautionAddOnly,
-          baselineValue: baseline.warningVisibilityMeters,
-          rejectedValue: adjusted.warningVisibilityMeters,
-        ),
-      );
-    }
-    if (!(adjusted.warningTemperatureCelsius >=
-        baseline.warningTemperatureCelsius)) {
-      return _OverrideOutcome.rejected(
-        VehicleOverrideRejection(
-          token: token,
-          field: 'warningTemperatureCelsius',
-          invariant: VehicleOverrideInvariant.cautionAddOnly,
-          baselineValue: baseline.warningTemperatureCelsius,
-          rejectedValue: adjusted.warningTemperatureCelsius,
-        ),
-      );
+    // Written as the NEGATION of the invariant, never as `<`. Both
+    // fields are `int` today, so the two forms agree; if either is
+    // ever widened to `double`, `a < b` silently stops rejecting NaN
+    // while `!(a >= b)` keeps rejecting it.
+    int warnNoLater(String field, int adjustedValue, int baselineValue) {
+      if (!(adjustedValue >= baselineValue)) {
+        rejections.add(
+          VehicleOverrideRejection(
+            token: token,
+            field: field,
+            invariant: VehicleOverrideInvariant.cautionAddOnly,
+            baselineValue: baselineValue,
+            rejectedValue: adjustedValue,
+          ),
+        );
+        return baselineValue;
+      }
+      return adjustedValue;
     }
 
-    // Severity-not-profile invariant: vehicle-class adjusts TIMING,
-    // never SEVERITY tiers. Score floors MUST be preserved.
+    // Every other threshold field may not change, in EITHER direction:
+    // the three score floors, the two critical thresholds, the two info
+    // thresholds and the alerts-per-minute cap override. A tighter value
+    // is not safe by construction: a critical alert bypasses the density
+    // cap but still takes a slot in its rolling window, info alerts
+    // share the cap with warnings, and a transform is never shown the
+    // driver's profile, so a cap it writes is the same for every driver
+    // profile. Reported as
+    // `severityNotProfile`: a new enum value would stop an integrator's
+    // exhaustive `switch` from compiling on an in-range upgrade.
     //
-    // `!=` is deliberate over `!(a == b)`: these three are `double`,
-    // and `NaN != anything` is true, so a NaN floor is refused rather
-    // than waved through.
-    if (adjusted.safeScoreFloor != baseline.safeScoreFloor) {
-      return _OverrideOutcome.rejected(
-        VehicleOverrideRejection(
-          token: token,
-          field: 'safeScoreFloor',
-          invariant: VehicleOverrideInvariant.severityNotProfile,
-          baselineValue: baseline.safeScoreFloor,
-          rejectedValue: adjusted.safeScoreFloor,
-        ),
-      );
-    }
-    if (adjusted.infoScoreFloor != baseline.infoScoreFloor) {
-      return _OverrideOutcome.rejected(
-        VehicleOverrideRejection(
-          token: token,
-          field: 'infoScoreFloor',
-          invariant: VehicleOverrideInvariant.severityNotProfile,
-          baselineValue: baseline.infoScoreFloor,
-          rejectedValue: adjusted.infoScoreFloor,
-        ),
-      );
-    }
-    if (adjusted.warningScoreFloor != baseline.warningScoreFloor) {
-      return _OverrideOutcome.rejected(
-        VehicleOverrideRejection(
-          token: token,
-          field: 'warningScoreFloor',
-          invariant: VehicleOverrideInvariant.severityNotProfile,
-          baselineValue: baseline.warningScoreFloor,
-          rejectedValue: adjusted.warningScoreFloor,
-        ),
-      );
+    // `!=` is deliberate over `!(a == b)`: `NaN != anything` is true, so
+    // a NaN is refused rather than waved through, and `null == null`
+    // holds, so a null cap that stays null passes.
+    void mayNotChange(String field, num? adjustedValue, num? baselineValue) {
+      if (adjustedValue != baselineValue) {
+        rejections.add(
+          VehicleOverrideRejection(
+            token: token,
+            field: field,
+            invariant: VehicleOverrideInvariant.severityNotProfile,
+            baselineValue: baselineValue,
+            rejectedValue: adjustedValue,
+          ),
+        );
+      }
     }
 
-    return _OverrideOutcome.accepted(adjusted);
+    final warningVisibility = warnNoLater(
+      'warningVisibilityMeters',
+      adjusted.warningVisibilityMeters,
+      baseline.warningVisibilityMeters,
+    );
+    final warningTemperature = warnNoLater(
+      'warningTemperatureCelsius',
+      adjusted.warningTemperatureCelsius,
+      baseline.warningTemperatureCelsius,
+    );
+    mayNotChange(
+      'safeScoreFloor',
+      adjusted.safeScoreFloor,
+      baseline.safeScoreFloor,
+    );
+    mayNotChange(
+      'infoScoreFloor',
+      adjusted.infoScoreFloor,
+      baseline.infoScoreFloor,
+    );
+    mayNotChange(
+      'warningScoreFloor',
+      adjusted.warningScoreFloor,
+      baseline.warningScoreFloor,
+    );
+    mayNotChange(
+      'criticalVisibilityMeters',
+      adjusted.criticalVisibilityMeters,
+      baseline.criticalVisibilityMeters,
+    );
+    mayNotChange(
+      'criticalTemperatureCelsius',
+      adjusted.criticalTemperatureCelsius,
+      baseline.criticalTemperatureCelsius,
+    );
+    mayNotChange(
+      'infoVisibilityMeters',
+      adjusted.infoVisibilityMeters,
+      baseline.infoVisibilityMeters,
+    );
+    mayNotChange(
+      'infoTemperatureCelsius',
+      adjusted.infoTemperatureCelsius,
+      baseline.infoTemperatureCelsius,
+    );
+    mayNotChange(
+      'alertsPerMinuteCapOverride',
+      adjusted.alertsPerMinuteCapOverride,
+      baseline.alertsPerMinuteCapOverride,
+    );
+
+    if (rejections.isEmpty) return _OverrideOutcome(adjusted, rejections);
+
+    // The legal part of the transform, and nothing else: each warning
+    // floor at the higher of the transform's value and the baseline's,
+    // every other field at the baseline's. It is always a config some
+    // fully legal transform could have produced.
+    //
+    // This construction cannot throw. The constructor checks only the
+    // three score floors, and all three are the baseline's, which
+    // already passed those checks.
+    return _OverrideOutcome(
+      NavigationSafetyConfig(
+        safeScoreFloor: baseline.safeScoreFloor,
+        infoScoreFloor: baseline.infoScoreFloor,
+        warningScoreFloor: baseline.warningScoreFloor,
+        infoTemperatureCelsius: baseline.infoTemperatureCelsius,
+        warningTemperatureCelsius: warningTemperature,
+        criticalTemperatureCelsius: baseline.criticalTemperatureCelsius,
+        infoVisibilityMeters: baseline.infoVisibilityMeters,
+        warningVisibilityMeters: warningVisibility,
+        criticalVisibilityMeters: baseline.criticalVisibilityMeters,
+        alertsPerMinuteCapOverride: baseline.alertsPerMinuteCapOverride,
+      ),
+      rejections,
+    );
   }
 
   // ── Registration probe battery ─────────────────────────────────────
@@ -565,10 +631,19 @@ class VehicleThresholdOverrides {
   ///    (measured: 359m for snowZoneExperienced at 80 km/h). A
   ///    constant of, say, 400m passes against every profile baseline
   ///    and relaxes in the car. The HIGH probe is what refuses it.
+  ///
+  /// The two synthetics also carry a non-null
+  /// `alertsPerMinuteCapOverride`, HIGH above and LOW below every
+  /// per-profile default cap. Every profile baseline carries a `null`
+  /// cap, so without them a transform that rewrites only a non-null cap
+  /// (scales it, clamps it, or drops it to `null`) would pass
+  /// registration however the comparison is written. Carried by the two
+  /// existing synthetics rather than by an extra probe, so
+  /// [registrationProbeCount] is unchanged.
   static final List<NavigationSafetyConfig> _registrationProbes = [
     for (final profile in DriverProfile.values)
       NavigationSafetyConfig.forProfile(profile),
-    // HIGH: above any plausible post-context threshold.
+    // HIGH: above any plausible post-context threshold and cap.
     NavigationSafetyConfig(
       infoTemperatureCelsius: 20,
       warningTemperatureCelsius: 15,
@@ -576,8 +651,9 @@ class VehicleThresholdOverrides {
       infoVisibilityMeters: 20000,
       warningVisibilityMeters: 5000,
       criticalVisibilityMeters: 2000,
+      alertsPerMinuteCapOverride: 10.0,
     ),
-    // LOW: below any plausible post-context threshold.
+    // LOW: below any plausible post-context threshold and cap.
     NavigationSafetyConfig(
       infoTemperatureCelsius: -25,
       warningTemperatureCelsius: -30,
@@ -585,6 +661,7 @@ class VehicleThresholdOverrides {
       infoVisibilityMeters: 5,
       warningVisibilityMeters: 1,
       criticalVisibilityMeters: 0,
+      alertsPerMinuteCapOverride: 0.5,
     ),
   ];
 
@@ -685,15 +762,15 @@ extension VehicleThresholdOverridesRegistration on VehicleThresholdOverrides {
       VehicleThresholdOverrides._probedAtRegistration[this] ?? false;
 }
 
-/// Result of evaluating one transform against one baseline: either an
-/// accepted config or the rejection that refused it, never both.
+/// Result of evaluating one transform against one baseline: the config
+/// to apply, and every rejection found on the way to it.
+///
+/// With no rejections, [config] is the transform's own result. With
+/// field rejections, it is the legal part of that result. When the
+/// transform threw, it is the baseline.
 class _OverrideOutcome {
-  final NavigationSafetyConfig? adjusted;
-  final VehicleOverrideRejection? rejection;
+  final NavigationSafetyConfig config;
+  final List<VehicleOverrideRejection> rejections;
 
-  const _OverrideOutcome.accepted(NavigationSafetyConfig this.adjusted)
-    : rejection = null;
-
-  const _OverrideOutcome.rejected(VehicleOverrideRejection this.rejection)
-    : adjusted = null;
+  const _OverrideOutcome(this.config, this.rejections);
 }
