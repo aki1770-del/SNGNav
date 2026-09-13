@@ -115,9 +115,10 @@ you use the value for anything a driver depends on.
 Three getters ask the question directly:
 
 ```dart
-position.isMeasured        // raw sensor only
-position.containsMeasurement  // measured OR fused — a sensor contributed
-position.isDeadReckoned    // pure prediction, nothing behind it
+// oracle:placeholders position
+position.isMeasured;          // raw sensor only
+position.containsMeasurement; // measured OR fused — a sensor contributed
+position.isDeadReckoned;      // pure prediction, nothing behind it
 ```
 
 `containsMeasurement` is the one a safety consumer usually means.
@@ -133,14 +134,19 @@ can close on movement that never happened.
 Gate on provenance, not on accuracy:
 
 ```dart
-// oracle:placeholders track, metresBetween, showDegradedGpsQuality
+// oracle:placeholders track, metresBetween, showDegradedGpsQuality, provider
+var distanceMeters = 0.0;
+GeoPosition? lastFix;
 provider.positions.listen((position) {
   if (!position.containsMeasurement) {
     // Prediction. Show it if you like — never bank it.
     showDegradedGpsQuality();
     return;
   }
-  distanceMeters += metresBetween(lastFix, position); // your own haversine
+  final previous = lastFix;
+  if (previous != null) {
+    distanceMeters += metresBetween(previous, position); // your own haversine
+  }
   track.add(position);
   lastFix = position;
 });

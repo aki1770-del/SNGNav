@@ -168,6 +168,35 @@ class KalmanFilter {
     : _x = [0, 0, 0, 0],
       _p = _identity(1e6), // large initial uncertainty
       _lastTime = DateTime.fromMillisecondsSinceEpoch(0) {
+    _refuseInvalidProfile(profile);
+  }
+
+  /// Creates a Kalman filter initialised to a known state (for testing).
+  ///
+  /// Refuses an invalid [profile] exactly as the unnamed constructor does,
+  /// throwing [ArgumentError] in every build mode.
+  KalmanFilter.withState({
+    this.profile = MotionProfile.roadVehicle,
+    required double latitude,
+    required double longitude,
+    required double speed,
+    required double heading,
+    required DateTime timestamp,
+    double initialAccuracy = 5.0,
+  }) : _x = [latitude, longitude, speed, heading],
+       _p = _diagFromAccuracy(initialAccuracy),
+       _lastTime = timestamp,
+       _initialized = true {
+    // Through 0.6.4 this constructor did not check its profile at all, not
+    // even with an `assert`, so one infinite term here left `accuracyMetres`
+    // NaN exactly as it did through the unnamed constructor. One check, two
+    // doors: the refusal lives in a single place so the doors cannot drift.
+    _refuseInvalidProfile(profile);
+  }
+
+  /// Throws [ArgumentError], naming the term, unless every [MotionProfile]
+  /// term is finite and greater than zero.
+  static void _refuseInvalidProfile(MotionProfile profile) {
     // REFUSAL, not a post-condition: it rejects a CALLER's MotionProfile
     // before the filter is ever used. As an `assert` it was absent from every
     // shipped build and from `dart run` -- and a non-positive process-noise
@@ -199,20 +228,6 @@ class KalmanFilter {
       }
     }
   }
-
-  /// Creates a Kalman filter initialised to a known state (for testing).
-  KalmanFilter.withState({
-    this.profile = MotionProfile.roadVehicle,
-    required double latitude,
-    required double longitude,
-    required double speed,
-    required double heading,
-    required DateTime timestamp,
-    double initialAccuracy = 5.0,
-  }) : _x = [latitude, longitude, speed, heading],
-       _p = _diagFromAccuracy(initialAccuracy),
-       _lastTime = timestamp,
-       _initialized = true;
 
   // -----------------------------------------------------------------------
   // Public API

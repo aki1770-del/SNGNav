@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.5
+
+**`KalmanFilter(profile: ...)` now throws `ArgumentError` when any
+`MotionProfile` term is not finite and greater than zero, in every build mode,
+naming the term.**
+
+- **What you had.** Through 0.6.4 that check was an `assert`. Dart strips
+  `assert` from release builds and from plain `dart run`, so a zero, negative
+  or NaN term was accepted in what you ship. An infinite term passed even the
+  assert, because `double.infinity > 0` is true. In a 0.6.4 release build, one
+  infinite term left `accuracyMetres` at NaN, and after ten minutes of dead
+  reckoning with no GPS `isAccuracyExceeded` was still `false`, so a caller
+  relying on it was never told to stop trusting the position.
+- **What does not change.** `MotionProfile.roadVehicle` (the default),
+  `MotionProfile.pedestrian`, and any profile whose four terms are finite and
+  greater than zero construct exactly as before. No other behaviour in `lib/`
+  changes.
+- **Both constructors check.** `KalmanFilter.withState(profile: ...)` refuses
+  the same profiles in the same way. Through 0.6.4 it did not check its
+  profile at all, in any build mode.
+
 ## 0.6.4
 
 **Tooling and one README line. `lib/` is byte-identical to `0.6.2` and `0.6.3`;

@@ -174,6 +174,48 @@ void main() {
       }
     });
 
+    test('withState refuses the same profiles, naming the term', () {
+      // Through 0.6.4 `withState` never checked its profile, in any mode.
+      KalmanFilter build(MotionProfile profile) => KalmanFilter.withState(
+        profile: profile,
+        latitude: 39.72,
+        longitude: 140.10,
+        speed: 12.0,
+        heading: 90.0,
+        timestamp: DateTime.utc(2026, 1, 1),
+      );
+
+      for (final bad in <double>[0, -1.0, double.infinity, double.nan]) {
+        try {
+          build(
+            MotionProfile(
+              latVariancePerSecond: 1e-10,
+              lonVariancePerSecond: 1e-10,
+              speedVariancePerSecond: 0.5,
+              headingVariancePerSecond: bad,
+            ),
+          );
+          fail('expected withState to refuse headingVariancePerSecond=$bad');
+        } on ArgumentError catch (e) {
+          expect(e.name, contains('headingVariancePerSecond'));
+        }
+      }
+
+      // Valid profiles construct exactly as before, on this door too.
+      expect(build(MotionProfile.roadVehicle).isInitialized, isTrue);
+      expect(build(MotionProfile.pedestrian).isInitialized, isTrue);
+      expect(
+        KalmanFilter.withState(
+          latitude: 39.72,
+          longitude: 140.10,
+          speed: 12.0,
+          heading: 90.0,
+          timestamp: DateTime.utc(2026, 1, 1),
+        ).profile,
+        same(MotionProfile.roadVehicle),
+      );
+    });
+
     test('isValid rejects non-finite and non-positive terms', () {
       expect(MotionProfile.roadVehicle.isValid, isTrue);
       expect(MotionProfile.pedestrian.isValid, isTrue);
