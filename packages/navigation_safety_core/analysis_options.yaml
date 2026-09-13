@@ -1,7 +1,8 @@
 
 
-# Strict-mode flags (per SNGNav review 2026-04-25 P2 finding #12).
-# V14 protection for future contributions; codebase currently strict-clean.
+# Strict-mode flags: the analyzer reports implicit casts from dynamic, types it
+# cannot infer, and generic types without type arguments, so new code cannot
+# add them silently. The existing code passes all three.
 analyzer:
   language:
     strict-casts: true
