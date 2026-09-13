@@ -95,8 +95,8 @@ enum CumulativeFatigueClass {
 /// signal) with the [cumulativeFatigue] classification (integrator-
 /// derived bucket). The factory consumes [cumulativeFatigue] for the
 /// threshold adjustment; [consecutiveDrivingDays] is carried for the
-/// integrator's own logging / analytics needs and for the
-/// `LoomFitTelemetry` correlation surface.
+/// integrator's own logging / analytics needs. Nothing in this package
+/// reads it, and `LoomFitTelemetryRecord` has no field that carries it.
 ///
 /// **UNVERIFIED-magnitude flag**: the day-thresholds dividing the
 /// four [CumulativeFatigueClass] buckets are **design-default

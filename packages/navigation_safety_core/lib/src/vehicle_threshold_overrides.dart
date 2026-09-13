@@ -706,11 +706,16 @@ class VehicleThresholdOverrides {
   /// 2. A HIGH and a LOW synthetic — catches a transform that returns
   ///    a CONSTANT threshold. The live config reaching
   ///    [applyOverrideForToken] is post-context, not the raw profile
-  ///    baseline: speed and precipitation-history margins push
-  ///    `warningVisibilityMeters` well above every profile value
-  ///    (measured: 359m for snowZoneExperienced at 80 km/h). A
-  ///    constant of, say, 400m passes against every profile baseline
-  ///    and relaxes in the car. The HIGH probe is what refuses it.
+  ///    baseline: a precipitation-history margin, and at speeds above
+  ///    133 km/h a speed margin, push `warningVisibilityMeters` above
+  ///    the profile's own value (measured: 359m for snowZoneExperienced
+  ///    30 minutes after precipitation, from the precipitation margin
+  ///    alone; at 80 km/h the speed margin adds nothing). A constant of,
+  ///    say, 400m passes against every profile baseline, and 30 minutes
+  ///    after precipitation it would make the warning later for three
+  ///    profiles (`ageingRural` 538m, `noviceUrban` 574m,
+  ///    `foreignTouristSnowZone` 717m). The HIGH probe is what refuses
+  ///    it.
   ///
   /// The two synthetics also carry a non-null
   /// `alertsPerMinuteCapOverride`, HIGH above and LOW below every
@@ -832,12 +837,19 @@ extension VehicleThresholdOverridesRegistration on VehicleThresholdOverrides {
   /// Whether this registry was probed by
   /// [VehicleThresholdOverrides.validated] at construction.
   ///
-  /// Informational. The drive-path check in
+  /// Informational. For a registry built with a
+  /// [VehicleThresholdOverrides] constructor, the drive-path check in
   /// [VehicleThresholdOverrides.applyOverrideForToken] runs either way,
   /// because registration-time probing is a filter and not a proof (see
   /// library docs). `false` for a registry built with the plain
   /// constructor, and for any class that implements or extends
-  /// [VehicleThresholdOverrides]; it never throws.
+  /// [VehicleThresholdOverrides]; it never throws. A class that
+  /// implements [VehicleThresholdOverrides], or extends it and replaces
+  /// [VehicleThresholdOverrides.applyOverrideForToken], gets the
+  /// drive-path check only if its own method returns what the one
+  /// [VehicleThresholdOverrides] defines returns; otherwise what its
+  /// method returns is applied unchecked. What its method throws is not
+  /// caught.
   bool get validatedAtRegistration =>
       VehicleThresholdOverrides._probedAtRegistration[this] ?? false;
 }

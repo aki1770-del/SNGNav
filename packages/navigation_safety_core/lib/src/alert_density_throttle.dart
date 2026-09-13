@@ -63,8 +63,9 @@ import 'driver_profile.dart';
 /// 1. Window is rolling 60s by default (sliding, not fixed). Fixed
 ///    windows allow a burst at minute boundary that the driver
 ///    perceives as one event but the arithmetic counts as two minutes.
-/// 2. Burst-then-quiet: when in-window count exceeds the cap and a
-///    new alert arrives, the new alert is DROPPED (not queued) UNLESS
+/// 2. Burst-then-quiet: when a new alert arrives while the in-window
+///    count is no longer below the cap (a cap of 2.0 is reached at 2
+///    alerts), the new alert is DROPPED (not queued) UNLESS
 ///    it is `AlertSeverity.critical`. Queued post-cap alerts deliver
 ///    stale information about a now-passed condition; per the listen-
 ///    frame substrate, false-stale alerts erode trust faster than
@@ -82,8 +83,12 @@ import 'driver_profile.dart';
 ///    insight #105 — drop-records inform the L8 calibration cycle on
 ///    whether per-profile caps are actually too sensitive).
 class AlertDensityThrottle {
-  /// Maximum number of advisory alerts that may fire in a single
-  /// rolling [window].
+  /// Cap on advisory alerts in a single rolling [window]. An advisory
+  /// alert fires only while fewer alerts than this cap, critical alerts
+  /// included, are in the window. Nothing rounds the cap, so as many
+  /// advisory alerts as the cap rounded up can fire: the `ageingRural`
+  /// default of 1.2 and the `noviceUrban` default of 1.5 each admit 2
+  /// per window.
   ///
   /// Must be > 0. Per-profile defaults from literature; see
   /// [defaultCapFor].

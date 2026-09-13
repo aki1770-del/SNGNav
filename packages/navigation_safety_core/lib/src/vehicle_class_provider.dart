@@ -27,11 +27,17 @@
 /// matched against a [VehicleThresholdOverrides] registry, the
 /// override may make the warning thresholds fire EARLIER than the
 /// per-profile baseline, NEVER later, and may not change any other
-/// threshold field. This is refused in every build mode:
-/// `VehicleThresholdOverrides.validated(...)` throws `ArgumentError` at
-/// registration, and on the drive path each refused field goes back to
-/// its un-overridden value and is reported, without throwing, while the
-/// legal rest of the override is kept. See [VehicleThresholdOverrides].
+/// threshold field. For a registry built with a
+/// [VehicleThresholdOverrides] constructor this is refused in every
+/// build mode: `VehicleThresholdOverrides.validated(...)` throws
+/// `ArgumentError` at registration, and on the drive path each refused
+/// field goes back to its un-overridden value and is reported, without
+/// throwing, while the legal rest of the override is kept. A registry
+/// whose class implements [VehicleThresholdOverrides], or extends it
+/// and replaces its `applyOverrideForToken`, gets these refusals only if
+/// that method returns what the one [VehicleThresholdOverrides] defines
+/// returns; otherwise neither applies. What that method throws reaches
+/// the factory's caller. See [VehicleThresholdOverrides].
 ///
 /// **Null-as-absent convention**: returning `null` means the
 /// integrator does not have a vehicle-class signal in this trip /

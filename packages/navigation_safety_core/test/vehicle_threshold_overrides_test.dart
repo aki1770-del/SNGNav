@@ -170,11 +170,12 @@ void main() {
     test('a CONSTANT threshold that clears every profile baseline is still '
         'refused — the HIGH synthetic probe is what catches it', () {
       // 400m is >= every DriverProfile baseline warningVisibilityMeters
-      // (max 320). But the config reaching the drive path is
-      // POST-CONTEXT: speed and precipitation margins push it well
-      // past 400m (measured 359m at 80 km/h for snowZoneExperienced,
-      // higher for conservative profiles). Probing only the profile
-      // baselines would pass this and relax in the car.
+      // (max 400, foreignTouristSnowZone). But the config reaching the
+      // drive path is POST-CONTEXT: 30 minutes after precipitation the
+      // margin takes it to 359m for snowZoneExperienced (80 km/h adds
+      // nothing) and past 400m for ageingRural (538m), noviceUrban
+      // (574m) and foreignTouristSnowZone (717m). Probing only the
+      // profile baselines would pass this and relax in the car.
       expect(
         () => VehicleThresholdOverrides.validated({
           'constant-400': (b) => _copy(b, warningVisibilityMeters: 400),

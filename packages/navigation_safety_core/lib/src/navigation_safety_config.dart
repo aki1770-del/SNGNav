@@ -159,8 +159,10 @@ class NavigationSafetyConfig extends Equatable {
   ///   ignore ambient, and otherwise the per-profile baseline stands.
   ///   See [_residualMoistureFractionOrNull].
   ///
-  /// The factory respects the per-profile baseline as a floor for
-  /// every threshold: context can only add caution, not remove it.
+  /// Context respects the per-profile baseline as a floor for every
+  /// threshold: it can only add caution, not remove it. A vehicle-class
+  /// registry can take a threshold below that floor only when its class
+  /// replaces `applyOverrideForToken`, as the next paragraph describes.
   ///
   /// **Vehicle-class overrides (0.9.0)**: when [vehicleOverrides] is
   /// non-null AND `context.vehicleClassToken` is non-null AND the
@@ -174,13 +176,24 @@ class NavigationSafetyConfig extends Equatable {
   /// (severity-not-profile invariant). A lowered warning threshold, or
   /// any change to one of those other fields, is refused at
   /// REGISTRATION by [VehicleThresholdOverrides.validated], which throws
-  /// [ArgumentError] there. On this drive path
-  /// [VehicleThresholdOverrides.applyOverrideForToken] checks the same
-  /// fields again and NEVER throws: each refused field goes back to its
-  /// un-overridden value, every legal part of the override is kept, and
-  /// each refusal is reported. This factory therefore cannot throw on
-  /// account of a registered override -- a caller deriving a config per
-  /// vehicle-bus frame inside an `async*` body keeps its stream.
+  /// [ArgumentError] there. On this drive path the factory calls the
+  /// registry's own `applyOverrideForToken`. The one
+  /// [VehicleThresholdOverrides] defines checks the same fields again
+  /// and NEVER throws: each refused field goes back to its un-overridden
+  /// value, every legal part of the override is kept, and each refusal
+  /// is reported. So a registry built with a [VehicleThresholdOverrides]
+  /// constructor cannot make this factory throw -- a caller deriving a
+  /// config per vehicle-bus frame inside an `async*` body keeps its
+  /// stream. A registry whose class implements
+  /// [VehicleThresholdOverrides], or extends it and replaces
+  /// [VehicleThresholdOverrides.applyOverrideForToken], has its own
+  /// method called here, and this factory adds no check of its own.
+  /// Unless that method returns what the one [VehicleThresholdOverrides]
+  /// defines returns, what it returns is applied unchecked and
+  /// unreported, in every build mode, even a warning threshold lowered
+  /// below the per-profile baseline. What that method throws leaves this
+  /// factory and ends such a stream. An integrator that supplies such a
+  /// registry owns both checks.
   ///
   /// Citations for each formula are documented in the module headers
   /// under `lib/src/` in the `navigation_safety_calibration` package,
@@ -280,11 +293,15 @@ class NavigationSafetyConfig extends Equatable {
     // severity-not-profile violations (a lowered warning threshold, or a
     // changed score floor, critical threshold, info threshold or cap)
     // are refused at REGISTRATION by VehicleThresholdOverrides.validated
-    // (which throws there) and re-checked here by applyOverrideForToken,
+    // (which throws there) and re-checked here by the
+    // applyOverrideForToken that VehicleThresholdOverrides defines,
     // which does NOT throw: it puts each violating field back to its
     // un-overridden value, keeps the legal rest of the override, and
     // reports each rejection. This call site can be inside a per-frame
-    // loop, so it must not be able to kill the caller.
+    // loop, and it adds no check and catches no throw: a
+    // registry class that implements VehicleThresholdOverrides, or
+    // extends it and replaces applyOverrideForToken, runs its own method
+    // here, and what that method returns or throws reaches the caller.
     if (vehicleOverrides == null) return postContext;
     return vehicleOverrides.applyOverrideForToken(
       context.vehicleClassToken,
@@ -387,8 +404,11 @@ class NavigationSafetyConfig extends Equatable {
   /// the state axis ([DriverState]) of a [DriverContext]. Optionally
   /// composes with a live [DrivingContext] (the v0.5.0 environmental
   /// context); when both are passed, the trait baseline is computed
-  /// first, then the state delta, then the environmental delta — each
-  /// step conservative-only (warns earlier, never later).
+  /// first, then the environmental delta (inside
+  /// [forProfileWithContext], followed there by any vehicle-class
+  /// override), then the state delta. Each step warns earlier, never
+  /// later, except a vehicle-class registry that
+  /// [forProfileWithContext] describes as unchecked.
   ///
   /// State deltas at this spike (0.6.0) are intentionally small and
   /// flagged UNVERIFIED in `KNOWN_LIMITATIONS.md` (state-axis section).
@@ -410,8 +430,12 @@ class NavigationSafetyConfig extends Equatable {
   ///   (0.9.0). When supplied, the registry composes through
   ///   `forProfileWithContext` (caution-add-only invariant refused at
   ///   registration by `VehicleThresholdOverrides.validated`, and
-  ///   re-checked without throwing in
-  ///   `VehicleThresholdOverrides.applyOverrideForToken`).
+  ///   re-checked without throwing by the `applyOverrideForToken` that
+  ///   `VehicleThresholdOverrides` defines). A registry whose class
+  ///   implements `VehicleThresholdOverrides`, or extends it and
+  ///   replaces that method, is checked only if its method returns what
+  ///   that one returns; otherwise its result reaches this config
+  ///   unchecked. A throw from its method leaves this factory.
   /// - [circadianPhase] — time-of-day circadian classification
   ///   (#28). When supplied, the per-phase multiplier
   ///   ([CircadianPhaseMultiplier.multiplier], always `>= 1.0`) is
@@ -423,10 +447,19 @@ class NavigationSafetyConfig extends Equatable {
   ///   floor (caution-add-only; `rested` no-op).
   /// - [confidence] + [isHighConfidenceConfirmed] —
   ///   self-assessed-confidence signal with cap-override-with-
-  ///   confirmation pattern (#30). [Confidence.low] tightens the
-  ///   alerts-per-minute cap automatically. [Confidence.high]
+  ///   confirmation pattern (#30). [Confidence.low] multiplies the
+  ///   alerts-per-minute cap by 0.75 automatically, but never below
+  ///   1.0, so `foreignTouristSnowZone`'s default cap of 1.0 does not
+  ///   change. [Confidence.high]
   ///   loosens the cap ONLY when [isHighConfidenceConfirmed] is
   ///   `true`; otherwise treated as [Confidence.medium] (no-op).
+  ///   [AlertDensityThrottle] admits alerts up to the cap rounded up,
+  ///   so a changed cap changes how many advisory alerts it admits only
+  ///   where that whole number changes. With the per-profile defaults,
+  ///   it admits fewer under [Confidence.low] only for `ageingRural` (2
+  ///   per window to 1) and `professional` (4 to 3), and more under a
+  ///   confirmed [Confidence.high] for every profile except
+  ///   `ageingRural` and `noviceUrban`.
   ///   The driver-always-drives invariant requires affirmative
   ///   driver confirmation for cap-loosening; the system never
   ///   auto-relaxes from a high-confidence reading alone.
@@ -450,13 +483,19 @@ class NavigationSafetyConfig extends Equatable {
     // any future calibration update there is automatically inherited
     // here. The vehicle-class override (if any) applies AFTER the
     // per-profile baseline AND AFTER the live-context adjustment in
-    // `forProfileWithContext`; the caution-add-only +
+    // `forProfileWithContext`. For a registry built with a
+    // VehicleThresholdOverrides constructor, the caution-add-only +
     // severity-not-profile checks run there in EVERY build mode, on all
     // ten threshold fields. Each violating field goes back to its
     // un-overridden value and is reported, never silently applied and
-    // never thrown, and the legal rest of the override is kept. Only a
-    // registry built with VehicleThresholdOverrides.validated throws, and
-    // it does so earlier, at registration.
+    // never thrown, and the legal rest of the override is kept. Of those
+    // registries, only one built with VehicleThresholdOverrides.validated
+    // throws, and it does so earlier, at registration. A registry class
+    // that implements VehicleThresholdOverrides, or extends it and
+    // replaces applyOverrideForToken, is checked there only if its
+    // method returns what VehicleThresholdOverrides' own method returns;
+    // otherwise its result is applied as it comes, unreported. A throw
+    // from its method leaves this factory.
     final base = NavigationSafetyConfig.forProfileWithContext(
       driverContext.profile,
       context: environmentalContext,
@@ -539,7 +578,8 @@ class NavigationSafetyConfig extends Equatable {
     }
 
     // Step 5 (0.10.0): confidence cap-override-with-confirmation.
-    // - `low` tightens the alerts-per-minute cap (caution-add).
+    // - `low` multiplies the alerts-per-minute cap by 0.75, never below
+    //   1.0; see _confidenceAdjustedCap for what that admits.
     // - `medium` is a no-op.
     // - `high` requires `isHighConfidenceConfirmed == true` to loosen
     //   the cap; without confirmation it is treated as `medium`
@@ -603,7 +643,8 @@ class NavigationSafetyConfig extends Equatable {
   /// baseline cap (carried through the layering chain) when no
   /// confidence signal is supplied, when confidence is `medium`, or
   /// when confidence is `high` without `isHighConfidenceConfirmed`.
-  /// Tightens the cap on `low`; loosens on `high`-confirmed only.
+  /// On `low` multiplies the cap by 0.75, never below 1.0; loosens it
+  /// on `high`-confirmed only.
   ///
   /// Magnitudes UNVERIFIED at 0.10.0 — design-default hypotheses
   /// pending field-measurement validation (see
@@ -621,9 +662,12 @@ class NavigationSafetyConfig extends Equatable {
       case Confidence.medium:
         return baseCap;
       case Confidence.low:
-        // Tighten by 25%: the less-confident driver gets fewer
-        // advisory alerts per minute to reduce overload. Floor at
-        // 1.0 alerts/min so the cap remains operational.
+        // Scale by 0.75, aiming at fewer advisory alerts per minute for
+        // the less-confident driver. Floor at 1.0 alerts/min so the cap
+        // remains operational. The throttle admits alerts up to the cap
+        // rounded up, so the admitted count drops only where that whole
+        // number drops: of the per-profile defaults, 1.2 (2 to 1) and
+        // 4.0 (4 to 3); 3.0, 2.0 and 1.5 keep theirs, and 1.0 stays 1.0.
         final tightened = effectiveBase * 0.75;
         return tightened < 1.0 ? 1.0 : tightened;
       case Confidence.high:

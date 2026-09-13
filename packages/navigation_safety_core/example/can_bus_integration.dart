@@ -48,9 +48,13 @@
 //   PER FRAME          — derive only what genuinely depends on live
 //                        context, and only when a sample actually
 //                        changed. `forProfileWithContext` cannot throw
-//                        on account of a registered override; each
+//                        on account of a registry built this way; each
 //                        field it refuses goes back to its
-//                        un-overridden value and is reported.
+//                        un-overridden value and is reported. A class
+//                        that implements VehicleThresholdOverrides, or
+//                        extends it and replaces applyOverrideForToken,
+//                        is guarded only as far as its own method is: a
+//                        throw from that method ends the stream.
 //
 // The config itself cannot be fully hoisted — it is a function of
 // live speed and temperature, which is the entire point of a CAN
@@ -174,10 +178,14 @@ Stream<String> safetyAdvisoryStream(
         coolantTempCelsius: lastCoolantC,
         vehicleClassToken: vehicleClassToken,
       );
-      // Cannot throw on account of a registered override: a violating
-      // field goes back to its un-overridden value and is reported, not
-      // raised. That is what keeps this `async*` stream alive for the
-      // whole journey.
+      // Cannot throw on account of a registry built with a
+      // VehicleThresholdOverrides constructor, as main() builds it: a
+      // violating field goes back to its un-overridden value and is
+      // reported, not raised. That is what keeps this `async*` stream
+      // alive for the whole journey. A registry class that implements
+      // VehicleThresholdOverrides, or extends it and replaces
+      // applyOverrideForToken, runs its own method here, and a throw from
+      // that method ends the stream.
       config = NavigationSafetyConfig.forProfileWithContext(
         profile,
         context: ctx,
