@@ -1248,65 +1248,73 @@ class _WeatherMarker extends StatelessWidget {
     // just removed: it resolves "no data" to "not hazardous". Tri-state instead.
     final verdict = condition?.hazard ?? SafetyVerdict.unknown;
 
-    // The state is carried on SHAPE and SIZE first and colour second.
+    // The state is carried on LUMINANCE, shape and size, and colour last.
     //
-    // Measured 2026-09-12 (HIE): the previous version drew all three states as
-    // one 52px circle and separated them by fill alone, at WCAG contrast
-    // 1.08-1.17:1 against a 3.0:1 floor. Rendered and looked at with colour
-    // removed, `hazardous`, `unknown` and `notHazardous` were a single identical
-    // grey disc. Colour is the first channel lost to glare, to peripheral
-    // vision, to a sun-washed panel and to colour-vision deficiency, and it was
-    // the only thing separating "there is ice" from "the road is fine".
+    // Luminance first, because it is what survives glare, a sun-washed panel,
+    // dusk, peripheral vision and colour-vision deficiency. The two dangerous
+    // confusions are carried on it: "there is ice" is the darkest mark and "the
+    // road is fine" is the lightest, and "we did not measure this road" sits
+    // between them. Mistaking hazardous for unknown is the safe direction, and
+    // those two are also apart on shape and size.
+    //
+    // The previous palette (a red #B71C1C triangle, an amber #FFC107 disc with a
+    // dark ring, a blue #0D47A1 dot) was rendered on the offline basemap and
+    // measured. With colour removed, the ice warning and the clear road were the
+    // same grey at their centres. With fine detail lost, the unknown disc was
+    // the quietest mark on the map, because its amber fill sits at the map's own
+    // luminance and only a thin ring carried it.
     //
     // Salience is ordered hazardous > unknown > clear. "We did not measure this
-    // road" must never be quieter than "the road is fine"; previously it was the
-    // quietest of the three.
+    // road" must never be quieter than "the road is fine".
     //
-    // Guarded by `scripts/hie-glance-gate.py` in the governance repo, which
-    // fails when a state surface differs on colour alone.
+    // Glyph size and colour count: a large light glyph in a dark mark makes its
+    // centre grey, and the centre is what a blurred glance keeps.
     switch (verdict) {
       case SafetyVerdict.hazardous:
-        // Triangle: the learned warning shape, and the only one of the three
-        // that is still itself when the pin is 20px of peripheral vision.
+        // Triangle: the learned warning shape. Darkest and largest.
         return const SizedBox(
           width: 52,
           height: 52,
           child: DecoratedBox(
             decoration: ShapeDecoration(
-              color: Color(0xFFB71C1C),
+              color: Color(0xFF8B0000),
               shape: _WarningTriangleBorder(),
               shadows: [BoxShadow(color: Colors.black54, blurRadius: 3)],
             ),
             child: Align(
-              alignment: Alignment(0, 0.45),
-              child: Icon(Icons.ac_unit, color: Colors.white, size: 22),
+              alignment: Alignment(0, 0.55),
+              child: Icon(Icons.ac_unit, color: Color(0xFFFFFFFF), size: 18),
             ),
           ),
         );
       case SafetyVerdict.unknown:
-        // NOT a green light, and not a quiet one either. The heavy dark ring -
-        // not the fill - is what holds this pin against a pale basemap; amber
-        // alone sits at 1.5:1 against OSM land and would disappear into it.
+        // NOT a green light, and not a quiet one either: a solid mid-dark disc
+        // that holds against a pale basemap on its fill, and a broad white ring
+        // that holds against dark labels and roads, where a light clear mark
+        // would otherwise be the brighter change.
         return const Center(
           child: _RingedDot(
-            fill: Color(0xFFFFC107),
-            ring: Color(0xFF212121),
+            fill: Color(0xFFEF6C00),
+            ring: Color(0xFFFFFFFF),
+            ringWidth: 5,
             size: 46,
             icon: Icons.question_mark,
-            iconColor: Color(0xFF212121),
-            iconSize: 22,
+            iconColor: Color(0xFF8B0000),
+            iconSize: 26,
           ),
         );
       case SafetyVerdict.notHazardous:
-        // Smallest and quietest. An assessed-and-clear road asks nothing of her.
+        // Smallest, quietest and the only light mark. An assessed-and-clear
+        // road asks nothing of her, and cannot be mistaken for a dark warning.
         return const Center(
           child: _RingedDot(
-            fill: Color(0xFF0D47A1),
-            ring: Color(0x00000000),
+            fill: Color(0xFFFFFFFF),
+            ring: Color(0xFF0B3D91),
+            ringWidth: 2,
             size: 30,
             icon: Icons.cloud,
-            iconColor: Colors.white,
-            iconSize: 16,
+            iconColor: Color(0xFF0B3D91),
+            iconSize: 14,
           ),
         );
     }
@@ -1346,6 +1354,7 @@ class _RingedDot extends StatelessWidget {
   const _RingedDot({
     required this.fill,
     required this.ring,
+    required this.ringWidth,
     required this.size,
     required this.icon,
     required this.iconColor,
@@ -1354,6 +1363,7 @@ class _RingedDot extends StatelessWidget {
 
   final Color fill;
   final Color ring;
+  final double ringWidth;
   final double size;
   final IconData icon;
   final Color iconColor;
@@ -1367,7 +1377,7 @@ class _RingedDot extends StatelessWidget {
       decoration: BoxDecoration(
         color: fill,
         shape: BoxShape.circle,
-        border: Border.all(color: ring, width: 4),
+        border: Border.all(color: ring, width: ringWidth),
       ),
       child: Icon(icon, color: iconColor, size: iconSize),
     );
