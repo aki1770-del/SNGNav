@@ -175,12 +175,7 @@ adjustments may make warning thresholds fire EARLIER than the
 per-profile baseline + live-context + state-delta floor; NEVER
 later. The factory enforces the multiplier `>= 1.0` floor (circadian)
 and the visibility lift `>= 0` floor (session-state) at runtime via
-debug-mode assertions in `forDriverContext`. Negative-test coverage
-in `test/circadian_phase_test.dart`,
-`test/session_state_provider_test.dart`,
-`test/confidence_provider_test.dart`, and
-`test/navigation_safety_config_driver_state_inputs_test.dart`
-confirms the assertions fire on relaxing inputs. The
+debug-mode assertions in `forDriverContext`. The
 cap-override-with-confirmation pattern (#30) is the ONLY exception
 to the warn-thresholds-only-add-caution rule and applies only to the
 alerts-per-minute cap (rate-limit), never to the warning visibility

@@ -22,6 +22,13 @@ no override, or only `withKeiCarDefault()`, you receive exactly the configs
   this package designed. You now receive the un-overridden baseline and the
   refusal is reported. If your release build has been running with a relaxing
   override, your warnings will move earlier after this upgrade. That is the fix.
+- **What that refusal checks: five fields.** `warningVisibilityMeters` and
+  `warningTemperatureCelsius` may not decrease, and the three score floors may
+  not change. A transform that changes `criticalVisibilityMeters`,
+  `criticalTemperatureCelsius`, `infoVisibilityMeters`, `infoTemperatureCelsius`
+  or `alertsPerMinuteCapOverride` is not detected and is applied as written, as
+  it was in 0.11.5; for those fields the rule is kept by your transform, not by
+  this release.
 - **An exception thrown inside your transform no longer reaches your code.** In
   0.11.5 it propagated to whoever called `forProfileWithContext`,
   `forDriverContext` or `applyOverrideForToken`. It is now caught, the baseline
