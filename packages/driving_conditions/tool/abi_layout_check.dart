@@ -293,8 +293,9 @@ List<DartField> parseDartStructFields(String source, String className) {
       'struct.',
     );
   }
-  if (fields.isEmpty)
+  if (fields.isEmpty) {
     throw Unverifiable('Dart class "$className" has no fields.');
+  }
   return fields;
 }
 
