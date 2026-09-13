@@ -48,8 +48,9 @@
 //   PER FRAME          — derive only what genuinely depends on live
 //                        context, and only when a sample actually
 //                        changed. `forProfileWithContext` cannot throw
-//                        on account of a registered override; a
-//                        violating one is discarded and reported.
+//                        on account of a registered override; each
+//                        field it refuses goes back to its
+//                        un-overridden value and is reported.
 //
 // The config itself cannot be fully hoisted — it is a function of
 // live speed and temperature, which is the entire point of a CAN
@@ -131,8 +132,9 @@ DrivingContext driveContextFromCanSamples({
 /// [vehicleOverrides] is built ONCE by the caller (see [main]) and
 /// passed in. It is never constructed inside the loop below: a
 /// registry is startup configuration, not per-frame data, and
-/// `.validated()` has already refused any transform that would relax
-/// a warning threshold.
+/// `.validated()` has already refused, at startup, any transform its
+/// probes caught relaxing a warning threshold or changing a field an
+/// override may not change.
 Stream<String> safetyAdvisoryStream(
   _J1939EcuLike ecu, {
   VehicleThresholdOverrides? vehicleOverrides,
@@ -173,8 +175,9 @@ Stream<String> safetyAdvisoryStream(
         vehicleClassToken: vehicleClassToken,
       );
       // Cannot throw on account of a registered override: a violating
-      // transform is discarded and reported, not raised. That is what
-      // keeps this `async*` stream alive for the whole journey.
+      // field goes back to its un-overridden value and is reported, not
+      // raised. That is what keeps this `async*` stream alive for the
+      // whole journey.
       config = NavigationSafetyConfig.forProfileWithContext(
         profile,
         context: ctx,
@@ -229,8 +232,10 @@ Future<void> main() async {
   // ONCE, at startup, before a single frame is read. `.validated()`
   // probes every registered transform against a battery of baselines
   // and throws here — on the developer's machine, at wiring time — if
-  // one would relax a warning threshold. Nothing is left to refuse
-  // later, on the road.
+  // one relaxes a warning threshold or changes a field an override may
+  // not change, on any probe. The battery is finite, so the drive path
+  // still checks every config it derives; what it refuses there is
+  // reported, not thrown.
   final overrides = VehicleThresholdOverrides.withKeiCarDefault();
 
   final ecu = _MockEcu();

@@ -168,19 +168,19 @@ class NavigationSafetyConfig extends Equatable {
   /// AFTER the per-profile baseline AND AFTER the live-context
   /// adjustments. The transform is bound by the caution-add-only
   /// invariant — it may make warning thresholds fire EARLIER, never
-  /// later, than the post-context baseline. The score-floor tiers and
-  /// the critical thresholds MUST be preserved (severity-not-profile
-  /// invariant). A lowered warning threshold or a changed score floor
-  /// is refused at REGISTRATION by [VehicleThresholdOverrides.validated],
-  /// which throws [ArgumentError] there. On this drive path
+  /// later, than the post-context baseline. Every other threshold field
+  /// MUST be preserved: the score-floor tiers, the critical thresholds,
+  /// the info thresholds and `alertsPerMinuteCapOverride`
+  /// (severity-not-profile invariant). A lowered warning threshold, or
+  /// any change to one of those other fields, is refused at
+  /// REGISTRATION by [VehicleThresholdOverrides.validated], which throws
+  /// [ArgumentError] there. On this drive path
   /// [VehicleThresholdOverrides.applyOverrideForToken] checks the same
-  /// fields again and NEVER throws: a violating override is refused
-  /// whole and the un-overridden config is returned, with the rejection
-  /// reported. A changed critical threshold or
-  /// `alertsPerMinuteCapOverride` is checked by neither, and is applied.
-  /// This factory therefore cannot throw on account of a registered
-  /// override -- a caller deriving a config per vehicle-bus frame
-  /// inside an `async*` body keeps its stream.
+  /// fields again and NEVER throws: each refused field goes back to its
+  /// un-overridden value, every legal part of the override is kept, and
+  /// each refusal is reported. This factory therefore cannot throw on
+  /// account of a registered override -- a caller deriving a config per
+  /// vehicle-bus frame inside an `async*` body keeps its stream.
   ///
   /// Citations for each formula are documented in the
   /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
@@ -275,14 +275,14 @@ class NavigationSafetyConfig extends Equatable {
 
     // Vehicle-class override (0.9.0). Applied AFTER per-profile baseline
     // AND AFTER live-context adjustment. Caution-add-only +
-    // severity-not-profile violations (a lowered warning threshold, a
-    // changed score floor; the critical thresholds are not checked) are
-    // refused at REGISTRATION by VehicleThresholdOverrides.validated
+    // severity-not-profile violations (a lowered warning threshold, or a
+    // changed score floor, critical threshold, info threshold or cap)
+    // are refused at REGISTRATION by VehicleThresholdOverrides.validated
     // (which throws there) and re-checked here by applyOverrideForToken,
-    // which does NOT throw:
-    // it discards a violating override, returns the un-overridden
-    // config, and reports the rejection. This call site can be inside
-    // a per-frame loop, so it must not be able to kill the caller.
+    // which does NOT throw: it puts each violating field back to its
+    // un-overridden value, keeps the legal rest of the override, and
+    // reports each rejection. This call site can be inside a per-frame
+    // loop, so it must not be able to kill the caller.
     if (vehicleOverrides == null) return postContext;
     return vehicleOverrides.applyOverrideForToken(
       context.vehicleClassToken,
@@ -446,12 +446,12 @@ class NavigationSafetyConfig extends Equatable {
     // here. The vehicle-class override (if any) applies AFTER the
     // per-profile baseline AND AFTER the live-context adjustment in
     // `forProfileWithContext`; the caution-add-only +
-    // severity-not-profile checks run there in EVERY build mode. A
-    // violating override is refused whole -- the un-overridden config is
-    // returned and the rejection reported, never silently applied and
-    // never thrown. Only a registry built with
-    // VehicleThresholdOverrides.validated throws, and it does so earlier,
-    // at registration. The critical thresholds are not checked.
+    // severity-not-profile checks run there in EVERY build mode, on all
+    // ten threshold fields. Each violating field goes back to its
+    // un-overridden value and is reported, never silently applied and
+    // never thrown, and the legal rest of the override is kept. Only a
+    // registry built with VehicleThresholdOverrides.validated throws, and
+    // it does so earlier, at registration.
     final base = NavigationSafetyConfig.forProfileWithContext(
       driverContext.profile,
       context: environmentalContext,

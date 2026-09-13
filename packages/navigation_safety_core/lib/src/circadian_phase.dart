@@ -20,8 +20,11 @@
 /// floored at `1.0` (`morning` baseline) and capped at `1.5`
 /// (`lateNight` circadian-trough). `1.0` means no adjustment; values
 /// `> 1.0` make warning thresholds fire EARLIER than the baseline.
-/// The factory enforces `multiplier >= 1.0` at runtime via a debug-mode
-/// assertion in the integration site.
+/// The floor holds in every build mode: each multiplier is a fixed
+/// value inside this package, and the factory applies a circadian
+/// result only when it raises the warning visibility floor, an ordinary
+/// `if` that release builds keep. A debug-mode assertion at that site
+/// additionally flags a multiplier edited below `1.0`.
 ///
 /// **Severity-not-profile invariant** (load-bearing): the circadian
 /// adjustment tunes warning TIMING only (warn-earlier-floors). It does

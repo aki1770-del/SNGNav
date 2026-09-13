@@ -21,37 +21,45 @@
 /// **Severity-not-profile invariant** (load-bearing): vehicle-class
 /// adjustments tune TIMING (warn-earlier-floors) only. They MUST NOT
 /// modify the score-floor tiers (`safeScoreFloor`, `infoScoreFloor`,
-/// `warningScoreFloor`), the critical thresholds, or the
-/// alerts-per-minute cap override.
+/// `warningScoreFloor`), the critical thresholds, the info thresholds,
+/// or the alerts-per-minute cap override.
 ///
-/// **What the checks below cover, exactly: five fields.**
+/// **What the checks below cover, exactly: all ten threshold fields.**
 /// `warningVisibilityMeters` and `warningTemperatureCelsius` may not
-/// decrease, and the three score floors may not change. A transform
-/// that changes a critical threshold or `alertsPerMinuteCapOverride`
-/// is **not detected** by either check and is applied as written, so
-/// for those fields the MUST NOT above is kept by the transform's
-/// author, not by this class.
+/// decrease. Every other field may not change, in either direction:
+/// the three score floors, `criticalVisibilityMeters`,
+/// `criticalTemperatureCelsius`, `infoVisibilityMeters`,
+/// `infoTemperatureCelsius` and `alertsPerMinuteCapOverride`, where a
+/// `null` cap must stay `null` and NaN counts as a change. A tighter
+/// value is refused too, because it is not safe by construction: a
+/// critical alert bypasses `AlertDensityThrottle`'s cap but still takes
+/// a slot in its rolling window, info alerts take slots exactly as
+/// warnings do, and a transform is never shown the driver's profile, so
+/// a cap it writes is the same for every profile. Through 0.11.6 only
+/// the two warning thresholds and the three score floors were checked.
 ///
 /// ## Where the refusal lives — registration, not the drive path
 ///
 /// The checks run at **registration** in
 /// [VehicleThresholdOverrides.validated], which probes every
 /// registered transform against a battery of baselines and throws
-/// [ArgumentError] naming the token, the field and the probe. That is
-/// the moment a mistake is actually made — an integrator wires a
-/// registry once, at startup — and it is the only moment at which
-/// throwing is safe.
+/// [ArgumentError] naming the token, every field the probe refused,
+/// and the probe. That is the moment a mistake is actually made — an
+/// integrator wires a registry once, at startup — and it is the only
+/// moment at which throwing is safe.
 ///
 /// [applyOverrideForToken] runs on the **drive path**, potentially
 /// once per vehicle-bus frame while the car is moving. It runs the
-/// same checks again and **never throws**. A violating override is
-/// refused whole: the method returns the unmodified `baseline` and
-/// reports the rejection to the `onRejected` handler passed to the
-/// constructor (or, absent a handler, to [rejectionReporter], once per
-/// token, field and invariant).
+/// same checks again and **never throws**. Each field is judged on its
+/// own: a field that breaks its rule goes back to its `baseline` value,
+/// every legal part of the override is kept, and each refused field is
+/// reported to the `onRejected` handler passed to the constructor (or,
+/// absent a handler, to [rejectionReporter], once per token, field and
+/// invariant). A transform that throws has produced no config to
+/// check, so it alone is refused whole and `baseline` is returned.
 ///
-/// The history is worth keeping, because both previous shapes were
-/// wrong and they were wrong in opposite directions:
+/// The history is worth keeping, because every earlier shape was
+/// wrong, and the first two were wrong in opposite directions:
 ///
 /// - Through 0.11.5 the guards were `assert`s. In a shipped integrator
 ///   build the assertion is elided, so a relaxing override was
@@ -65,6 +73,12 @@
 ///   TERMINATES the stream. Measured on a per-frame harness: 0 of 5
 ///   advisories delivered, nav surface dead. A guard that removes the
 ///   warning is not a stronger halt; it is the absence of one.
+/// - 0.11.6 moved the refusal off the drive path, but refused a
+///   violating override WHOLE there, and checked five of the ten
+///   fields. A legal warning-floor raise was thrown away because a
+///   DIFFERENT field was wrong, so that warning fired later than the
+///   legal part of the override asked for; a changed critical
+///   threshold, info threshold or cap was applied as written.
 ///
 /// Hence the present shape, which is the poka-yoke ordering: the
 /// mistake is refused where it is made (once, loudly, at
@@ -81,6 +95,12 @@
 /// on a live config. That is exactly why [applyOverrideForToken] keeps
 /// checking. Registration is the fixture; the drive-path check is the
 /// last line, and it refuses rather than crashes.
+///
+/// Every per-profile baseline carries a `null`
+/// `alertsPerMinuteCapOverride`, but two of the probes carry a non-null
+/// cap. A transform that rewrites a non-null cap, or drops it to `null`,
+/// is therefore refused at registration, even if every config it meets
+/// through this package's own factories carries a `null` cap.
 ///
 /// **HER kei-car-at-65 cohort default**: the [withKeiCarDefault]
 /// factory ships a built-in override for the `'kei-car'` token. The
@@ -153,12 +173,14 @@ enum VehicleOverrideInvariant {
   transformThrew,
 }
 
-/// A vehicle-class override that was refused rather than applied.
+/// One refusal of a vehicle-class override: a field that broke its
+/// rule, or a transform that threw.
 ///
-/// Produced by [VehicleThresholdOverrides.applyOverrideForToken] on
-/// the drive path, where throwing would kill the caller's stream, and
-/// by [VehicleThresholdOverrides.validated] at registration, where it
-/// is wrapped in the thrown [ArgumentError].
+/// One call can produce several, one per refused field. Produced by
+/// [VehicleThresholdOverrides.applyOverrideForToken] on the drive path,
+/// where throwing would kill the caller's stream, and by
+/// [VehicleThresholdOverrides.validated] at registration, where every
+/// refusal a probe produced is described in the thrown [ArgumentError].
 class VehicleOverrideRejection {
   /// The registry key whose transform was refused.
   final String token;
@@ -201,7 +223,8 @@ class VehicleOverrideRejection {
     this.stackTrace,
   });
 
-  /// Human-readable explanation, including what was applied instead.
+  /// Human-readable explanation: what was refused, and the rule it
+  /// broke. [toString] adds what was applied instead.
   String get explanation {
     switch (invariant) {
       case VehicleOverrideInvariant.cautionAddOnly:
@@ -291,8 +314,9 @@ class VehicleThresholdOverrides {
   /// The function receives the per-profile-baseline config (post
   /// live-context adjustment) and MUST return a config whose
   /// `warningVisibilityMeters` and `warningTemperatureCelsius` are
-  /// both `>=` the baseline. Score-floor tiers and the critical
-  /// thresholds MUST be preserved.
+  /// both `>=` the baseline. Every other field MUST come back
+  /// unchanged: the score-floor tiers, the critical thresholds, the info
+  /// thresholds and `alertsPerMinuteCapOverride`, `null` included.
   final Map<
     String,
     NavigationSafetyConfig Function(NavigationSafetyConfig baseline)
@@ -321,8 +345,8 @@ class VehicleThresholdOverrides {
   /// `const`-capable, with the same positional signature since 0.9.0,
   /// so existing consumers keep compiling. Prefer
   /// [VehicleThresholdOverrides.validated]: a registry built this way
-  /// defers every refusal to the drive path, where the override is
-  /// discarded and reported rather than fixed.
+  /// defers every refusal to the drive path, where each refused field
+  /// is reset and reported rather than fixed.
   const VehicleThresholdOverrides(
     this.overrides, {
     void Function(VehicleOverrideRejection rejection)? onRejected,
@@ -340,8 +364,13 @@ class VehicleThresholdOverrides {
   ///
   /// Throws [ArgumentError] when, for ANY probe baseline, a registered
   /// transform lowers `warningVisibilityMeters` or
-  /// `warningTemperatureCelsius`, changes `safeScoreFloor`,
-  /// `infoScoreFloor` or `warningScoreFloor`, or throws.
+  /// `warningTemperatureCelsius`; changes any other threshold field, in
+  /// either direction (`safeScoreFloor`, `infoScoreFloor`,
+  /// `warningScoreFloor`, `criticalVisibilityMeters`,
+  /// `criticalTemperatureCelsius`, `infoVisibilityMeters`,
+  /// `infoTemperatureCelsius` or `alertsPerMinuteCapOverride`); or
+  /// throws. The message names every field that probe refused, and the
+  /// rule each one broke.
   ///
   /// **Bound**: the probe battery is finite (see
   /// [registrationProbeCount]). Passing validation is strong evidence,
@@ -425,31 +454,37 @@ class VehicleThresholdOverrides {
   /// car is moving, and in an `async*` body an uncaught throw
   /// terminates the stream, taking the driver's advisories with it.
   ///
-  /// When the registered transform lowers a warning threshold, changes
-  /// a score floor, or throws, the override is **refused whole**: this
-  /// method returns the unmodified [baseline] and reports a
+  /// Every field of the transform's result is judged on its own. A
+  /// lowered warning threshold goes back to its [baseline] value, and a
+  /// raised one is kept. Any change to any other field (a score floor,
+  /// a critical threshold, an info threshold or
+  /// `alertsPerMinuteCapOverride`, in either direction) goes back to its
+  /// [baseline] value. Each refused field is reported as its own
   /// [VehicleOverrideRejection] to the `onRejected` handler passed to
   /// the constructor, or absent a handler to [rejectionReporter] once
-  /// per token, field and invariant. A change to a critical threshold
-  /// or to `alertsPerMinuteCapOverride` is not checked and is applied
-  /// (see library docs).
+  /// per token, field and invariant, so a handler can be called more
+  /// than once for one call. The result is always a config that some
+  /// fully legal transform could have produced. A transform that throws
+  /// has produced nothing to check, so it is refused whole: [baseline]
+  /// is returned and the error is reported.
   ///
-  /// Refusing WHOLE rather than repairing field-by-field is deliberate
-  /// and is the safer of the two:
+  /// Refusing field by field, rather than refusing the whole override,
+  /// is deliberate. Through 0.11.6 this method refused the whole
+  /// override, on the reasoning that a transform with one wrong field
+  /// has not earned trust on the others. For a warning floor that
+  /// reasoning points the wrong way: returning [baseline] for a legal
+  /// raise makes that warning fire LATER than the legal part of the
+  /// override asked for, because a DIFFERENT field was wrong. Measured
+  /// on 0.11.6 with the `ageingRural` profile, an override that raised
+  /// `warningVisibilityMeters` by 50 m and lowered
+  /// `warningTemperatureCelsius` by 1 °C came back with a 300 m
+  /// visibility floor instead of 350 m. The defect stays visible either
+  /// way: the refused field comes back at its baseline value, and every
+  /// refused field is reported, not only the first.
   ///
-  /// - [baseline] is the config this package designed and tested for
-  ///   that profile and context. It is exactly what an integrator who
-  ///   registered no override receives, so it is never itself unsafe.
-  /// - A transform that got one field wrong has not earned trust on
-  ///   the others.
-  /// - Half-applying a broken override produces a config nobody
-  ///   designed and makes the defect HARDER to notice: the behaviour
-  ///   looks nearly right and the report becomes the only signal.
-  ///   A whole refusal is a larger, more visible delta — detected
-  ///   instantly beats silently half-repaired.
-  ///
-  /// What it does NOT do is apply the relaxation. Silently accepting
-  /// it is the 0.11.5 defect and is not available here.
+  /// What it does NOT do is apply a relaxation, or any change to a
+  /// field an override may not change. Silently accepting a relaxation
+  /// is the 0.11.5 defect and is not available here.
   NavigationSafetyConfig applyOverrideForToken(
     String? token,
     NavigationSafetyConfig baseline,

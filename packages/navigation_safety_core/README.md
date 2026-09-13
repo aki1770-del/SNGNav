@@ -120,7 +120,11 @@ Every context input is **conservative-only**: it can make the
 thresholds warn earlier than the per-profile baseline, never later.
 The per-profile baseline is the floor; vehicle-class overrides apply
 AFTER the baseline AND AFTER the live-context adjustments and are
-themselves caution-add-only (asserted at runtime in debug builds).
+themselves caution-add-only. That is checked in every build mode, not
+only in debug builds: `VehicleThresholdOverrides.validated(...)`
+refuses a violating transform at registration, and on the drive path
+each refused field goes back to its un-overridden value and is
+reported.
 
 A runnable end-to-end walkthrough lives in
 [`example/main.dart`](example/main.dart).

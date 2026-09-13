@@ -26,12 +26,12 @@
 /// **Caution-add-only invariant** (load-bearing): when a token is
 /// matched against a [VehicleThresholdOverrides] registry, the
 /// override may make the warning thresholds fire EARLIER than the
-/// per-profile baseline, NEVER later. A relaxing override is refused
-/// in every build mode: `VehicleThresholdOverrides.validated(...)`
-/// throws `ArgumentError` at registration, and on the drive path the
-/// factory returns the un-overridden config and reports the rejection
-/// instead of applying it, without throwing. The critical thresholds
-/// are not checked; see [VehicleThresholdOverrides].
+/// per-profile baseline, NEVER later, and may not change any other
+/// threshold field. This is refused in every build mode:
+/// `VehicleThresholdOverrides.validated(...)` throws `ArgumentError` at
+/// registration, and on the drive path each refused field goes back to
+/// its un-overridden value and is reported, without throwing, while the
+/// legal rest of the override is kept. See [VehicleThresholdOverrides].
 ///
 /// **Null-as-absent convention**: returning `null` means the
 /// integrator does not have a vehicle-class signal in this trip /

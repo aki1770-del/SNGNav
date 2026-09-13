@@ -17,11 +17,13 @@
 /// has the data to answer.
 ///
 /// `LoomFitTelemetry` is the package-boundary surface for emitting
-/// those observations. It is **emit-only**: the package observes its
-/// own firing decisions and surfaces them on a broadcast stream; it
-/// does NOT classify "fit" vs "misfit" itself, does NOT enact any
-/// policy change in response, and does NOT harvest driver-identity
-/// data. Detection logic — if any consuming app wants it — lives in
+/// those observations. It is **emit-only**: it surfaces on a broadcast
+/// stream exactly the records an integrator passes to `record()` at
+/// the seam where alerts are fired, as the composition pattern below
+/// shows. `AlertDensityThrottle` does not call it, so a decision nobody
+/// records emits nothing. It does NOT classify "fit" vs "misfit"
+/// itself, does NOT enact any policy change in response, and does NOT
+/// harvest driver-identity data. Detection logic — if any consuming app wants it — lives in
 /// the consuming app's analytics layer, where the integrator owns
 /// the privacy-class boundary, the consent surface, and the threshold
 /// for "the loom does not fit this driver-class."
@@ -98,9 +100,10 @@
 /// ```
 ///
 /// This is a Pure Dart, advisory-only surface. It does not actuate the
-/// vehicle. The class observes the loom; the consuming application
-/// owns delivery to any analytics surface and retains full
-/// responsibility for the calibration loop the records feed.
+/// vehicle. The class carries the integrator's observations of the
+/// loom; the consuming application owns delivery to any analytics
+/// surface and retains full responsibility for the calibration loop
+/// the records feed.
 library;
 
 import 'dart:async';
