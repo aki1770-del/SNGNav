@@ -182,8 +182,10 @@ class NavigationSafetyConfig extends Equatable {
   /// account of a registered override -- a caller deriving a config per
   /// vehicle-bus frame inside an `async*` body keeps its stream.
   ///
-  /// Citations for each formula are documented in the
-  /// `lib/src/calibration/` module headers and in `KNOWN_LIMITATIONS.md`.
+  /// Citations for each formula are documented in the module headers
+  /// under `lib/src/` in the `navigation_safety_calibration` package,
+  /// which has supplied these formulas since this package's 0.11.0,
+  /// and in `KNOWN_LIMITATIONS.md`.
   factory NavigationSafetyConfig.forProfileWithContext(
     DriverProfile profile, {
     DrivingContext? context,
@@ -360,9 +362,10 @@ class NavigationSafetyConfig extends Equatable {
     return agreed;
   }
 
-  /// Per-profile reaction-time defaults in seconds. See
-  /// `lib/src/calibration/speed_dependent_visibility.dart` module
-  /// header for citations and UNVERIFIED flags.
+  /// Per-profile reaction-time defaults in seconds. See the
+  /// `lib/src/speed_dependent_visibility.dart` module header in the
+  /// `navigation_safety_calibration` package for citations and
+  /// UNVERIFIED flags.
   static double _reactionTimeSecondsFor(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.ageingRural:
@@ -397,10 +400,11 @@ class NavigationSafetyConfig extends Equatable {
   /// [forProfile] / [forProfileWithContext] see no behaviour change;
   /// state-axis tuning is opt-in via this factory only.
   ///
-  /// **DriverState-axis scaffolding (0.10.0)**: four new optional
-  /// named parameters compose with the existing trait + state +
-  /// live-context layering as additional caution-adding adjustments
-  /// applied AFTER the state-delta in the existing layering order:
+  /// **DriverState-axis scaffolding (0.10.0)**: five new optional
+  /// named parameters. [vehicleOverrides] is applied inside
+  /// `forProfileWithContext`, and so BEFORE the state-delta; the
+  /// [circadianPhase] and [sessionState] lifts are applied AFTER it.
+  /// They do not all add caution; each is described below:
   ///
   /// - [vehicleOverrides] — vehicle-class threshold-override registry
   ///   (0.9.0). When supplied, the registry composes through
@@ -427,10 +431,11 @@ class NavigationSafetyConfig extends Equatable {
   ///   driver confirmation for cap-loosening; the system never
   ///   auto-relaxes from a high-confidence reading alone.
   ///
-  /// Magnitudes for the four new inputs are **design-default
-  /// hypotheses** pending field-measurement validation; see
-  /// `KNOWN_LIMITATIONS.md` (DriverState-scaffolding section, 0.10.0)
-  /// for the per-input UNVERIFIED-magnitude flag.
+  /// Magnitudes for the circadian-phase, session-state and confidence
+  /// inputs are **design-default hypotheses** pending
+  /// field-measurement validation; see `KNOWN_LIMITATIONS.md`
+  /// (DriverState-scaffolding section, 0.10.0) for the per-input
+  /// UNVERIFIED-magnitude flag.
   factory NavigationSafetyConfig.forDriverContext(
     DriverContext driverContext, {
     DrivingContext? environmentalContext,

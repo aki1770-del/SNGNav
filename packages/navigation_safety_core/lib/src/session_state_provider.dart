@@ -117,8 +117,15 @@ class SessionState extends Equatable {
   /// UNVERIFIED-magnitude flag on the day-thresholds.
   final CumulativeFatigueClass cumulativeFatigue;
 
-  /// Construct a session-state snapshot. [consecutiveDrivingDays]
-  /// must be `>= 0`; the factory throws [RangeError] otherwise.
+  /// Construct a session-state snapshot. [consecutiveDrivingDays] is
+  /// meant to be `>= 0`, but nothing checks it, with assertions on or
+  /// off: this constructor accepts a negative count without throwing,
+  /// and `NavigationSafetyConfig.forDriverContext` never reads the
+  /// count (it reads only [cumulativeFatigue]), so a negative count
+  /// neither throws there nor changes any threshold. Nothing checks
+  /// that [cumulativeFatigue] agrees with the count either. A tracker
+  /// that can go negative has to be caught where the integrator
+  /// derives both values.
   const SessionState({
     required this.consecutiveDrivingDays,
     required this.cumulativeFatigue,

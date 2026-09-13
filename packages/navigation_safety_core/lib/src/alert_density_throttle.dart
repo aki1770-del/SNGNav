@@ -226,10 +226,11 @@ class AlertDensityThrottle {
     }
 
     // Cap evaluation: in-window count strictly less than cap → fire.
-    // The cap is a per-window count; .floor() applied to the double
-    // cap yields the integer ceiling. With cap = 1.5 and 1 prior
-    // alert in window, 1 < 1.5 → fire (and become 2nd); with 2 prior,
-    // 2 < 1.5 false → drop (until window slides).
+    // The int count is compared with the double cap as it stands;
+    // nothing rounds the cap, so an advisory alert fires while fewer
+    // than ceil(cap) alerts are in the window. With cap = 1.5 and 1
+    // prior alert in window, 1 < 1.5 → fire (and become 2nd); with 2
+    // prior, 2 < 1.5 false → drop (until window slides).
     if (_firedAt.length < alertsPerMinuteCap) {
       _firedAt.add(now);
       return true;
