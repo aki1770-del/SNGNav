@@ -1,0 +1,17 @@
+# Monorepo development ONLY — never published.
+#
+# Resolves the sibling packages from the working tree, so a change to a sibling
+# is exercised by this example before it is released. Excluded from the
+# published archive by ../.pubignore.
+#
+# This lives in its own file, not in pubspec.yaml, because pub does NOT strip
+# dependency_overrides when publishing. Inline, these path overrides shipped
+# inside the published archive and made the example unresolvable for every
+# consumer: `dart pub get` exit 66, "path which doesn't exist", before any
+# version constraint was read.
+#
+# Monorepo development: navigation_safety transitively pulls
+# navigation_safety_core; resolve it locally too.
+dependency_overrides:
+  navigation_safety_core:
+    path: ../../navigation_safety_core

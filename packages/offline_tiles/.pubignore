@@ -1,0 +1,9 @@
+# A .pubignore REPLACES any .gitignore in the same directory for publishing.
+# This package has no .gitignore of its own, so none is displaced here.
+#
+# Monorepo-development path overrides. These MUST NOT ship: they point at
+# sibling directories that exist only inside this monorepo. When they sat
+# inline in example/pubspec.yaml they shipped to pub.dev and made the example
+# unresolvable (`dart pub get` exit 66, "path which doesn't exist").
+pubspec_overrides.yaml
+example/pubspec_overrides.yaml

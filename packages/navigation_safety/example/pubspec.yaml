@@ -9,7 +9,7 @@ dependencies:
     sdk: flutter
   navigation_safety:
     path: ../
-  routing_engine: ^0.4.0
+  routing_engine: '>=0.4.0 <0.7.0'
   latlong2: ^0.9.1
   flutter_bloc: ^9.1.0
 
@@ -17,11 +17,12 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-# Monorepo development: navigation_safety transitively pulls
-# navigation_safety_core; resolve it locally too.
-dependency_overrides:
-  navigation_safety_core:
-    path: ../../navigation_safety_core
-
 flutter:
   uses-material-design: true
+
+# Monorepo development: the sibling path overrides live in
+# `pubspec_overrides.yaml`, NOT here, and that file is excluded from the
+# published archive by `../.pubignore`. pub does NOT strip
+# `dependency_overrides` from a published archive; inline, they made this
+# example unresolvable for anyone outside this monorepo (`dart pub get`
+# exit 66, "path which doesn't exist").
