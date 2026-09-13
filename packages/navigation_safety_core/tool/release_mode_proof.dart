@@ -40,7 +40,18 @@ bool _assertionsEnabled() {
 
 final List<String> _failures = <String>[];
 
+/// Cases actually executed. The instrument counts itself.
+///
+/// It did not, until 2026-09-13. The author reported "16 cases" for a
+/// run that emits 15, having counted the `_check` DEFINITION as a call
+/// site by eye; ORS caught it by running `grep -c '^  ok '` against the
+/// real output. A proof whose case count comes from a person reading
+/// its source is a proof with an unmeasured number in it -- which is
+/// the defect class this whole file exists to catch, one level up.
+int _checked = 0;
+
 void _check(String what, bool held, {String? detail}) {
+  _checked++;
   if (held) {
     stdout.writeln('  ok    $what');
   } else {
@@ -239,11 +250,15 @@ Future<void> main() async {
   VehicleThresholdOverrides.resetRejectionReporting();
 
   stdout.writeln('');
+  stdout.writeln(
+    'cases executed: $_checked  (plus 1 refusal control, which emits no '
+    'case line: this program exits 2 under --enable-asserts)',
+  );
   if (_failures.isEmpty) {
-    stdout.writeln('ALL CASES HELD (assertions elided)');
+    stdout.writeln('ALL $_checked CASES HELD (assertions elided)');
     exit(0);
   }
-  stderr.writeln('${_failures.length} CASE(S) FAILED:');
+  stderr.writeln('${_failures.length} of $_checked CASE(S) FAILED:');
   for (final f in _failures) {
     stderr.writeln('  - $f');
   }
