@@ -384,8 +384,9 @@ class VehicleThresholdOverrides {
       for (final probe in _registrationProbes) {
         final rejections = _evaluate(entry.key, entry.value, probe).rejections;
         if (rejections.isNotEmpty) {
-          // Every field this probe refused is named, not only the first,
-          // so one run shows the developer everything to fix.
+          // Every field this probe refused is named, not only the first.
+          // The throw ends both loops, so what a later probe or another
+          // token's transform refuses is named only once these are fixed.
           throw ArgumentError.value(
             entry.key,
             'overrides',

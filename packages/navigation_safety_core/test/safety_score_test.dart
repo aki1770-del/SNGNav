@@ -172,14 +172,14 @@ void main() {
     });
   });
 
-  // GAP-1 (conservative-on-uncertain invariant): a non-finite (NaN / Infinity) score must be
+  // Conservative-on-uncertain invariant: a non-finite (NaN / Infinity) score must be
   // treated as the worst-case/uncertain value and ALERT conservatively,
   // never silently pass. NaN compares false to both clamp bounds (so it
   // would slip through unclamped), and in toAlertSeverity every `<`
   // against NaN is false → null (no alert). +Infinity clamps to 1 → no
   // alert. Both invert the "if uncertain, alert conservatively" intent
   // The invariant the guard enforces: non-finite → 0 → critical.
-  group('non-finite inputs alert conservatively (GAP-1)', () {
+  group('non-finite inputs alert conservatively', () {
     test('NaN components clamp to 0 (worst-case), never remain NaN', () {
       final score = SafetyScore(
         overall: double.nan,

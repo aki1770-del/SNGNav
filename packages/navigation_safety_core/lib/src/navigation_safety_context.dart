@@ -12,8 +12,10 @@
 /// Today's context-aware factory honours these fields:
 ///
 /// - [speedMps] — current vehicle speed in metres per second; when
-///   non-null, the warning visibility floor adjusts to ensure reaction
-///   time + braking distance fits the threshold.
+///   non-null, the warning visibility floor rises to the reaction plus
+///   braking distance at 5.5 m/s², a dry-pavement deceleration, when
+///   that is longer. On snow or ice, stopping can take more distance
+///   than this floor, and no field here takes another deceleration.
 /// - [humidityRH] — relative humidity as a fraction in `(0.0, 1.0]`;
 ///   combined with [ambientTempCelsius] adjusts the warning temperature
 ///   for dew-point-driven black-ice risk.

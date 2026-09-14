@@ -140,8 +140,12 @@ class NavigationSafetyConfig extends Equatable {
   /// supplied, the relevant thresholds adjust as follows:
   ///
   /// - If `context.speedMps` is non-null, the warning visibility floor
-  ///   raises to fit reaction time + braking distance for the current
-  ///   speed, using a per-profile reaction-time default. The
+  ///   rises to the reaction distance (a per-profile reaction-time
+  ///   default times the speed) plus the braking distance at 5.5 m/s²,
+  ///   a dry-pavement deceleration, when that is longer. Neither this
+  ///   factory nor `DrivingContext` takes another deceleration, so on
+  ///   snow or ice stopping can take more distance than the floor
+  ///   returned. The
   ///   per-profile baseline acts as a lower bound: context can only
   ///   warn earlier (longer visibility floor), never later.
   /// - If both `context.humidityRH` and `context.ambientTempCelsius`
@@ -720,15 +724,15 @@ class NavigationSafetyConfig extends Equatable {
     this.alertsPerMinuteCapOverride,
   }) {
     // Conservative-on-uncertain invariant at the config boundary
-    // (GAP-2, sibling to SafetyScore GAP-1): a non-finite score floor
+    // (sibling to SafetyScore's non-finite guard): a non-finite score floor
     // (NaN / ±Infinity) is NaN-permissive against the `< 0 || > 1`
     // range checks below — NaN compares false to both bounds, and the
     // ordering checks (`safeScoreFloor < infoScoreFloor`) are likewise
     // false against NaN — so it would pass construction silently. It
     // then poisons `SafetyScore.toAlertSeverity`, where `overall < NaN`
-    // is always false: even overall == 0 (the GAP-1 worst-case value)
+    // is always false: even overall == 0 (the worst-case value)
     // yields NO alert, inverting the "if uncertain, alert
-    // conservatively" guarantee on the operand GAP-1's score-side guard
+    // conservatively" guarantee on the operand SafetyScore's guard
     // does not reach. Reject it loudly at construction, consistent with
     // the throw-on-invalid-floor contract — a non-finite threshold is a
     // programming error, not uncertain runtime data.

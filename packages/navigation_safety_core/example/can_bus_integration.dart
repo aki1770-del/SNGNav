@@ -27,13 +27,14 @@
 // It decodes no ambient-air, humidity or precipitation signal. Engine
 // coolant temperature is NOT ambient air temperature and must not be
 // passed as `ambientTempCelsius`: an earlier revision of this file did,
-// so once the engine warmed past the warning temperature (1 °C here)
-// the advisory could not fire, whatever the air outside.
+// so once the engine warmed past the warning temperature the advisory
+// could not fire, whatever the air outside.
 //
 // Real integrations should consult SAE J1939/71 for the full SPN /
-// PGN catalog and apply the same composition pattern to other
-// vehicle-bus signals (wiper status, headlamp state, ambient air
-// temperature, ABS / TCS engagement, and so on).
+// PGN catalog and apply the same composition pattern to the other
+// signals `DrivingContext` has fields for (ambient air temperature,
+// relative humidity, time since precipitation). Wiper status, headlamp
+// state and ABS / TCS engagement have no `DrivingContext` field.
 //
 // To run on a development host without a real CAN bus, see the j1939
 // package README for `vcan` setup. This file is illustrative — the

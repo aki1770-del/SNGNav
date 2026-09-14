@@ -67,9 +67,7 @@ import 'driver_profile.dart';
 ///    count is no longer below the cap (a cap of 2.0 is reached at 2
 ///    alerts), the new alert is DROPPED (not queued) UNLESS
 ///    it is `AlertSeverity.critical`. Queued post-cap alerts deliver
-///    stale information about a now-passed condition; per the listen-
-///    frame substrate, false-stale alerts erode trust faster than
-///    missed-info alerts (Bian PubMed 38669900).
+///    stale information about a now-passed condition.
 /// 3. Critical bypass: see invariant above.
 /// 4. Cold-start: the first alert in a session bypasses the window
 ///    check (no historical context to throttle against).

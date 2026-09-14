@@ -7,7 +7,7 @@ import 'alert_severity.dart';
 import 'navigation_safety_config.dart';
 
 double _clamp01(double value) {
-  // Conservative-on-uncertain invariant (GAP-1): a
+  // Conservative-on-uncertain invariant: a
   // non-finite value (NaN / +Infinity / -Infinity) is an invalid or
   // uncertain score. Map it to 0 — the worst-case value — so it ALERTS
   // conservatively (overall < warningScoreFloor → critical) instead of

@@ -236,8 +236,7 @@ void main() {
   group('AlertDensityThrottle burst-then-quiet', () {
     test('drops new alert (does not queue) when cap reached', () {
       // Documented behavior: queuing post-cap delivers stale information
-      // about a now-passed condition; per the listen-frame substrate,
-      // false-stale alerts erode trust faster than missed-info alerts.
+      // about a now-passed condition.
       final t = AlertDensityThrottle(
         alertsPerMinuteCap: 2.0,
         window: const Duration(seconds: 60),

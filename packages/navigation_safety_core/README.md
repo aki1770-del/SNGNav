@@ -116,8 +116,12 @@ vehicle-class data should build their own registry with
 strings, NOT control inputs.
 
 The live driving conditions and the driver state are
-**conservative-only**: they can make the thresholds warn earlier than
-the per-profile baseline, never later. Vehicle-class overrides apply
+**conservative-only** for thresholds: they can make the thresholds warn
+earlier than the per-profile baseline, never later. An earlier threshold
+has its own cost: `DriverState.impairedVisibility` also moves the info
+and critical visibility thresholds earlier, and info and critical alerts
+take slots in `AlertDensityThrottle`'s rolling window as warnings do, so
+a later warning can be dropped. Vehicle-class overrides apply
 AFTER the baseline AND AFTER the live-context adjustments. For a
 registry built with a `VehicleThresholdOverrides` constructor, an
 override may move only the two warning thresholds, and only earlier;

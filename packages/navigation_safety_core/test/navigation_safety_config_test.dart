@@ -73,7 +73,7 @@ void main() {
       );
     });
 
-    // GAP-2 (sibling to SafetyScore GAP-1): a non-finite score floor is
+    // Sibling to SafetyScore's non-finite guard: a non-finite score floor is
     // NaN-permissive against the `< 0 || > 1` range checks and would pass
     // construction silently, then poison `toAlertSeverity` (overall < NaN
     // is always false → no alert even at overall == 0). Construction must
