@@ -310,10 +310,10 @@ this layer).
 
 ## 8 — What the driver experiences
 
-**What the driver experiences when this package fires**: *the alert that arrives in time + makes sense + is calm enough to ignore safely.* When `navigation_safety_core` fires through an integrator HMI, the driver sees an alert that:
+**What the driver experiences when this package fires**: *the alert that arrives in time + makes sense + is limited in number, except when critical.* When `navigation_safety_core` fires through an integrator HMI, the driver sees an alert that:
 - **arrives in time** — threshold-tuned to her profile (ageingRural gets an earlier visibility-warning floor than snowZoneExperienced, 300 m against 200 m, per the `forProfile` factory; a higher floor warns earlier) AND adjusted upward for live driving conditions where they exceed the per-profile floor (`forProfileWithContext`).
 - **makes sense** — vocabulary in her language (`AlertExplainer` locale-class differentiation), at action-coupled granularity (advisory verbs not raw severity codes), with the action she can take (*"reduce", "avoid", "maintain"*) coupled to the condition.
-- **is calm enough to ignore safely** — `AlertDensityThrottle` per-profile alerts/min cap prevents desensitization. Critical alerts always fire (documented invariant); info and warning gates against alarm-fatigue.
+- **is limited in number, except when critical** — `AlertDensityThrottle` tells the integrator whether to fire each alert. An info or warning alert fires only while fewer alerts than the per-minute cap for her profile are in its rolling 60 s window; a critical alert always fires (documented invariant). An info or warning alert over the cap is dropped, not queued, so she is not told of it. The cap does not make any alert safe to ignore, and its effect on desensitization has not been measured: the caps are defaults, not validated against field data (`KNOWN_LIMITATIONS.md`, "Per-profile caps are literature-anchored DEFAULTS, not population-validated").
 
 **The driver stays in control**: the alert brings a change in conditions (the unexpected snow, the dropping visibility) to the driver's attention. It does not replace the driver's own attention to the road: the driver performs the dynamic driving task at all times and retains full control authority (sections 1 and 7).
 

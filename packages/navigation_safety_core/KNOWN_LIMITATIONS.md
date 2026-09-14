@@ -321,13 +321,6 @@ condition, builds its message with
 given; `voice_guidance` 0.7.7 sets a per-profile speaking rate
 (`VoiceGuidanceConfig.forProfile`).
 
-The format-mismatch can erase the earlier-alert benefit
-([Bian et al PubMed 38669900](https://pubmed.ncbi.nlm.nih.gov/38669900/)
-shows earlier triggering reduces collisions only when alerts persist
-long enough to be processed; [Strayer/AAA PMC7283540](https://pmc.ncbi.nlm.nih.gov/articles/PMC7283540/)
-shows identical voice formats cost older drivers 8+ seconds more
-eyes-off-road than younger).
-
 **0.3.0 added `assertUxDifferentiated()`** as a no-op stub. It is no
 longer a stub: calling `assertUxDifferentiated(profile)` throws an
 `AssertionError` in a debug build when no UX differentiator is
