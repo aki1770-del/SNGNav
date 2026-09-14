@@ -124,12 +124,17 @@ package's code does in any of these cases.
   `forDriverContext` and `DrivingContext` take none. The speed-adjusted
   warning visibility always uses 5.5 m/s², which the calibration package gives
   as a dry-pavement value and the README counted among its worst-case
-  constants. Speed raises the warning visibility only where the reaction and
-  braking distance at 5.5 m/s² is longer than the per-profile floor, which for
-  no profile happens below 133 km/h; below that, the README's "additional
-  visibility margin" from speed is nothing. At 100 km/h `snowZoneExperienced`
-  gets 200 m, and the same formula at 1.5 m/s², the calibration package's
-  value for glare ice, gives 307 m.
+  constants. In `forProfileWithContext`, speed raises the warning visibility
+  only where the reaction and braking distance at 5.5 m/s² is longer than the
+  per-profile floor, which for no profile happens below 133 km/h; below that,
+  the README's "additional visibility margin" from speed is nothing. At
+  100 km/h `snowZoneExperienced` gets 200 m, and the same formula at 1.5 m/s²,
+  the calibration package's value for glare ice, gives 307 m.
+  `forDriverContext` adds a margin at any speed: when its `DrivingContext`
+  carries `speedMps`, it adds the speed times 0.5 s for `DriverState.fatigued`
+  or 1.0 s for `DriverState.distracted`, rounded up to the metre, to what
+  `forProfileWithContext` gives, so at 100 km/h `snowZoneExperienced` gets
+  214 m or 228 m instead of 200 m.
 - **If your app passes a `DriverState` or a `Confidence` to
   `forDriverContext`,** their documentation called these adjustments
   conservative-only or caution-adding. They never move a threshold later, but
