@@ -1,13 +1,13 @@
 /// Expandable sheet widget that surfaces an `AlertExplainer` at two
-/// levels of detail (collapsed source-line / expanded full attribution).
+/// levels of detail (collapsed source-line / expanded action text).
 ///
 /// Why this exists:
 ///
 /// `navigation_safety_core` ships `AlertExplainer.forConditionAndProfile`
 /// which returns the per-(condition, profile) action string + verbosity
-/// + locale + source attribution. That tuple is a substrate; integrators
-/// historically rendered just the `action` string and absorbed the
-/// attribution-rendering responsibility silently. This widget closes
+/// + locale tag. It carries no source field. That tuple is a substrate;
+/// integrators historically rendered just the `action` string and
+/// absorbed the rendering decision silently. This widget closes
 /// that loom by shipping a per-cohort default rendering policy at the
 /// integrator-package boundary.
 ///
@@ -16,13 +16,13 @@
 /// - **Collapsed** — source-line text only (default `'AlertExplainer'`).
 ///   Plus a tap-to-expand affordance.
 /// - **Expanded** — `AlertExplainer.action` text VERBATIM + the
-///   verbosity name + locale tag + source-line provenance full-form.
+///   verbosity name + locale tag + the same source-line text again.
 ///
 /// Per-cohort default expansion (driver-class equal-dignity discipline):
 ///
 /// - `ageingRural` -> default-EXPANDED (cognitive-load support).
 /// - `foreignTouristSnowZone` -> default-EXPANDED (unfamiliar snow zone;
-///   needs source attribution to trust the recommendation).
+///   the action text shows without a tap).
 /// - `noviceUrban` -> default-EXPANDED (low-experience cohort).
 /// - `agriculturalForestry` -> default-COLLAPSED (experienced cohort).
 /// - `snowZoneExperienced` -> default-COLLAPSED (high-experience cohort).

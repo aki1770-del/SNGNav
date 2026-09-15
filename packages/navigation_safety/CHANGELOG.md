@@ -25,6 +25,11 @@ threshold, duration or budget this package computes has changed.
   language. If you name a source, name one that your text actually comes
   from. We suggest not putting the old text back: those organisations did not
   write these strings.
+- **Test:** a new widget test checks that the default is exactly
+  `'AlertExplainer'`. For every driver profile, collapsed and expanded, it
+  checks that the line appears once collapsed and twice expanded, and that no
+  text the sheet renders names JAF, MLIT or NEXCO. With the old default put
+  back, the test fails.
 
 **Values that no cited source gives.** The docs placed these values beside
 citations. The docs now call them recorded decisions: values this package
@@ -49,6 +54,14 @@ chose.
 
 **Other corrections:**
 
+- `AlertExplainerExpandableSheet`'s doc comments, and this changelog's 0.9.0
+  entry, said the expanded sheet shows a full attribution, and described
+  attribution as something `AlertExplainer` hands the integrator to render.
+  From 0.9.0 to 0.9.6 the expanded sheet showed the action text, the
+  verbosity, the locale tag and the same `sourceLine` text again, and
+  `AlertExplainer` has no source field. The doc comments now say this. The
+  0.9.0 entry is left as it was published.
+
 - `CONTRIBUTING.md`, open task S-051, gave the WCAG AA contrast as "0.21" on a
   0.0 to 1.0 field. WCAG 2.2 AA asks for at least 4.5:1, on its own 1 to 21
   scale. No mapping between the two scales is defined yet. A contribution that
@@ -58,8 +71,12 @@ chose.
   dropped, not queued, and that a critical alert always fires. It also says
   that no alert is made safe to ignore, and that the cap's effect on
   desensitization has not been measured.
+- `CONTRIBUTING.md`, on how to ask a question: it said to open a GitHub issue
+  or mention a maintainer's GitHub account in the issue thread. It now links
+  this repository's issues page and asks you to keep questions in the issue
+  thread rather than mentioning individual accounts.
 
-**The published example now resolves and compiles.** In 0.9.6 and earlier,
+**The published example now resolves and compiles.** From 0.7.0 to 0.9.6,
 `example/pubspec.yaml` carried `dependency_overrides` with local paths
 (`../../navigation_safety_core`) that exist only in our development
 repository. `flutter pub get` in the published `example/` failed with

@@ -36,10 +36,12 @@ your own drivers.
   say that none of them is about snow or wind. The point about a hearing driver
   in a loud whiteout is our own reasoning.
 
-**The published example now resolves.** In 0.7.7 and earlier,
-`example/pubspec.yaml` carried `dependency_overrides` naming 28 packages by
-local paths (`../../snow_rendering` and others) that exist only in our
-development repository. It also asked for `navigation_safety: ^0.5.0`.
+**The published example now resolves.** From 0.4.0 to 0.7.7,
+`example/pubspec.yaml` carried `dependency_overrides` with local paths that
+exist only in our development repository: two packages
+(`navigation_safety` and `navigation_safety_core`) from 0.4.0 to 0.6.2, and
+28 packages (`../../snow_rendering` and others) from 0.6.3. It also asked for
+`navigation_safety: ^0.5.0`.
 `flutter pub get` in the published `example/` failed with "version solving
 failed". The overrides now live in `example/pubspec_overrides.yaml`, which is
 kept out of the published package. The example now asks for

@@ -134,5 +134,61 @@ void main() {
       await tester.pump();
       expect(calls, [true, false]);
     });
+
+    testWidgets('default sourceLine is exactly \'AlertExplainer\' and no '
+        'rendered text names JAF, MLIT or NEXCO, in both states', (
+      tester,
+    ) async {
+      // 0.9.7 changed the default from 'AlertExplainer (JAF / MLIT / NEXCO)'.
+      // Those organisations did not write the action strings, so a default
+      // that names them again must fail here.
+      final attribution = RegExp('JAF|MLIT|NEXCO');
+      const condition = RoadSurfaceCondition.ice;
+
+      expect(
+        const AlertExplainerExpandableSheet(
+          condition: condition,
+          profile: DriverProfile.professional,
+        ).sourceLine,
+        'AlertExplainer',
+      );
+
+      List<String> renderedTexts() => tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data ?? '')
+          .toList();
+
+      for (final profile in DriverProfile.values) {
+        await tester.pumpWidget(
+          _wrap(
+            AlertExplainerExpandableSheet(
+              key: ValueKey(profile),
+              condition: condition,
+              profile: profile,
+            ),
+          ),
+        );
+        for (var state = 0; state < 2; state++) {
+          final expanded = find.text(
+            AlertExplainer.forConditionAndProfile(condition, profile).action,
+          ).evaluate().isNotEmpty;
+          // The source line renders once collapsed, twice expanded.
+          expect(
+            find.text('AlertExplainer'),
+            findsNWidgets(expanded ? 2 : 1),
+            reason: '$profile expanded=$expanded',
+          );
+          for (final text in renderedTexts()) {
+            expect(
+              attribution.hasMatch(text),
+              isFalse,
+              reason: '$profile expanded=$expanded rendered "$text"',
+            );
+          }
+          await tester.tap(find.byType(InkWell));
+          await tester.pump();
+        }
+      }
+    });
   });
 }

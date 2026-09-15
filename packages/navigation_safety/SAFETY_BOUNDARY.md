@@ -83,10 +83,10 @@
 
 **Operational discipline**: *the explainer sheet ships a per-cohort default expansion policy at the package boundary so the integrator-developer is not required to invent one. Each driver-class receives the explainer at the verbosity their cohort default expects.*
 
-**Concrete locus**: `lib/src/widgets/alert_explainer_expandable_sheet.dart` `AlertExplainerExpandableSheet` consumes `AlertExplainer.forConditionAndProfile` from `navigation_safety_core` 0.10.0 substrate. Two states: collapsed (source-line provenance + expand affordance) / expanded (action text VERBATIM + verbosity name + locale tag + provenance full-form).
+**Concrete locus**: `lib/src/widgets/alert_explainer_expandable_sheet.dart` `AlertExplainerExpandableSheet` consumes `AlertExplainer.forConditionAndProfile` from `navigation_safety_core` 0.10.0 substrate. Two states: collapsed (the `sourceLine` text + expand affordance) / expanded (action text VERBATIM + verbosity name + locale tag + the same `sourceLine` text). `AlertExplainer` has no source field, so the sheet shows no provenance of its own: `sourceLine` defaults to `'AlertExplainer'`, a class name, and names a source only if the integrator passes one.
 
 **Per-cohort default expansion** (UNVERIFIED-magnitude design-default-hypothesis):
-- `ageingRural`, `foreignTouristSnowZone`, `noviceUrban` -> default-EXPANDED (cognitive-load support; trust-attribution support; low-experience cognitive support).
+- `ageingRural`, `foreignTouristSnowZone`, `noviceUrban` -> default-EXPANDED (the full action text, verbosity and locale are shown without a tap; no source attribution is shown beyond the integrator's `sourceLine`).
 - `agriculturalForestry`, `snowZoneExperienced`, `professional` -> default-COLLAPSED (experienced / terse-expectation cohorts).
 
 Per-instance override via `defaultExpanded` field. Optional `onExpansionChanged` callback for integrator analytics.

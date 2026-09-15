@@ -71,7 +71,7 @@ corrected where it appears:
   package's values.
 - PubMed 38669900 was credited to "Bian et al". It is Xu and Bowers 2024, on
   hazard warning modality and timing for older drivers with impaired vision.
-  Its citations are removed; see the next item.
+  Its citations are removed; see the list of removed citations below.
 - The JAF link used a host that does not exist. It is now
   https://jaf.or.jp/common/attention/snow.
 - A link described as MLIT's Hokkaido snow-road guide is the Hokuriku
@@ -81,18 +81,38 @@ corrected where it appears:
   standard numbers. The package has not mapped its text against any JIS or
   JASO document.
 - Citations removed because the source, as far as we could read it, does not
-  support the claim they were attached to: PubMed 38669900, PMID 34111571 (a
-  medication-adherence review), an MDPI 2024 review, and the
-  use of arxiv 2410.06388 and PMC12181921 as sources for the cap values.
-  PMC12181921 is still cited, for alarm fatigue in health care. arxiv
-  2410.06388 is still cited, for alert fatigue from repeated false alarms in
-  a simulator study.
+  support the claim they were attached to. This is every citation this
+  release removes from the package's docs and code comments, besides the
+  standard numbers and the MLIT link above:
+  - PubMed 38669900 (Xu and Bowers 2024) and PMC7283540 (Cooper et al.
+    2020).
+  - PMID 34111571 (a medication-adherence review) and an MDPI 2024 review of
+    continuous glucose monitor alert design, both cited for `AlertExplainer`.
+  - The AAA Foundation for Traffic Safety report on ADAS exposure and driver
+    workload (2023).
+  - An FHWA page on roadway-visibility research, cited for the
+    `impairedVisibility` scale-up.
+  - A Springer book chapter on ADAS visual and auditory interfaces.
+  - A Powderlife blog post on Hokkaido winter driving, cited for
+    `foreignTouristSnowZone`.
+  - JARTIC and a Yahoo!カーナビ note, cited for the road-surface vocabulary.
+  - OSHA 1928 and UNECE-FAO-ILO 2023 forestry literature, cited for the
+    `agriculturalForestry` cap.
+  - The use of arxiv 2410.06388, PMC12181921, PubMed 16313881 and PubMed
+    22664714 as sources for the cap values. PMC12181921 is still cited, for
+    alarm fatigue in health care. arxiv 2410.06388 is still cited, for alert
+    fatigue from repeated false alarms in a simulator study. PubMed 16313881
+    and 22664714 are still cited in `KNOWN_LIMITATIONS.md` for what they
+    found about hazard perception.
+- A statement with no source is removed: that engineering guidance gives 48
+  to 72 hours for asphalt to dry, and that relative humidity above 80 %
+  roughly doubles it.
 
 **Other statements the docs made that were not accurate:**
 
 - Black ice at air temperatures above 0 °C. The docs now give the condition
   their sources state: the air warms suddenly after a prolonged cold spell has
-  left the road surface below freezing, or radiative cooling under a clear
+  left the road surface well below freezing, or radiative cooling under a clear
   night sky.
 - A relative humidity reading between 100 % and 105 % is kept as saturated
   air. The docs called that "maximum caution". It is not: at 100 % the
