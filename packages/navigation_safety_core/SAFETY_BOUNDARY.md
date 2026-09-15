@@ -52,7 +52,7 @@
 **Status**: **applies in scope by design.**
 **Concrete locus**:
 - README.md §Standards mapping: *"the driver performs the dynamic driving task at all times; the package's surfaces inform the driver but never actuate the vehicle and never close a control loop"*
-- README.md §What this is NOT: *"Action verbs in `AlertExplainer` are advisory; speed numbers are published reference points, not system-enforced limits. The driver retains full control authority."*
+- README.md §What this is NOT: *"Action verbs in `AlertExplainer` are advisory; speed numbers are advisory reference points chosen by the package, not system-enforced limits. The driver retains full control authority."*
 - `lib/src/alert_explainer.dart` class documentation, advisory-mood discipline: *"Action verbs are advisory ("reduce" / "avoid" / "maintain"), never imperative-on-control … This is a Pure Dart, advisory-only surface. It does not actuate the vehicle."*
 
 **Design intent**: the agency to choose what to do next remains with the driver. This package's surfaces are designed for that cognitive moment of choice, never around it.

@@ -2,18 +2,12 @@
 /// the recommended driver action in the language and verbosity that
 /// fits the active [DriverProfile].
 ///
-/// Why this exists (literature anchors):
+/// Why this exists: an alert that names a condition without naming an
+/// action leaves the integrating app to couple each condition to an
+/// action. This class ships that coupling. No source is cited for an
+/// effect on compliance.
 ///
-/// Alerts that name a condition without naming the implied action
-/// degrade compliance. Two anchors:
-///
-/// - Medication-adherence literature (PMID 34111571) shows action-
-///   coupled instructions improve adherence over condition-only.
-/// - CGM (continuous glucose monitor) alert-design literature (MDPI
-///   2024 review of CGM UX patterns) finds the same pattern in
-///   ambient-monitoring contexts.
-///
-/// Translation to driving: "icy road" is incomplete; "icy road →
+/// For example: "icy road" is incomplete; "icy road →
 /// reduce speed to 30 km/h" is actionable.
 ///
 /// Action-text discipline (advisory mood, not control):
@@ -21,15 +15,15 @@
 /// - Action verbs are advisory ("reduce" / "avoid" / "maintain"),
 ///   never imperative-on-control ("brake now" / "the system will slow
 ///   you").
-/// - Speed numbers (30 km/h, 20 km/h) are published reference points,
-///   not system-enforced limits. Wording uses 「以下に減速」 ("reduce
-///   to or below") / "Slow to" — the driver retains full speed
-///   authority.
+/// - Speed numbers (30 km/h, 20 km/h) are advisory reference points
+///   chosen by the package (a recorded decision), not system-enforced
+///   limits. Wording uses 「以下に減速」 ("reduce to or below") /
+///   "Slow to" — the driver retains full speed authority.
 /// - "Stop in a safe place" is the strongest action; phrased "if
 ///   possible" / 「可能であれば」 — does not imply the system stops the
 ///   vehicle.
 /// - No action string promises an outcome. Each is a recommendation
-///   grounded in published JAF / MLIT driving-guidance vocabulary.
+///   in the package's own advisory wording.
 ///
 /// This is a Pure Dart, advisory-only surface. It does not actuate the
 /// vehicle. The matrix is information delivered in a particular format;
@@ -73,11 +67,9 @@ enum VerbosityLevel {
 ///   coupling each condition to an action. This class prevents that by
 ///   shipping the (condition, action, verbosity, locale) tuple at the
 ///   package boundary.
-/// - **How it works** — action vocabulary is sourced from JAF / MLIT /
-///   NEXCO public driver-guidance materials, with adherence anchors
-///   PMID 34111571 and the MDPI 2024 CGM review. The 36-cell
-///   `_actionFor` table is the recorded per-(condition, profile)
-///   decision.
+/// - **How it works** — the 36-cell `_actionFor` table is the recorded
+///   per-(condition, profile) decision; no source is cited for its
+///   wording.
 /// - **What it will not do** — it never ships half a recommendation.
 ///   Verbosity, locale and vocabulary are matched to each driver class,
 ///   so no class is forced into another class's vocabulary.
@@ -118,8 +110,7 @@ class AlertExplainer {
   /// Returns the verbosity level that profile expects and the
   /// pre-localized action string. The 36 high-action cells (6 profiles
   /// × 6 high-action conditions: WET, SNOW, ICE, SLUSH, WET_ICE,
-  /// LOOSE_GRAVEL) are sourced from JAF /
-  /// MLIT public driving-guidance materials. UNKNOWN and DRY get
+  /// LOOSE_GRAVEL) are the package's own wording. UNKNOWN and DRY get
   /// profile-flat content (no per-profile differentiation
   /// for those two conditions in v0.4).
   factory AlertExplainer.forConditionAndProfile(
@@ -165,8 +156,11 @@ class AlertExplainer {
   ///
   /// 36 high-action cells; UNKNOWN
   /// and DRY get profile-flat content (one string per profile).
-  /// Sources: JAF snow-driving safety, MLIT Hokkaido snow-road guide,
-  /// NEXCO public driver-guidance.
+  /// JAF's snow-driving page (https://jaf.or.jp/common/attention/snow)
+  /// also uses ブラックアイスバーン and names windy bridges, overpasses
+  /// and tunnel entrances/exits as the most dangerous places
+  /// (「風通しのよい橋の上や陸橋、トンネル出入口付近がもっとも危険」). The
+  /// rest of the wording is the package's.
   static String _actionFor(
     RoadSurfaceCondition condition,
     DriverProfile profile,
@@ -189,10 +183,13 @@ class AlertExplainer {
       case RoadSurfaceCondition.wet:
         switch (profile) {
           case DriverProfile.ageingRural:
-            // JAF-faithful: black ice (ブラックアイスバーン) can form even
-            // when the AIR is above 0°C — the road surface cools below the
-            // air (radiative cooling), bridges and tunnel exits first. The
-            // string must not condition ice on sub-zero air temperature.
+            // Black ice (ブラックアイスバーン, JAF's term) can form while the
+            // air is above 0°C: radiative cooling "can cause frost or black
+            // ice to form on surfaces exposed to the clear night sky, even
+            // when the ambient temperature does not fall below freezing"
+            // (Wikipedia, "Radiative cooling"). JAF names bridges and tunnel
+            // entrances/exits among the most dangerous places. The string
+            // must not condition ice on sub-zero air temperature.
             return '路面が濡れています。気温が0°Cより高くても路面は先に冷えて凍り、'
                 'ブラックアイスバーンになることがあります。'
                 '橋やトンネル出口で速度を落としてください';
@@ -237,10 +234,15 @@ class AlertExplainer {
         switch (profile) {
           case DriverProfile.ageingRural:
             // The previous string asserted 「気温0°C以下で薄氷ができています」
-            // — false: thin ice forms with air above 0°C too (the road
-            // surface radiates heat and drops below air temperature;
-            // bridges freeze first, per JAF). Ice existence must never be
-            // conditioned on sub-zero air.
+            // — false: thin ice forms with air above 0°C too. Radiative
+            // cooling "can cause frost or black ice to form on surfaces
+            // exposed to the clear night sky, even when the ambient
+            // temperature does not fall below freezing" (Wikipedia,
+            // "Radiative cooling"), and black ice
+            // "forms first on bridges and overpasses" (Wikipedia,
+            // "Black ice"); JAF names bridges among the most dangerous
+            // places. Ice existence must never be conditioned on sub-zero
+            // air.
             return '凍結路面です。気温が0°Cより高くても路面は空気より冷え、'
                 '薄氷ができることがあります。橋の上は特に凍りやすい場所です。'
                 '時速30km以下に減速し、急ブレーキは避けてください';

@@ -72,9 +72,9 @@ void main() {
       }
     });
 
-    test('SNOW uses 圧雪 not generic 雪 (JAF / MLIT vocabulary)', () {
-      // 圧雪 (compacted snow) is the JAF-documented road-state term;
-      // generic 雪 conflates falling snow with road-state.
+    test('SNOW uses 圧雪 not generic 雪', () {
+      // 圧雪 names the road state; generic 雪 conflates falling snow with
+      // road state.
       final g = RoadSurfaceConditionGlossary.forCondition(
         RoadSurfaceCondition.snow,
       );
@@ -82,7 +82,7 @@ void main() {
       expect(g.jaSpeakString, contains('圧雪'));
     });
 
-    test('ICE uses 凍結 (kanji-native; preferred per JAF)', () {
+    test('ICE uses 凍結 (kanji-native)', () {
       final g = RoadSurfaceConditionGlossary.forCondition(
         RoadSurfaceCondition.ice,
       );
@@ -183,8 +183,7 @@ void main() {
       // 0.7.1 expansion: SLUSH (シャーベット) added to high-risk subset
       // because lateral-slip risk of partially-melted snow is
       // underestimated by drivers unfamiliar with snow-zone road
-      // state. ageingRural override gives full phrasing + action cue
-      // per JAF older-driver materials.
+      // state. ageingRural override gives full phrasing + action cue.
       final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
         RoadSurfaceCondition.slush,
         DriverProfile.ageingRural,

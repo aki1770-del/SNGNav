@@ -230,9 +230,11 @@ void main() {
       // Regression: the pre-0.11.2 string said 「気温0°C以下で薄氷が
       // できています」— asserting ice needs sub-zero AIR. That is false:
       // road surfaces radiate heat and can freeze while the air is above
-      // 0°C (bridges first, per JAF). Teaching "air above zero → no ice"
-      // to the profile most exposed to radiative frost is the exact
-      // misjudgement that kills grip assumptions on a clear cold morning.
+      // 0°C (black ice "forms first on bridges and overpasses", Wikipedia
+      // "Black ice"; JAF names bridges among the most dangerous places).
+      // Teaching "air above zero → no ice" to the profile most exposed to
+      // radiative frost is the exact misjudgement that kills grip
+      // assumptions on a clear cold morning.
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.ice,
         DriverProfile.ageingRural,

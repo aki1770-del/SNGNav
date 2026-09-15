@@ -2,17 +2,13 @@
 /// alerts (info / warning tiers), with a non-negotiable critical-bypass
 /// invariant.
 ///
-/// Why this exists (literature anchors):
+/// Why this exists:
 ///
-/// Alarm fatigue is the documented failure mode for systems that fire
-/// too many alerts. The medical alarm-fatigue scoping review
-/// (PMC12181921) finds >60% of alarms get no timely response and 85%
-/// of clinicians report overwhelm. The AAA-FTS ADAS-exposure /
-/// driver-workload report extends the same pattern to consumer ADAS:
-/// alert density above the driver's tolerance produces desensitization,
-/// and a safety-critical alert arriving in a desensitized state can be
-/// ignored. arxiv 2410.06388 frames over-warning explicitly as a
-/// silent safety failure.
+/// Alarm fatigue is a documented failure mode where alerts are frequent.
+/// A scoping review in health care (PMC12181921) describes "repeated
+/// exposure to frequent or non-actionable alarms" leading to "a gradual
+/// desensitization or reduced responsiveness" among health-care
+/// professionals.
 ///
 /// The throttle's job is to prevent advisory-tier desensitization. Its
 /// non-negotiable invariant is that `AlertSeverity.critical` always
@@ -20,9 +16,9 @@
 /// credible; the throttle exists to keep them that way, not to mask
 /// them.
 ///
-/// Per-profile cap defaults are literature-anchored (see
-/// `defaultCapFor` and the per-cell comments). They are DEFAULTS, not
-/// invariants; integrating apps can override via
+/// Per-profile cap defaults are a recorded decision (see
+/// `defaultCapFor`); no source is cited for the values. They are
+/// DEFAULTS, not invariants; integrating apps can override via
 /// `NavigationSafetyConfig.alertsPerMinuteCapOverride`.
 ///
 /// This is a Pure Dart, advisory-only surface. It does not actuate the
@@ -44,13 +40,11 @@ import 'driver_profile.dart';
 ///   desensitized driver. The throttle is meant to stop the over-warning
 ///   before that desensitization compounds; that effect has not been
 ///   measured.
-/// - **How it works** — per-profile caps are anchored in PMC12181921,
-///   PubMed 16313881, PubMed 22664714, AAA-FTS and arxiv 2410.06388.
-///   The cap table in `defaultCapFor` is the recorded decision.
+/// - **How it works** — the cap table in `defaultCapFor` is the recorded
+///   decision; no source is cited for its six values.
 /// - **What it will not do** — it throttles the app, never the driver.
-///   Each driver class gets a literature-anchored cap matched to its
-///   own reaction-time and overwhelm characteristics; no class is
-///   treated as second-tier.
+///   Each driver class gets its own cap; no class is treated as
+///   second-tier.
 ///
 /// Maintains a sliding rolling window of fired-alert timestamps and
 /// gates new alerts against [alertsPerMinuteCap]. Critical alerts
@@ -88,8 +82,8 @@ class AlertDensityThrottle {
   /// default of 1.2 and the `noviceUrban` default of 1.5 each admit 2
   /// per window.
   ///
-  /// Must be > 0. Per-profile defaults from literature; see
-  /// [defaultCapFor].
+  /// Must be > 0. Per-profile defaults: see [defaultCapFor] (a recorded
+  /// decision).
   final double alertsPerMinuteCap;
 
   /// Rolling window duration. Default `Duration(seconds: 60)`. The
@@ -141,42 +135,32 @@ class AlertDensityThrottle {
     }
   }
 
-  /// Construct a throttle with the per-profile literature-anchored
-  /// default cap.
+  /// Construct a throttle with the per-profile default cap.
   ///
-  /// See [defaultCapFor] for the cap-table and per-cell citations.
+  /// See [defaultCapFor] for the cap table.
   factory AlertDensityThrottle.forProfile(DriverProfile profile) {
     return AlertDensityThrottle(alertsPerMinuteCap: defaultCapFor(profile));
   }
 
-  /// Per-profile literature-anchored default alerts/min cap.
+  /// Per-profile default alerts/min cap (the recorded decision).
   ///
   /// These are the v0.4 defaults; integrating apps can override via
   /// `NavigationSafetyConfig.alertsPerMinuteCapOverride`.
   ///
-  /// Per-cell anchors:
+  /// Per-cell rationale (the values are recorded decisions; no source is
+  /// cited for any of them):
   ///
-  /// - `professional` — 4.0. Trained drivers; AAA-FTS ADAS-exposure
-  ///   report finds professional drivers retain alert-acceptance at
-  ///   higher densities. Cap is upper-end; bias toward signal
-  ///   preservation.
-  /// - `snowZoneExperienced` — 3.0. Standard baseline; experienced
-  ///   snow-driver hazard-perception RT ≈ 1.32s (PubMed 16313881).
+  /// - `professional` — 4.0. Trained drivers; upper-end cap, biased
+  ///   toward signal preservation.
+  /// - `snowZoneExperienced` — 3.0. Standard baseline.
   /// - `agriculturalForestry` — 2.0. Off-road / extended-shift
-  ///   contexts; OSHA 1928 / FAO UNECE-FAO-ILO 2023 forestry literature
-  ///   emphasizes systemic fatigue management; the lower cap is meant to
-  ///   protect against shift-end desensitization (effect not measured).
-  /// - `noviceUrban` — 1.5. Novice hazard-perception RT 3.58s (PubMed
-  ///   16313881) — >2× experienced. Each alert needs longer processing
-  ///   time; the closer cap is meant to protect against
-  ///   queueing-into-overload (effect not measured).
-  /// - `ageingRural` — 1.2. AAA-FTS
-  ///   ADAS-exposure-and-driver-workload finds older drivers report
-  ///   higher overwhelm at given alert density.
-  /// - `foreignTouristSnowZone` — 1.0. Combines novice-equivalent
-  ///   unfamiliarity (Konstantopoulos PubMed 22664714 novice-fog
-  ///   crash-rate elevation) + language-processing overhead (translation
-  ///   time during alert reception). Strictest cap.
+  ///   contexts; the lower cap is meant to protect against shift-end
+  ///   desensitization (effect not measured).
+  /// - `noviceUrban` — 1.5. Novice drivers; the closer cap is meant to
+  ///   protect against queueing-into-overload (effect not measured).
+  /// - `ageingRural` — 1.2. Older drivers.
+  /// - `foreignTouristSnowZone` — 1.0. Unfamiliar conditions and alerts
+  ///   that may need translating. Strictest cap.
   static double defaultCapFor(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.professional:

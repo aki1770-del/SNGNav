@@ -127,12 +127,12 @@ void main() {
     });
 
     test('ageingRural threshold magnitudes match 0.3.0 calibration', () {
-      // 0.3.0 corrections per literature:
-      // - infoTemperatureCelsius: 5°C → 4°C (alert-fatigue per arxiv 2410.06388
-      //   + AAA-FTS report; 5°C combined with 1500m visibility fired on most
-      //   autumn evenings, desensitizing drivers before actual black-ice events)
-      // - warningTemperatureCelsius: 1°C → 2°C (margin above black-ice
-      //   formation envelope at road-surface ≤0°C; 1°C left no margin)
+      // 0.3.0 corrections (recorded decisions):
+      // - infoTemperatureCelsius: 5°C → 4°C (5°C with 1500m visibility fired
+      //   on most autumn evenings, an alert-fatigue risk; see
+      //   KNOWN_LIMITATIONS.md)
+      // - warningTemperatureCelsius: 1°C → 2°C (more margin above black-ice
+      //   formation at road-surface ≤0°C)
       // See KNOWN_LIMITATIONS.md "Threshold magnitudes".
       final ageing = NavigationSafetyConfig.forProfile(
         DriverProfile.ageingRural,
@@ -142,12 +142,9 @@ void main() {
     });
 
     test('noviceUrban threshold magnitudes match 0.3.0 calibration', () {
-      // 0.3.0 correction per literature:
-      // - warningVisibilityMeters: 250m → 320m. Novice hazard-perception RT
-      //   is 3.58s vs 1.32s experienced (PubMed 16313881); at 60 km/h that's
-      //   ~37m additional reaction-distance from RT alone, so 250m (+50m
-      //   over standard) left no braking margin. 320m gives RT-margin +
-      //   braking margin per Konstantopoulos PubMed 22664714.
+      // 0.3.0 correction (a recorded decision):
+      // - warningVisibilityMeters: 250m → 320m, more reaction and braking
+      //   margin for novice drivers.
       // See KNOWN_LIMITATIONS.md "Threshold magnitudes".
       final novice = NavigationSafetyConfig.forProfile(
         DriverProfile.noviceUrban,

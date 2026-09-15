@@ -33,7 +33,8 @@ void main() {
 
     test('phase ordering by multiplier: morning < evening < afternoon '
         '< earlyMorning < night < lateNight', () {
-      // The qualitative ordering follows the chronobiology literature.
+      // The ordering is a recorded decision (no source is cited; see
+      // KNOWN_LIMITATIONS.md).
       expect(
         CircadianPhase.morning.multiplier,
         lessThan(CircadianPhase.evening.multiplier),

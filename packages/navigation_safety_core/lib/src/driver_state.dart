@@ -1,15 +1,18 @@
 /// Live driver-state axis (transient), orthogonal to [DriverProfile] (trait).
 ///
-/// Per Regan, Hallett & Gordon (2011) PMC4001671 — "Driver distraction
-/// and driver inattention: definitions, relationship and taxonomy" —
-/// trait (who the driver is) and state (what state the driver is in
-/// right now) are orthogonal axes of risk. Our v0.5.0 taxonomy collapsed
-/// both into trait via [DriverProfile]. v0.6.0 introduces this state
-/// axis as an additive, opt-in dimension; consumers that pass only a
-/// [DriverProfile] continue to receive the v0.5.0 behaviour.
+/// Regan and Strayer 2014 (PMC4001671, "Towards an understanding of
+/// driver inattention: taxonomy and theory") list driver conditions
+/// (e.g. young, inexperienced, old) and driver states (e.g. bored,
+/// sleepy, fatigued, drugged, emotional) as factors in driver
+/// inattention. This package treats trait (who the driver is) and state
+/// (what state the driver is in right now) as separate inputs. Our
+/// v0.5.0 taxonomy collapsed both into trait via [DriverProfile].
+/// v0.6.0 introduces this state axis as an additive, opt-in dimension;
+/// consumers that pass only a [DriverProfile] continue to receive the
+/// v0.5.0 behaviour.
 ///
 /// State is intentionally coarse-grained at this spike. The full
-/// trait × state matrix (Regan T3) is a v1.0 architecture decision.
+/// trait × state matrix is a v1.0 architecture decision.
 /// This enum is a forward-
 /// compatible foothold, not the final shape.
 ///

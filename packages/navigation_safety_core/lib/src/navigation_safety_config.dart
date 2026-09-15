@@ -29,7 +29,7 @@ class NavigationSafetyConfig extends Equatable {
 
   /// Optional override for the per-profile alerts/min cap used by
   /// [AlertDensityThrottle]. When `null` (the default), the throttle
-  /// uses the literature-anchored per-profile default from
+  /// uses the per-profile default (a recorded decision) from
   /// [AlertDensityThrottle.defaultCapFor]. Integrating apps with their
   /// own measured per-population data should set this.
   ///
@@ -51,13 +51,15 @@ class NavigationSafetyConfig extends Equatable {
   factory NavigationSafetyConfig.forProfile(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.ageingRural:
-        // 0.3.0 calibration corrections per published literature.
+        // 0.3.0 calibration corrections (recorded decisions; see
+        // KNOWN_LIMITATIONS.md "Threshold magnitudes").
         // - infoTemperatureCelsius: 0.2.0 had 5°C; combined with
-        //   infoVisibilityMeters 1500m this fired alert-fatigue on
-        //   most autumn evenings in Hokkaido/Tohoku (a silent
-        //   safety failure per arxiv 2410.06388 + AAA-FTS). Lowered
-        //   to 4°C to preserve information-tier signal without
-        //   firing on routine cold autumn evenings.
+        //   infoVisibilityMeters 1500m this fired on most autumn
+        //   evenings in Hokkaido/Tohoku (an alert-fatigue risk; arxiv
+        //   2410.06388 reports alert fatigue from repeated false alarms
+        //   in a simulator study). Lowered to 4°C to preserve
+        //   information-tier signal without firing on routine cold
+        //   autumn evenings.
         // - warningTemperatureCelsius: 0.2.0 had 1°C; black ice
         //   forms at road-surface ≤0°C even when ambient air is
         //   several degrees warmer (well-documented). 1°C left no
@@ -78,14 +80,13 @@ class NavigationSafetyConfig extends Equatable {
         // snow-zone driver's interpretation of standard warnings.
         return NavigationSafetyConfig();
       case DriverProfile.noviceUrban:
-        // 0.3.0 calibration correction per published literature.
+        // 0.3.0 calibration correction (a recorded decision).
         // - warningVisibilityMeters: 0.2.0 had 250m (+50m over
-        //   standard). Novice hazard-perception RT is 3.58s vs 1.32s
-        //   experienced (PubMed 16313881). At 60 km/h that's ~37m
-        //   additional reaction-distance from RT alone — +50m left
-        //   no braking margin. Raised to 320m to give RT-margin +
-        //   braking margin per published novice-fog crash-rate
-        //   elevation (Konstantopoulos PubMed 22664714).
+        //   standard). Raised to 320m to give novice drivers more
+        //   reaction and braking margin (a recorded decision). Mueller
+        //   and Trick 2012 (PubMed 22664714) found in a driving
+        //   simulator that novice drivers had higher hazard response
+        //   times and were the only drivers to have collisions.
         return NavigationSafetyConfig(
           safeScoreFloor: 0.85,
           infoScoreFloor: 0.55,
@@ -426,8 +427,9 @@ class NavigationSafetyConfig extends Equatable {
   /// State deltas at this spike (0.6.0) are intentionally small and
   /// flagged UNVERIFIED in `KNOWN_LIMITATIONS.md` (state-axis section).
   /// The shape of the API is the load-bearing piece; the magnitudes
-  /// are placeholders pending state-axis literature anchoring (Regan
-  /// PMC4001671 + downstream).
+  /// are placeholders pending state-axis calibration; Regan and Strayer
+  /// 2014 (PMC4001671) name driver states as factors in inattention but
+  /// give no magnitudes.
   ///
   /// 0.5.0 callers that pass [DriverProfile] alone to
   /// [forProfile] / [forProfileWithContext] see no behaviour change;
@@ -779,7 +781,7 @@ class NavigationSafetyConfig extends Equatable {
   }
 
   /// Resolve the alerts/min cap for [profile]: the override if set,
-  /// the literature-anchored per-profile default otherwise.
+  /// the per-profile default (a recorded decision) otherwise.
   ///
   /// Use this when constructing an [AlertDensityThrottle] from a
   /// config that may carry an integrating-app override.

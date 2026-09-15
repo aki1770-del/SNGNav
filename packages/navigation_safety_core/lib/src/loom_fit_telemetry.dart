@@ -2,13 +2,11 @@
 /// cold-start alert outcomes, paired with the per-profile context the
 /// outcome occurred under.
 ///
-/// Why this exists (literature anchors):
-///
-/// The throttle's job is to prevent advisory-tier desensitization
-/// (PMC12181921 medical alarm-fatigue + AAA-FTS ADAS-exposure /
-/// driver-workload + arxiv 2410.06388 silent over-warning failure).
-/// The cap defaults are literature-anchored DEFAULTS, not population-
-/// validated invariants. To know whether a per-profile cap actually
+/// Why this exists: the throttle is meant to prevent advisory-tier
+/// desensitization (alarm fatigue is described in health care by
+/// PMC12181921; the throttle's effect has not been measured). The cap
+/// defaults are recorded-decision DEFAULTS, not population-validated
+/// invariants. To know whether a per-profile cap actually
 /// fits the driver-class it's nominally tuned for, the consuming
 /// application needs to observe the firing decisions in operation:
 /// how often does the throttle drop an advisory? do critical-bypass
@@ -195,7 +193,7 @@ class LoomFitTelemetryRecord {
 ///
 /// - **Failure mode this prevents** — a throttle that does not fit the
 ///   driver class it is tuned for, and cannot be observed to mis-fit.
-///   The per-profile caps are literature-anchored DEFAULTS; without
+///   The per-profile caps are recorded-decision DEFAULTS; without
 ///   observation, a population mismatch (a cap too sensitive or too
 ///   permissive for an actual driver class) stays silent. This stream
 ///   is the observation surface that lets a calibration loop ask "did

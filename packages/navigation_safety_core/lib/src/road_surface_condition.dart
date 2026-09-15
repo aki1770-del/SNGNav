@@ -10,10 +10,10 @@
 /// keyed on driver-class. The glossary exists because Japanese drivers
 /// in unexpected snow encounter road-surface terms (圧雪 / アイスバーン /
 /// 凍結 / シャーベット) without knowing the safe-driving semantic each
-/// implies. Sources: JAF (https://jaf.org.jp/common/attention/snow),
-/// MLIT Hokkaido snow-road guide (https://www.hrr.mlit.go.jp/hokugi/yukinavi/),
-/// JARTIC (https://www.jartic.or.jp/), Yahoo!カーナビ winter-guidance
-/// (https://note.com/yahoo_carnavi/n/n0ecdc7700eb0).
+/// implies. JAF's snow-driving page
+/// (https://jaf.or.jp/common/attention/snow) uses アイスバーン and
+/// ブラックアイスバーン; the glossary wording is otherwise the package's
+/// own (a recorded decision).
 ///
 /// The glossary text is informational only. It does not control the
 /// vehicle and is not safety-critical in the sense of actuating any
@@ -40,9 +40,8 @@ enum RoadSurfaceCondition {
   wet,
 
   /// VSS `SNOW`. Surface has compacted snow (圧雪) — distinct from
-  /// generic falling snow. The Japanese-driver semantic is documented
-  /// by JAF / Hokkaido snow-road guides as a road-state classification,
-  /// not a weather classification.
+  /// generic falling snow. The term 圧雪 names a road state, not falling
+  /// snow (a recorded wording decision).
   snow,
 
   /// VSS `ICE`. Surface is iced over (凍結). Includes the sub-class
@@ -134,11 +133,10 @@ enum RoadSurfaceCondition {
 /// - [jaSpeakString] — TTS-ready Japanese phrase (full sentence).
 /// - [enSpeakString] — TTS-ready English phrase (full sentence).
 ///
-/// All strings are sourced from JAF / MLIT / NEXCO / Yahoo!カーナビ
-/// public driver-guidance materials, not invented; wording is
-/// conservative (no specific km/h advice in the bare glossary —
-/// speed advice belongs to a separate action-coupled explainer
-/// surface, not the bare label).
+/// The strings are the package's own wording (a recorded decision);
+/// wording is conservative (no specific km/h advice in the bare
+/// glossary — speed advice belongs to a separate action-coupled
+/// explainer surface, not the bare label).
 class RoadSurfaceConditionGlossary {
   /// Formal Japanese label (e.g. 圧雪路面 for `SNOW`).
   final String jaName;
@@ -163,7 +161,6 @@ class RoadSurfaceConditionGlossary {
   ///
   /// Use this when the consuming app does not yet know the active
   /// driver profile, or when a profile-neutral surface is desired.
-  /// Source: JAF / MLIT / NEXCO public driver-guidance vocabulary.
   static RoadSurfaceConditionGlossary forCondition(RoadSurfaceCondition c) {
     switch (c) {
       case RoadSurfaceCondition.unknown:
@@ -188,9 +185,8 @@ class RoadSurfaceConditionGlossary {
           enSpeakString: 'Road is wet',
         );
       case RoadSurfaceCondition.snow:
-        // 圧雪 (compacted snow) chosen over generic 雪 per JAF + MLIT
-        // Hokkaido snow-road guide vocabulary — generic 雪 conflates
-        // falling snow with road-state.
+        // 圧雪 (compacted snow) chosen over generic 雪 — generic 雪
+        // conflates falling snow with road-state.
         return const RoadSurfaceConditionGlossary(
           jaName: '圧雪路面',
           enName: 'Compacted snow',
@@ -198,8 +194,7 @@ class RoadSurfaceConditionGlossary {
           enSpeakString: 'Compacted snow on road',
         );
       case RoadSurfaceCondition.ice:
-        // 凍結 (kanji-native) preferred per JAF vocabulary; older drivers
-        // recognize the kanji form most reliably.
+        // 凍結 (kanji-native) is a recorded wording decision.
         return const RoadSurfaceConditionGlossary(
           jaName: '凍結路面',
           enName: 'Icy road',
@@ -215,8 +210,9 @@ class RoadSurfaceConditionGlossary {
         );
       case RoadSurfaceCondition.wetIce:
         // アイスバーン as the recognized loanword for the wet-film-on-ice
-        // condition; parenthetical 濡れた凍結 anchors meaning. Sources:
-        // JAF + Hokkaido snow-road guide.
+        // condition; parenthetical 濡れた凍結 anchors meaning (a recorded
+        // wording decision; JAF uses アイスバーン without defining it as
+        // ice with a water film).
         return const RoadSurfaceConditionGlossary(
           jaName: 'アイスバーン（濡れた凍結）',
           enName: 'Wet ice (ice with water film)',
@@ -243,13 +239,10 @@ class RoadSurfaceConditionGlossary {
   ///
   /// SLUSH (シャーベット) was added to the high-risk subset in 0.7.1
   /// because the lateral-slip risk of partially-melted snow is
-  /// underestimated by drivers unfamiliar with snow-zone road state;
-  /// the JAF guidance materials list slush separately from compacted
-  /// snow as a distinct skid-class hazard.
+  /// underestimated by drivers unfamiliar with snow-zone road state.
   ///
   /// Profile-specific design rules:
-  /// - `ageingRural` — full kanji-native phrasing with a brief action
-  ///   cue (sourced from JAF older-driver materials).
+  /// - `ageingRural` — full kanji-native phrasing with a brief action cue.
   /// - `snowZoneExperienced` — terse single-token (matches expert
   ///   driver vocabulary; minimum cognitive load).
   /// - `noviceUrban` — explicit hazard wording (less low-vis / icy-road
@@ -302,8 +295,7 @@ class RoadSurfaceConditionGlossary {
               enSpeakString: defaults.enSpeakString,
             );
           case RoadSurfaceCondition.slush:
-            // Full kanji-native phrasing with brief action cue
-            // (matches JAF older-driver materials).
+            // Full kanji-native phrasing with brief action cue.
             return RoadSurfaceConditionGlossary(
               jaName: defaults.jaName,
               enName: defaults.enName,

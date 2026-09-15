@@ -49,9 +49,11 @@ print(config.warningTemperatureCelsius);  // 0
 
 The six profiles (`ageingRural`, `snowZoneExperienced`, `noviceUrban`,
 `professional`, `agriculturalForestry`, `foreignTouristSnowZone`) ship
-literature-anchored thresholds for visibility, temperature, and score
-floors. Pick the one closest to the active driver context; fall back
-to `snowZoneExperienced` (the historical default) when uncertain.
+default thresholds for visibility, temperature, and score floors. The
+values are recorded decisions, not population-validated (see
+[`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)). Pick the profile
+closest to the active driver context; fall back to
+`snowZoneExperienced` (the historical default) when uncertain.
 
 ### c. Advanced usage — context-aware factories
 
@@ -150,9 +152,11 @@ The package separates three orthogonal axes:
 | **State** | `DriverState`   | What state are they in right now? | Sub-trip; can change mid-trip |
 | **Live conditions** | `DrivingContext` | What does the road / weather look like right now? | Real-time; updates on every sample |
 
-The trait + state pairing is `DriverContext`, anchored to the
-trait/state distinction in the driver-distraction literature
-(Regan, Hallett & Gordon, 2011). Trait is who the driver is; state is
+The trait + state pairing is `DriverContext`. The trait/state split is
+this package's design. Regan and Strayer 2014 (PMC4001671) list driver
+conditions (e.g. young, inexperienced, old) and driver states
+(e.g. bored, sleepy, fatigued, drugged, emotional) as factors in
+driver inattention. Trait is who the driver is; state is
 what state the driver is in right now. The two are independent inputs
 to threshold tuning. State adjustments at 0.6.0 are intentionally
 small — the API shape is stable; the magnitudes are flagged
@@ -166,14 +170,13 @@ Two runtime helpers ship alongside the threshold config:
   invariant); info and warning alerts are gated by the cap, which is
   meant to limit driver desensitisation; that effect has not been
   measured (see [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
-  Per-profile cap defaults are anchored to the
-  alarm-fatigue and ADAS driver-workload literature.
+  Per-profile cap defaults are a recorded decision; no source is cited
+  for the values (see [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
 - **`AlertExplainer`** — pre-localised
   `(condition, action, verbosity, locale)` tuple for each
-  `(RoadSurfaceCondition, DriverProfile)` pair. Action vocabulary
-  sourced from JAF / MLIT / NEXCO published driver-guidance
-  materials. Action mood is advisory ("reduce", "avoid", "maintain"),
-  never imperative-on-control.
+  `(RoadSurfaceCondition, DriverProfile)` pair. The action wording is
+  the package's own (a recorded decision). Action mood is advisory
+  ("reduce", "avoid", "maintain"), never imperative-on-control.
 
 ## Calibration formulas
 
@@ -288,9 +291,9 @@ signal sources.
   the certification path for their integration.
 - **Not JIS / JASO conformant.** Japanese-domestic certification is
   out of scope at this layer.
-- **Not a control surface.** Action verbs in `AlertExplainer` are
-  advisory; speed numbers are published reference points, not
-  system-enforced limits. The driver retains full control authority.
+- **Not a control surface.** Action verbs in `AlertExplainer` are advisory;
+  speed numbers are advisory reference points chosen by the package, not system-enforced limits.
+  The driver retains full control authority.
 - **Not a routing engine.** `NavigationRoute` is a typed route
   representation independent of any specific routing engine; it
   describes a route, it does not compute one.

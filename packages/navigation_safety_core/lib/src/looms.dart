@@ -7,9 +7,10 @@
 /// no meaning beyond "one guard, one failure mode".
 ///
 /// Each loom in this barrel documents, in its class-level doc comment,
-/// the failure mode it is meant to prevent, the evidence its behaviour
-/// is anchored in, and the boundary it keeps between this package and
-/// the integrating application.
+/// the failure mode it is meant to prevent; the sources it cites and
+/// what they show, or that a value is a recorded decision; and the
+/// boundary it keeps between this package and the integrating
+/// application.
 ///
 /// These are *runtime* guards: the consuming app constructs and owns
 /// them, and they run in-process on the app's own data. They are

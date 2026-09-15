@@ -3,10 +3,10 @@ import 'package:test/test.dart';
 
 void main() {
   group('AlertDensityThrottle.defaultCapFor — per-profile defaults', () {
-    test('every profile has a literature-anchored default cap', () {
-      // Locks exhaustive coverage of all 6 profiles. Each cap is
-      // documented with a literature anchor in alert_density_throttle.dart
-      // (defaultCapFor doc-comment).
+    test('every profile has a default cap (the recorded decision)', () {
+      // Locks exhaustive coverage of all 6 profiles. The cap table is the
+      // recorded decision in alert_density_throttle.dart (defaultCapFor
+      // doc-comment).
       expect(
         AlertDensityThrottle.defaultCapFor(DriverProfile.professional),
         4.0,

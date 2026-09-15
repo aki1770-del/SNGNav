@@ -1,17 +1,17 @@
 /// Time-of-day circadian-phase classification for driver-state-aware
 /// threshold tuning.
 ///
-/// `CircadianPhase` partitions the 24-hour clock into six phases that
-/// correspond to qualitatively-different driver alertness regimes
-/// per the chronobiology / driver-fatigue literature. Each phase
+/// `CircadianPhase` partitions the 24-hour clock into six phases meant
+/// to reflect different driver alertness regimes (a recorded decision;
+/// no source is cited). Each phase
 /// carries a multiplier in `[1.0, 1.5]` that the
 /// `NavigationSafetyConfig.forDriverContext` factory applies to the
 /// reaction-time-driven warning visibility floor as a caution-adding
 /// adjustment.
 ///
 /// The phase boundaries (00:00 / 04:00 / 08:00 / 12:00 / 16:00 / 20:00)
-/// follow standard four-hour-block partitioning used in driver-fatigue
-/// reporting; the multiplier values are **design-default hypotheses**
+/// are a recorded decision (no source is cited); the multiplier values
+/// are **design-default hypotheses**
 /// pending field-measurement validation. See `KNOWN_LIMITATIONS.md`
 /// (circadian-phase section, 0.10.0) for the UNVERIFIED-magnitude
 /// disclosure on every per-phase multiplier.
@@ -36,7 +36,7 @@
 /// advisory input consumed for threshold tuning. It does NOT actuate
 /// the vehicle, NOT close any control loop, NOT modulate alert
 /// severity. Returning a phase does not change vehicle behaviour; it
-/// only sharpens the warning-tier visibility floor for known-elevated
+/// only sharpens the warning-tier visibility floor for the intended
 /// risk windows (circadian trough, post-lunch dip, sleep inertia).
 ///
 /// Typical wiring (integrator-supplied):
@@ -62,21 +62,23 @@ library;
 /// flag on the per-phase multiplier values.
 enum CircadianPhase {
   /// 04:00 – 07:59 — sleep inertia window. Cognitive performance
-  /// recovers gradually after waking; reaction time is measurably
-  /// elevated above mid-morning baseline. Multiplier `1.2`.
+  /// recovers gradually after waking; the window is meant to reflect
+  /// slower reactions after waking (no source is cited). Multiplier
+  /// `1.2`.
   earlyMorning,
 
   /// 08:00 – 11:59 — peak alertness window. Used as the baseline
   /// (multiplier `1.0`); no caution-adding adjustment applied.
   morning,
 
-  /// 12:00 – 15:59 — post-lunch dip. Mild post-prandial alertness
-  /// trough documented in chronobiology literature. Multiplier `1.1`.
+  /// 12:00 – 15:59 — post-lunch dip. The window is meant to reflect a
+  /// mild post-lunch alertness dip (no source is cited). Multiplier
+  /// `1.1`.
   afternoon,
 
-  /// 16:00 – 19:59 — fatigue accumulation. End-of-workday cognitive
-  /// load + cumulative-day fatigue produces measurable alertness
-  /// degradation. Multiplier `1.05`.
+  /// 16:00 – 19:59 — fatigue accumulation. The window is meant to
+  /// reflect end-of-workday load and fatigue building through the day
+  /// (no source is cited). Multiplier `1.05`.
   evening,
 
   /// 20:00 – 23:59 — circadian-low. Evening-into-night transition;
@@ -85,8 +87,9 @@ enum CircadianPhase {
   night,
 
   /// 00:00 – 03:59 — circadian-trough (highest risk). The
-  /// chronobiological low-point; reaction time and cognitive
-  /// performance reach their minimum. Multiplier `1.5` (cap).
+  /// chronobiological low-point; the window is meant to reflect the
+  /// overnight alertness low (no source is cited). Multiplier `1.5`
+  /// (cap).
   lateNight,
 }
 

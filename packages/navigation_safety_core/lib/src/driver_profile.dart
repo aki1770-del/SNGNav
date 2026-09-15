@@ -69,12 +69,13 @@ enum DriverProfile {
   /// unfamiliarity with the local conditions + likely non-winterised
   /// rental vehicle + language-localization gaps in road signage. Defaults:
   /// most-conservative on every dimension; warn earliest on weather +
-  /// visibility; highest score floors. Hokkaido winter accidents involve
-  /// foreign self-driving tourists at meaningful rates — the previous
-  /// 5-profile taxonomy mis-mapped this class to either snowZoneExperienced
-  /// (catastrophically wrong — they have neither experience nor local
-  /// equipment) or noviceUrban (location-wrong). This profile closes that
-  /// gap; added in 0.3.0 per published evidence, so that this driver
+  /// visibility; highest score floors. A Hokkaido winter-driving guide
+  /// relays rental-car operators' accounts of tourist accidents at 止まれ
+  /// (stop-sign) intersections, with no rate (see `KNOWN_LIMITATIONS.md`).
+  /// The previous 5-profile taxonomy mis-mapped this class to either
+  /// snowZoneExperienced (catastrophically wrong — they have neither
+  /// experience nor local equipment) or noviceUrban (location-wrong).
+  /// This profile closes that gap; added in 0.3.0 so that this driver
   /// class gets defaults of its own rather than another class's.
   foreignTouristSnowZone,
 }
