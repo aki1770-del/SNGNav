@@ -14,9 +14,9 @@ is worth knowing; nothing about it is required to use the classes.
 
 A runtime loom in `navigation_safety_core` is a pure-Dart class that:
 
-1. Catches a documented failure mode at the package boundary.
-2. Carries a class-level doc-comment naming the failure mode it prevents and the
-   literature anchors that justify any embedded magnitudes.
+1. Guards against a documented failure mode at the package boundary.
+2. Carries a class-level doc-comment naming the failure mode it is meant to
+   prevent and the literature anchors cited for any embedded magnitudes.
 3. Is advisory-only — the loom decides whether something fires *from the package
    boundary*; the consuming app owns delivery to the driver and retains full
    responsibility.
@@ -24,9 +24,9 @@ A runtime loom in `navigation_safety_core` is a pure-Dart class that:
 
 ## Catalog
 
-| Loom (Dart class) | Failure mode caught |
+| Loom (Dart class) | Failure mode it is meant to prevent |
 |---|---|
-| `AlertDensityThrottle` | Alert fatigue / over-warning desensitization — advisory tiers crowd out the credibility of `AlertSeverity.critical` |
+| `AlertDensityThrottle` | Alert fatigue / over-warning desensitization — advisory tiers crowd out the credibility of `AlertSeverity.critical` (the throttle's effect on it has not been measured) |
 | `AlertExplainer` | Condition-without-action alert — e.g. "icy road" stated with no driver action implied |
 
 ## Importing the runtime looms

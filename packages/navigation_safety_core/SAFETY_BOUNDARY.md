@@ -65,10 +65,11 @@ operational discipline, and the SAE J3016 / ISO 26262 / SOTIF posture
 under which the loom is permitted to fire.
 
 - **`AlertDensityThrottle`** — per-profile rolling-window rate-limiter
-  for advisory alerts. Operational discipline: *the throttle protects
-  the driver from advisory-tier desensitization; the critical-bypass
-  invariant preserves credibility of safety-critical alerts.* The
-  throttle gates info / warning tiers against alarm-fatigue;
+  for advisory alerts. Operational discipline: *the throttle is meant to
+  protect the driver from advisory-tier desensitization (that effect has
+  not been measured); the critical-bypass invariant is meant to preserve
+  the credibility of safety-critical alerts.* The throttle gates info /
+  warning tiers at the per-profile cap;
   `AlertSeverity.critical` always fires regardless of in-window count.
   The rolling window is shared across severities: every alert that
   fires takes a slot, critical and info alike, and the cap does not

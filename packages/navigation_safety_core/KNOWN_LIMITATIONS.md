@@ -96,7 +96,7 @@ field-measurement validation.
   telemetry; the `LoomFitTelemetry` 0.8.0 stream is the
   package-boundary surface for that calibration loop).
 - The full trait × state × time × session × confidence five-axis
-  matrix per Regan-Hallett-Gordon T3 + downstream is a v1.0
+  matrix is a v1.0
   architecture decision; 0.10.0 ships the orthogonal axes and the
   composition factory only.
 
@@ -105,9 +105,13 @@ field-measurement validation.
 ## DriverState (state-axis spike, added in 0.6.0) — UNVERIFIED magnitudes
 
 The `DriverState` enum and `DriverContext` trait/state composite were
-added in 0.6.0 per Regan-Hallett-Gordon 2011 (PMC4001671) trait/state
-separation. The **shape** of the API is intentional and stable for
-this spike (Regan T3); the **magnitudes** of the per-state delta
+added in 0.6.0 per Regan and Strayer 2014 (PMC4001671), whose account
+of the Regan, Hallett and Gordon 2011 taxonomy names driver conditions
+(e.g. young, inexperienced, old) and driver states (e.g. bored, sleepy,
+fatigued, drugged, emotional) as factors that may give rise to
+inattention processes or moderate their impact. The **shape** of the
+API is intentional and stable for this spike; the **magnitudes** of
+the per-state delta
 applied by `NavigationSafetyConfig.forDriverContext` are NOT
 literature-anchored and are placeholders pending state-axis
 calibration.
@@ -156,8 +160,9 @@ calibration.
 
 ### What is verified at 0.6.0
 
-- **API shape** — trait × state separation per Regan-Hallett-Gordon
-  2011 (PMC4001671) T3 finding.
+- **API shape** — trait × state separation per Regan and Strayer 2014
+  (PMC4001671): driver conditions (e.g. young, inexperienced, old)
+  and driver states (e.g. bored, sleepy, fatigued, drugged, emotional).
 - **Conservative-only contract** — state delta may make thresholds
   warn earlier than the per-profile baseline, never later. Verified
   by tests that compare `forDriverContext(ctx)` against
@@ -215,9 +220,11 @@ the two classes below. There are six profiles now: 0.3.0 added
 ### Trait-only taxonomy
 
 The six profiles encode driver **trait** (who-the-driver-is). Industry
-literature (Regan, Hallett & Gordon 2011 —
+literature (Regan and Strayer 2014 —
 [PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
-separates trait from **state** (drowsy / distracted / alert / asleep).
+lists driver conditions (e.g. young, inexperienced, old) and driver
+**states** (e.g. bored, sleepy, fatigued, drugged, emotional) as factors
+in driver inattention.
 A `DriverState` axis crossed with `DriverProfile` would match how risk
 is actually modeled. **Addressed in 0.6.0** with `DriverState` and
 `DriverContext` (see the DriverState section above); the full trait ×
@@ -400,11 +407,8 @@ The 6 per-profile alerts/min cap defaults (`professional` 4.0,
 1.5, `ageingRural` 1.2, `foreignTouristSnowZone` 1.0) come from the
 literature anchors cited in `alert_density_throttle.dart` and the
 0.4.0 changelog entry — alarm-fatigue ([PMC12181921](https://pmc.ncbi.nlm.nih.gov/articles/PMC12181921/)),
-ADAS exposure ([AAA-FTS](https://aaafoundation.org/wp-content/uploads/2023/09/202309-AAAFTS-ADAS-Exposure-and-Driver-Workload.pdf)),
 hazard-perception RT ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)),
-voice-format cost differential by age ([PMC7283540](https://pmc.ncbi.nlm.nih.gov/articles/PMC7283540/)),
-novice-fog crash-rate elevation ([PubMed 22664714](https://pubmed.ncbi.nlm.nih.gov/22664714/)),
-and over-warning silent failure ([arxiv 2410.06388](https://arxiv.org/html/2410.06388)).
+and novice-fog crash-rate elevation ([PubMed 22664714](https://pubmed.ncbi.nlm.nih.gov/22664714/)).
 
 These are DEFAULTS, not invariants. None of these caps has been
 validated against actual population field-data — that work is
