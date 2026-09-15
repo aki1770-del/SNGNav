@@ -1,3 +1,56 @@
+## 0.7.8
+
+A documentation release, plus a published example that now resolves. There is
+no API or behaviour change: outside comments and doc comments, `lib/` is
+unchanged, and every rate, budget and announcement is what 0.7.7 produced.
+
+**The speaking-rate multipliers are not taken from a study.** The docs said
+`kSpeakingRateMultiplierByProfile` (noviceUrban 0.85, ageingRural 0.70,
+foreignTouristSnowZone 0.70, the other profiles 1.0) was "anchored on" a
+Strayer auditory-load study, PMC7283540, and that "the package does not invent
+these multipliers". That was not true. PMC7283540 is Cooper et al. 2020 (Strayer
+is its last author). It found that older drivers "took longer to complete
+tasks, were slower to react to stimuli, and reported higher task demand" with
+in-vehicle information systems. It did not vary or measure speaking rate. The
+multipliers are recorded decisions: values this package chose. A slower rate is
+meant to help a driver act on an announcement. That effect has not been
+measured. If speaking rate matters to your product, check these values with
+your own drivers.
+
+**Other corrections:**
+
+- The 12-second glance budget that `BudgetAwarePaceProfile` responds to was
+  cited as "NHTSA Phase 2". It comes from the first phase of NHTSA's
+  guidelines, "Visual-Manual NHTSA Driver Distraction Guidelines for
+  In-Vehicle Electronic Devices" (78 FR 24818, 2013). Those guidelines are
+  "nonbinding, voluntary" and cover visual-manual tasks, not auditory-vocal
+  ones. Slowing speech as that budget is used up is this package's decision.
+- `SAFETY_BOUNDARY.md` said an announcement is "calm enough to ignore safely".
+  It now says no announcement is safe to ignore, and that the driver decides
+  what to do with it.
+- `SAFETY_BOUNDARY.md` removes a citation of PubMed 38669900 as "Bian et al".
+  That paper is Xu and Bowers 2024, and it does not show the claim it was
+  cited for.
+- `SAFETY_BOUNDARY.md`, on the tactile channel: the three sources on deaf and
+  hard-of-hearing drivers are now quoted for what each says. The docs also now
+  say that none of them is about snow or wind. The point about a hearing driver
+  in a loud whiteout is our own reasoning.
+
+**The published example now resolves.** In 0.7.7 and earlier,
+`example/pubspec.yaml` carried `dependency_overrides` naming 28 packages by
+local paths (`../../snow_rendering` and others) that exist only in our
+development repository. It also asked for `navigation_safety: ^0.5.0`.
+`flutter pub get` in the published `example/` failed with "version solving
+failed". The overrides now live in `example/pubspec_overrides.yaml`, which is
+kept out of the published package. The example now asks for
+`navigation_safety: ^0.9.0` and `routing_engine: '>=0.4.0 <0.7.0'`. This fix is
+in the example only.
+
+**Dependencies:** unchanged. `navigation_safety: ^0.9.0` allows
+`navigation_safety` 0.9.7, and `navigation_safety_core: '>=0.10.0 <0.12.0'`
+allows `navigation_safety_core` 0.11.8. This release needs neither of them to
+build or run.
+
 ## 0.7.7
 
 **Three things this package told you that were not true.** All three were about

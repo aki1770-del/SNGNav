@@ -75,8 +75,9 @@ class AlertExplainerExpandableSheet extends StatefulWidget {
   /// integrator analytics or persistence).
   final ValueChanged<bool>? onExpansionChanged;
 
-  /// Optional source-line text shown in both states. Defaults to a
-  /// short attribution string. Integrators may localise or extend.
+  /// Optional source-line text shown in both states. Defaults to
+  /// `'AlertExplainer'`, the class name, which is not words for a driver;
+  /// pass a line in the driver's language.
   final String sourceLine;
 
   const AlertExplainerExpandableSheet({

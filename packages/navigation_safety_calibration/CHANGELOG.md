@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.1.4
+
+A documentation release. No API or behaviour change: outside comments and doc
+comments, `lib/` is unchanged. Every function returns what it returned in
+0.1.3.
+
+**Values that no cited source gives.** The docs placed these values beside
+citations or called them "conservative". We read the cited sources. None of
+them gives these values, and none shows that the half-life is conservative.
+The docs now call each one a recorded decision: a value this package chose.
+
+- **The 90-minute default of `evaporationHalfLifeMinutes`** in
+  `computeSurfaceMoistureFraction`, and the exponential shape of the
+  decay. The docs called 90 minutes "deliberately conservative", biased toward
+  "still wet". Nothing cited shows that. A longer half-life keeps the moisture
+  fraction, and any warning margin your app derives from it, higher for
+  longer. The one cited source on how long a surface stays wet (PMC7917919, an
+  urban-surface evaporation study) reports that the concrete layer's water
+  content stayed at its peak "for a few days after the rain". It gives no
+  half-life. If you have your own measure of how long roads stay wet where
+  your app is used, pass it as `evaporationHalfLifeMinutes`.
+- **The six per-profile reaction times** in the `speed_dependent_visibility`
+  header: ageingRural 2.5 s, noviceUrban 3.58 s, snowZoneExperienced 1.8 s,
+  professional 1.5 s, agriculturalForestry 2.0 s, foreignTouristSnowZone
+  3.5 s. The docs attributed 3.58 s (novice) and 1.32 s (experienced) to
+  PubMed 16313881. That paper (Sagberg and Bjørnskau 2006) gives no reaction
+  times in seconds in its abstract. It found that the decrease in
+  hazard-perception reaction time with experience "was not significant".
+- **The 3.0 °C ambient ceiling** of `isRadiativeFrostBlackIce`
+  (`radiativeFrostAmbientCeilingCelsius`). The docs called it the envelope
+  that the cited sources document. They give no ceiling.
+- **The road-surface temperature estimate** of
+  `computeEffectiveTemperatureCelsius`. The docs called it "a conservative
+  estimate". It returns the dew point. Using the dew point as the road-surface
+  temperature is a modelling decision, not a measurement, and nothing cited
+  compares it with a measured road surface.
+
+**Citations corrected:**
+
+- PMC4001671 was cited as Regan, Hallett and Gordon 2011. It is Regan and
+  Strayer 2014, which describes Regan, Hallett and Gordon's 2011 taxonomy.
+  It lists driver conditions and driver states as factors that may lead to
+  inattention, or change how much inattention affects driving. It gives no
+  reaction times. The trait/state split is this package's design.
+- Black ice at air temperatures above 0 °C. The docs now give the conditions
+  their sources state. Wikipedia's "Black ice" says so only when the air warms
+  suddenly after a prolonged cold spell has left the road surface well below
+  freezing. Wikipedia's "Radiative cooling" says it for surfaces under a clear
+  night sky, and gives no temperature.
+- The Magnus constants (a = 17.625, b = 243.04 °C) are now cited to the paper
+  that gives them, Alduchov and Eskridge 1996, with the range over which that
+  paper compared its approximations (−40 °C to +50 °C).
+
+`navigation_safety_core` re-exports this package and points to these headers
+for its citations. Its 0.11.8 docs describe them as they read in this
+release.
+
+Tests: one group name and one test name changed. The test name now gives the
+Magnus dew point at 20 °C and 50 % relative humidity as ≈ 9.26 °C, not ≈ 9.27 °C.
+No assertion changed.
+
 ## 0.1.3
 
 - Add `isRadiativeFrostBlackIce({ambientCelsius, humidityRHPercent})` — the

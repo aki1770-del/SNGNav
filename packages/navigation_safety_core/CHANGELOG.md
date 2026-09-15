@@ -1,5 +1,125 @@
 # Changelog
 
+## 0.11.8
+
+A documentation release. No public API changes, and no value this package
+computes has changed: no threshold, cap, reaction time, multiplier or alert
+string. Outside comments and doc comments, `lib/` is unchanged except for one
+debug-only assertion message (last item below).
+
+**If you chose this package's defaults because the docs said they came from
+published research, read this entry.** Earlier releases placed the default
+values beside citations and called them "literature-anchored", "published
+reference points" or "sourced from" named organisations. We read the cited
+sources. None of them gives these values. The docs now say, for each, that it
+is a recorded decision: a value this package chose, not one taken from a
+study. The values themselves are the same as in 0.11.7.
+
+- **The alerts-per-minute caps** in `AlertDensityThrottle.defaultCapFor`:
+  professional 4.0, snowZoneExperienced 3.0, agriculturalForestry 2.0,
+  noviceUrban 1.5, ageingRural 1.2, foreignTouristSnowZone 1.0. The docs no
+  longer say the throttle prevents desensitization. It is meant to; that
+  effect has not been measured.
+- **The per-profile reaction times** used for the speed-dependent visibility
+  floor: ageingRural 2.5 s, noviceUrban 3.58 s, snowZoneExperienced 1.8 s,
+  professional 1.5 s, agriculturalForestry 2.0 s, foreignTouristSnowZone
+  3.5 s. The 3.58 s and 1.32 s figures were attributed to PubMed 16313881.
+  That paper (Sagberg and Bjørnskau 2006) gives no reaction times in seconds
+  in its abstract, and found that the decrease in hazard-perception reaction
+  time with experience "was not significant".
+- **The 0.3.0 threshold changes**: noviceUrban's warning visibility of 320 m,
+  and ageingRural's 4 °C info temperature and 2 °C warning temperature.
+- **The state adjustments** in `forDriverContext` (fatigued +0.5 s and +1 °C,
+  distracted +1.0 s), the **`CircadianPhase` boundaries and multipliers**
+  (1.0 to 1.5) and the **confidence cap modifiers** (× 0.75 and × 1.25).
+- **The 30 km/h and 20 km/h speeds** in `AlertExplainer` action strings. They
+  are advisory reference points this package chose. JAF's snow-driving page
+  gives no speed figure.
+- **The Japanese wording** of `AlertExplainer` and
+  `RoadSurfaceConditionGlossary`. The docs said this wording was sourced from
+  JAF, MLIT, NEXCO and other public driver guidance. It is this package's own
+  wording. JAF's page does use アイスバーン and ブラックアイスバーン.
+
+**What your drivers hear about wet ice is unchanged, and its ranking is not
+sourced.** For `RoadSurfaceCondition.wetIce`, the spoken and displayed strings
+still call wet ice the most slippery condition: 最も滑りやすい and 最も滑ります
+in Japanese, and "most slippery condition" in English. No source cited by this
+package ranks wet ice that way, and JAF uses アイスバーン without defining it as
+ice with a water film. The docs now say this. The strings are not changed in
+this release, so the words your drivers hear stay the same.
+
+If a default matters to your product, treat it as a starting value to check
+against your own drivers and roads. `KNOWN_LIMITATIONS.md` lists, for each
+value, what the cited sources show and what they do not.
+
+**Citations that named the wrong authors or the wrong source.** Each is
+corrected where it appears:
+
+- PubMed 24642933 (Useful Field of View) is Wood and Owsley 2014, not "Ball et
+  al".
+- The rural-Japan frailty study was credited to "Kasama". It is Liu et al.
+  2020.
+- PMC4001671 was cited as Regan, Hallett and Gordon 2011. It is Regan and
+  Strayer 2014, which describes the 2011 taxonomy. The trait/state split in
+  `DriverContext` is this package's design. That paper lists driver conditions
+  and driver states as factors in inattention and gives no magnitudes.
+- PubMed 22664714 was credited to "Konstantopoulos et al". It is Mueller and
+  Trick 2012, a driving-simulator study in which novice drivers had higher
+  hazard response times and "were the only drivers to have collisions".
+- PMC7283540 was cited as a Strayer study that anchors per-profile values. It
+  is Cooper et al. 2020 (Strayer is its last author). It does not give this
+  package's values.
+- PubMed 38669900 was credited to "Bian et al". It is Xu and Bowers 2024, on
+  hazard warning modality and timing for older drivers with impaired vision.
+  Its citations are removed; see the next item.
+- The JAF link used a host that does not exist. It is now
+  https://jaf.or.jp/common/attention/snow.
+- A link described as MLIT's Hokkaido snow-road guide is the Hokuriku
+  regional bureau's portal. It is removed.
+- JIS D 0207 was given as a display-ergonomics standard. It is a general rule
+  for dust tests of automobile parts. It is removed, with the other example
+  standard numbers. The package has not mapped its text against any JIS or
+  JASO document.
+- Citations removed because the source, as far as we could read it, does not
+  support the claim they were attached to: PubMed 38669900, PMID 34111571 (a
+  medication-adherence review), an MDPI 2024 review, and the
+  use of arxiv 2410.06388 and PMC12181921 as sources for the cap values.
+  PMC12181921 is still cited, for alarm fatigue in health care. arxiv
+  2410.06388 is still cited, for alert fatigue from repeated false alarms in
+  a simulator study.
+
+**Other statements the docs made that were not accurate:**
+
+- Black ice at air temperatures above 0 °C. The docs now give the condition
+  their sources state: the air warms suddenly after a prolonged cold spell has
+  left the road surface below freezing, or radiative cooling under a clear
+  night sky.
+- A relative humidity reading between 100 % and 105 % is kept as saturated
+  air. The docs called that "maximum caution". It is not: at 100 % the
+  effective temperature equals ambient, so humidity adds the least warning
+  margin. The code is unchanged; only the description was wrong.
+- `foreignTouristSnowZone` was said to rest on published accident rates. The
+  source is a Hokkaido driving guide that relays rental-car operators'
+  accounts, with no rate.
+- `AlertDensityThrottle`'s cold-start rule. The docs said only the first alert
+  in a session skips the window check. Any alert that finds the rolling window
+  empty skips it. The constructor already refuses a cap that is not greater
+  than 0, so this changes no firing decision.
+- The docs pointing to `navigation_safety_calibration` for citations now say
+  that calibration's headers state which values are recorded decisions. That
+  is true from `navigation_safety_calibration` 0.1.4. This package's
+  constraint, `^0.1.2`, already allows 0.1.4.
+
+**Debug builds only: the `assertUxDifferentiated` message is shorter.** When
+no UX differentiator is registered for a profile, the `AssertionError` message
+no longer ends with a sentence citing PubMed 38669900 and PMC7283540. The
+registration instruction before it is unchanged. Release builds are not
+affected, because Dart removes `assert`. A test that checks the message for
+`'38669900'` or `'PMC7283540'` will fail.
+
+Tests: some test names and comments no longer cite sources. No assertion
+changed except the message check above.
+
 ## 0.11.7
 
 A vehicle-class override may no longer change the critical thresholds, the

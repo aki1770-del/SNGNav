@@ -1,3 +1,83 @@
+## 0.9.7
+
+**One change in this release shows on your users' screens. Read the first
+item if your app uses `AlertExplainerExpandableSheet`.** Everything else is
+documentation and the published example. There is no API change, and no
+threshold, duration or budget this package computes has changed.
+
+**`AlertExplainerExpandableSheet.sourceLine` has a new default.** It was
+`'AlertExplainer (JAF / MLIT / NEXCO)'`. It is now `'AlertExplainer'`.
+
+- **Who sees it:** every app that builds the sheet without passing
+  `sourceLine`. The line appears at the top of the card. When the card is
+  expanded, it appears again below the action text. The sheet opens expanded
+  by default for `ageingRural`, `foreignTouristSnowZone` and `noviceUrban`.
+- **What it can cost you:** your code still compiles. A widget test that looks
+  for the old text, or a golden image of the sheet, will fail after you
+  upgrade.
+- **Why it changed:** the old text told drivers that the advice on the card
+  came from JAF, MLIT and NEXCO. It did not. The action wording comes from
+  `navigation_safety_core`'s `AlertExplainer`, and it is that package's own
+  wording (see its 0.11.8 entry). JAF's snow-driving page gives no speed
+  figure, and the card's advice includes speeds.
+- **What we suggest:** `'AlertExplainer'` is the name of a Dart class, not
+  words written for a driver. Pass your own `sourceLine`, in your driver's
+  language. If you name a source, name one that your text actually comes
+  from. We suggest not putting the old text back: those organisations did not
+  write these strings.
+
+**Values that no cited source gives.** The docs placed these values beside
+citations. The docs now call them recorded decisions: values this package
+chose.
+
+- **`kModalAlertDurationBase`** (5 seconds) and
+  **`kModalAlertDurationMultiplierByProfile`** (1.0 to 1.5). The multipliers
+  were credited to "Bian et al (PubMed 38669900)". That paper is Xu and Bowers
+  2024, on hazard warning modality and timing for older drivers with impaired
+  vision, and it does not give these values. A claim that older drivers'
+  reading pace was documented in JAF older-driver materials is also removed.
+  The longer durations are meant to give a slower reader time to read an
+  alert. That effect has not been measured.
+- **The 12-second `totalBudget`** of `GlanceBudgetTracker`. The docs cited
+  "NHTSA Phase 2". The 12-second figure comes from the first phase of NHTSA's
+  guidelines, "Visual-Manual NHTSA Driver Distraction Guidelines for
+  In-Vehicle Electronic Devices" (78 FR 24818, 2013). Those guidelines are
+  "nonbinding, voluntary". They set 12 seconds as the cumulative glance-away
+  time for one visual-manual task, and they do not cover auditory-vocal
+  tasks. Two things are this package's decisions: using that per-task figure
+  as the budget, and counting cognitive and manual events against it.
+
+**Other corrections:**
+
+- `CONTRIBUTING.md`, open task S-051, gave the WCAG AA contrast as "0.21" on a
+  0.0 to 1.0 field. WCAG 2.2 AA asks for at least 4.5:1, on its own 1 to 21
+  scale. No mapping between the two scales is defined yet. A contribution that
+  adds the field must define the mapping and test it.
+- `SAFETY_BOUNDARY.md` said the alert cap makes an alert "calm enough to
+  ignore safely". It now says that an info or warning alert over the cap is
+  dropped, not queued, and that a critical alert always fires. It also says
+  that no alert is made safe to ignore, and that the cap's effect on
+  desensitization has not been measured.
+
+**The published example now resolves and compiles.** In 0.9.6 and earlier,
+`example/pubspec.yaml` carried `dependency_overrides` with local paths
+(`../../navigation_safety_core`) that exist only in our development
+repository. `flutter pub get` in the published `example/` failed with
+"version solving failed". Those overrides now live in
+`example/pubspec_overrides.yaml`, which is kept out of the published package.
+The example also allows `routing_engine` `>=0.4.0 <0.7.0`. From
+`routing_engine` 0.6.0, `RouteManeuver.position` is nullable, and the old
+example did not compile against it. The example now leaves out a maneuver
+that has no position, and never places one at 0,0. A production app should
+keep that maneuver's instruction and distance, and only refuse to place it on
+the map. This fix is in the example only.
+
+**Dependencies:** unchanged. `navigation_safety_core: '>=0.10.0 <0.12.0'`
+already allows `navigation_safety_core` 0.11.8. This release needs nothing
+from 0.11.8 to build or run. `SAFETY_BOUNDARY.md` quotes a heading from
+`navigation_safety_core`'s `KNOWN_LIMITATIONS.md` as that heading reads from
+0.11.8.
+
 ## 0.9.6
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.
