@@ -28,8 +28,7 @@
 /// the privacy-class boundary, the consent surface, and the threshold
 /// for "the loom does not fit this driver-class."
 ///
-/// **Schema** (per the Bian et al. PubMed 38669900 "alert-magnitude ×
-/// duration as one product" frame, expanded for per-profile context):
+/// **Schema**:
 ///
 /// - `profileClass` — the active `DriverProfile`. Necessary for any
 ///   per-profile fit analysis; without it, drop-rate is an aggregate

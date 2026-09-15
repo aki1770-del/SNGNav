@@ -44,9 +44,8 @@ import 'driver_profile.dart';
 ///   desensitized driver. The throttle stops the over-warning before
 ///   that desensitization compounds.
 /// - **How it works** — per-profile caps are anchored in PMC12181921,
-///   PMC7283540, PubMed 16313881, PubMed 22664714, AAA-FTS and
-///   arxiv 2410.06388. The cap table in `defaultCapFor` is the
-///   recorded decision.
+///   PubMed 16313881, PubMed 22664714, AAA-FTS and arxiv 2410.06388.
+///   The cap table in `defaultCapFor` is the recorded decision.
 /// - **What it will not do** — it throttles the app, never the driver.
 ///   Each driver class gets a literature-anchored cap matched to its
 ///   own reaction-time and overwhelm characteristics; no class is
@@ -169,8 +168,7 @@ class AlertDensityThrottle {
   /// - `noviceUrban` — 1.5. Novice hazard-perception RT 3.58s (PubMed
   ///   16313881) — >2× experienced. Each alert needs longer processing
   ///   time; closer cap protects against queueing-into-overload.
-  /// - `ageingRural` — 1.2. Strayer/AAA PMC7283540 — older drivers
-  ///   cost +8s eyes-off-road on identical voice formats; AAA-FTS
+  /// - `ageingRural` — 1.2. AAA-FTS
   ///   ADAS-exposure-and-driver-workload finds older drivers report
   ///   higher overwhelm at given alert density.
   /// - `foreignTouristSnowZone` — 1.0. Combines novice-equivalent

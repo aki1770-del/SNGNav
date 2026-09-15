@@ -122,14 +122,19 @@ void main() {
       );
     });
 
-    test('error message references published evidence anchors', () {
+    test('error message is the registration instruction, exactly', () {
       try {
         assertUxDifferentiated(DriverProfile.ageingRural);
         fail('expected AssertionError');
       } on AssertionError catch (e) {
-        final msg = e.message.toString();
-        expect(msg, contains('38669900'));
-        expect(msg, contains('PMC7283540'));
+        expect(
+          e.message.toString(),
+          'No UX differentiator registered for DriverProfile.ageingRural. '
+          'Register one at app-bootstrap time via '
+          "registerUxDifferentiator(ageingRural, '<package>:<dimension>') "
+          'for each consuming UX layer (voice_guidance speakingRate, '
+          'navigation_safety modalDuration, navigation_safety explainer).',
+        );
       }
     });
   });

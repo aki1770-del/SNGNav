@@ -13,9 +13,6 @@
 /// but in the SAME format as for `snowZoneExperienced`. Same voice
 /// verbosity, modal duration, glance-time, explainer (none).
 ///
-/// The format-mismatch can erase the earlier-alert benefit (Bian et al
-/// PubMed 38669900 / Strayer-AAA PMC7283540).
-///
 /// This file ships the activated runtime hook for 0.7.0:
 ///
 /// 1. Consuming UX layers register a differentiator per [DriverProfile]
@@ -29,13 +26,16 @@
 ///    driver-facing build — it surfaces during integration testing.
 ///
 /// Driver-facing loom (per the package's architectural anchor):
-/// *"alert that arrives in time + makes sense + is calm enough to
-/// ignore safely."* The threshold layer ensures **arrives in time**;
-/// the per-profile UX-differentiation layer ensures **makes sense +
-/// calm enough to ignore safely** for the registered profile. Without
-/// registration, the second half of the architectural anchor is
-/// silently dropped — this hook makes that silent drop audible to the
-/// integrator before the driver sees it.
+/// *"alert that arrives in time + makes sense +
+/// is limited in number, except when critical."* The threshold layer
+/// ensures **arrives in time**; the per-profile UX-differentiation layer
+/// ensures **makes sense** for the registered profile. The third part,
+/// **is limited in number, except when critical**, belongs to
+/// `AlertDensityThrottle`, which tells the integrator whether to fire
+/// each alert; it is not this layer's. Without registration, the
+/// **makes sense** part of the anchor is silently dropped — this hook
+/// makes that silent drop audible to the integrator before the driver
+/// sees it.
 library;
 
 import 'driver_profile.dart';
@@ -126,10 +126,7 @@ void assertUxDifferentiated(DriverProfile profile) {
         'registerUxDifferentiator(${profile.name}, '
         "'<package>:<dimension>') for each consuming UX layer "
         '(voice_guidance speakingRate, navigation_safety modalDuration, '
-        'navigation_safety explainer). Without per-profile UX '
-        'differentiation, the earlier-threshold benefit can be erased '
-        'by a UX surface that does not match the profile (Bian et al '
-        'PubMed 38669900 / Strayer-AAA PMC7283540).',
+        'navigation_safety explainer).',
       );
     }
     return true;
