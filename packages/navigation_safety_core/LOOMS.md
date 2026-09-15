@@ -16,7 +16,8 @@ A runtime loom in `navigation_safety_core` is a pure-Dart class that:
 
 1. Guards against a documented failure mode at the package boundary.
 2. Carries a class-level doc-comment naming the failure mode it is meant to
-   prevent and the literature anchors cited for any embedded magnitudes.
+   prevent and, for any embedded magnitudes, either the sources that show
+   them or that they are a recorded decision.
 3. Is advisory-only — the loom decides whether something fires *from the package
    boundary*; the consuming app owns delivery to the driver and retains full
    responsibility.

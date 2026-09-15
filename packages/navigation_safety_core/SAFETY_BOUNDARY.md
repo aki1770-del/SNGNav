@@ -87,10 +87,11 @@ under which the loom is permitted to fire.
   Operational discipline: *the explainer ships the (condition, action)
   tuple at the package boundary so the integrator-developer is not
   silently absorbed responsibility for action-coupling.* The 36-cell
-  action table sources from JAF / MLIT / NEXCO public driver-guidance
-  vocabulary; advisory-mood verbs only; speed numbers are published
-  reference points, not system-enforced limits. The driver retains
-  full control authority. ASIL-QM advisory per §2.
+  action table is the package's own wording (a recorded decision; no
+  source is cited for it); advisory-mood verbs only; speed
+  numbers are advisory reference points chosen by the package, not
+  system-enforced limits. The driver retains full control authority.
+  ASIL-QM advisory per §2.
 
 - **`LoomFitTelemetry`** (new in 0.8.0) — emit-only broadcast stream
   of `LoomFitTelemetryRecord` observations. Operational discipline:
@@ -314,11 +315,11 @@ this layer).
 **What the driver experiences when this package fires**: *the alert that arrives in time + makes sense + is limited in number, except when critical.* When `navigation_safety_core` fires through an integrator HMI, the driver sees an alert that:
 - **arrives in time** — threshold-tuned to her profile (ageingRural gets an earlier visibility-warning floor than snowZoneExperienced, 300 m against 200 m, per the `forProfile` factory; a higher floor warns earlier) AND adjusted upward for live driving conditions where they exceed the per-profile floor (`forProfileWithContext`).
 - **makes sense** — vocabulary in her language (`AlertExplainer` locale-class differentiation), at action-coupled granularity (advisory verbs not raw severity codes), with the action she can take (*"reduce", "avoid", "maintain"*) coupled to the condition.
-- **is limited in number, except when critical** — `AlertDensityThrottle` tells the integrator whether to fire each alert. An info or warning alert fires only while fewer alerts than the per-minute cap for her profile are in its rolling 60 s window; a critical alert always fires (documented invariant). An info or warning alert over the cap is dropped, not queued, so she is not told of it. The cap does not make any alert safe to ignore, and its effect on desensitization has not been measured: the caps are defaults, not validated against field data (`KNOWN_LIMITATIONS.md`, "Per-profile caps are literature-anchored DEFAULTS, not population-validated").
+- **is limited in number, except when critical** — `AlertDensityThrottle` tells the integrator whether to fire each alert. An info or warning alert fires only while fewer alerts than the per-minute cap for her profile are in its rolling 60 s window; a critical alert always fires (documented invariant). An info or warning alert over the cap is dropped, not queued, so she is not told of it. The cap does not make any alert safe to ignore, and its effect on desensitization has not been measured: the caps are defaults, not validated against field data (`KNOWN_LIMITATIONS.md`, "Per-profile caps are recorded-decision DEFAULTS, not population-validated").
 
 **The driver stays in control**: the alert brings a change in conditions (the unexpected snow, the dropping visibility) to the driver's attention. It does not replace the driver's own attention to the road: the driver performs the dynamic driving task at all times and retains full control authority (sections 1 and 7).
 
-**For the integrator**: an integrator reading `AlertExplainer` source today sees the action-mood discipline + locale + verbosity mapping. The trait+state separation follows published literature (Regan, Hallett & Gordon, 2011) and leaves modeling choices to the integrator.
+**For the integrator**: an integrator reading `AlertExplainer` source today sees the action-mood discipline + locale + verbosity mapping. The trait+state separation is this package's design; Regan and Strayer 2014 (PMC4001671) list driver conditions (e.g. young, inexperienced, old) and driver states (e.g. bored, sleepy, fatigued, drugged, emotional) as factors in driver inattention. The separation leaves modeling choices to the integrator.
 
 ## 9 — Cross-references
 
