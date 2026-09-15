@@ -38,11 +38,12 @@ import 'driver_profile.dart';
 ///
 /// Design rationale:
 ///
-/// - **Failure mode this prevents** — alert fatigue: the app fires more
-///   advisory alerts than the driver can process, the driver
+/// - **Failure mode this is meant to prevent** — alert fatigue: the app
+///   fires more advisory alerts than the driver can process, the driver
 ///   desensitizes, and a later safety-critical alert lands on a
-///   desensitized driver. The throttle stops the over-warning before
-///   that desensitization compounds.
+///   desensitized driver. The throttle is meant to stop the over-warning
+///   before that desensitization compounds; that effect has not been
+///   measured.
 /// - **How it works** — per-profile caps are anchored in PMC12181921,
 ///   PubMed 16313881, PubMed 22664714, AAA-FTS and arxiv 2410.06388.
 ///   The cap table in `defaultCapFor` is the recorded decision.
@@ -163,11 +164,12 @@ class AlertDensityThrottle {
   ///   snow-driver hazard-perception RT ≈ 1.32s (PubMed 16313881).
   /// - `agriculturalForestry` — 2.0. Off-road / extended-shift
   ///   contexts; OSHA 1928 / FAO UNECE-FAO-ILO 2023 forestry literature
-  ///   emphasizes systemic fatigue management; lower cap protects
-  ///   against shift-end desensitization.
+  ///   emphasizes systemic fatigue management; the lower cap is meant to
+  ///   protect against shift-end desensitization (effect not measured).
   /// - `noviceUrban` — 1.5. Novice hazard-perception RT 3.58s (PubMed
   ///   16313881) — >2× experienced. Each alert needs longer processing
-  ///   time; closer cap protects against queueing-into-overload.
+  ///   time; the closer cap is meant to protect against
+  ///   queueing-into-overload (effect not measured).
   /// - `ageingRural` — 1.2. AAA-FTS
   ///   ADAS-exposure-and-driver-workload finds older drivers report
   ///   higher overwhelm at given alert density.

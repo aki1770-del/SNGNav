@@ -28,8 +28,8 @@
 /// Driver-facing loom (per the package's architectural anchor):
 /// *"alert that arrives in time + makes sense +
 /// is limited in number, except when critical."* The threshold layer
-/// ensures **arrives in time**; the per-profile UX-differentiation layer
-/// ensures **makes sense** for the registered profile. The third part,
+/// owns **arrives in time**; the per-profile UX-differentiation layer
+/// owns **makes sense** for the registered profile. The third part,
 /// **is limited in number, except when critical**, belongs to
 /// `AlertDensityThrottle`, which tells the integrator whether to fire
 /// each alert; it is not this layer's. Without registration, the

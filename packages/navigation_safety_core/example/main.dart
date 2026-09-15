@@ -138,8 +138,9 @@ void _showProfileWithDriverState() {
 /// 4. Alert-density throttle: cap advisory alerts/min per profile.
 ///
 /// Critical alerts always fire (safety invariant). Info and warning
-/// alerts are gated by the profile's alerts/min cap so the driver
-/// is not desensitised by over-warning.
+/// alerts are gated by the profile's alerts/min cap, which is meant to
+/// limit desensitisation from over-warning; that effect has not been
+/// measured.
 void _showAlertDensityThrottle() {
   print('[4] AlertDensityThrottle — per-profile alerts/min cap');
 

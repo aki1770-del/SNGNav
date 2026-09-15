@@ -163,8 +163,10 @@ Two runtime helpers ship alongside the threshold config:
 
 - **`AlertDensityThrottle`** — per-profile alerts/min cap with a
   rolling 60-second window. Critical alerts always fire (documented
-  invariant); info and warning alerts are gated to prevent driver
-  desensitisation. Per-profile cap defaults are anchored to the
+  invariant); info and warning alerts are gated by the cap, which is
+  meant to limit driver desensitisation; that effect has not been
+  measured (see [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)).
+  Per-profile cap defaults are anchored to the
   alarm-fatigue and ADAS driver-workload literature.
 - **`AlertExplainer`** — pre-localised
   `(condition, action, verbosity, locale)` tuple for each
