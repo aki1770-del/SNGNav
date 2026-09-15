@@ -6,7 +6,8 @@
 /// multipliers (a static per-cohort baseline; `kSpeakingRateMultiplier
 /// ByProfile`). That baseline does not respond to live cognitive-load
 /// state — when the driver's cumulative off-road glance time approaches
-/// the NHTSA Phase 2 12-second budget, the same baseline-pace voice
+/// the 12-second budget (NHTSA's first-phase figure for visual-manual
+/// tasks), the same baseline-pace voice
 /// announcement competes for attention against an already-overloaded
 /// cognitive channel. This profile lets an integrator slow speech
 /// further, dynamically, as the glance budget is consumed.

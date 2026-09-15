@@ -6,12 +6,10 @@
 /// alert remains on screen** before consuming apps can choose to
 /// auto-dismiss it.
 ///
-/// One product, three axes: alert-magnitude × duration × pace. Bian
-/// et al (PubMed 38669900) document that earlier-or-louder alerts
-/// without matching display duration produce the same comprehension
-/// gap as no per-profile differentiation at all — the message arrives,
-/// but the slower-cognitive-load profiles cannot read-and-process it
-/// before it disappears, erasing the threshold-layer benefit.
+/// One product, three axes: alert-magnitude × duration × pace. The
+/// per-profile duration is meant to give a driver who reads more slowly
+/// time to read an earlier alert before it is dismissed; no source is
+/// cited for that effect.
 ///
 /// This primitive is **advisory not control**: it returns a `Duration`
 /// the consuming app uses to time its own auto-dismiss policy. The
@@ -27,17 +25,16 @@ import 'package:navigation_safety_core/navigation_safety_core.dart';
 
 /// Base modal-alert display duration (engine-base; profile-neutral).
 ///
-/// Five seconds is the conservative engine-base anchor: long enough to
-/// read a single conservative advisory line, short enough to avoid
-/// stale alerts lingering after the condition has passed. Per-profile
+/// Five seconds is the engine-base default, a recorded decision: meant
+/// to be long enough to read a single advisory line and short enough to
+/// avoid stale alerts lingering after the condition has passed. Per-profile
 /// multipliers tune this by `DriverProfile`; see [kModalAlertDurationMultiplierByProfile].
 const Duration kModalAlertDurationBase = Duration(seconds: 5);
 
 /// Per-profile multipliers on top of [kModalAlertDurationBase].
 ///
-/// **Source anchor**: Bian et al PubMed 38669900 (alert-magnitude ×
-/// duration as a single product); 100-insights #56 substrate; AAA
-/// spawn -50 dignity-anchor for per-profile rendering discipline.
+/// **Source**: none is cited for the multipliers; they are recorded
+/// decisions.
 ///
 /// **Conservative-only direction**: multipliers are 1.0 or larger;
 /// no profile gets a SHORTER display duration than engine-base. The
@@ -55,8 +52,8 @@ const Duration kModalAlertDurationBase = Duration(seconds: 5);
 /// - `noviceUrban` (× 1.3) — explicit lengthening; less low-vis /
 ///   icy-road experience, so the read-and-process step takes longer.
 /// - `ageingRural`, `foreignTouristSnowZone` (× 1.5) — strong
-///   lengthening; ageingRural has age-related read-pace differences
-///   per JAF older-driver materials; foreignTouristSnowZone may be
+///   lengthening; ageingRural is meant to allow for slower reading
+///   (no source is cited); foreignTouristSnowZone may be
 ///   reading a non-native-language phrase under conditions they have
 ///   never trained for.
 const Map<DriverProfile, double> kModalAlertDurationMultiplierByProfile =
@@ -87,8 +84,9 @@ const Map<DriverProfile, double> kModalAlertDurationMultiplierByProfile =
 /// **Conservative-only**: integrators may dwell the alert LONGER than
 /// the returned duration if their HMI surface gives evidence of
 /// post-display benefit, but should not dwell SHORTER — the per-profile
-/// multiplier reflects the conservative read-and-process budget for
-/// the slowest reasonable case in that profile-class.
+/// multiplier is a recorded decision meant to allow a slower reader in
+/// that profile-class time to read the alert; it is not a measured
+/// read-and-process budget.
 ///
 /// **Severity-not-profile invariant preserved**: severity decides
 /// whether/what to display; profile only decides how long the display

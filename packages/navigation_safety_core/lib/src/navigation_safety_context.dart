@@ -131,10 +131,13 @@ class DrivingContext extends Equatable {
   /// Handles the dirty values real feeds deliver, caution-consistently:
   ///
   /// - `1.0 <= p <= 100.0` — converted to the fraction (`95.0` → `0.95`).
-  /// - `100.0 < p <= 105.0` — **saturated to `100.0`**: supersaturated RH
-  ///   slightly above 100% is a documented NWP/sensor reality at peak
-  ///   icing and freezing fog; saturated air = maximum caution, so the
-  ///   reading is kept, not crashed on.
+  /// - `100.0 < p <= 105.0` — **saturated to `100.0`**: a reading slightly
+  ///   above 100% is kept as saturated air rather than rejected, so a dirty
+  ///   feed does not crash the safety path (a recorded decision; no source
+  ///   is cited for when feeds deliver such readings). Saturated air is not
+  ///   the most cautious input here: at 100% RH the effective temperature
+  ///   equals ambient, so humidity adds the least lift (see README.md,
+  ///   "Humidity-dependent effective temperature").
   /// - `p <= 0.0` — treated as **unknown** (`humidityRH: null`): `0.0` is
   ///   a common missing-data sentinel; no lift, no crash.
   /// - `0.0 < p < 1.0` — **rejected** ([ArgumentError]): sub-1% RH is
@@ -171,7 +174,7 @@ class DrivingContext extends Equatable {
       if (p <= 0.0) {
         fraction = null; // missing-data sentinel -> unknown, no lift, no crash
       } else if (p > 100.0) {
-        fraction = 1.0; // supersaturation -> saturated air, maximum caution
+        fraction = 1.0; // supersaturation -> saturated air, kept rather than rejected
       } else {
         fraction = p / 100.0;
       }

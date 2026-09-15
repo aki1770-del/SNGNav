@@ -84,9 +84,10 @@ void main() {
       expect(t, closeTo(10.0, 1e-9));
     });
 
-    test('dry air (RH ≈ 0.5) at 20 °C — Magnus dew point ≈ 9.27 °C', () {
-      // Well-known Magnus result: at 20 °C, RH 50%, dew point ≈ 9.27 °C.
-      // depression ≈ 10.73; effective ≈ ambient - depression ≈ 9.27 °C.
+    test('dry air (RH ≈ 0.5) at 20 °C — Magnus dew point ≈ 9.26 °C', () {
+      // Magnus result with a = 17.625, b = 243.04: at 20 °C, RH 50%,
+      // dew point ≈ 9.26 °C.
+      // depression ≈ 10.74; effective ≈ ambient - depression ≈ 9.26 °C.
       // (effective = ambient - depression = ambient - (ambient - dewPoint)
       //  = dewPoint by construction.)
       final t = computeEffectiveTemperatureCelsius(

@@ -28,7 +28,7 @@
 **Honesty discipline at adapter boundary** (SOTIF-class operational discipline):
 - **Hazard announcements interrupt maneuver speech for safety priority** (`voice_guidance_bloc.dart` `_onHazardAnnounced`): a hazard line preempts a maneuver line, never the reverse — the driver hears the hazard before the routing detail.
 - **Min-announcement interval** (`VoiceGuidanceConfig.minAnnouncementIntervalSeconds`): the integrator's policy on cool-down between announcements is configurable at the boundary; the package does not invent a cool-down.
-- **Per-profile speaking-rate** (`VoiceGuidanceConfig.forProfile()` 0.4.0): tunes pace per `DriverProfile` so a foreign-tourist driver in unexpected snow hears the announcement at a pace they can act on, while an experienced snow-zone driver hears it at engine-base pace. Threshold layer (`navigation_safety_core`) ensures **arrives in time**; per-profile rate ensures **calm enough to act on** for the profile.
+- **Per-profile speaking-rate** (`VoiceGuidanceConfig.forProfile()` 0.4.0): tunes pace per `DriverProfile` so a foreign-tourist driver in unexpected snow hears the announcement at a pace they can act on, while an experienced snow-zone driver hears it at engine-base pace. Threshold layer (`navigation_safety_core`) is meant to make the alert **arrive in time**; per-profile rate is meant to make it **calm enough to act on** for the profile. Neither effect has been measured.
 - **Engine pluggability** (`TtsEngine` interface): production builds choose `FlutterTtsEngine` (mobile) or `LinuxTtsEngine` (desktop); CI / headless choose `NoOpTtsEngine` (silent). Engine choice is integrator-class; the package does not lock in a vendor.
 - **Rate clamping at engine boundary**: each engine clamps speaking-rate to its own sane range so a config-class out-of-range value cannot produce an unintelligible announcement.
 These five disciplines collectively form the package's SOTIF-class advisory-honesty posture.
@@ -63,7 +63,7 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are TTS engine method calls (audible channel) + BLoC state updates. The package emits no control signal, holds no actuator authority, exposes no API that closes a control loop. The driver hears the announcement; the driver decides response; the driver always drives.
-**Axis anchor**: per the unit's driver-sovereignty axis substrate — driver is subject not object. The voice arrives in time + makes sense + is calm enough to ignore safely; the driver decides what to do with the information. The pace differentiation (0.4.0) is about respect for cognitive-load differences across `DriverProfile`s, not about removing the driver's agency.
+**Axis anchor**: per the unit's driver-sovereignty axis substrate — driver is subject not object. The voice is meant to arrive in time and make sense; no announcement is safe to ignore, and the driver decides what to do with the information. The pace differentiation (0.4.0) is about respect for cognitive-load differences across `DriverProfile`s, not about removing the driver's agency.
 
 ## 8 — Driver-facing loom (D-VGC189-1)
 
@@ -72,9 +72,9 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 - HER hears the hazard announcement preempt a routing maneuver line — safety-priority interrupt is built into the BLoC's hazard handler.
 - HER hears arrival + deviation transitions at the same per-profile pace.
 
-**Sakichi reading**: the loom is *the announcer who matches HER hearing-pace, not who shouts at HER on a one-pace-fits-all schedule*. The pace differentiation closes the dignity gap that the threshold layer alone cannot close: earlier thresholds without matching speaking-pace can produce earlier-but-incomprehensible announcements for the slower-cognitive-load profiles, erasing the threshold-layer benefit. The loom restores the second half of the architectural anchor: *alert that arrives in time + makes sense + is calm enough to ignore safely*. With per-profile rate, the rate matches the profile; the announcement is calm enough to ignore safely if the conditions don't actually require action; it is fast enough for HER to act on if they do.
+**Sakichi reading**: the loom is *the announcer who matches HER hearing-pace, not who shouts at HER on a one-pace-fits-all schedule*. The pace differentiation is meant to let a driver who follows speech more slowly act on an earlier announcement; that effect has not been measured, and the per-profile rates are recorded decisions. A slower announcement is not one that is safe to ignore: the driver decides whether the conditions require action.
 
-**Audible-to-edge-developer**: integrator reading `VoiceGuidanceConfig.forProfile()` API today sees the profile-class differentiation surfaced explicitly + the per-profile multiplier table published in `kSpeakingRateMultiplierByProfile` + the rationale anchored on Strayer-AAA PMC7283540 in package documentation. Nothing patronizes the developer.
+**Audible-to-edge-developer**: integrator reading `VoiceGuidanceConfig.forProfile()` API today sees the profile-class differentiation surfaced explicitly + the per-profile multiplier table published in `kSpeakingRateMultiplierByProfile` + package documentation that states the multipliers are recorded decisions that no cited source gives. Nothing patronizes the developer.
 
 **Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `voice_guidance` 0.4.0. Subsequent versions update this field on material changes to the driver-experience surface (rate-axis extensions, new profile classes, voice-actor differentiation, etc.).
 
@@ -99,7 +99,7 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 
 **Composition with 0.4.0 per-profile rate**: the 0.4.0 axis tunes pace; the 0.5.0 axis tunes content + locale. Together: the foreign-tourist driver in unexpected snow hears the action-coupled English line at a slower pace; the experienced snow-zone driver hears the terse Japanese line at engine-base pace. Both axes are conservative-only: per-profile rate ≤ 1.0 for vulnerable profiles; action-coupled text never promises an outcome (advisory mood preserved per `AlertExplainer` source discipline).
 
-**Driver-always-drives preserved**: the explainer's action verbs are advisory (*"reduce", "avoid", "maintain", "if possible"*); speed numbers (30 km/h / 20 km/h) are published reference points, not system-enforced limits. The bloc speaks the line; the driver decides response.
+**Driver-always-drives preserved**: the explainer's action verbs are advisory (*"reduce", "avoid", "maintain", "if possible"*); speed numbers (30 km/h / 20 km/h) are advisory reference points chosen by the package, not system-enforced limits. The bloc speaks the line; the driver decides response.
 
 **Audible-to-edge-developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `profile` parameter — defaults to null preserving pre-0.5.0 back-compat. An integrator that supplies no profile sees the historical free-form `alertMessage` rendering. The 0.5.0 wiring is opt-in at the integrator's choice.
 
@@ -113,7 +113,7 @@ navigation state stream + alertCondition + driver profile (integrator)
 
 ## 8.2 — BudgetAwarePaceProfile driver-facing loom (new in 0.6.0)
 
-**Anchor**: NHTSA Phase 2 Driver Distraction Guidelines (NHTSA-2010-0053; widely cited 12-second total off-road glance budget per task; published-anchor consumed via `navigation_safety` 0.9.0 `GlanceBudgetTracker`).
+**Anchor**: the 12-second off-road glance budget of `navigation_safety` 0.9.0 `GlanceBudgetTracker`, taken from "Visual-Manual NHTSA Driver Distraction Guidelines for In-Vehicle Electronic Devices" (78 FR 24818, 2013; docket NHTSA-2010-0053), the first phase of NHTSA's "nonbinding, voluntary" guidelines, which recommend "a cumulative time spent glancing away from the roadway of 12 seconds or less" for a visual-manual task. They do not cover auditory-vocal tasks; slowing speech as that budget is consumed is this package's decision.
 
 **Operational discipline**: *when the cumulative off-road glance budget is consumed, voice announcements slow down so the driver hears the line at a pace they can act on under elevated cognitive load. The pace adjustment composes with the per-profile baseline rate; it never speeds up speech.*
 
@@ -147,14 +147,21 @@ channel adds no functional-safety scope. It renders a tactile cue beside the
 audio hazard announcement; the driver feels it, the driver decides. No
 actuator authority, no control loop, no automation.
 
-**Why it exists** — the audio channel is not a universal channel. A deaf or
-hard-of-hearing driver receives nothing from an audio-only hazard warning,
-and neither does a hearing driver inside a roaring-wind whiteout where speech
-cannot carry. The tactile channel carries the **same hazard warning** off the
-**same severity gate**, so the driver who cannot hear is not silently served a
-lesser warning. Grounded in the recorded deaf / hard-of-hearing driver voice
-(`DRIVER_VOICES.md`: SafeDrive4Deaf n=25/100%, Bauman 2009, Gaffary & Lécuyer
-2018).
+**Why it exists** — the audio channel is not a universal channel. A deaf
+driver receives nothing from an audio-only hazard warning, and a
+hard-of-hearing driver may not hear it. A driver with hearing loss writes, "I
+use my eyes when I drive" (Neil Bauman, "Driving Safely with Hearing Loss",
+*Hearing Health*, 2009). In SafeDrive4Deaf, a study of 25 deaf and hard-of-hearing
+drivers, "All participants (100%) reported difficulties in detecting
+approaching emergency vehicles" (*Nafath*, Mada). A review of in-car haptic
+and tactile information (Gaffary and Lécuyer, *Frontiers in ICT*, 2018)
+relays a finding that the improvement from tactile feedback was "more visible
+with people with hearing loss, not able to hear instructions from GPS
+navigation systems". None of these sources is about snow or wind: that a
+hearing driver inside a roaring-wind whiteout may not hear speech is this
+record's own reasoning. The tactile channel carries the **same hazard
+warning** off the **same severity gate**, so the driver who cannot hear is
+not silently served a lesser warning.
 
 **Same-gate / set-parity invariant** (load-bearing, locked by test): the
 haptic cue is derived from the hazard event's `AlertSeverity` via the pure
@@ -231,8 +238,6 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 - D-VGC188-1 / D-VGC188-2 (driver-sovereignty axis + 5-test framework)
 - AAA bylaws Article 17 (β) safe-default boundary
 - Composition: `navigation_safety_core` 0.7.0 SAFETY_BOUNDARY.md §6 (severity-not-profile invariant verbatim) + `navigation_safety_core` `assertUxDifferentiated()` activated 0.7.0 (the runtime hook this package's `voice_guidance:speakingRate` tag answers to)
-- Strayer-AAA auditory-load study (PubMed Central PMC7283540) — per-profile-rate multiplier anchor
-- Bian et al PubMed 38669900 — format-mismatch erases earlier-alert benefit anchor
 
 ---
 

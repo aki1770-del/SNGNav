@@ -279,8 +279,9 @@ earlier); the magnitudes have known calibration issues:
 
 - **`ageingRural infoTemperatureCelsius`**: 0.2.0 set this at 5°C
   (+2°C over standard). Combined with `infoVisibilityMeters` at 1500m,
-  this fires the "info" tier on most autumn evenings in Hokkaido /
-  Tohoku — an alert-fatigue risk. In a driving-simulator study of a
+  5°C was judged to fire the "info" tier too often on autumn evenings
+  in Hokkaido / Tohoku, an alert-fatigue risk; how often it fires has
+  not been measured. In a driving-simulator study of a
   pedestrian-crossing alert system
   ([arxiv 2410.06388](https://arxiv.org/html/2410.06388)), "Seven
   participants indicated that repeated false alarms reduced their
@@ -288,14 +289,15 @@ earlier); the magnitudes have known calibration issues:
   ignoring subsequent warnings altogether." That study compared alert
   modalities and false alarms, not the rate of alerts about a real
   condition. **0.3.0 lowers to 4°C**, a recorded decision, to keep the
-  information tier without firing on routine autumn evenings.
+  information tier while firing it in fewer conditions.
 
 ### Unverifiable (kept at 0.2.0 values)
 
 - **`safeScoreFloor` / `infoScoreFloor` / `warningScoreFloor` shifts**
   per profile (+0.05 on all three for ageingRural; +0.05, +0.05 and
-  +0.02 for noviceUrban) — no published mapping exists between
-  numerical safety scores and reaction-time / cognitive-load deltas.
+  +0.02 for noviceUrban) — this package cites no published mapping
+  between numerical safety scores and reaction-time / cognitive-load
+  deltas.
   Score floors stay at 0.2.0 values pending evidence that justifies a
   specific magnitude.
 
@@ -373,8 +375,8 @@ If you are an app developer integrating `navigation_safety_core`:
    the substrate provides usable per-profile differentiation; the
    threshold direction is correct even where magnitudes are imperfect.
 2. **Pin the patch version**, not the minor version, if you need
-   stability. Threshold magnitudes are still being calibrated per
-   ongoing literature review; minor versions may adjust them.
+   stability. Threshold magnitudes are recorded decisions, not
+   field-validated; minor versions may adjust them.
 3. **If you serve a driver-class that none of the six profiles
    fits**, fall back to `DriverProfile.snowZoneExperienced` (the
    standard default) and document the mapping in your own integration

@@ -63,8 +63,10 @@ import 'driver_profile.dart';
 ///    it is `AlertSeverity.critical`. Queued post-cap alerts deliver
 ///    stale information about a now-passed condition.
 /// 3. Critical bypass: see invariant above.
-/// 4. Cold-start: the first alert in a session bypasses the window
-///    check (no historical context to throttle against).
+/// 4. Cold-start: an alert that finds the rolling window empty bypasses
+///    the window check, whatever its severity: the first alert in a
+///    session, and any alert after the window has emptied (no recent
+///    firing to throttle against).
 /// 5. Profile-switch: the rolling window resets when a fresh
 ///    `forProfile` instance is constructed. Carrying the previous
 ///    profile's window into a more conservative one would over-
@@ -191,9 +193,13 @@ class AlertDensityThrottle {
   /// the firing timestamp (criticals do consume window slots — they
   /// represent real driver-attention events).
   ///
-  /// Cold-start: the first call to this method in a session bypasses
-  /// the window check (no historical context to throttle against). The
-  /// firing timestamp is still recorded.
+  /// Cold-start: when the rolling window is empty after the purge (the
+  /// first call in a session, or any call after the window has
+  /// emptied), this returns true without the window check, whatever
+  /// [severity] is. The firing timestamp is still recorded. The
+  /// constructor refuses a cap that is not greater than 0, so an empty
+  /// window would pass the cap check as well: this path changes no
+  /// firing decision.
   bool shouldFire(DateTime now, AlertSeverity severity) {
     // Purge entries at or before `now - window` before any evaluation.
     final cutoff = now.subtract(window);
@@ -201,7 +207,8 @@ class AlertDensityThrottle {
       (t) => t.isBefore(cutoff) || t.isAtSameMomentAs(cutoff),
     );
 
-    // Cold-start: first alert in session bypasses window check.
+    // Cold-start: an empty window (first alert in a session, or after the
+    // window has emptied) bypasses the window check.
     if (_firedAt.isEmpty) {
       _firedAt.add(now);
       return true;

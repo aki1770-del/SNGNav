@@ -1,8 +1,9 @@
 /// Surface-moisture exponential-decay formula.
 ///
 /// After precipitation ends, surface moisture evaporates over time.
-/// The decay is well-modelled by an exponential with an
-/// evaporation half-life that depends on ambient temperature, surface
+/// This helper models the decay as an exponential with an evaporation
+/// half-life (a recorded modelling decision; no source is cited for
+/// the shape). Drying time varies with ambient temperature, surface
 /// material, wind, sun exposure, and shade.
 ///
 /// This helper returns a moisture fraction in `[0.0, 1.0]` where 1.0
@@ -13,23 +14,19 @@
 /// moistureFraction = exp(-ln(2) * t / halfLife)
 /// ```
 ///
-/// Default half-life is 90 minutes — a deliberately conservative
-/// choice biased toward "still wet" so the consuming app warns longer
-/// rather than shorter on residual surface moisture. Most road
-/// surfaces dry faster than 90 minutes under sun and wind; some dry
-/// slower (shaded, cold, low-wind environments). Consumers with
-/// telemetry that informs a more accurate half-life should override.
+/// Default half-life is 90 minutes, a recorded decision. A longer
+/// half-life keeps the fraction higher for longer; no source is cited
+/// showing that 90 minutes is conservative, and how long a road stays
+/// wet has not been measured here. Consumers with telemetry that
+/// informs a more accurate half-life should override.
 ///
 /// Citations:
 ///
-/// - **Exponential surface-moisture decay** — UNVERIFIED specific
-///   cite. The exponential-decay shape is the standard
-///   first-order-evaporation model used in pavement-engineering and
-///   atmospheric-science references; the 90-minute default is
-///   conservative rather than population-validated.
-/// - **Half-life dependence on ambient conditions** — well-documented
-///   qualitative dependency on temperature, wind, and solar load; no
-///   single published number captures every road context.
+/// - **Exponential surface-moisture decay** — no source is cited for
+///   the exponential shape or for the 90-minute default; both are
+///   recorded decisions, not population-validated.
+/// - **Half-life dependence on ambient conditions** — no source is
+///   cited here; no single number fits every road context.
 ///
 /// The [ambientCelsius] parameter is accepted for forward-compatible
 /// API shape (a future revision may modulate the half-life by
@@ -44,7 +41,8 @@ import 'dart:math' as math;
 ///
 /// Returns a value in `[0.0, 1.0]`: `1.0` immediately after
 /// precipitation; decays exponentially with the supplied
-/// [evaporationHalfLifeMinutes] (default 90 minutes — conservative).
+/// [evaporationHalfLifeMinutes] (default 90 minutes, a recorded
+/// decision).
 ///
 /// [ambientCelsius] is accepted for forward-compatible API shape; it
 /// is not currently used in the formula but allows a future revision

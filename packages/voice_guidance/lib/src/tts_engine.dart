@@ -45,14 +45,12 @@ abstract class TtsEngine {
   /// rate scale; the default base rate is `1.0` (engine-default).
   /// Implementations clamp the value to a sensible per-engine range.
   ///
-  /// **Driver-facing rationale**: a Japanese announcer's standard
-  /// pace is too fast for an older rural driver and a foreign-tourist
-  /// driver in unexpected snow; per-profile rate lets each driver
-  /// hear the line at a pace they can act on. The
+  /// **Driver-facing rationale**: per-profile rate is meant to let an
+  /// older rural driver and a foreign-tourist driver in unexpected snow
+  /// hear the line at a pace they can act on (effect not measured). The
   /// `VoiceGuidanceConfig.speakingRateForProfile()` helper returns
-  /// per-profile rate multipliers anchored on the Strayer-AAA
-  /// auditory-load study (PMC7283540) and the package's published
-  /// per-profile threshold differentiation.
+  /// per-profile rate multipliers that are recorded decisions; no source
+  /// cited gives them.
   Future<void> setSpeechRate(double rate);
 
   /// Speaks the provided text.

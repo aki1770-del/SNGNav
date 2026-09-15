@@ -1,12 +1,15 @@
 /// Off-road-glance budget tracker for advisory cognitive-load management.
 ///
-/// Why this exists (literature anchor):
+/// Why this exists (anchor):
 ///
-/// NHTSA Phase 2 Driver Distraction Guidelines (NHTSA-2010-0053; widely
-/// cited operational anchor) describe a 12-second total off-road glance
-/// budget for any single driver task — the cumulative time the driver's
-/// eyes may leave the forward roadway across a sequence of glances
-/// before the task is judged distraction-class. This tracker exposes
+/// "Visual-Manual NHTSA Driver Distraction Guidelines for In-Vehicle
+/// Electronic Devices" (78 FR 24818, 2013; docket NHTSA-2010-0053), the
+/// first phase of NHTSA's "nonbinding, voluntary" guidelines, recommend
+/// that devices be designed so that tasks can be completed with "a
+/// cumulative time spent glancing away from the roadway of 12 seconds
+/// or less". They cover visual-manual tasks, not auditory-vocal ones.
+/// Using that per-task figure as this tracker's budget is this
+/// package's decision. This tracker exposes
 /// the budget at the integrator-package boundary so apps can render a
 /// budget indicator, modulate voice-guidance pace, or escalate
 /// advisories as the budget approaches exhaustion.
@@ -39,8 +42,8 @@
 /// driver-facing surface or vehicle state.
 ///
 /// **Driver-facing loom**: the driver receives an indication when
-/// cumulative off-road glance time approaches the published NHTSA
-/// budget so attention can return to the road before the budget is
+/// cumulative off-road glance time approaches the 12-second budget so
+/// attention can return to the road before the budget is
 /// exhausted. The driver-experience surface for the warning belongs
 /// to the integrator HMI; this package supplies the substrate.
 ///
@@ -72,7 +75,8 @@ import 'package:equatable/equatable.dart';
 /// Modal class of an off-road glance event.
 ///
 /// Informational at v1: the budget pool is shared across modal classes
-/// per the NHTSA Phase 2 12-second total. Per-modal-class sub-budgets
+/// (this package's decision; NHTSA's 12-second figure is for visual-manual
+/// tasks). Per-modal-class sub-budgets
 /// can graduate in v2 when field evidence supports differentiation.
 enum GlanceModalClass {
   /// Glance away from the road for visual task (e.g. reading a label
@@ -112,14 +116,16 @@ enum BudgetResetReason {
 /// Configuration for the NHTSA-anchored 12-second off-road glance
 /// budget. Per-modal-class tunable; default 4s + 4s + 4s = 12s total.
 ///
-/// **Anchor**: NHTSA Phase 2 Driver Distraction Guidelines (12-second
-/// total off-road glance budget). The 12-second total is published-
-/// anchor; the equal 4-4-4 modal-class split is a design-default
-/// (UNVERIFIED-magnitude pending field-evidence on whether visual /
-/// cognitive / manual sub-budgets warrant differentiation).
+/// **Anchor**: the 12-second figure is NHTSA's cumulative glance-away
+/// criterion for a visual-manual task in the first phase of its
+/// nonbinding, voluntary Driver Distraction Guidelines (78 FR 24818,
+/// 2013). Applying it to cognitive and manual events, and the equal
+/// 4-4-4 modal-class split, are design-defaults (UNVERIFIED-magnitude
+/// pending field-evidence on whether visual / cognitive / manual
+/// sub-budgets warrant differentiation).
 class NHTSAGlanceBudgetConfig extends Equatable {
-  /// Total off-road glance budget per task. Default 12 seconds per
-  /// NHTSA Phase 2.
+  /// Total off-road glance budget. Default 12 seconds, NHTSA's per-task
+  /// criterion for visual-manual tasks (first phase).
   final Duration totalBudget;
 
   /// Per-modal-class sub-budget. At v1 the tracker pools all events

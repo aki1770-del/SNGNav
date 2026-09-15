@@ -6,7 +6,7 @@
 ///
 /// - [computeSurfaceMoistureFraction] — exponential surface-moisture
 ///   decay after a precipitation event ends (default 90-minute
-///   half-life; conservative; accepts ambient temperature for
+///   half-life, a recorded decision; accepts ambient temperature for
 ///   forward-compatible API shape).
 /// - [computeEffectiveTemperatureCelsius] — Magnus-formula dew-point
 ///   computation and an effective road-surface temperature for

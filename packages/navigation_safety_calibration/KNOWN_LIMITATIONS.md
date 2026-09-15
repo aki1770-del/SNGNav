@@ -1,9 +1,11 @@
 # Known limitations
 
 This document lists known limitations of the three calibration
-primitives shipped in `navigation_safety_calibration` 0.1.0, with
-citations to public sources, so that consumers can integrate with
-eyes open and contribute corrections from informed positions.
+primitives shipped in `navigation_safety_calibration` 0.1.0. It names
+the public sources that show what they are cited for, and says where a
+value is a recorded decision that no cited source gives, so that
+consumers can integrate with eyes open and contribute corrections from
+informed positions.
 
 The list is honest by intent — surfacing what we don't yet know
 rather than letting silent gaps reach drivers.
@@ -14,17 +16,22 @@ rather than letting silent gaps reach drivers.
 
 ### What is UNVERIFIED at 0.1.0
 
-- **90-minute default half-life.** The exponential-decay shape is the
-  standard first-order-evaporation model used in pavement-engineering
-  and atmospheric-science references. The 90-minute default is
-  conservative-by-design rather than population-validated for any
-  particular climate, surface material, sun exposure, or wind
-  condition. Most road surfaces dry faster than 90 minutes under sun
-  and wind; some dry slower (shaded, cold, low-wind environments).
-- **Half-life dependence on ambient conditions.** The qualitative
-  dependency on temperature, wind, and solar load is well-documented
-  in pavement-engineering literature; no single published number
-  captures every road context. The current API accepts
+- **90-minute default half-life.** The exponential-decay shape and the
+  90-minute default are recorded decisions; no source is cited for
+  either, and neither is population-validated for any particular
+  climate, surface material, sun exposure, or wind condition. A longer
+  half-life keeps the moisture fraction higher for longer; no source is
+  cited showing that 90 minutes is conservative. Published
+  urban-surface evaporation work
+  ([PMC7917919](https://pmc.ncbi.nlm.nih.gov/articles/PMC7917919/))
+  reports that the "water content of the concrete layer had been in the
+  peak for a few days after the rain"; it publishes no half-life for
+  residual moisture on a road surface and does not describe drying as
+  exponential.
+- **Half-life dependence on ambient conditions.** PMC7917919 names
+  "wind speed, net radiation" among the "other meteorological factors
+  that affect the evaporation process"; no source cited here gives a
+  half-life for any road context. The current API accepts
   `evaporationHalfLifeMinutes` so consumers with telemetry can
   override the default toward a population-fitted value.
 - **`ambientCelsius` parameter is not yet used.** The parameter is
@@ -41,8 +48,8 @@ rather than letting silent gaps reach drivers.
   dominates the moisture budget; the exponential model fits
   evaporation, not melt-freeze cycling.
 - Any safety-critical decision that would treat a low moisture
-  fraction as "definitely dry"; the value is a
-  conservative-bias-toward-still-wet indicator, not a measurement.
+  fraction as "definitely dry"; the value is a modelled indicator
+  from a recorded-decision half-life, not a measurement.
 
 ---
 
@@ -50,31 +57,39 @@ rather than letting silent gaps reach drivers.
 
 ### What is verified at 0.1.0
 
-- **Magnus formula constants.** `a = 17.625`, `b = 243.04 °C` follow
-  the modern August-Roche-Magnus parameterisation documented in
-  Alduchov & Eskridge (1996), the standard reference for this
-  parameterisation in atmospheric-science literature.
+- **Magnus formula constants.** `a = 17.625`, `b = 243.04 °C` are the
+  constants Alduchov & Eskridge give for their AEKR Magnus-form
+  approximation ("Improved Magnus Form Approximation of Saturation Vapor
+  Pressure", Journal of Applied Meteorology, 1996).
 
 ### What is UNVERIFIED at 0.1.0
 
 - **Effective road-surface temperature approximation.** The function
   approximates effective surface temperature as
-  `ambient - dew_point_depression`. Real road-surface temperature
-  depends on emissivity, sky cloud cover, surface material,
-  time-of-night, wind, and solar loading; the approximation is
-  conservative-by-design (biased toward earlier frost-risk warning)
-  rather than measured. Consumers should treat the output as a
-  frost-risk indicator rather than a measured surface temperature.
+  `ambient - dew_point_depression`, which equals the dew point. Real
+  road-surface temperature depends on emissivity, sky cloud cover,
+  surface material, time-of-night, wind, and solar loading; the
+  approximation is a recorded modelling decision, not measured. In
+  unsaturated air the estimate is below ambient, so a frost-risk test
+  on it can fire while the air is above 0 °C; in saturated air it
+  equals ambient. No source cited here compares it with a measured
+  road surface. Consumers should treat the output as a frost-risk
+  indicator rather than a measured surface temperature.
 - **Magnitude of nighttime radiative cooling vs. ambient under varied
-  cloud cover.** Well-documented qualitatively in surface-meteorology
-  references; no single magnitude captures every road context.
+  cloud cover.** No magnitude is cited. The University of Washington
+  roadway-icing tutorial
+  ([Roadway Icing and Weather tutorial, U. Washington](https://www.atmos.washington.edu/~cliff/Roadway3.html))
+  says frost "tends to occur on cold, relatively clear nights when
+  wind speeds are low" and that on such nights "temperature at ground
+  level can be 2-5F cooler than air temperature only a few feet
+  above"; no single magnitude fits every road context.
 
 ### Bounded validity range
 
-The Magnus parameterisation `a = 17.625`, `b = 243.04 °C` is
-documented as accurate over the temperature range typical of
-near-surface meteorology (roughly −40 °C to +50 °C ambient). Outside
-that range, dew-point error grows; the function does not enforce a
+Alduchov & Eskridge compared the accuracy of their approximations,
+this one included, over −40 °C to +50 °C, and note that the largest
+relative errors usually occur at the end points of that range. This
+record cites no evaluation outside it. The function does not enforce a
 range check and consumers should clamp inputs to plausible ambient
 ranges before feeding the helper.
 
@@ -82,27 +97,35 @@ ranges before feeding the helper.
 
 ## Speed-adjusted visibility floor (`computeSpeedAdjustedVisibilityMeters`)
 
-### What is anchored to literature
+### What the cited sources show, and what they do not
 
-- **Hazard-perception reaction time for novice vs experienced
-  drivers.** Novice 3.58 s, experienced 1.32 s, per
-  [PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/).
-- **Trait-state framing of reaction time.** Regan, Hallett & Gordon
-  2011 ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
-  distinguishes trait reaction-time (driver class) from state
-  reaction-time (drowsy / distracted). The `driverReactionTimeSeconds`
-  parameter encodes the trait axis; consumers passing a state-aware
-  value should compose the two axes themselves.
+- **Reaction times.** No source cited here gives any of the per-profile
+  reaction times in seconds; all six are recorded decisions. Sagberg
+  and Bjørnskau 2006
+  ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)), whose
+  abstract gives no reaction times in seconds, found that average
+  hazard-perception reaction times "tended to decrease with
+  experience, but the decrease was not significant", with "some
+  significant differences in the expected direction for individual
+  test items".
+- **Trait and state.** The trait/state split of reaction time is this
+  package's design. Regan and Strayer 2014
+  ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
+  list driver conditions (e.g. young, inexperienced, old) and driver
+  states (e.g. bored, sleepy, fatigued, drugged, emotional) as factors
+  in driver inattention; they give no reaction times. The
+  `driverReactionTimeSeconds` parameter encodes the trait axis;
+  consumers passing a state-aware value should compose the two axes
+  themselves.
 
 ### What is UNVERIFIED at 0.1.0
 
-- **Per-profile reaction-time defaults.** The
-  `snowZoneExperienced` ≈ 1.8 s, `professional` ≈ 1.5 s,
-  `agriculturalForestry` ≈ 2.0 s, and `foreignTouristSnowZone` ≈ 3.5 s
-  values cited in the docstring are reasonable engineering anchors
-  pending field-measurement validation; they are conservative
-  relative to the 1.32 s experienced anchor and are explicitly
-  marked UNVERIFIED in the source.
+- **Per-profile reaction-time defaults.** The `ageingRural` ≈ 2.5 s,
+  `noviceUrban` ≈ 3.58 s, `snowZoneExperienced` ≈ 1.8 s,
+  `professional` ≈ 1.5 s, `agriculturalForestry` ≈ 2.0 s, and
+  `foreignTouristSnowZone` ≈ 3.5 s values in the docstring are recorded
+  decisions pending field-measurement validation; no source cited here
+  gives any of them.
 - **Default braking deceleration of 5.5 m/s².** A typical
   passenger-car dry-pavement value; surface friction coefficient is
   the dominant variable. For snow / ice surfaces consumers should
@@ -139,14 +162,14 @@ composed with the broader threshold model should use
 ## How to contribute corrections
 
 If you have field-measurement data for any of the UNVERIFIED magnitudes
-above (population study mapping hour-of-day to reaction-time
-multiplier; pavement-evaporation half-life by climate band; per-class
-braking deceleration on snow / ice surfaces), please open an issue at
+above (per-profile reaction times; pavement-evaporation half-life by
+climate band; per-class braking deceleration on snow / ice surfaces),
+please open an issue at
 <https://github.com/aki1770-del/SNGNav/issues>.
 
-Citations to a published source are sufficient; a fleet-data PR with
-methodology disclosure is welcome. The caution-add-only contract is
-load-bearing: any contribution that would let the per-profile
-visibility floor lower, or shorten the moisture half-life beyond the
-conservative-by-design 90-minute anchor, must include independent
-field validation.
+A published source that shows the value is sufficient; a fleet-data PR
+with methodology disclosure is welcome. The caution-add-only contract
+is load-bearing: any contribution that would let the per-profile
+visibility floor lower, or shorten the moisture half-life below the
+90-minute recorded default, must include independent field
+validation.

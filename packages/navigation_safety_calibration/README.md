@@ -11,8 +11,9 @@ larger core-package surface area or its transitive dependencies.
 
 - `computeSurfaceMoistureFraction` — exponential surface-moisture
   decay after a precipitation event ends. Default 90-minute half-life
-  is conservative (biased toward "still wet"); accepts ambient
-  temperature for forward-compatible API shape.
+  (a recorded decision; a longer half-life keeps the fraction higher
+  for longer); accepts ambient temperature for forward-compatible API
+  shape.
 - `computeEffectiveTemperatureCelsius` — Magnus formula dew-point
   computation and an effective road-surface temperature for
   frost-risk reasoning. Constants `a = 17.625` / `b = 243.04 °C` per
@@ -102,7 +103,7 @@ change imports.
 The three primitives are **engineering heuristics**, not measured
 ground truth. See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) for
 the explicit bounded-validity discussion (Magnus formula validity
-range; decay coefficient empirical anchor; visibility heuristic
+range; decay half-life as a recorded decision; visibility heuristic
 single-axis approximation; when NOT to use). The caution-add-only
 invariant is preserved across all three primitives — they may make
 warnings fire earlier but never later than baseline.

@@ -82,8 +82,9 @@ void main() {
 
     test('dirty live-feed values are handled caution-consistently, '
         'never crashing the safety path', () {
-      // Supersaturated RH (documented NWP/sensor reality at peak icing and
-      // freezing fog — the worst case) saturates to 100%, never throws.
+      // Supersaturated RH readings (100%, 105%] saturate to 100% and never
+      // throw (a recorded decision; no source is cited for when feeds send
+      // them).
       for (final p in [100.1, 101.5, 105.0]) {
         final ctx = DrivingContext.withPercentHumidity(humidityPercent: p);
         expect(

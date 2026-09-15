@@ -1,10 +1,10 @@
 /// Humidity-dependent effective-temperature formula.
 ///
-/// Black ice can form on a road surface when the ambient air is
-/// several degrees above 0°C: clear-sky radiative cooling at night
-/// drops the road-surface temperature toward the dew point, and any
-/// surface moisture that reaches the dew point freezes. A naive
-/// "warn below 0°C ambient" threshold misses this window.
+/// Black ice can form on a road surface while the air is above 0°C:
+/// radiative cooling "can cause frost or black ice to form on surfaces
+/// exposed to the clear night sky, even when the ambient temperature
+/// does not fall below freezing" (Wikipedia, "Radiative cooling"). A
+/// naive "warn below 0°C ambient" threshold misses this window.
 ///
 /// This helper estimates an effective road-surface temperature for
 /// frost-risk reasoning by subtracting the dew-point depression from
@@ -21,7 +21,8 @@
 /// `T - dew_point`, always non-negative for `RH` in `[0, 1]`.
 ///
 /// Effective road-surface temperature is approximated as
-/// `ambient - depression`. The approximation is conservative: real
+/// `ambient - depression`, which equals the dew point: a recorded
+/// modelling decision, not measured. Real
 /// road-surface temperature depends on emissivity, sky cloud cover,
 /// surface material, and time-of-night. UNVERIFIED for any specific
 /// surface; consumers should treat the output as a frost-risk indicator
@@ -29,15 +30,21 @@
 ///
 /// Citations:
 ///
-/// - **Magnus formula** — Magnus, G. (1844); the modern parameter
-///   constants `a = 17.625`, `b = 243.04 °C` are documented in standard
-///   atmospheric-science references (Alduchov & Eskridge 1996).
-/// - **Black-ice formation envelope** — well-documented at road
-///   surface temperatures ≤ 0 °C even when ambient air is several
-///   degrees warmer ([Wikipedia black ice](https://en.wikipedia.org/wiki/Black_ice)).
+/// - **Magnus formula** — Magnus, G. (1844), as Alduchov & Eskridge
+///   relay it; the modern parameter constants `a = 17.625`,
+///   `b = 243.04 °C` are documented in Alduchov & Eskridge 1996.
+/// - **Black-ice formation envelope** — black ice "may form even when
+///   the ambient temperature is several degrees above the freezing
+///   point" if the air warms suddenly after a prolonged cold spell has
+///   left the road surface well below freezing
+///   ([Wikipedia black ice](https://en.wikipedia.org/wiki/Black_ice)).
+///   Radiative cooling can form black ice on surfaces under a clear
+///   night sky while the air is above freezing
+///   ([Wikipedia radiative cooling](https://en.wikipedia.org/wiki/Radiative_cooling)).
 /// - **Road-surface radiative cooling** — UNVERIFIED specific cite for
 ///   the magnitude of nighttime cooling vs. ambient under varied
-///   cloud cover; this helper returns a conservative estimate.
+///   cloud cover. No source cited here shows how this helper's
+///   estimate compares with a measured road surface.
 library;
 
 import 'dart:math' as math;
@@ -50,8 +57,9 @@ const double _magnusB = 243.04;
 ///
 /// Subtracts the dew-point depression (computed via the Magnus formula
 /// from [ambientCelsius] and [humidityRH]) from the ambient
-/// temperature. Returns a conservative estimate of the temperature a
-/// road surface may reach during clear-sky nighttime radiative cooling.
+/// temperature. Returns the dew point as an estimate of the temperature
+/// a road surface may reach during clear-sky nighttime radiative
+/// cooling (a recorded modelling decision, not measured).
 ///
 /// [humidityRH] must lie in `(0.0, 1.0]`. A value of `0.0` is rejected
 /// because `ln(0)` is undefined; pass a small positive value (e.g.
@@ -81,13 +89,15 @@ double computeEffectiveTemperatureCelsius({
 
 /// Ambient-air ceiling for the radiative-frost black-ice condition, °C.
 ///
-/// The calibration's documented envelope is black ice forming when the
-/// ambient air is "several degrees above 0 °C" (clear-sky radiative
-/// cooling drops the road surface toward the dew point). The dew-point
-/// test ALONE has no such bound and would fire on benign dry afternoons
-/// (probe-measured: 20 °C at 25 % RH) — cry-wolf that discredits the
-/// warning before the genuine near-zero morning. This ceiling keeps the
-/// classification inside the physics the calibration documents.
+/// No source cited in this file gives a ceiling: Wikipedia's "Radiative
+/// cooling" gives no magnitude, and its "Black ice" gives "several
+/// degrees above the freezing point" only if the air warms suddenly after
+/// a prolonged cold spell has left the road surface well below freezing.
+/// The 3.0 °C ceiling is a recorded decision. The
+/// dew-point test ALONE has no such bound and would fire on benign dry
+/// afternoons (probe-measured: 20 °C at 25 % RH) — cry-wolf that
+/// discredits the warning before the genuine near-zero morning. This
+/// ceiling bounds the classification to near-zero ambient air.
 const double radiativeFrostAmbientCeilingCelsius = 3.0;
 
 /// Effective road-surface temperature at or below which the radiative-frost
@@ -96,12 +106,13 @@ const double radiativeFrostSurfaceTempCelsius = 0.0;
 
 /// Single source of truth for the radiative-frost black-ice classification.
 ///
-/// Black ice can form with NO precipitation and with the ambient air a few
-/// degrees ABOVE 0 °C — the clear-sky-radiative-cooling window that a naive
+/// Black ice can form with NO precipitation and with the ambient air
+/// ABOVE 0 °C — the clear-sky-radiative-cooling window that a naive
 /// "warn below 0 °C ambient" (or "ice only when it is precipitating") check
 /// silently drops. This is the exact Akita pre-dawn bridge-deck hazard: the
-/// road surface radiatively cools toward the dew point and any surface
-/// moisture freezes while the air still reads +1…+3 °C.
+/// road surface radiatively cools below 0 °C while the air still reads
+/// above it (this model flags ambient air up to 3.0 °C, a recorded
+/// decision).
 ///
 /// **Mechanism + honest scope.** This is a dew-point-depression model
 /// (`effective` == the dew point), so it fires when the dew point is at or
@@ -117,8 +128,9 @@ const double radiativeFrostSurfaceTempCelsius = 0.0;
 /// Returns `true` when [ambientCelsius] is within
 /// [radiativeFrostAmbientCeilingCelsius] AND the Magnus-formula effective
 /// road-surface temperature (see [computeEffectiveTemperatureCelsius], which
-/// returns a CONSERVATIVE estimate — read its citations + UNVERIFIED-magnitude
-/// caveat) is at or below [radiativeFrostSurfaceTempCelsius].
+/// returns the dew point as a modelled estimate — read its citations +
+/// UNVERIFIED-magnitude caveat) is at or below
+/// [radiativeFrostSurfaceTempCelsius].
 ///
 /// **Why this exists as ONE function.** The pre-trip briefing and the
 /// in-drive road-surface classifier must never disagree about black ice: a

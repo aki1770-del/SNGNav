@@ -37,7 +37,7 @@ Your name appears in `CHANGELOG.md` and in the SNGNav safety argument document.
 | S-035 | Slope aspect shadow (ice in shade) | `slopeAspectIceRisk` (0.0–1.0) | medium |
 | S-041 | Wet-bridge microclimate | `microclimateBridgeRisk` (0.0–1.0) | medium |
 | S-047 | Crosswind severity at highway speed | `crosswindRisk` (0.0–1.0) | medium |
-| S-051 | Low-vision accessibility contrast | `contrastRatio` (0.0–1.0, WCAG AA = 0.21) | hard |
+| S-051 | Low-vision accessibility contrast | `contrastRatio` (0.0–1.0; WCAG 2.2 AA asks for a contrast ratio of at least 4.5:1, on its 1–21 scale) | hard |
 | S-058 | Right-to-left locale alert rendering | locale string support in `SafetyOverlay` | hard |
 
 ## SOTIF boundary reminder

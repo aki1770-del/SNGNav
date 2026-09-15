@@ -161,7 +161,7 @@ what state the driver is in right now. The two are independent inputs
 to threshold tuning. State adjustments at 0.6.0 are intentionally
 small — the API shape is stable; the magnitudes are flagged
 UNVERIFIED in [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) pending
-state-axis literature anchoring.
+state-axis calibration.
 
 Two runtime helpers ship alongside the threshold config:
 
@@ -220,8 +220,9 @@ not need a separate import:
   fraction adds a margin to the visibility floor proportional to
   how wet the road still is.
 
-Per-formula citations live in each calibration source file's header
-comment in the `navigation_safety_calibration` package.
+Each calibration source file's header comment in the
+`navigation_safety_calibration` package names the sources cited for its
+formula and states which of its values are recorded decisions.
 
 **Determinism note (safety-class).** These constants are the
 design-default baseline the driver relies on (Magnus black-ice constants; the

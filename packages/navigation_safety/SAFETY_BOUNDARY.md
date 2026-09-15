@@ -47,16 +47,16 @@
 ## 7 — Driver-always-drives invariant
 
 **Status**: **applies in scope by design** per D-VGC188-1.
-**Concrete reasoning**: `NavigationBloc` emits state transitions consumed by the integrator HMI. The bloc holds no actuator authority; the driver hears / sees the alert and decides response. The 0.8.0 explainer integration replaces the free-form `message` string with the per-(condition, profile) action string when both are supplied — the action vocabulary remains advisory-mood (per `AlertExplainer` source: *"Action verbs are advisory ('reduce' / 'avoid' / 'maintain'), never imperative-on-control"*), and speed numbers remain published reference points, not system-enforced limits.
+**Concrete reasoning**: `NavigationBloc` emits state transitions consumed by the integrator HMI. The bloc holds no actuator authority; the driver hears / sees the alert and decides response. The 0.8.0 explainer integration replaces the free-form `message` string with the per-(condition, profile) action string when both are supplied — the action vocabulary remains advisory-mood (per `AlertExplainer` source: *"Action verbs are advisory ('reduce' / 'avoid' / 'maintain'), never imperative-on-control"*), and speed numbers remain advisory reference points chosen by the package, not system-enforced limits.
 
 ## 8 — Integrator-side driver-facing loom (D-VGC189-1; new in 0.8.0)
 
-**Operational discipline**: *the throttle protects the driver from advisory-tier desensitization; the critical-bypass invariant preserves credibility.*
+**Operational discipline**: *the throttle limits how many info and warning alerts reach the HMI and is meant to protect the driver from advisory-tier desensitization, an effect that has not been measured; a critical alert always fires.*
 
 **What HER experiences when this package fires (0.8.0)**:
 - HER receives an alert that *arrives in time* — when an alert is permitted by the per-profile throttle and reaches the HMI (the threshold layer in `navigation_safety_core` decides whether the underlying condition crosses the per-profile fire-threshold; the integration here gates density at the rendering boundary).
 - HER receives an alert that *makes sense* — when a road-surface condition + profile pair is supplied, the bloc resolves the per-(condition, profile) action via `AlertExplainer.forConditionAndProfile`, replacing free-form text with action-coupled text in the driver's register.
-- HER receives an alert that *is calm enough to ignore safely* — the per-profile alerts/min cap drops advisory-tier alerts that would crowd attention beyond HER driver-class threshold; critical alerts always preserved.
+- HER receives an alert that *is limited in number, except when critical* — an info or warning alert over the per-minute cap for her profile is dropped, not queued, so she is not told of it; a critical alert always fires. The cap does not make any alert safe to ignore, and its effect on desensitization has not been measured: the caps are defaults, not validated against field data (`navigation_safety_core` `KNOWN_LIMITATIONS.md`, "Per-profile caps are recorded-decision DEFAULTS, not population-validated").
 - HER agency preserved: the bloc emits state for the HMI to render. The bloc does not actuate the vehicle.
 
 **Self-observation surface**: when a `LoomFitTelemetry` instance is supplied to the bloc, the integration emits one telemetry record per `shouldFire` decision (`fired` / `droppedByThrottle` / `criticalBypass` / `coldStart`) so the consuming-app analytics layer can ask *did the loom fit each driver-class?* and tune per-profile caps when calibration data warrants. The package does not classify "fit" vs "misfit" itself. Detection lives in the consuming app's analytics layer; the integrator owns the privacy-class boundary.
@@ -65,9 +65,9 @@
 
 ## 8.1 — GlanceBudgetTracker integrator-side advisory loom (new in 0.9.0)
 
-**Anchor**: NHTSA Phase 2 Driver Distraction Guidelines (NHTSA-2010-0053; widely cited 12-second total off-road glance budget per task; published-anchor).
+**Anchor**: "Visual-Manual NHTSA Driver Distraction Guidelines for In-Vehicle Electronic Devices" (78 FR 24818, 2013; docket NHTSA-2010-0053), the first phase of NHTSA's "nonbinding, voluntary" guidelines. They recommend that devices be designed so that tasks can be completed with "glances away from the roadway of 2 seconds or less and a cumulative time spent glancing away from the roadway of 12 seconds or less". They cover visual-manual tasks, not auditory-vocal ones. Using that per-task 12-second figure as the tracker's budget, and counting cognitive and manual events against it, is this package's decision.
 
-**Operational discipline**: *the tracker reports cumulative off-road glance consumption against the published budget so an integrator HMI can lighten attention demand before the budget is exhausted; the package supplies the substrate, the integrator owns the surface.*
+**Operational discipline**: *the tracker reports cumulative off-road glance consumption against its 12-second budget so an integrator HMI can lighten attention demand before the budget is exhausted; the package supplies the substrate, the integrator owns the surface.*
 
 **Concrete locus**: `lib/src/glance_budget_tracker.dart` `GlanceBudgetTracker.record(GlanceEvent)` consumes integrator-supplied glance events; emits `BudgetWarning` (default 75% consumed) and `BudgetExhausted` (100% consumed) records on a broadcast `budgetEvents` stream. Reset via `reset(BudgetResetReason)` is integrator-explicit only.
 
@@ -102,7 +102,7 @@ Per-instance override via `defaultExpanded` field. Optional `onExpansionChanged`
 - `lib/src/bloc/navigation_bloc.dart` — `_onSafetyAlert` 0.8.0 throttle + explainer + telemetry integration
 - `lib/src/bloc/navigation_event.dart` — `SafetyAlertReceived` 0.8.0 fields: `condition`, `ambientThreshold`
 - `lib/src/bloc/navigation_state.dart` — `NavigationState.alertCondition` 0.8.0 field
-- `lib/src/glance_budget_tracker.dart` — 0.9.0 `GlanceBudgetTracker` substrate (NHTSA Phase 2 12-second total off-road glance budget; caution-add-only)
+- `lib/src/glance_budget_tracker.dart` — 0.9.0 `GlanceBudgetTracker` substrate (12-second off-road glance budget from the first phase of NHTSA's visual-manual driver distraction guidelines; caution-add-only)
 - `lib/src/widgets/alert_explainer_expandable_sheet.dart` — 0.9.0 `AlertExplainerExpandableSheet` widget (per-cohort default expansion; Article 17 (β) verbatim-relay both states)
 - `navigation_safety_core` SAFETY_BOUNDARY.md (re-exported core boundary applies; severity-not-profile invariant inherited verbatim)
 - LICENSE: BSD-3-Clause

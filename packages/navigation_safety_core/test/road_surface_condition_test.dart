@@ -140,9 +140,8 @@ void main() {
     });
 
     test('ageingRural ICE uses kanji-native 凍結 (not loanword)', () {
-      // Generational vocabulary drift: older drivers recognize 凍結 most
-      // reliably; loanwords (アイスバーン-class) are skiing/snowboarding
-      // culture, less familiar to ageing-rural cohort.
+      // 凍結 (kanji-native) for ageingRural is a recorded wording
+      // decision; no source is cited for which terms older drivers know.
       final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
         RoadSurfaceCondition.ice,
         DriverProfile.ageingRural,
@@ -181,9 +180,9 @@ void main() {
     test('SLUSH ageingRural uses full kanji-native phrasing with action cue '
         '(0.7.1)', () {
       // 0.7.1 expansion: SLUSH (シャーベット) added to high-risk subset
-      // because lateral-slip risk of partially-melted snow is
-      // underestimated by drivers unfamiliar with snow-zone road
-      // state. ageingRural override gives full phrasing + action cue.
+      // for the lateral-slip risk of partially-melted snow (a recorded
+      // decision; no source is cited for how drivers judge that risk).
+      // ageingRural override gives full phrasing + action cue.
       final g = RoadSurfaceConditionGlossary.forConditionAndProfile(
         RoadSurfaceCondition.slush,
         DriverProfile.ageingRural,

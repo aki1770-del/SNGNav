@@ -7,9 +7,10 @@
 ///   UNKNOWN, DRY, WET, SNOW, ICE, SLUSH, WET_ICE, LOOSE_GRAVEL
 ///
 /// The 0.3.1 patch surfaces these eight values plus a small glossary
-/// keyed on driver-class. The glossary exists because Japanese drivers
-/// in unexpected snow encounter road-surface terms (圧雪 / アイスバーン /
-/// 凍結 / シャーベット) without knowing the safe-driving semantic each
+/// keyed on driver-class. The glossary pairs each road-surface term
+/// (圧雪 / アイスバーン / 凍結 / シャーベット) with the safe-driving action it is
+/// meant to convey; no source is cited for what drivers know of these
+/// terms or of the action each
 /// implies. JAF's snow-driving page
 /// (https://jaf.or.jp/common/attention/snow) uses アイスバーン and
 /// ブラックアイスバーン; the glossary wording is otherwise the package's
@@ -53,9 +54,11 @@ enum RoadSurfaceCondition {
   /// snow with high lateral-slip risk.
   slush,
 
-  /// VSS `WET_ICE`. Surface is wet ice (アイスバーン) — ice with a water
-  /// film on top, the most-slippery condition. The parenthetical
-  /// reading 濡れた凍結 anchors meaning for first-time hearers.
+  /// VSS `WET_ICE`. Surface is wet ice — ice with a water film on top
+  /// (this package's gloss; VSS gives no definition). The glossary labels
+  /// it アイスバーン with the parenthetical reading 濡れた凍結, a recorded
+  /// wording decision meant to anchor the meaning for first-time hearers.
+  /// No source cited here ranks it as the most slippery condition.
   wetIce,
 
   /// VSS `LOOSE_GRAVEL`. Surface has loose gravel — increases stopping
@@ -209,10 +212,9 @@ class RoadSurfaceConditionGlossary {
           enSpeakString: 'Slush on road',
         );
       case RoadSurfaceCondition.wetIce:
-        // アイスバーン as the recognized loanword for the wet-film-on-ice
-        // condition; parenthetical 濡れた凍結 anchors meaning (a recorded
-        // wording decision; JAF uses アイスバーン without defining it as
-        // ice with a water film).
+        // アイスバーン with the parenthetical 濡れた凍結 labels the
+        // wet-film-on-ice condition (a recorded wording decision; JAF uses
+        // アイスバーン without defining it as ice with a water film).
         return const RoadSurfaceConditionGlossary(
           jaName: 'アイスバーン（濡れた凍結）',
           enName: 'Wet ice (ice with water film)',
@@ -237,9 +239,9 @@ class RoadSurfaceConditionGlossary {
   /// `DRY`, `WET`, `LOOSE_GRAVEL`) fall through to the default
   /// speak-strings from [forCondition].
   ///
-  /// SLUSH (シャーベット) was added to the high-risk subset in 0.7.1
-  /// because the lateral-slip risk of partially-melted snow is
-  /// underestimated by drivers unfamiliar with snow-zone road state.
+  /// SLUSH (シャーベット) was added to the high-risk subset in 0.7.1 for
+  /// the lateral-slip risk of partially-melted snow (a recorded decision;
+  /// no source is cited for how drivers judge that risk).
   ///
   /// Profile-specific design rules:
   /// - `ageingRural` — full kanji-native phrasing with a brief action cue.

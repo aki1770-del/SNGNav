@@ -128,9 +128,9 @@ void main() {
 
     test('ageingRural threshold magnitudes match 0.3.0 calibration', () {
       // 0.3.0 corrections (recorded decisions):
-      // - infoTemperatureCelsius: 5°C → 4°C (5°C with 1500m visibility fired
-      //   on most autumn evenings, an alert-fatigue risk; see
-      //   KNOWN_LIMITATIONS.md)
+      // - infoTemperatureCelsius: 5°C → 4°C (5°C with 1500m visibility was
+      //   judged to fire too often on autumn evenings, an alert-fatigue risk,
+      //   not measured; see KNOWN_LIMITATIONS.md)
       // - warningTemperatureCelsius: 1°C → 2°C (more margin above black-ice
       //   formation at road-surface ≤0°C)
       // See KNOWN_LIMITATIONS.md "Threshold magnitudes".

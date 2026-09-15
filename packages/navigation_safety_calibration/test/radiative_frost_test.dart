@@ -148,7 +148,7 @@ void main() {
     });
   });
 
-  group('constants are the documented envelope', () {
+  group('constants are the recorded envelope', () {
     test('ambient ceiling is 3.0C', () {
       expect(radiativeFrostAmbientCeilingCelsius, 3.0);
     });

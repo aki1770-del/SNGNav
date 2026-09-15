@@ -61,14 +61,14 @@ library;
 /// library documentation for invariants and the UNVERIFIED-magnitude
 /// flag on the per-phase multiplier values.
 enum CircadianPhase {
-  /// 04:00 – 07:59 — sleep inertia window. Cognitive performance
-  /// recovers gradually after waking; the window is meant to reflect
-  /// slower reactions after waking (no source is cited). Multiplier
-  /// `1.2`.
+  /// 04:00 – 07:59 — sleep inertia window. The window is meant to
+  /// reflect slower reactions after waking (no source is cited).
+  /// Multiplier `1.2`.
   earlyMorning,
 
-  /// 08:00 – 11:59 — peak alertness window. Used as the baseline
-  /// (multiplier `1.0`); no caution-adding adjustment applied.
+  /// 08:00 – 11:59 — baseline window, meant to reflect the day's most
+  /// alert hours (no source is cited). Multiplier `1.0`; no
+  /// caution-adding adjustment applied.
   morning,
 
   /// 12:00 – 15:59 — post-lunch dip. The window is meant to reflect a
@@ -81,15 +81,14 @@ enum CircadianPhase {
   /// (no source is cited). Multiplier `1.05`.
   evening,
 
-  /// 20:00 – 23:59 — circadian-low. Evening-into-night transition;
-  /// alertness declines toward the night-time minimum. Multiplier
-  /// `1.3`.
+  /// 20:00 – 23:59 — circadian-low. The window is meant to reflect
+  /// alertness falling toward the night-time low (no source is cited).
+  /// Multiplier `1.3`.
   night,
 
-  /// 00:00 – 03:59 — circadian-trough (highest risk). The
-  /// chronobiological low-point; the window is meant to reflect the
-  /// overnight alertness low (no source is cited). Multiplier `1.5`
-  /// (cap).
+  /// 00:00 – 03:59 — circadian-trough (the highest multiplier). The
+  /// window is meant to reflect the overnight alertness low (no source
+  /// is cited). Multiplier `1.5` (cap).
   lateNight,
 }
 

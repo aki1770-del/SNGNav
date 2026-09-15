@@ -6,16 +6,16 @@ import 'package:navigation_safety/navigation_safety.dart' show DriverProfile;
 
 import 'budget_aware_pace_profile.dart';
 
-/// Per-profile speaking-rate multipliers anchored on the Strayer-AAA
-/// auditory-load study (PMC7283540) and the package's published
-/// per-profile threshold differentiation: an older rural driver and
-/// a foreign-tourist driver in an unfamiliar snow-zone need a
-/// distinctly slower delivery to act on the same line in the same
-/// window the experienced snow-zone driver does. The package does
-/// not invent these multipliers; they mirror the per-profile
-/// conservative-only direction already present in the threshold
-/// layer (earlier-warn → matching slower-speak so the format does
-/// not erase the earlier-warn benefit).
+/// Per-profile speaking-rate multipliers. The values are recorded
+/// decisions; no source cited gives them. They follow the direction of
+/// the package's per-profile threshold differentiation: an older rural
+/// driver and a foreign-tourist driver in an unfamiliar snow-zone are
+/// given a slower delivery, meant to help them act on the same line in
+/// the same window as the experienced snow-zone driver (effect not
+/// measured). Cooper et al. 2020 (PMC7283540) found that "Older drivers
+/// took longer to complete tasks, were slower to react to stimuli, and
+/// reported higher task demand when interacting with IVIS"; that study
+/// did not vary or measure speaking rate.
 ///
 /// Multipliers applied to the engine's base rate of `1.0`:
 ///
@@ -27,9 +27,6 @@ import 'budget_aware_pace_profile.dart';
 /// | `noviceUrban`            |       0.85 |
 /// | `ageingRural`            |       0.70 |
 /// | `foreignTouristSnowZone` |       0.70 |
-///
-/// Reference: D. L. Strayer et al., "Measuring Cognitive Distraction
-/// in the Automobile" (AAA Foundation; PubMed Central PMC7283540).
 const Map<DriverProfile, double> kSpeakingRateMultiplierByProfile =
     <DriverProfile, double>{
       DriverProfile.snowZoneExperienced: 1.0,

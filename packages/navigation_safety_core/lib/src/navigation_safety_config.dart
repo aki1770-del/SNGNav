@@ -208,7 +208,8 @@ class NavigationSafetyConfig extends Equatable {
   /// factory and ends such a stream. An integrator that supplies such a
   /// registry owns both checks.
   ///
-  /// Citations for each formula are documented in the module headers
+  /// The sources cited for each formula, and which of its values are
+  /// recorded decisions, are stated in the module headers
   /// under `lib/src/` in the `navigation_safety_calibration` package,
   /// which has supplied these formulas since this package's 0.11.0,
   /// and in `KNOWN_LIMITATIONS.md`.
@@ -394,10 +395,10 @@ class NavigationSafetyConfig extends Equatable {
     return agreed;
   }
 
-  /// Per-profile reaction-time defaults in seconds. See the
+  /// Per-profile reaction-time defaults in seconds, recorded decisions:
+  /// no source cited gives them. See the
   /// `lib/src/speed_dependent_visibility.dart` module header in the
-  /// `navigation_safety_calibration` package for citations and
-  /// UNVERIFIED flags.
+  /// `navigation_safety_calibration` package and `KNOWN_LIMITATIONS.md`.
   static double _reactionTimeSecondsFor(DriverProfile profile) {
     switch (profile) {
       case DriverProfile.ageingRural:

@@ -12,16 +12,21 @@
 /// `braking_distance = speed^2 / (2 × deceleration)`. Both follow
 /// standard kinematics for a vehicle decelerating to a stop.
 ///
-/// Reaction-time literature anchors the per-profile defaults:
+/// No source cited here gives the per-profile reaction-time defaults;
+/// they are recorded decisions. Context:
 ///
-/// - **Hazard-perception RT for novice vs experienced drivers** —
-///   novice 3.58s, experienced 1.32s, per
-///   [PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/).
-/// - **Trait-state framing of reaction time** — Regan, Hallett &
-///   Gordon 2011 ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
-///   distinguishes trait reaction-time (driver class) from state
-///   reaction-time (drowsy / distracted). This package today encodes
-///   trait only; per-profile defaults below assume an alert state.
+/// - **Hazard-perception RT and experience** — Sagberg and Bjørnskau
+///   2006 ([PubMed 16313881](https://pubmed.ncbi.nlm.nih.gov/16313881/)),
+///   whose abstract gives no reaction times in seconds, found that
+///   average hazard-perception reaction times "tended to decrease with
+///   experience, but the decrease was not significant".
+/// - **Trait and state** — the trait/state split is this package's
+///   design. Regan and Strayer 2014
+///   ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
+///   list driver conditions (e.g. young, inexperienced, old) and driver
+///   states (e.g. bored, sleepy, fatigued, drugged, emotional) as
+///   factors in driver inattention. This package today encodes trait
+///   only; per-profile defaults below assume an alert state.
 ///
 /// Braking-deceleration default is 5.5 m/s², a typical passenger-car
 /// dry-pavement value. For snow / ice surfaces the consumer should
@@ -32,19 +37,17 @@
 /// Per-profile reaction-time defaults (consumer-supplied; this helper
 /// does not pick a profile RT — it accepts the RT as a parameter):
 ///
-/// - `ageingRural` ≈ 2.5s — older drivers; published distribution.
-/// - `noviceUrban` ≈ 3.58s — PubMed 16313881 hazard-perception value.
-/// - `snowZoneExperienced` ≈ 1.8s — alert defensive-driving culture
-///   (UNVERIFIED specific cite; conservative anchor between
-///   experienced 1.32s and a snow-context margin).
-/// - `professional` ≈ 1.5s — trained reaction; UNVERIFIED specific
-///   cite for the 1.5s magnitude.
-/// - `agriculturalForestry` ≈ 2.0s — typical adult; UNVERIFIED.
-/// - `foreignTouristSnowZone` ≈ 3.5s — matches novice behaviour in
-///   unfamiliar conditions; UNVERIFIED specific cite.
+/// - `ageingRural` ≈ 2.5s — older drivers.
+/// - `noviceUrban` ≈ 3.58s — novice drivers.
+/// - `snowZoneExperienced` ≈ 1.8s — meant to add a surface-friction
+///   margin for snow / ice to an experienced-driver baseline.
+/// - `professional` ≈ 1.5s — trained reaction.
+/// - `agriculturalForestry` ≈ 2.0s — adult drivers.
+/// - `foreignTouristSnowZone` ≈ 3.5s — set close to the novice value
+///   for a driver in unfamiliar snow conditions.
 ///
-/// Values marked UNVERIFIED are reasonable defaults pending field
-/// validation; see `KNOWN_LIMITATIONS.md` for the calibration discipline.
+/// All six are recorded decisions pending field validation; no source
+/// cited here gives any of them. See `KNOWN_LIMITATIONS.md`.
 library;
 
 import 'dart:math' as math;

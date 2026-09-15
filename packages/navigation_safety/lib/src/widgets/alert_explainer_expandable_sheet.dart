@@ -13,8 +13,8 @@
 ///
 /// Two states:
 ///
-/// - **Collapsed** — source-line provenance only (e.g. `'AlertExplainer
-///   (JAF / MLIT / NEXCO)'`). Plus a tap-to-expand affordance.
+/// - **Collapsed** — source-line text only (default `'AlertExplainer'`).
+///   Plus a tap-to-expand affordance.
 /// - **Expanded** — `AlertExplainer.action` text VERBATIM + the
 ///   verbosity name + locale tag + source-line provenance full-form.
 ///
@@ -85,7 +85,7 @@ class AlertExplainerExpandableSheet extends StatefulWidget {
     required this.profile,
     this.defaultExpanded,
     this.onExpansionChanged,
-    this.sourceLine = 'AlertExplainer (JAF / MLIT / NEXCO)',
+    this.sourceLine = 'AlertExplainer',
   });
 
   /// Per-cohort default expansion. Profiles benefiting from cognitive-
