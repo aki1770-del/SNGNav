@@ -60,10 +60,11 @@ class NavigationSafetyConfig extends Equatable {
         //   in a simulator study). Lowered to 4°C to preserve
         //   information-tier signal without firing on routine cold
         //   autumn evenings.
-        // - warningTemperatureCelsius: 0.2.0 had 1°C; black ice
-        //   forms at road-surface ≤0°C even when ambient air is
-        //   several degrees warmer (well-documented). 1°C left no
-        //   margin above formation envelope. Raised to 2°C.
+        // - warningTemperatureCelsius: 0.2.0 had 1°C; black ice can
+        //   form on a road surface below 0°C while the air is several
+        //   degrees warmer, if the air warms suddenly after a prolonged
+        //   cold spell (Wikipedia, "Black ice"). 1°C left no margin
+        //   above formation envelope. Raised to 2°C.
         return NavigationSafetyConfig(
           safeScoreFloor: 0.85,
           infoScoreFloor: 0.55,
