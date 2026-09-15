@@ -110,10 +110,12 @@ ranges before feeding the helper.
   test items".
 - **Trait and state.** The trait/state split of reaction time is this
   package's design. Regan and Strayer 2014
-  ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/))
-  list driver conditions (e.g. young, inexperienced, old) and driver
-  states (e.g. bored, sleepy, fatigued, drugged, emotional) as factors
-  in driver inattention; they give no reaction times. The
+  ([PMC4001671](https://pmc.ncbi.nlm.nih.gov/articles/PMC4001671/)),
+  describing Regan, Hallett and Gordon's 2011 taxonomy, list driver
+  conditions (e.g. young, inexperienced, old) and driver states (e.g.
+  bored, sleepy, fatigued, drugged, emotional) as factors that may give
+  rise to processes that may culminate in inattention, or moderate the
+  impact of those processes; they give no reaction times. The
   `driverReactionTimeSeconds` parameter encodes the trait axis;
   consumers passing a state-aware value should compose the two axes
   themselves.

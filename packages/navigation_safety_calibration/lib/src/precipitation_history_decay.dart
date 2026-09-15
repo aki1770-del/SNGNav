@@ -25,8 +25,12 @@
 /// - **Exponential surface-moisture decay** — no source is cited for
 ///   the exponential shape or for the 90-minute default; both are
 ///   recorded decisions, not population-validated.
-/// - **Half-life dependence on ambient conditions** — no source is
-///   cited here; no single number fits every road context.
+/// - **Half-life dependence on ambient conditions** — urban-surface
+///   evaporation work
+///   ([PMC7917919](https://pmc.ncbi.nlm.nih.gov/articles/PMC7917919/))
+///   names "wind speed, net radiation" among the "other meteorological
+///   factors that affect the evaporation process"; no source cited here
+///   gives a half-life for any road context.
 ///
 /// The [ambientCelsius] parameter is accepted for forward-compatible
 /// API shape (a future revision may modulate the half-life by

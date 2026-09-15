@@ -58,7 +58,11 @@ enum RoadSurfaceCondition {
   /// (this package's gloss; VSS gives no definition). The glossary labels
   /// it アイスバーン with the parenthetical reading 濡れた凍結, a recorded
   /// wording decision meant to anchor the meaning for first-time hearers.
-  /// No source cited here ranks it as the most slippery condition.
+  /// No source cited here ranks it as the most slippery condition. The
+  /// Japanese spoken strings for this value (最も滑りやすい, 最も滑ります)
+  /// and AlertExplainer's wet-ice explanations still rank it so; that
+  /// wording is unchanged in this release, and the ranking in it is not
+  /// sourced.
   wetIce,
 
   /// VSS `LOOSE_GRAVEL`. Surface has loose gravel — increases stopping
