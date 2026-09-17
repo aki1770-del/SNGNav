@@ -199,8 +199,8 @@ surface. 0.11.8's docs said the drying margin for `timeSincePrecipitation` adds
 to the warning visibility floor. Neither 0.11.8 nor this release adds it to a
 longer floor from speed: the floor is the longer of the floor from speed and the
 per-profile floor plus the margin, as the docs now say. For
-`snowZoneExperienced` at 150 km/h, with precipitation 0 minutes ago, that is
-400 m, not 233 m plus 200 m.
+`snowZoneExperienced` at 150 km/h, with precipitation 0 minutes ago and no
+temperature or humidity passed, that is 400 m, not 233 m plus 200 m.
 
 ## 0.11.8
 

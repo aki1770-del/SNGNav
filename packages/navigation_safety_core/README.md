@@ -246,7 +246,7 @@ design-default baseline the driver relies on (Magnus black-ice constants; the
 surface-moisture half-life; the braking-distance default, 5.5 m/s², a
 dry-pavement value and not a worst case for snow or ice; the
 per-profile visibility floor). The calibration package is **caution-add-only — the per-profile
-floor never lowers** across its releases. Core pins it at `^0.1.2`;
+floor never lowers** across its releases. Core pins it at `^0.1.3`;
 integrators shipping a product SHOULD commit a `pubspec.lock` so the
 exact calibration version is reproducible across builds rather than
 floating within the `0.1.x` range.
