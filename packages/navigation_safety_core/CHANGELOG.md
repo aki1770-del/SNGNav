@@ -11,7 +11,25 @@ below. This release adds a field for the deceleration, uses an ice figure when
 the readings you pass point to black ice, and raises the warning temperature
 on those readings so that comparing the ambient reading with it warns. It also
 changes five wet-ice strings that `AlertExplainer` and
-`RoadSurfaceConditionGlossary` return.
+`RoadSurfaceConditionGlossary` return, and it requires
+`navigation_safety_calibration` 0.1.3 or later.
+
+**If your lock holds `navigation_safety_calibration` 0.1.2, read this before
+upgrading.** This release calls `isRadiativeFrostBlackIce`, which that package
+added in 0.1.3, so it now depends on `navigation_safety_calibration: ^0.1.3`.
+0.11.8 accepted `^0.1.2`.
+
+- If your pubspec does not list `navigation_safety_calibration`, upgrading this
+  package moves it too, and nothing else is needed.
+- If your pubspec lists it with a range that allows 0.1.3, such as `^0.1.2`,
+  `dart pub upgrade navigation_safety_core` stops at 0.11.8. It shows
+  `(0.11.9 available)` on this package's line and reports no error. Upgrade
+  both together:
+  `dart pub upgrade navigation_safety_core navigation_safety_calibration`.
+- If your pubspec allows only versions below 0.1.3, 0.11.8 is the newest
+  version of this package that resolves with it. A pubspec that asks for
+  `^0.11.9` fails to resolve, with a message naming
+  `navigation_safety_calibration ^0.1.3`.
 
 **If you pass both `ambientTempCelsius` and `humidityRH`, read this first.** On
 readings this package classifies as black ice, two values can be higher than
@@ -56,12 +74,14 @@ new strings, exactly:
 
 No other string these two classes return has changed: every name, speak
 string, action, verbosity and locale tag, for every condition and profile, is
-the one 0.11.8 returned. `navigation_safety` 0.9.7 shows the `AlertExplainer`
-text in `AlertExplainerExpandableSheet` when it is expanded, and as
+the one 0.11.8 returned. `navigation_safety` shows the `AlertExplainer` text in
+`AlertExplainerExpandableSheet` when it is expanded, and as
 `NavigationState.alertMessage` when its bloc has a driver profile and the alert
-carries a condition. `voice_guidance` 0.7.8 speaks it when its bloc has a
-driver profile and the navigation state carries a condition. Both accept this
-release, so what they show and say changes when your app resolves it.
+carries a condition. `voice_guidance` speaks it when its bloc has a driver
+profile and the navigation state carries a condition. Every `navigation_safety`
+from 0.9.4 and every `voice_guidance` from 0.7.3 does this and accepts this
+release, so what they show and say changes when your app resolves it, whichever
+of those versions you hold.
 
 **Which readings.** Those for which `isRadiativeFrostBlackIce(ambientCelsius:
 ..., humidityRHPercent: ...)` returns `true`: an ambient reading at or below
@@ -90,8 +110,8 @@ in percent.
 
   At 60 km/h and below nothing changes. Above 120 km/h the increase is larger.
   If you also pass `timeSincePrecipitation`, the increase can be smaller: the
-  floor is the longer of this and the drying margin, and the drying margin may
-  already have been the longer one in 0.11.8.
+  floor is the longer of this and the per-profile floor plus the drying margin,
+  and that may already have been the longer one in 0.11.8.
   `forDriverContext` and vehicle-class overrides start from this floor. An app
   that warns when visibility is at or below the floor will warn at longer
   visibilities on these readings than it did.
@@ -99,22 +119,24 @@ in percent.
 - **New: `DrivingContext.brakingDecelerationMps2`**, in m/s², also a parameter
   of `DrivingContext.withPercentHumidity`. Optional; `null` means you have no
   value for the surface. **A value you pass can only lengthen the floor. It
-  never gives a shorter floor than leaving it out.**
-  - 5.5 or more changes nothing, on any reading: you get the same floor as
-    `null`.
-  - On black-ice readings, any value above 0.981 changes nothing: the floor
-    uses 0.981. Only a lower value lengthens it there. **This includes a value
-    you measured on the road. No value you can pass shortens the floor on
-    those readings.**
-  - On other readings, a value below 5.5 is used as given. Positive values
-    below 0.001 are used as 0.001.
-  - `NaN`, `double.infinity`, `double.negativeInfinity`, zero and negative
-    values are used as 0.4905 (0.05 × 9.81, the low end of "Wet black ice
-    0.05–0.10" in VTI meddelande 911A; TRB Special Report 115 reports friction
-    "dropping to near zero on completely flat surfaces", which no finite value
-    represents). At 120 km/h that gives a floor of 1,183 to 1,252 m, by
-    profile, whatever the readings. **Pass `null` when you have no value. Do not
-    use 0, -1, `NaN` or `double.infinity` to mean "unknown".**
+  never gives a shorter floor than leaving it out.** It is taken in this order:
+  1. `NaN`, `double.infinity`, `double.negativeInfinity`, zero and negative
+     values are checked first and used as 0.4905 (0.05 × 9.81, the low end of
+     "Wet black ice 0.05–0.10" in VTI meddelande 911A; TRB Special Report 115
+     reports friction "dropping to near zero on completely flat surfaces",
+     which no finite value represents), whatever the readings. The next two
+     steps do not apply to them, so `double.infinity` does not count as a value
+     above 5.5: at 120 km/h these values give a floor of 1,183 to 1,252 m, by
+     profile. **Pass `null` when you have no value. Do not use 0, -1, `NaN` or
+     `double.infinity` to mean "unknown".**
+  2. Then a value above 5.5 is used as 5.5, so any other value of 5.5 or more
+     gives the same floor as `null`, on any reading. A positive value below
+     0.001 is used as 0.001. Other values are kept as given.
+  3. Then, on black-ice readings, the lower of that value and 0.981 is used, so
+     any value above 0.981 gives the same floor as `null` there and only a lower
+     value lengthens it. **This includes a value you measured on the road. No
+     value you can pass shortens the floor on those readings.** On other
+     readings the value from step 2 is used.
   - The factories and `withPercentHumidity` do not throw on any of these
     values.
   - The README now lists this field, with the same rule: pass `null`, not a
@@ -161,15 +183,24 @@ which still uses the deceleration you pass it as given and still throws
 `braking_on_ice_audit_vectors_test.dart` (the floor and the new field),
 `effective_temperature_ambient_comparison_test.dart` (the warning temperature
 against the ambient reading) and `residual_moisture_half_life_pin_test.dart`
-(the drying margin at five times after precipitation). No existing test was
-renamed or removed.
+(the drying margin at five times after precipitation).
+`braking_deceleration_on_ice_test.dart` also has the test
+`the black-ice classification uses the humidity as passed, not a rounded value`,
+which fails if the factories round the humidity you pass before the black-ice
+check: 2.8 °C at 81.6 % RH is a black-ice reading, and at 82 % it is not. No
+existing test was renamed or removed.
 
 **Docs:** the docs no longer give 3.0 m/s² for compacted snow or 1.5 m/s² for
 glare ice. They give the friction ranges the cited surveys report, and
 call 5.5 and 0.981 m/s² figures this package chose; see
 `brakingDecelerationMps2` and `KNOWN_LIMITATIONS.md`. The README's list of live
 driving conditions now includes the braking deceleration for the current
-surface.
+surface. 0.11.8's docs said the drying margin for `timeSincePrecipitation` adds
+to the warning visibility floor. Neither 0.11.8 nor this release adds it to a
+longer floor from speed: the floor is the longer of the floor from speed and the
+per-profile floor plus the margin, as the docs now say. For
+`snowZoneExperienced` at 150 km/h, with precipitation 0 minutes ago, that is
+400 m, not 233 m plus 200 m.
 
 ## 0.11.8
 

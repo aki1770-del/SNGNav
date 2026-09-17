@@ -11,9 +11,9 @@ shows it when expanded, and it opens expanded by default for profiles that
 include `ageingRural` and `foreignTouristSnowZone`. `NavigationBloc` puts it in
 `NavigationState.alertMessage` when the bloc has a driver profile and the alert
 carries a condition. `navigation_safety_core` 0.11.9 changes this text for
-`RoadSurfaceCondition.wetIce` and three profiles. This package accepts 0.11.9,
-as 0.9.7 did, so the text changes when your app resolves it, whichever of the
-two versions of this package you hold:
+`RoadSurfaceCondition.wetIce` and three profiles. Every version of this package
+from 0.9.4 accepts 0.11.9 and shows this text, so the text changes when your app
+resolves 0.11.9, whichever of those versions you hold:
 
 - `ageingRural`: the sentence `最も滑りやすい路面状態です。` becomes
   `最も滑りやすい路面の一つです。` The rest of the text is unchanged.

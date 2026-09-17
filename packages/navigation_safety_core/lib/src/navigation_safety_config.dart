@@ -151,9 +151,11 @@ class NavigationSafetyConfig extends Equatable {
   ///   rises to the reaction distance (a per-profile reaction-time
   ///   default times the speed) plus the braking distance, when that is
   ///   longer. The braking deceleration is
-  ///   `context.brakingDecelerationMps2` when supplied (values above
-  ///   5.5 m/s² are used as 5.5; unreadable values as 0.4905), and
-  ///   otherwise 5.5 m/s², a dry-pavement figure. Where
+  ///   `context.brakingDecelerationMps2` when supplied (checked first:
+  ///   `NaN`, infinite, zero and negative values are unreadable and are
+  ///   used as 0.4905, whatever the readings; then values above
+  ///   5.5 m/s² are used as 5.5), and otherwise 5.5 m/s², a
+  ///   dry-pavement figure. Where
   ///   `context.ambientTempCelsius` and `context.humidityRH` classify
   ///   radiative-frost black ice (`isRadiativeFrostBlackIce`), the lower
   ///   of that value and 0.981 m/s² applies, so a supplied value never
@@ -185,13 +187,19 @@ class NavigationSafetyConfig extends Equatable {
   ///   baseline; the calibration does not classify those readings as
   ///   black ice.
   /// - If `context.timeSincePrecipitation` is non-null, the warning
-  ///   visibility additionally raises by a residual-moisture margin
-  ///   proportional to the surface-moisture fraction (longer
-  ///   visibility floor while the road is still drying). This margin
+  ///   visibility floor is the longer of the floor so far (the
+  ///   per-profile baseline, or the speed floor above) and the
+  ///   per-profile baseline plus a residual-moisture margin, the
+  ///   baseline times the surface-moisture fraction rounded to a whole
+  ///   metre (longer visibility floor while the road is still drying).
+  ///   The margin is not added to the speed floor: for
+  ///   `snowZoneExperienced` at 100 km/h on black-ice readings the floor
+  ///   is 444 m with precipitation 0, 90 or 360 minutes ago, as without
+  ///   it, and without a speed it is 400, 300 and 213 m. This margin
   ///   does NOT require `context.ambientTempCelsius`, and when ambient
   ///   is absent no temperature is substituted for it: the margin
   ///   applies only while the surface-moisture calibration is shown to
-  ///   ignore ambient, and otherwise the per-profile baseline stands.
+  ///   ignore ambient, and otherwise no margin applies.
   ///   See [_residualMoistureFractionOrNull].
   ///
   /// Context respects the per-profile baseline as a floor for every
@@ -278,9 +286,9 @@ class NavigationSafetyConfig extends Equatable {
       );
       // `null` means the fraction could not be obtained without a
       // measurement this context does not carry. The margin is an
-      // add-on; withholding it leaves the per-profile baseline, which
-      // is what every other absent field of DrivingContext falls back
-      // to. No temperature is invented to keep the add-on alive.
+      // add-on; withholding it leaves the floor computed above: the
+      // per-profile baseline, or the speed floor when a speed is given.
+      // No temperature is invented to keep the add-on alive.
       if (fraction != null) {
         // Conservative add-on: residual-moisture margin scales with the
         // moisture fraction times the per-profile baseline, capped at
@@ -303,9 +311,14 @@ class NavigationSafetyConfig extends Equatable {
       // If the effective temperature is at or below the baseline
       // warning temperature, raise the warning by the whole degrees it
       // sits below the baseline, at most 10. That moves the ambient
-      // comparison by the lift only: an ambient reading more than the
-      // lift above the baseline still passes (1.5 C at 84% RH:
-      // effective -0.91 C, warning temperature 1 C).
+      // comparison by the lift only. On readings classified as
+      // radiative-frost black ice the step below also raises the warning
+      // temperature to at least the ambient reading rounded up, so the
+      // ambient comparison warns (1.5 C at 84% RH, 0 C baseline:
+      // effective -0.91 C, the lift gives 1 C, the raise 2 C). Outside
+      // that classification, as above 3.0 C ambient, an ambient reading
+      // more than the lift above the baseline still passes (4.0 C at 70%
+      // RH, 0 C baseline: effective -0.98 C, warning temperature 1 C).
       if (effective <= base.warningTemperatureCelsius.toDouble()) {
         // .toInt() portability hardening: num.clamp is declared to return
         // `num`; current SDKs special-case int.clamp(int, int) as int, but

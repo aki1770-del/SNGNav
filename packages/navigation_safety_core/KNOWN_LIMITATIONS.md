@@ -698,9 +698,10 @@ and the 0.4.0 density caps — these are recorded-decision defaults,
 not field-validated population values.
 
 The factories compute this floor with the deceleration from
-`DrivingContext.brakingDecelerationMps2`. Values above 5.5 m/s² are
-used as 5.5, and `NaN`, infinities, zero and negative values as
-0.4905 m/s² (0.05 × 9.81). Without a supplied value they use 5.5 m/s²,
+`DrivingContext.brakingDecelerationMps2`. `NaN`, infinities, zero and
+negative values are checked first and used as 0.4905 m/s²
+(0.05 × 9.81), whatever the readings; then values above 5.5 m/s² are
+used as 5.5. Without a supplied value they use 5.5 m/s²,
 a recorded decision for dry pavement. Where the ambient and humidity
 readings classify radiative-frost black ice (`isRadiativeFrostBlackIce`)
 they use 0.981 m/s² (0.10 × 9.81), or a supplied value when that is
@@ -761,9 +762,11 @@ indicator, not a measured surface temperature.
 ### Precipitation-history exponential decay (`precipitation_history_decay.dart`)
 
 Returns `exp(-ln2 × t / halfLife)` clamped to `[0, 1]`. Default
-half-life 90 minutes, a recorded decision. The fraction adds a margin
-to the warning visibility floor that shrinks as the fraction decays,
-so a longer half-life keeps the added warning distance longer; no
+half-life 90 minutes, a recorded decision. The warning visibility floor
+becomes the per-profile floor plus a margin that shrinks as the
+fraction decays, when that is longer than the floor from speed (the
+margin is not added to the speed floor), so a longer half-life keeps
+the added warning distance longer; no
 source is cited showing that 90 minutes is conservative. Drying time
 varies with sun, wind, shade and cold.
 

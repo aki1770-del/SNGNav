@@ -20,9 +20,11 @@
 ///   0.981 m/s², an ice figure.
 /// - [brakingDecelerationMps2] — the deceleration the integrator
 ///   expects the vehicle can reach on the current surface, in m/s².
-///   It can only lengthen the floor: values above 5.5 are used as 5.5,
-///   and where the readings classify radiative-frost black ice, values
-///   above 0.981 are used as 0.981.
+///   It can only lengthen the floor. `NaN`, infinities, zero and
+///   negative values are checked first and used as 0.4905, whatever the
+///   readings; then values above 5.5 are used as 5.5, and where the
+///   readings classify radiative-frost black ice, values above 0.981
+///   are used as 0.981.
 /// - [humidityRH] — relative humidity as a fraction in `(0.0, 1.0]`;
 ///   combined with [ambientTempCelsius] adjusts the warning temperature
 ///   for dew-point-driven black-ice risk.
@@ -132,8 +134,9 @@ class DrivingContext extends Equatable {
   /// classify it, call `isRadiativeFrostBlackIce(ambientCelsius:
   /// ambientTempCelsius, humidityRHPercent: humidityRH * 100)`, which
   /// this package re-exports; it takes humidity in percent. `NaN`,
-  /// infinities, zero and negative values are not readable and are used
-  /// as 0.4905 (0.05 × 9.81), the lowest bounded friction figure in the
+  /// infinities, zero and negative values are checked before the 5.5
+  /// and 0.981 rules: they are not readable and are used as 0.4905
+  /// (0.05 × 9.81), the lowest bounded friction figure in the
   /// sources read (VTI meddelande 911A, wet black ice 0.05–0.10). TRB
   /// Special Report 115 reports friction on completely flat ice surfaces
   /// sometimes dropping to near zero, which no finite floor represents.

@@ -4,7 +4,7 @@
 //
 // Figures:
 // - 5.5 m/s2: the calibration's existing default. No source read gives it;
-//   a recorded decision. Used here only as the ceiling (the 0.11.7 answer).
+//   a recorded decision. Used here only as the ceiling (the 0.11.8 answer).
 // - 1.5 m/s2: a value supplied in some tests below. No source read gives
 //   it. It equals friction ~0.153 x 9.81, inside Wallman and Astrom
 //   (VTI meddelande 911A, 2001) "Black ice 0.15-0.30" at its lower edge
@@ -67,7 +67,7 @@ void main() {
       );
     });
 
-    test('a value above dry pavement never shortens the 0.11.7 answer', () {
+    test('a value above dry pavement never shortens the 0.11.8 answer', () {
       final v = 150 / 3.6; // dry answer 233 m exceeds the 200 m baseline
       expect(floorFor(DriverProfile.snowZoneExperienced, speedMps: v), 233);
       expect(
@@ -128,7 +128,7 @@ void main() {
   });
 
   group('absent deceleration', () {
-    test('no frost evidence: the 0.11.7 dry answer is unchanged', () {
+    test('no frost evidence: the 0.11.8 dry answer is unchanged', () {
       expect(
           floorFor(DriverProfile.snowZoneExperienced, speedMps: kmh100), 200);
       expect(
@@ -185,11 +185,70 @@ void main() {
         444,
       );
     });
+
+    test(
+        'the black-ice classification uses the humidity as passed, not a '
+        'rounded value', () {
+      // Near the edge of isRadiativeFrostBlackIce a small change of humidity
+      // moves a reading across it, either way. 2.8 C at 81.6 % RH is
+      // classified as black ice (dew point -0.036 C) and would not be at
+      // 82 % (+0.032 C); 1.9 C at 87.4 % RH is not (+0.028 C) and would be
+      // at 87 % (-0.035 C). The factory must classify the humidity it is
+      // given, the same way the documented check does:
+      // isRadiativeFrostBlackIce(humidityRHPercent: humidityRH * 100).
+      // ageingRural at 100 km/h: 463 m on black-ice readings, 300 m
+      // otherwise.
+      int ageingRural100(double? ambient, double? rh) => floorFor(
+          DriverProfile.ageingRural,
+          speedMps: kmh100, ambient: ambient, rh: rh);
+      expect(ageingRural100(null, null), 300);
+      expect(ageingRural100(-5.0, 0.50), 463);
+
+      expect(
+        isRadiativeFrostBlackIce(ambientCelsius: 2.8, humidityRHPercent: 81.6),
+        isTrue,
+      );
+      expect(
+        isRadiativeFrostBlackIce(ambientCelsius: 2.8, humidityRHPercent: 82.0),
+        isFalse,
+      );
+      expect(ageingRural100(2.8, 0.816), 463);
+
+      expect(
+        isRadiativeFrostBlackIce(ambientCelsius: 1.9, humidityRHPercent: 87.4),
+        isFalse,
+      );
+      expect(
+        isRadiativeFrostBlackIce(ambientCelsius: 1.9, humidityRHPercent: 87.0),
+        isTrue,
+      );
+      expect(ageingRural100(1.9, 0.874), 300);
+
+      // Every 0.01 % from 80 to 100 % RH at every 0.1 C from 0.0 to 3.0 C,
+      // where the edge lies: the floor follows the classification of the
+      // humidity as passed.
+      var cells = 0;
+      var blackIce = 0;
+      for (var ti = 0; ti <= 30; ti++) {
+        final t = ti / 10.0;
+        for (var i = 8000; i <= 10000; i++) {
+          final rh = i / 10000.0;
+          final iced = isRadiativeFrostBlackIce(
+              ambientCelsius: t, humidityRHPercent: rh * 100.0);
+          cells++;
+          if (iced) blackIce++;
+          expect(ageingRural100(t, rh), iced ? 463 : 300,
+              reason: '$t C, humidity $rh');
+        }
+      }
+      expect(cells, 31 * 2001);
+      expect(blackIce, allOf(greaterThan(0), lessThan(cells)));
+    });
   });
 
   group('invariant grid', () {
     test(
-        'never below the 0.11.7 dry answer; never below kinematics at the '
+        'never below the 0.11.8 dry answer; never below kinematics at the '
         'effective deceleration', () {
       final decels = <double?>[
         null, 0.3, 0.4905, 1.0, 1.5, 3.0, 5.5, 9.0, //

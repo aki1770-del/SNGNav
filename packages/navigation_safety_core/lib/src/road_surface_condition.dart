@@ -58,7 +58,10 @@ enum RoadSurfaceCondition {
   /// (this package's gloss; VSS gives no definition). The glossary labels
   /// it アイスバーン with the parenthetical reading 濡れた凍結, a recorded
   /// wording decision meant to anchor the meaning for first-time hearers.
-  /// Its spoken strings rank it among the most slippery road surfaces, not
+  /// In the glossary, the Japanese spoken strings for `ageingRural` and
+  /// `foreignTouristSnowZone` rank it among the most slippery road surfaces
+  /// (最も滑りやすい路面の一つ), and its other Japanese strings do not rank
+  /// it. Both English spoken strings say "very slippery". None says it is
   /// the single most slippery. In VTI meddelande 911A's survey summary, wet
   /// black ice has the lowest friction numbers of the surfaces listed
   /// (0.05–0.10, skiddometer at 17 % slip). In TRB Special Report 115,
@@ -66,10 +69,8 @@ enum RoadSurfaceCondition {
   /// near zero on completely flat surfaces", and a discussant adds
   /// "Rough-textured ice is not as slick as glare ice": how slippery ice is
   /// depends on its texture as well as on a water film, so no source read
-  /// ranks wet ice as such the single most slippery. The Japanese strings
-  /// say 最も滑りやすい路面の一つ; the English says "among the most slippery
-  /// road surfaces". Mapping VSS WET_ICE to VTI's "wet black ice" is this
-  /// package's decision.
+  /// ranks wet ice as such the single most slippery. Mapping VSS WET_ICE to
+  /// VTI's "wet black ice" is this package's decision.
   wetIce,
 
   /// VSS `LOOSE_GRAVEL`. Surface has loose gravel — increases stopping

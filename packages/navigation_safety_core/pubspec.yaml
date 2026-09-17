@@ -22,7 +22,7 @@ dependencies:
   # baseline (re-exported from the barrel). Caution-add-only: the
   # per-profile floor never lowers across releases. Integrators should
   # commit pubspec.lock to pin the exact calibration version.
-  navigation_safety_calibration: ^0.1.2
+  navigation_safety_calibration: ^0.1.3
 
 dev_dependencies:
   test: ^1.25.0

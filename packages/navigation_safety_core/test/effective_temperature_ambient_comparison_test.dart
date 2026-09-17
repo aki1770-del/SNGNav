@@ -1,6 +1,6 @@
 // Inside the calibration's own radiative-frost black-ice classification, a
 // consumer comparing AMBIENT with the returned warning temperature must get
-// "warn". Outside it, the 0.11.7 answer is unchanged.
+// "warn". Outside it, the 0.11.8 answer is unchanged.
 //
 // The classification is navigation_safety_calibration's single source of
 // truth (isRadiativeFrostBlackIce: ambient <= 3.0 C and dew point <= 0 C).
@@ -8,7 +8,7 @@
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
-/// The 0.11.7 warning temperature, re-stated as a characterization.
+/// The 0.11.8 warning temperature, re-stated as a characterization.
 int oldWarning(DriverProfile p, double t, double rh) {
   final b = NavigationSafetyConfig.forProfile(p).warningTemperatureCelsius;
   final eff =
@@ -32,7 +32,7 @@ void main() {
 
   test(
       'grid: frost-classified => ambient <= warning; otherwise unchanged; '
-      'never below 0.11.7; never above baseline + 10', () {
+      'never below 0.11.8; never above baseline + 10', () {
     var frostCells = 0;
     var otherCells = 0;
     var misses = 0;

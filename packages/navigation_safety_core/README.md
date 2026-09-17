@@ -195,8 +195,10 @@ not need a separate import:
   the live speed) plus the braking distance REPLACES the per-profile
   warning visibility floor when it is longer; it is not added to it.
   The factories take the deceleration from
-  `DrivingContext.brakingDecelerationMps2`, with values above 5.5 m/s²
-  used as 5.5. Without one they use 5.5 m/s², a dry-pavement value, and
+  `DrivingContext.brakingDecelerationMps2`. They check it first for
+  `NaN`, infinite, zero and negative values, which are used as
+  0.4905 m/s² whatever the readings, and then use values above 5.5 m/s²
+  as 5.5. Without one they use 5.5 m/s², a dry-pavement value, and
   with the per-profile floors that replaces the floor only above about
   134 km/h (`agriculturalForestry`) to 179 km/h
   (`foreignTouristSnowZone`). Where the ambient and humidity readings
@@ -230,9 +232,10 @@ not need a separate import:
   black ice.
 - **Time-since-precipitation surface moisture**
   (`computeSurfaceMoistureFraction`) — surface moisture decays
-  exponentially after the last rain or snowfall; the residual moisture
-  fraction adds a margin to the visibility floor proportional to
-  how wet the road still is.
+  exponentially after the last rain or snowfall. The warning visibility
+  floor becomes the per-profile floor plus a margin proportional to how
+  wet the road still is, when that is longer than the floor from speed;
+  the margin is not added to the speed floor.
 
 Each calibration source file's header comment in the
 `navigation_safety_calibration` package names the sources cited for its
