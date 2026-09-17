@@ -697,20 +697,32 @@ Same defer pattern as the 0.3.1 per-profile vocabulary speak-strings
 and the 0.4.0 density caps — these are recorded-decision defaults,
 not field-validated population values.
 
-The factories compute this floor with the calibration's default
-braking deceleration, 5.5 m/s² (typical dry pavement). No parameter of
-`forProfileWithContext`, `forDriverContext` or `DrivingContext` takes
-a different value, so the speed floor they return assumes dry-pavement
-braking on every surface. Surface friction is the dominant variable
-and no single default fits every road condition: on compacted snow
-(about 3.0 m/s²) or glare ice (about 1.5 m/s², the calibration's own
-figures), reacting and stopping takes more distance than the floor
-the factories return in 19 of the 30 cases measured (each profile at
-60, 80, 100, 110 and 130 km/h, with speed the only input). At 80 km/h
-`snowZoneExperienced` gets a 200 m floor, and stopping on glare ice
-after its 1.8 s reaction time takes 204.6 m.
-`computeSpeedAdjustedVisibilityMeters`, which this package re-exports,
-accepts `brakingDecelerationMps2`; the factories do not pass it.
+The factories compute this floor with the deceleration from
+`DrivingContext.brakingDecelerationMps2`. Values above 5.5 m/s² are
+used as 5.5, and `NaN`, infinities, zero and negative values as
+0.4905 m/s² (0.05 × 9.81). Without a supplied value they use 5.5 m/s²,
+a recorded decision for dry pavement. Where the ambient and humidity
+readings classify radiative-frost black ice (`isRadiativeFrostBlackIce`)
+they use 0.981 m/s² (0.10 × 9.81), or a supplied value when that is
+lower: a recorded decision, the lower edge of the ice ranges in TRB
+Special Report 115 and 土木技術資料 52-5; wet or near-melting ice can
+be lower. For snow or ice, pass a value for the surface. Friction
+surveys give ranges, not one figure: compacted snow or ice, the surface
+most frequently observed, around 0.2 to 0.3 and new snow compacted by
+traffic 0.10 to 0.15 (TRB Special Report 115), packed snow 0.20–0.30
+and wet black ice 0.05–0.10 (VTI meddelande 911A), ice 0.1 to 0.2 (TRB
+Special Report 115; 土木技術資料 52-5). Multiplied by 9.81 m/s² these
+bound deceleration from above; they are not measured stopping figures.
+With speed the only input, the floor still assumes dry-pavement
+braking: the reaction distance plus the braking distance at 0.981 m/s²
+exceeds the floor the factories return in 23 of the 30 cases measured
+(each profile at 60, 80, 100, 110 and 130 km/h). At 80 km/h
+`snowZoneExperienced` gets a 200 m floor from speed alone; its 1.8 s
+reaction distance plus the braking distance at 0.981 m/s² is 291.7 m,
+and with frost-classified ambient and humidity readings the factories
+return 292 m. `computeSpeedAdjustedVisibilityMeters`, which this
+package re-exports, takes the deceleration as `brakingDecelerationMps2`
+(default 5.5 m/s²).
 
 ### Humidity-dependent effective temperature (`humidity_dependent_temperature.dart`)
 

@@ -128,11 +128,15 @@ ranges before feeding the helper.
   `foreignTouristSnowZone` ≈ 3.5 s values in the docstring are recorded
   decisions pending field-measurement validation; no source cited here
   gives any of them.
-- **Default braking deceleration of 5.5 m/s².** A typical
-  passenger-car dry-pavement value; surface friction coefficient is
-  the dominant variable. For snow / ice surfaces consumers should
-  pass a lower value (≈ 3.0 m/s² for compacted snow; ≈ 1.5 m/s² for
-  glare ice). No single default fits every road condition.
+- **Default braking deceleration of 5.5 m/s².** A recorded decision for
+  dry pavement. For snow or ice, pass a value for the surface. Friction
+  surveys give ranges, not one figure: compacted snow or ice, the
+  surface most frequently observed, around 0.2 to 0.3 and new snow
+  compacted by traffic 0.10 to 0.15 (TRB Special Report 115), packed
+  snow 0.20–0.30 and wet black ice 0.05–0.10 (VTI meddelande 911A), ice
+  0.1 to 0.2 (TRB Special Report 115; 土木技術資料 52-5). Multiplied by
+  9.81 m/s² these bound deceleration from above; they are not measured
+  stopping figures.
 
 ### Caution-add-only contract
 

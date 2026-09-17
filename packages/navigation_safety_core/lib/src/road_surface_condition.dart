@@ -58,11 +58,18 @@ enum RoadSurfaceCondition {
   /// (this package's gloss; VSS gives no definition). The glossary labels
   /// it アイスバーン with the parenthetical reading 濡れた凍結, a recorded
   /// wording decision meant to anchor the meaning for first-time hearers.
-  /// No source cited here ranks it as the most slippery condition. The
-  /// Japanese spoken strings for this value (最も滑りやすい, 最も滑ります)
-  /// and AlertExplainer's wet-ice explanations still rank it so; that
-  /// wording is unchanged in this release, and the ranking in it is not
-  /// sourced.
+  /// Its spoken strings rank it among the most slippery road surfaces, not
+  /// the single most slippery. In VTI meddelande 911A's survey summary, wet
+  /// black ice has the lowest friction numbers of the surfaces listed
+  /// (0.05–0.10, skiddometer at 17 % slip). In TRB Special Report 115,
+  /// Ichihara and Mizoguchi give flat-ice friction "sometimes dropping to
+  /// near zero on completely flat surfaces", and a discussant adds
+  /// "Rough-textured ice is not as slick as glare ice": how slippery ice is
+  /// depends on its texture as well as on a water film, so no source read
+  /// ranks wet ice as such the single most slippery. The Japanese strings
+  /// say 最も滑りやすい路面の一つ; the English says "among the most slippery
+  /// road surfaces". Mapping VSS WET_ICE to VTI's "wet black ice" is this
+  /// package's decision.
   wetIce,
 
   /// VSS `LOOSE_GRAVEL`. Surface has loose gravel — increases stopping
@@ -297,7 +304,7 @@ class RoadSurfaceConditionGlossary {
             return RoadSurfaceConditionGlossary(
               jaName: defaults.jaName,
               enName: defaults.enName,
-              jaSpeakString: 'アイスバーンです。最も滑りやすい状態です',
+              jaSpeakString: 'アイスバーンです。最も滑りやすい路面の一つです',
               enSpeakString: defaults.enSpeakString,
             );
           case RoadSurfaceCondition.slush:
@@ -474,7 +481,7 @@ class RoadSurfaceConditionGlossary {
             return const RoadSurfaceConditionGlossary(
               jaName: 'アイスバーン（濡れた凍結）',
               enName: 'Wet ice (ice with water film)',
-              jaSpeakString: 'ぬれた凍結路面、最も滑ります',
+              jaSpeakString: 'ぬれた凍結路面、最も滑りやすい路面の一つです',
               enSpeakString: 'Wet ice, very slippery, drive very slowly',
             );
           case RoadSurfaceCondition.slush:

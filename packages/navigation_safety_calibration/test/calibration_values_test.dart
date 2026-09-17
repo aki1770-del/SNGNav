@@ -153,20 +153,20 @@ void main() {
       expect(v, greaterThan(100.0));
     });
 
-    test('lower deceleration (e.g. snow ≈ 3.0) raises required distance', () {
+    test('lower deceleration (e.g. 3.0) raises required distance', () {
       final dryV = computeSpeedAdjustedVisibilityMeters(
         profileBaseMeters: 0.0,
         speedMps: 20.0,
         driverReactionTimeSeconds: 1.5,
         brakingDecelerationMps2: 5.5,
       );
-      final snowV = computeSpeedAdjustedVisibilityMeters(
+      final lowerV = computeSpeedAdjustedVisibilityMeters(
         profileBaseMeters: 0.0,
         speedMps: 20.0,
         driverReactionTimeSeconds: 1.5,
         brakingDecelerationMps2: 3.0,
       );
-      expect(snowV, greaterThan(dryV));
+      expect(lowerV, greaterThan(dryV));
     });
 
     test('rejects negative profile-base', () {

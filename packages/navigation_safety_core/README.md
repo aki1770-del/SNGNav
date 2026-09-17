@@ -58,7 +58,8 @@ closest to the active driver context; fall back to
 ### c. Advanced usage — context-aware factories
 
 When the app has live driving conditions (current speed, humidity,
-ambient temperature, time-since-precipitation), pass a `DrivingContext`
+ambient temperature, time-since-precipitation, the braking deceleration
+the vehicle can reach on the current surface), pass a `DrivingContext`
 to `forProfileWithContext` and the relevant thresholds adjust:
 
 ```dart
@@ -191,15 +192,20 @@ not need a separate import:
 
 - **Speed-dependent visibility** (`computeSpeedAdjustedVisibilityMeters`)
   — the reaction distance (the per-profile reaction-time default times
-  the live speed) plus the braking distance at the default deceleration
-  of 5.5 m/s², a dry-pavement value, REPLACES the per-profile warning
-  visibility floor when it is longer; it is not added to it. With the
-  per-profile floors that happens only above about 134 km/h
-  (`agriculturalForestry`) to 179 km/h (`foreignTouristSnowZone`), so at
-  ordinary speeds a speed sample leaves the floor unchanged, and
-  `forProfileWithContext` has no parameter for a lower snow or ice
-  deceleration. (`forDriverContext` adds a further margin of speed
-  times a reaction-time penalty for a fatigued or distracted driver.)
+  the live speed) plus the braking distance REPLACES the per-profile
+  warning visibility floor when it is longer; it is not added to it.
+  The factories take the deceleration from
+  `DrivingContext.brakingDecelerationMps2`, with values above 5.5 m/s²
+  used as 5.5. Without one they use 5.5 m/s², a dry-pavement value, and
+  with the per-profile floors that replaces the floor only above about
+  134 km/h (`agriculturalForestry`) to 179 km/h
+  (`foreignTouristSnowZone`). Where the ambient and humidity readings
+  classify radiative-frost black ice they use 0.981 m/s², or a supplied
+  value when that is lower, and the floor is replaced from about 65 km/h
+  (`agriculturalForestry`) to 89 km/h (`foreignTouristSnowZone`). Both
+  figures are recorded decisions; see `KNOWN_LIMITATIONS.md`.
+  (`forDriverContext` adds a further margin of speed times a
+  reaction-time penalty for a fatigued or distracted driver.)
 - **Humidity-dependent effective temperature**
   (`computeEffectiveTemperatureCelsius`) — black ice forms at
   road-surface temperature ≤ 0 °C. The effective temperature is the
@@ -210,10 +216,18 @@ not need a separate import:
   saturated freezing fog above about +1 °C. When the effective
   temperature is at or below the per-profile warning temperature, the
   warning temperature rises by `baseline − floor(effective)`, at most
-  10 °C. The effective temperature does not replace ambient in the
-  comparison: at 3.0 °C and 70 % RH the effective temperature is
-  −1.94 °C, the warning temperature rises from 0 °C to 2 °C, and a
-  3.0 °C ambient reading is still above it.
+  10 °C. Where the readings classify radiative-frost black ice (ambient
+  at or below 3.0 °C and effective temperature at or below 0 °C), the
+  warning temperature is also raised to at least the ambient reading
+  rounded up, so an ambient comparison (`<=`) warns: at 3.0 °C and
+  70 % RH the effective temperature is −1.94 °C, and for a profile whose
+  warning temperature is 0 °C the lift gives 2 °C and the
+  classification 3 °C; for `ageingRural` and `foreignTouristSnowZone`,
+  whose warning temperature is 2 °C, the lift alone gives 6 °C. Above
+  3.0 °C ambient, an ambient reading can still stay above the raised
+  warning temperature while the effective temperature is at or below
+  the baseline; the calibration does not classify those readings as
+  black ice.
 - **Time-since-precipitation surface moisture**
   (`computeSurfaceMoistureFraction`) — surface moisture decays
   exponentially after the last rain or snowfall; the residual moisture
@@ -320,7 +334,9 @@ for the full discussion.
 - **`DriverState`** — four live-state values (transient state axis).
 - **`DriverContext`** — trait + state composite.
 - **`DrivingContext`** — live driving-conditions value-object. As of
-  0.9.0, carries an optional `vehicleClassToken` field.
+  0.9.0, carries an optional `vehicleClassToken` field. It also carries
+  an optional `brakingDecelerationMps2` field for the current surface:
+  pass `null`, not a sentinel, when no value was measured.
 - **`VehicleClassProvider`** (0.9.0) — abstract interface returning
   `String? get vehicleClassToken` for integrator-supplied
   vehicle-class signals.

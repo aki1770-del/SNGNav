@@ -280,11 +280,11 @@ class AlertExplainer {
       case RoadSurfaceCondition.wetIce:
         switch (profile) {
           case DriverProfile.ageingRural:
-            return 'アイスバーンです。最も滑りやすい路面状態です。'
+            return 'アイスバーンです。最も滑りやすい路面の一つです。'
                 '可能であれば停車できる安全な場所を探してください。'
                 '走行中は時速20km以下を目安に';
           case DriverProfile.snowZoneExperienced:
-            return 'アイスバーン、最危険、20km/h以下';
+            return 'アイスバーン、極めて危険、20km/h以下';
           case DriverProfile.noviceUrban:
             return 'アイスバーン、極めて危険。'
                 '可能なら安全な場所で停車してください。'
@@ -294,7 +294,7 @@ class AlertExplainer {
           case DriverProfile.agriculturalForestry:
             return 'アイスバーン、停車できる場所まで最低速で';
           case DriverProfile.foreignTouristSnowZone:
-            return 'Wet ice — most slippery condition. '
+            return 'Wet ice — among the most slippery road surfaces. '
                 'If possible, stop in a safe place. '
                 'Otherwise drive below 20 km/h.';
         }

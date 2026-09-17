@@ -13,9 +13,16 @@
 ///
 /// - [speedMps] — current vehicle speed in metres per second; when
 ///   non-null, the warning visibility floor rises to the reaction plus
-///   braking distance at 5.5 m/s², a dry-pavement deceleration, when
-///   that is longer. On snow or ice, stopping can take more distance
-///   than this floor, and no field here takes another deceleration.
+///   braking distance, when that is longer. The deceleration used is
+///   [brakingDecelerationMps2] when supplied, otherwise 5.5 m/s², a
+///   dry-pavement figure; where [ambientTempCelsius] and [humidityRH]
+///   classify radiative-frost black ice, it is the lower of that and
+///   0.981 m/s², an ice figure.
+/// - [brakingDecelerationMps2] — the deceleration the integrator
+///   expects the vehicle can reach on the current surface, in m/s².
+///   It can only lengthen the floor: values above 5.5 are used as 5.5,
+///   and where the readings classify radiative-frost black ice, values
+///   above 0.981 are used as 0.981.
 /// - [humidityRH] — relative humidity as a fraction in `(0.0, 1.0]`;
 ///   combined with [ambientTempCelsius] adjusts the warning temperature
 ///   for dew-point-driven black-ice risk.
@@ -105,6 +112,37 @@ class DrivingContext extends Equatable {
   /// back to the per-profile baseline.
   final String? vehicleClassToken;
 
+  /// Braking deceleration in m/s² for the current surface, used with
+  /// [speedMps] to compute the warning-visibility floor. `null` means
+  /// the integrator has no surface-specific value.
+  ///
+  /// No single figure fits a road condition. Published skid-resistance
+  /// surveys report friction numbers such as 0.8–1.0 on a dry bare
+  /// surface, 0.20–0.30 on packed snow and 0.05–0.10 on wet black ice
+  /// (Wallman and Åström, VTI meddelande 911A, 2001); multiplying by
+  /// 9.81 m/s² gives an upper bound on deceleration, not a measured
+  /// stopping figure.
+  ///
+  /// Values above 5.5 are used as 5.5. Where [ambientTempCelsius] and
+  /// [humidityRH] classify radiative-frost black ice, values above 0.981
+  /// are used as 0.981 (0.10 × 9.81, the lower edge of the ice ranges in
+  /// TRB Special Report 115 and 土木技術資料 52-5), the figure used there
+  /// when this field is `null`. So a supplied value never gives a
+  /// shorter floor than leaving it out. To check whether given readings
+  /// classify it, call `isRadiativeFrostBlackIce(ambientCelsius:
+  /// ambientTempCelsius, humidityRHPercent: humidityRH * 100)`, which
+  /// this package re-exports; it takes humidity in percent. `NaN`,
+  /// infinities, zero and negative values are not readable and are used
+  /// as 0.4905 (0.05 × 9.81), the lowest bounded friction figure in the
+  /// sources read (VTI meddelande 911A, wet black ice 0.05–0.10). TRB
+  /// Special Report 115 reports friction on completely flat ice surfaces
+  /// sometimes dropping to near zero, which no finite floor represents.
+  /// The factory does not throw on these values, and at 120 km/h they
+  /// give floors of 1,183 to 1,252 m across the six profiles: pass
+  /// `null`, not a sentinel such as `0`, `-1` or `NaN`, when no value was
+  /// measured.
+  final double? brakingDecelerationMps2;
+
   /// Construct a context value. Every field is optional. Pass `null`
   /// for any input you do not have; the factory will fall back to the
   /// per-profile baseline for that dimension.
@@ -120,6 +158,7 @@ class DrivingContext extends Equatable {
     this.timeSincePrecipitation,
     this.ambientTempCelsius,
     this.vehicleClassToken,
+    this.brakingDecelerationMps2,
   });
 
   /// Construct a context from a PERCENT relative-humidity reading
@@ -152,6 +191,7 @@ class DrivingContext extends Equatable {
     Duration? timeSincePrecipitation,
     double? ambientTempCelsius,
     String? vehicleClassToken,
+    double? brakingDecelerationMps2,
   }) {
     double? fraction;
     final p = humidityPercent;
@@ -185,6 +225,7 @@ class DrivingContext extends Equatable {
       timeSincePrecipitation: timeSincePrecipitation,
       ambientTempCelsius: ambientTempCelsius,
       vehicleClassToken: vehicleClassToken,
+      brakingDecelerationMps2: brakingDecelerationMps2,
     );
   }
 
@@ -195,6 +236,7 @@ class DrivingContext extends Equatable {
     timeSincePrecipitation,
     ambientTempCelsius,
     vehicleClassToken,
+    brakingDecelerationMps2,
   ];
 
   @override

@@ -20,6 +20,12 @@ class NavigationSafetyConfig extends Equatable {
   final double warningScoreFloor;
 
   final int infoTemperatureCelsius;
+
+  /// A consumer warns when the ambient reading is at or below this value
+  /// (`<=`). Inside the radiative-frost classification,
+  /// [NavigationSafetyConfig.forProfileWithContext] raises it to at least
+  /// the ambient reading rounded up, so where it equals a whole-degree
+  /// ambient reading a strict `<` would not warn.
   final int warningTemperatureCelsius;
   final int criticalTemperatureCelsius;
 
@@ -143,25 +149,41 @@ class NavigationSafetyConfig extends Equatable {
   ///
   /// - If `context.speedMps` is non-null, the warning visibility floor
   ///   rises to the reaction distance (a per-profile reaction-time
-  ///   default times the speed) plus the braking distance at 5.5 m/s²,
-  ///   a dry-pavement deceleration, when that is longer. Neither this
-  ///   factory nor `DrivingContext` takes another deceleration, so on
-  ///   snow or ice stopping can take more distance than the floor
-  ///   returned. The
-  ///   per-profile baseline acts as a lower bound: context can only
-  ///   warn earlier (longer visibility floor), never later.
+  ///   default times the speed) plus the braking distance, when that is
+  ///   longer. The braking deceleration is
+  ///   `context.brakingDecelerationMps2` when supplied (values above
+  ///   5.5 m/s² are used as 5.5; unreadable values as 0.4905), and
+  ///   otherwise 5.5 m/s², a dry-pavement figure. Where
+  ///   `context.ambientTempCelsius` and `context.humidityRH` classify
+  ///   radiative-frost black ice (`isRadiativeFrostBlackIce`), the lower
+  ///   of that value and 0.981 m/s² applies, so a supplied value never
+  ///   gives a shorter floor than leaving it out. 0.981 m/s²
+  ///   (0.10 × 9.81) is an ice figure: the lower edge of the ice ranges
+  ///   in TRB Special Report 115 and 土木技術資料 52-5; wet or
+  ///   near-melting ice can be lower, so an integrator with a lower
+  ///   reading for the surface should supply it. Both figures are
+  ///   recorded decisions. The per-profile baseline acts as a lower
+  ///   bound: context can only warn earlier (longer visibility floor),
+  ///   never later.
   /// - If both `context.humidityRH` and `context.ambientTempCelsius`
   ///   are non-null and the effective road-surface temperature
   ///   (ambient minus dew-point depression, i.e. the dew point) is at
   ///   or below the per-profile warning temperature, the warning
   ///   temperature rises by `baseline - floor(effective)`, at most
-  ///   10 °C, to cover dew-point-driven black-ice risk. The effective
-  ///   temperature does not replace ambient in the comparison: an
-  ///   ambient reading compared with the raised warning temperature
-  ///   can stay above it while the effective temperature is at or
-  ///   below the baseline. At 3.0 °C and 70% RH the effective
-  ///   temperature is -1.94 °C and the warning temperature rises from
-  ///   0 to 2 °C, so the 3.0 °C reading does not meet it.
+  ///   10 °C, to cover dew-point-driven black-ice risk. Where the same
+  ///   readings classify radiative-frost black ice
+  ///   (`isRadiativeFrostBlackIce`: ambient at or below 3.0 °C and the
+  ///   effective temperature at or below 0 °C), the warning temperature
+  ///   is also raised to at least the ambient reading rounded up, so an
+  ///   ambient comparison (`<=`) warns. At 3.0 °C and 70% RH the
+  ///   effective temperature is -1.94 °C; for a profile whose baseline
+  ///   warning temperature is 0 °C the lift gives 2 °C and the
+  ///   classification 3 °C; for `ageingRural` and `foreignTouristSnowZone`,
+  ///   whose baseline is 2 °C, the lift alone gives 6 °C. Above 3.0 °C
+  ///   ambient the comparison can still stay above the raised warning
+  ///   temperature while the effective temperature is at or below the
+  ///   baseline; the calibration does not classify those readings as
+  ///   black ice.
   /// - If `context.timeSincePrecipitation` is non-null, the warning
   ///   visibility additionally raises by a residual-moisture margin
   ///   proportional to the surface-moisture fraction (longer
@@ -232,12 +254,18 @@ class NavigationSafetyConfig extends Equatable {
     var criticalVisibility = base.criticalVisibilityMeters;
     var warningTemperature = base.warningTemperatureCelsius;
 
+    final frostClassified = _isFrostClassified(context);
+
     // Speed-dependent visibility floor.
     if (context.speedMps != null) {
       final adjusted = computeSpeedAdjustedVisibilityMeters(
         profileBaseMeters: base.warningVisibilityMeters.toDouble(),
         speedMps: context.speedMps!,
         driverReactionTimeSeconds: _reactionTimeSecondsFor(profile),
+        brakingDecelerationMps2: _brakingDecelerationFor(
+          context.brakingDecelerationMps2,
+          frostClassified: frostClassified,
+        ),
       );
       warningVisibility = adjusted.ceil();
     }
@@ -288,6 +316,16 @@ class NavigationSafetyConfig extends Equatable {
             .clamp(0, 10)
             .toInt();
         warningTemperature = base.warningTemperatureCelsius + lift;
+      }
+      // Inside the radiative-frost classification the consumer's ambient
+      // comparison must warn: raise to the ambient reading rounded up.
+      // The classification bounds ambient at 3.0 C, so this stays within
+      // the lift's 10 C cap for every per-profile baseline.
+      if (frostClassified) {
+        final ambientCeil = context.ambientTempCelsius!.ceil();
+        if (ambientCeil > warningTemperature) {
+          warningTemperature = ambientCeil;
+        }
       }
     }
 
@@ -393,6 +431,61 @@ class NavigationSafetyConfig extends Equatable {
       }
     }
     return agreed;
+  }
+
+  /// Dry-pavement braking deceleration, m/s². A recorded decision: no
+  /// source read gives 5.5. It is the ceiling for a supplied value.
+  static const double _dryBrakingDecelerationMps2 = 5.5;
+
+  /// Ice braking deceleration, m/s², used where the context classifies
+  /// radiative-frost black ice: when no value is supplied, and as the
+  /// ceiling for a supplied value. A recorded decision: 0.981 = 0.10 ×
+  /// 9.81, an ice figure, the lower edge of the ice ranges in TRB Special
+  /// Report 115 (Table 1, "Ice 0.1 to 0.2") and 土木技術資料 52-5
+  /// (表-2, 氷路面 0.2～0.1); wet or near-melting ice can be lower.
+  static const double _inferredIceBrakingDecelerationMps2 = 0.981;
+
+  /// Used for an unreadable supplied value: 0.4905 (0.05 × 9.81), the
+  /// lowest bounded friction figure in the sources read (VTI meddelande
+  /// 911A, wet black ice 0.05–0.10). TRB Special Report 115 reports
+  /// friction on completely flat ice surfaces sometimes dropping to near
+  /// zero, which no finite floor represents.
+  static const double _unreadableBrakingDecelerationMps2 = 0.4905;
+
+  /// Numeric guard only, not a physical figure: keeps the braking
+  /// distance finite for a vanishing positive value.
+  static const double _minBrakingDecelerationMps2 = 1e-3;
+
+  static bool _isFrostClassified(DrivingContext context) {
+    final ambient = context.ambientTempCelsius;
+    final rh = context.humidityRH;
+    if (ambient == null || rh == null) return false;
+    return isRadiativeFrostBlackIce(
+      ambientCelsius: ambient,
+      humidityRHPercent: rh * 100.0,
+    );
+  }
+
+  static double _brakingDecelerationFor(
+    double? supplied, {
+    required bool frostClassified,
+  }) {
+    if (supplied == null) {
+      return frostClassified
+          ? _inferredIceBrakingDecelerationMps2
+          : _dryBrakingDecelerationMps2;
+    }
+    if (!supplied.isFinite || supplied <= 0) {
+      return _unreadableBrakingDecelerationMps2;
+    }
+    final readable = supplied > _dryBrakingDecelerationMps2
+        ? _dryBrakingDecelerationMps2
+        : (supplied < _minBrakingDecelerationMps2
+            ? _minBrakingDecelerationMps2
+            : supplied);
+    return frostClassified && _inferredIceBrakingDecelerationMps2 < readable
+        ? _inferredIceBrakingDecelerationMps2
+        : readable;
   }
 
   /// Per-profile reaction-time defaults in seconds, recorded decisions:

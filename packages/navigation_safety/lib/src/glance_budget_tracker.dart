@@ -14,6 +14,12 @@
 /// budget indicator, modulate voice-guidance pace, or escalate
 /// advisories as the budget approaches exhaustion.
 ///
+/// Every glance since the last [reset] counts against one budget. An
+/// integrator that resets only at trip boundaries gets a trip-long
+/// budget: after the first `BudgetExhausted`, later glances emit no
+/// event and `remainingBudget` stays zero until the next reset. NHTSA's
+/// figure is per task; when to reset is the integrator's decision.
+///
 /// **Advisory not control.** The tracker emits `BudgetWarning` and
 /// `BudgetExhausted` records on a broadcast stream the integrator may
 /// subscribe to. The package mounts no actuator, no automatic input
