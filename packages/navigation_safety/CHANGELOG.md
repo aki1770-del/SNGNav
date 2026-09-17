@@ -1,3 +1,43 @@
+## 0.9.8
+
+A documentation release. This package's code has not changed, and two tests
+are new. **What it shows for wet ice can change in the same upgrade, through
+`navigation_safety_core` 0.11.9. Read the first item if your app shows wet-ice
+alerts.**
+
+**Wet-ice text for three profiles.** The action text this package shows comes
+from `navigation_safety_core`'s `AlertExplainer`. `AlertExplainerExpandableSheet`
+shows it when expanded, and it opens expanded by default for profiles that
+include `ageingRural` and `foreignTouristSnowZone`. `NavigationBloc` puts it in
+`NavigationState.alertMessage` when the bloc has a driver profile and the alert
+carries a condition. `navigation_safety_core` 0.11.9 changes this text for
+`RoadSurfaceCondition.wetIce` and three profiles. This package accepts 0.11.9,
+as 0.9.7 did, so the text changes when your app resolves it, whichever of the
+two versions of this package you hold:
+
+- `ageingRural`: the sentence `最も滑りやすい路面状態です。` becomes
+  `最も滑りやすい路面の一つです。` The rest of the text is unchanged.
+- `snowZoneExperienced`: `アイスバーン、最危険、20km/h以下` becomes
+  `アイスバーン、極めて危険、20km/h以下`
+- `foreignTouristSnowZone`: the sentence `Wet ice — most slippery condition.`
+  becomes `Wet ice — among the most slippery road surfaces.` The rest of the
+  text is unchanged.
+
+A test that expects the old text for these profiles goes red. The
+`navigation_safety_core` 0.11.9 entry gives the full strings.
+
+**If you reset `GlanceBudgetTracker` only at trip boundaries, read this.** Every
+glance recorded since the last `reset` counts against one budget. After the
+first `BudgetExhausted`, later glances emit no event, and `remainingBudget`
+stays at zero until you call `reset`. A tracker reset only at the start or end
+of a trip therefore stays exhausted for the rest of that trip. The 12-second
+default comes from NHTSA's guidelines, which apply it to one task ("a
+cumulative time spent glancing away from the roadway of 12 seconds or less"),
+not to a trip. When to reset is your decision. The `GlanceBudgetTracker` docs
+now say this, and two new tests pin it:
+`glance_budget_latch_vector_test.dart` and
+`glance_budget_pooled_across_tasks_characterization_test.dart`.
+
 ## 0.9.7
 
 **One change in this release shows on your users' screens. Read the first

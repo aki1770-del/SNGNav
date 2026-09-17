@@ -1,5 +1,176 @@
 # Changelog
 
+## 0.11.9
+
+0.11.8 computed the braking part of the warning-visibility floor at 5.5 m/s²,
+a dry-pavement figure, on every road, and there was no way to pass another
+value. Its docs said that on snow or ice stopping can take more distance than
+the floor it returned. At 120 km/h on readings that point to black ice, that
+floor was up to 433 m shorter than the same formula gives with the ice figure
+below. This release adds a field for the deceleration, uses an ice figure when
+the readings you pass point to black ice, and raises the warning temperature
+on those readings so that comparing the ambient reading with it warns. It also
+changes five wet-ice strings that `AlertExplainer` and
+`RoadSurfaceConditionGlossary` return.
+
+**If you pass both `ambientTempCelsius` and `humidityRH`, read this first.** On
+readings this package classifies as black ice, two values can be higher than
+0.11.8 gave you: `warningVisibilityMeters`, when you also pass `speedMps`, and
+`warningTemperatureCelsius`. No value is ever lower than in 0.11.8. If you do
+not pass both readings, and do not pass the new field, every config you get is
+the one 0.11.8 gave you. If you pass both but the readings are not black-ice
+readings, you also get what 0.11.8 gave you.
+
+**If your app shows, speaks, compares or looks up the wet-ice text, read this
+too.** The 0.11.8 entry said the wet-ice strings were not changed in that
+release. Five of them change in this one. They no longer call wet ice the most
+slippery condition, or the most dangerous one; the `RoadSurfaceCondition.wetIce`
+docs say what the cited sources show. Code that compares these strings with the
+old text, or looks up a recording, translation or cache entry by the old text,
+no longer finds a match, and this package does not report that. The old and
+new strings, exactly:
+
+- `AlertExplainer.forConditionAndProfile(RoadSurfaceCondition.wetIce, ...)`
+  `.action`:
+  - `ageingRural`. Was:
+    `アイスバーンです。最も滑りやすい路面状態です。可能であれば停車できる安全な場所を探してください。走行中は時速20km以下を目安に`
+    Now:
+    `アイスバーンです。最も滑りやすい路面の一つです。可能であれば停車できる安全な場所を探してください。走行中は時速20km以下を目安に`
+    Only the second sentence changed: from "it is the most slippery road
+    condition" to "it is one of the most slippery road surfaces", in
+    translation.
+  - `snowZoneExperienced`. Was: `アイスバーン、最危険、20km/h以下`
+    Now: `アイスバーン、極めて危険、20km/h以下`
+    (最危険, "most dangerous", became 極めて危険, "extremely dangerous", the
+    words the `noviceUrban` string already uses).
+  - `foreignTouristSnowZone`. Was:
+    `Wet ice — most slippery condition. If possible, stop in a safe place. Otherwise drive below 20 km/h.`
+    Now:
+    `Wet ice — among the most slippery road surfaces. If possible, stop in a safe place. Otherwise drive below 20 km/h.`
+- `RoadSurfaceConditionGlossary.forConditionAndProfile(RoadSurfaceCondition.wetIce, ...)`
+  `.jaSpeakString`:
+  - `ageingRural`. Was: `アイスバーンです。最も滑りやすい状態です`
+    Now: `アイスバーンです。最も滑りやすい路面の一つです`
+  - `foreignTouristSnowZone`. Was: `ぬれた凍結路面、最も滑ります`
+    Now: `ぬれた凍結路面、最も滑りやすい路面の一つです`
+
+No other string these two classes return has changed: every name, speak
+string, action, verbosity and locale tag, for every condition and profile, is
+the one 0.11.8 returned. `navigation_safety` 0.9.7 shows the `AlertExplainer`
+text in `AlertExplainerExpandableSheet` when it is expanded, and as
+`NavigationState.alertMessage` when its bloc has a driver profile and the alert
+carries a condition. `voice_guidance` 0.7.8 speaks it when its bloc has a
+driver profile and the navigation state carries a condition. Both accept this
+release, so what they show and say changes when your app resolves it.
+
+**Which readings.** Those for which `isRadiativeFrostBlackIce(ambientCelsius:
+..., humidityRHPercent: ...)` returns `true`: an ambient reading at or below
+3.0 °C whose dew point is at or below 0 °C, with relative humidity of at least
+5 %. That includes every ambient reading at or below 0 °C. To see whether a
+config you got used them, call that function with the same readings, humidity
+in percent.
+
+- **Warning visibility, when you also pass `speedMps`.** On those readings, if
+  you do not pass `brakingDecelerationMps2`, the braking distance is computed
+  at 0.981 m/s² (0.10 × 9.81) instead of 5.5 m/s². 0.10 is the lower edge of
+  "Ice 0.1 to 0.2" in TRB Special Report 115, whose table is for 30 to 40 km/h,
+  and the upper edge of "Wet black ice 0.05–0.10" in VTI meddelande 911A. It is
+  a figure this package chose from those ranges, not a measured stopping
+  figure; flat, wet or near-melting ice can be lower. The floor in metres,
+  0.11.8 then 0.11.9, on any such reading, without `timeSincePrecipitation`:
+
+  | profile | 80 km/h | 100 km/h | 120 km/h |
+  |---|---|---|---|
+  | ageingRural | 300 → 308 | 300 → 463 | 300 → 650 |
+  | noviceUrban | 320 → 332 | 320 → 493 | 320 → 686 |
+  | snowZoneExperienced | 200 → 292 | 200 → 444 | 200 → 627 |
+  | professional | 200 → 286 | 200 → 435 | 200 → 617 |
+  | agriculturalForestry | 200 → 297 | 200 → 449 | 200 → 633 |
+  | foreignTouristSnowZone | 400 → 400 | 400 → 491 | 400 → 683 |
+
+  At 60 km/h and below nothing changes. Above 120 km/h the increase is larger.
+  If you also pass `timeSincePrecipitation`, the increase can be smaller: the
+  floor is the longer of this and the drying margin, and the drying margin may
+  already have been the longer one in 0.11.8.
+  `forDriverContext` and vehicle-class overrides start from this floor. An app
+  that warns when visibility is at or below the floor will warn at longer
+  visibilities on these readings than it did.
+
+- **New: `DrivingContext.brakingDecelerationMps2`**, in m/s², also a parameter
+  of `DrivingContext.withPercentHumidity`. Optional; `null` means you have no
+  value for the surface. **A value you pass can only lengthen the floor. It
+  never gives a shorter floor than leaving it out.**
+  - 5.5 or more changes nothing, on any reading: you get the same floor as
+    `null`.
+  - On black-ice readings, any value above 0.981 changes nothing: the floor
+    uses 0.981. Only a lower value lengthens it there. **This includes a value
+    you measured on the road. No value you can pass shortens the floor on
+    those readings.**
+  - On other readings, a value below 5.5 is used as given. Positive values
+    below 0.001 are used as 0.001.
+  - `NaN`, `double.infinity`, `double.negativeInfinity`, zero and negative
+    values are used as 0.4905 (0.05 × 9.81, the low end of "Wet black ice
+    0.05–0.10" in VTI meddelande 911A; TRB Special Report 115 reports friction
+    "dropping to near zero on completely flat surfaces", which no finite value
+    represents). At 120 km/h that gives a floor of 1,183 to 1,252 m, by
+    profile, whatever the readings. **Pass `null` when you have no value. Do not
+    use 0, -1, `NaN` or `double.infinity` to mean "unknown".**
+  - The factories and `withPercentHumidity` do not throw on any of these
+    values.
+  - The README now lists this field, with the same rule: pass `null`, not a
+    sentinel, when no value was measured.
+
+- **Warning temperature, on black-ice readings.** `warningTemperatureCelsius`
+  is now at least the ambient reading rounded up. It rises only where 0.11.8
+  left it below that, and only for the four profiles whose baseline warning
+  temperature is 0 °C: noviceUrban, snowZoneExperienced, professional and
+  agriculturalForestry. It rises to at most 3 °C, before a vehicle-class
+  override or the fatigued driver state adds its own degree. On a grid of
+  every 0.1 °C from -10.0 to 6.0 °C and every 1 % from 5 to 100 % RH, for the
+  six profiles, 700 of 92,736 combinations rise, all at ambient readings from
+  1.1 to 3.0 °C, by 1 or 2 °C. The README and the `forProfileWithContext` docs
+  use 3.0 °C and 70 % RH as their example. At those readings 0.11.8 gave the
+  four profiles above 2 °C, and its README said a 3.0 °C reading "is still
+  above it", although the same readings classify as black ice; 0.11.9 gives
+  them 3 °C. `ageingRural` and `foreignTouristSnowZone`, whose baseline warning
+  temperature is 2 °C, get 6 °C there, as in 0.11.8. The docs now say which
+  profiles get which. At 3.0 °C and 75 % RH the four profiles go from 1 °C to
+  3 °C. **Compare with `<=`:** `ambientTempCelsius <=
+  warningTemperatureCelsius`. A strict `<` does not warn when the ambient
+  reading is a whole degree, because 3.0 < 3 is false.
+
+**What can turn your tests red after upgrading:** a test that pins
+`warningVisibilityMeters` for a context with a speed and black-ice readings; a
+test that pins `warningTemperatureCelsius` for black-ice readings; a test that
+expects one of the five old wet-ice strings above, directly or through
+`navigation_safety` or `voice_guidance`; a test that matches the whole string
+of `DrivingContext.toString()`, which now lists six values instead of five; a
+test that pins a `DrivingContext.hashCode` value, which differs from 0.11.8
+even for a context that does not pass the new field. Contexts that do not pass
+the new field compare equal exactly as before.
+
+**Unchanged:** every other threshold and every score floor; every config
+computed without both `ambientTempCelsius` and `humidityRH`, unless you pass
+the new field; every warning visibility computed without `speedMps`; the drying
+margin for `timeSincePrecipitation`; and `computeSpeedAdjustedVisibilityMeters`,
+which still uses the deceleration you pass it as given and still throws
+`ArgumentError` for zero or a negative value, unlike the new field.
+
+**Tests:** four test files are new and ship with the package:
+`braking_deceleration_on_ice_test.dart` and
+`braking_on_ice_audit_vectors_test.dart` (the floor and the new field),
+`effective_temperature_ambient_comparison_test.dart` (the warning temperature
+against the ambient reading) and `residual_moisture_half_life_pin_test.dart`
+(the drying margin at five times after precipitation). No existing test was
+renamed or removed.
+
+**Docs:** the docs no longer give 3.0 m/s² for compacted snow or 1.5 m/s² for
+glare ice. They give the friction ranges the cited surveys report, and
+call 5.5 and 0.981 m/s² figures this package chose; see
+`brakingDecelerationMps2` and `KNOWN_LIMITATIONS.md`. The README's list of live
+driving conditions now includes the braking deceleration for the current
+surface.
+
 ## 0.11.8
 
 A documentation release. No public API changes, and no value this package

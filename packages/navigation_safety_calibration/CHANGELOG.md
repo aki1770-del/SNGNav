@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.5
+
+A documentation release. No value this package computes has changed: outside
+comments and doc comments, `lib/` is unchanged, and
+`computeSpeedAdjustedVisibilityMeters` still uses the deceleration you pass it.
+One test is renamed.
+
+**If you pass 3.0 or 1.5 m/s² because these docs suggested them, read this.**
+The docs in `lib/src/speed_dependent_visibility.dart`, where
+`computeSpeedAdjustedVisibilityMeters` is defined, said: "For snow / ice
+surfaces the consumer should pass a lower value (≈3.0 m/s² for compacted snow;
+≈1.5 m/s² for glare ice)." `KNOWN_LIMITATIONS.md` said the same. A single
+figure does not fit a surface. Friction surveys give ranges: compacted snow or
+ice, the surface most frequently observed, around 0.2 to 0.3; new snow
+compacted by traffic 0.10 to 0.15; ice 0.1 to 0.2 (TRB Special Report 115);
+packed snow 0.20–0.30 and wet black ice 0.05–0.10 (VTI meddelande 911A).
+Multiplied by 9.81 m/s², these bound deceleration from above; they are not
+measured stopping figures. Against those ranges, 3.0 m/s² (about 0.31) is just
+above the top of the compacted-snow and packed-snow ranges, and 1.5 m/s²
+(about 0.15) is inside the ice range and above the wet black ice range. The
+docs now give the ranges instead. The default is still 5.5 m/s², a figure this
+package chose for dry pavement.
+
+**Renamed test.** In `test/calibration_values_test.dart`,
+`lower deceleration (e.g. snow ≈ 3.0) raises required distance` is now
+`lower deceleration (e.g. 3.0) raises required distance`. It checks the same
+thing. If you run this package's tests by name, use the new name.
+
 ## 0.1.4
 
 A documentation release. No API or behaviour change: outside comments and doc
