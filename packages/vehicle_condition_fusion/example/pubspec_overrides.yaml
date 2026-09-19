@@ -1,0 +1,20 @@
+# Monorepo development ONLY — never published.
+#
+# Resolves the sibling packages from the working tree so a change to
+# driving_conditions / driving_weather / snow_rendering /
+# navigation_safety_calibration is exercised by this example before it is
+# released. Excluded from the published archive by ../.pubignore.
+#
+# This lives in its own file, not in pubspec.yaml, because pub does NOT strip
+# dependency_overrides when publishing: in vehicle_condition_fusion 0.5.0 these
+# four path overrides shipped to pub.dev and made the example unresolvable
+# (exit 66) for every consumer.
+dependency_overrides:
+  driving_weather:
+    path: ../../driving_weather
+  driving_conditions:
+    path: ../../driving_conditions
+  snow_rendering:
+    path: ../../snow_rendering
+  navigation_safety_calibration:
+    path: ../../navigation_safety_calibration

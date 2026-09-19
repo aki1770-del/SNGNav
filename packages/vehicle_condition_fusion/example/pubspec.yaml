@@ -12,28 +12,32 @@ dependencies:
   # Direct: the demo re-derives the FRESH candidate assessment (to mark
   # debounce-held steps) via DrivingConditionAssessment.fromCondition, and
   # reads RoadSurfaceState for the printed verdict.
-  # Must track the parent package's own floor (^0.6.0). pub.dev STRIPS
-  # dependency_overrides from the published archive, so this constraint is what
-  # a reader who runs `dart pub get` in example/ actually resolves against. At
-  # ^0.5.2 it selected driving_conditions 0.5.7, which requires
-  # driving_weather ^0.4.0 — the range this release exists to leave — and it
-  # made the example unresolvable against its own parent.
-  driving_conditions: ^0.6.0
+  #
+  # This range is EXACTLY the parent's own range (../pubspec.yaml). An example
+  # must never be narrower than the package it demonstrates: a reader whose app
+  # already resolves driving_conditions 0.7.x is entitled to run this example,
+  # because vehicle_condition_fusion 0.5.0 itself accepts 0.7.x. It was ^0.6.0
+  # — i.e. >=0.6.0 <0.7.0 — which excluded the BREAKING 0.7.0 (fleet term
+  # removed from the safety score) and 0.7.1, both of which the parent accepts.
+  #
+  # Verified 2026-09-12 at BOTH ends of this range against the published
+  # archive: 0.6.0 and 0.7.1, `dart analyze` clean and `dart run main.dart`
+  # exit 0 on each.
+  driving_conditions: ">=0.6.0 <0.8.0"
   vehicle_condition_fusion:
     path: ../
 
-# Monorepo development: resolve the humidity-bearing sibling packages locally
-# (the reach chain is unpublished until the release train lands). Published
-# releases resolve against pub.dev via the carets above.
-dependency_overrides:
-  driving_weather:
-    path: ../../driving_weather
-  driving_conditions:
-    path: ../../driving_conditions
-  snow_rendering:
-    path: ../../snow_rendering
-  navigation_safety_calibration:
-    path: ../../navigation_safety_calibration
+# Monorepo development: the sibling path overrides live in
+# `pubspec_overrides.yaml`, NOT here, and that file is excluded from the
+# published archive by `../.pubignore`.
+#
+# WHY, measured 2026-09-12: pub does NOT strip `dependency_overrides` from a
+# published archive. The overrides that used to sit in this file SHIPPED inside
+# vehicle_condition_fusion 0.5.0 pointing at `../../driving_conditions` and
+# three more siblings — paths that do not exist for anyone who is not standing
+# in this monorepo. A reader who extracted the archive and ran `dart pub get`
+# in example/ got exit 66, "path which doesn't exist", and never reached the
+# version constraint above at all. The example did not run for them.
 
 dev_dependencies:
   test: ^1.25.0

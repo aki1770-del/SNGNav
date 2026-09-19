@@ -3,7 +3,7 @@ description: >-
   Safety-calibrated fusion of in-vehicle signals (road friction, TCS/ABS,
   wiper/rain, ambient temperature) into a driving-condition hazard verdict,
   with an honest-degradation rail. Pure Dart, no Flutter, no databroker SDK.
-version: 0.5.0
+version: 0.5.1
 homepage: https://github.com/aki1770-del/SNGNav
 repository: https://github.com/aki1770-del/SNGNav
 issue_tracker: https://github.com/aki1770-del/SNGNav/issues
@@ -26,15 +26,9 @@ dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
 
-# Monorepo development: resolve the sibling humidity-bearing driving_weather +
-# the radiative-frost classifier chain locally; published releases resolve
-# against pub.dev via the carets above.
-dependency_overrides:
-  driving_weather:
-    path: ../driving_weather
-  driving_conditions:
-    path: ../driving_conditions
-  snow_rendering:
-    path: ../snow_rendering
-  navigation_safety_calibration:
-    path: ../navigation_safety_calibration
+# Local development: sibling path overrides live in pubspec_overrides.yaml,
+# beside this file, never inline here. pub does not strip dependency_overrides
+# from a published pubspec, so an inline `path: ../<sibling>` shipped and made
+# `pub get` inside the published package fail ("path which doesn't exist") for
+# anyone outside this repository. pub does not publish a package-root
+# pubspec_overrides.yaml, and .pubignore lists it as well.
