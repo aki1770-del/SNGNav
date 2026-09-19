@@ -1,11 +1,11 @@
 # noaa_nws_adapter — Safety-Class Boundary Record
 
 **Package**: `noaa_nws_adapter`
-**Version**: 0.0.1 (explore-phase; `publish_to: none`)
+**Version**: 0.0.1 (the first version published to pub.dev, on 2026-05-03; earlier versions of this record said `publish_to: none`, which was not so)
 **Boundary record version**: 1.0
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-03
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 
 ---
 
@@ -31,12 +31,12 @@
 - **User-Agent mandatory** (README.md L107): empty value throws ArgumentError at construction; anonymous request is a programmer error per NWS publisher convention.
 - **Default filter: `actualOnly: true`** (README.md L111): `Test`/`Exercise`/`System`/`Draft` entries excluded from default consumption — production driver-facing flow defaults to actual alerts only.
 - **Malformed features skipped not fatal** (README.md L113): one bad CAP feature does not abort whole response.
-These five disciplines collectively form the package's SOTIF-class advisory-honesty posture: the integrator (and HER through them) sees what NWS actually published, with explicit error surfaces for transport / shape / authentication failure modes.
+These five disciplines collectively form the package's SOTIF-class advisory-honesty posture: the integrator (and the driver through them) sees what NWS actually published, with explicit error surfaces for transport / shape / authentication failure modes.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
 **Touchpoint location**: **at this package's boundary — first real-data adapter consuming external network feed.**
-**Status**: **declared in scope by design** per AAA bylaws Article 17 (β) safe-default — this is the load-bearing WP.29 audit surface for SNGNav's first external-data adapter.
+**Status**: **declared in scope by design**, as a safe default — this is the load-bearing WP.29 audit surface for SNGNav's first external-data adapter.
 **Concrete WP.29 surface**:
 - TLS transport: package consumes `https://api.weather.gov` exclusively (per README.md L36); no HTTP fallback; no certificate pinning at adapter scope (integrator-class concern at deployment).
 - Authentication: none; NWS publishes open data. User-Agent header is rate-limit-accounting class not authentication class.
@@ -51,7 +51,7 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 ## 5 — JIS / JASO conformance
 
 **Conformance status**: **not applicable at this scope; geographic mismatch.**
-**Reasoning**: NWS data is U.S.-region (contiguous US + Alaska + Hawaii + Puerto Rico + territories per README.md L162-165). Japanese-region drivers consume `jmaxml`-class adapter (separate package; jmaxml γ Path-A scheduled 2026-05-04 morning JST per D-VGC187-4). JIS / JASO conformance audit fires at the Japanese-region adapter not at this US-region adapter.
+**Reasoning**: NWS data is U.S.-region (contiguous US + Alaska + Hawaii + Puerto Rico + territories per README.md L162-165). Japanese-region drivers consume a `jmaxml`-class adapter (a separate package). JIS / JASO conformance audit fires at the Japanese-region adapter not at this US-region adapter.
 **JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them for weather-data-adapter packages. No output from that watch has been found, so this record no longer says so. This package's JIS / JASO scope is geographic-mismatch-class.
 
 ## 6 — Severity-not-profile invariant
@@ -64,20 +64,20 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are typed `WinterAlert` records carrying public-domain NWS CAP data; the package emits no control signal, holds no actuator authority, exposes no API that closes a control loop. The substrate flows via integrator HMI to the driver as advisory information; the driver decides response.
-**Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object. NWS authoritative winter-alert data informs HER awareness of region-class hazards (Winter Storm Warning, Ice Storm Warning, etc.); the integrator HMI surfaces the alert; HER decides (continue, slow down, detour, abort trip). The package is consumer-class for an authoritative public source — exactly the PHIL-001-licensed pattern: public-domain authoritative source + advisory-class delivery + driver-decides outcome.
+**Driver agency**: the driver is the subject, not the object. NWS authoritative winter-alert data informs the driver's awareness of region-class hazards (Winter Storm Warning, Ice Storm Warning, etc.); the integrator HMI surfaces the alert; the driver decides (continue, slow down, detour, abort trip). The package is consumer-class for an authoritative public source — exactly the pattern the project's design principles license: public-domain authoritative source + advisory-class delivery + driver-decides outcome.
 
-## 8 — Driver-facing loom (D-VGC189-1)
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *when NWS has issued a winter alert for HER current point, HER sees it surfaced by the integrator HMI in time, with the publisher's exact wording.* When `noaa_nws_adapter` fires through an integrator HMI, HER sees:
+**What the driver experiences when this package fires**: *when NWS has issued a winter alert for her current point, she sees it surfaced by the integrator HMI in time, with the publisher's exact wording.* When `noaa_nws_adapter` fires through an integrator HMI, the driver sees:
 - the alert event class (*Winter Storm Warning, Ice Storm Warning, Blizzard Warning, etc. — 14 winter event types per README.md L43-48*) in the publisher's vocabulary
 - the headline + area description in NWS's authoritative wording (no app-class re-summarization that could alter authoritative meaning)
-- the expires time honestly (so HER knows alert validity window without integrator pre-interpretation)
+- the expires time honestly (so she knows alert validity window without integrator pre-interpretation)
 
-**Sakichi reading**: the loom is *the postman who carries the publisher's letter to HER without rewriting it.* NWS is the publisher of winter-alert authority; the loom delivers exactly what the publisher wrote, parsed into Dart-typed structure for the integrator to render. The package's restraint (no retry, no cache, no stream, no summarization, no translation per README.md §What this package deliberately does not do L143-159) is the Sakichi-loom-discipline applied to data-fusion: the loom does ONE thing well; it does NOT add layers HER did not ask for and the publisher did not author.
+**In plain terms**: the package is *the postman who carries the publisher's letter to the driver without rewriting it.* NWS is the publisher of winter-alert authority; the package delivers exactly what the publisher wrote, parsed into Dart-typed structure for the integrator to render. The package's restraint (no retry, no cache, no stream, no summarization, no translation per README.md §What this package deliberately does not do L143-159) is the discipline it applies to data-fusion: the package does ONE thing well; it does NOT add layers the driver did not ask for and the publisher did not author.
 
-**Audible-to-edge-developer**: integrator reading `NoaaNwsClient` API today sees explicit User-Agent requirement + explicit error classes (`NoaaNwsHttpException` / `NoaaNwsParseException`) + explicit `actualOnly` filter + stateless design + no-retry discipline. The README §Behaviours worth knowing (L98-114) explicitly enumerates the disciplines so the integrator knows what the adapter does AND what it deliberately does not do. Nothing patronizes the developer.
+**For the integrating developer**: integrator reading `NoaaNwsClient` API today sees explicit User-Agent requirement + explicit error classes (`NoaaNwsHttpException` / `NoaaNwsParseException`) + explicit `actualOnly` filter + stateless design + no-retry discipline. The README §Behaviours worth knowing (L98-114) explicitly enumerates the disciplines so the integrator knows what the adapter does AND what it deliberately does not do. Nothing patronizes the developer.
 
-**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `noaa_nws_adapter` 0.0.1 explore-phase. At deploy graduation (post-explore-phase, separate Komada-voice ratification per README.md L1-7 + pubspec.yaml L9-10), this field is re-audited; subsequent versions update on material changes to the driver-experience surface.
+**Driver-experience section**: this section is the package's declaration of what the driver experiences, written for `noaa_nws_adapter` 0.0.1. Earlier versions of this record promised a re-check at first publication; none is recorded, and the package has been on pub.dev since 0.0.1. Subsequent versions update on material changes to the driver-experience surface.
 
 **Driver-impact chain (≤4 hops)** per README.md L20-28 verbatim:
 ```
@@ -86,21 +86,16 @@ NWS API (api.weather.gov)
     -> SNGNav weather/condition consumer (forward)
       -> driver in unexpected snow region (US)
 ```
-Four hops; HER is terminal beneficiary; satisfies OPS-RULE-044 HER-trace ≤4-hop. Satisfies D-VGC188-2 5-test D5≤4-hop test.
+Four hops; the driver is the terminal beneficiary.
 
 ## 9 — Cross-references
 
 - README.md §Why this package exists L13-31 + §Smallest slice L34-52 + §Behaviours worth knowing L98-114 + §Authentication, rate limiting, license L116-130 + §What this package deliberately does not do L143-159
-- pubspec.yaml `version: 0.0.1` + `publish_to: none` (explore-phase fence per FDD bylaws Rule 1 + OPS-RULE-046)
+- pubspec.yaml `version: 0.0.1` (published to pub.dev; earlier versions of this record said `publish_to: none`, which was not so)
 - LICENSE: BSD-3-Clause source code; NWS data is U.S. Federal public-domain
-- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-- D-VGC188-1 / D-VGC188-2 (Driver Sovereignty axis + 5-test framework)
-- D-VGC187-4 (jmaxml γ Path-A 2026-05-04 sibling adapter scheduling — Japan-region equivalent)
-- AAA bylaws Article 17 (β) safe-default boundary
-- AAA VTTI Mode-1-vs-Mode-2 Boundary Verdict 2026-05-03 (sibling spawn -50 Task 2; same boundary-audit class)
 - Composition: SNGNav weather/condition consumer (downstream) + `driving_conditions` 0.5.0 SAFETY_BOUNDARY.md (downstream Monte Carlo calibration consumer) + `navigation_safety_core` 0.6.0 SAFETY_BOUNDARY.md (downstream profile-tuned advisory layer)
-- PHIL-001 boundary: public-domain authoritative-source consumption is explicitly PHIL-001-compatible; this is the foundational shape for SNGNav's external-data adapter pattern
+- Scope boundary: public-domain authoritative-source consumption is explicitly compatible with the project's design principles; this is the foundational shape for SNGNav's external-data adapter pattern
 
 ---
 
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization (spawn -50 Task 1). Subject = We / AAA. OPS-RULE-055 verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear. Explore-phase fence respected (no deploy-class assertion authored).
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review.

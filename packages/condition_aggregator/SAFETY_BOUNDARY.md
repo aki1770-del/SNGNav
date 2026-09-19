@@ -148,7 +148,7 @@ identifier) so the driver-facing surface is the publisher's
 authoritative wording, not an app-class re-summarization that could
 alter authoritative meaning.
 
-## 8 — Driver-facing loom
+## 8 — What the driver experiences
 
 **What the driver experiences when this package fires (via composition
 with one or more adapters)**: when a publisher (NWS, JMA, etc.) has
@@ -170,16 +170,16 @@ that (`result.staleSources`), nothing at this interface tells the
 integrator, and she can be shown "no advisory" over a document that is
 no longer being written.
 
-**Sakichi reading**: the loom is *a multi-postman who carries each
-publisher's letter to the driver without rewriting it.* The loom
+**In plain terms**: the package is *a multi-postman who carries each
+publisher's letter to the driver without rewriting it.* The package
 performs typed merge + warn-and-continue per-provider failure
-capture. The loom's restraint (no retry, no cache, no stream, no
+capture. The package's restraint (no retry, no cache, no stream, no
 silent coalesce, no severity reassertion at this layer) is the
-Sakichi-loom-discipline applied to multi-source data fusion: the loom
+discipline it applies to multi-source data fusion: the package
 does ONE thing well; it does NOT add layers the driver did not ask
 for and the publishers did not author.
 
-**Audible-to-edge-developer**: integrators reading the package API
+**For the integrating developer**: integrators reading the package API
 today see explicit `init()` lifecycle + explicit `StateError` on
 fetch-before-init + explicit `AdvisoryProviderInitException` for
 init-failure surfacing + explicit `AdvisoryProviderError` capture for

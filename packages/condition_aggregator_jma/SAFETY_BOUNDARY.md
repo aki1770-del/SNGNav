@@ -3,7 +3,7 @@
 **Package**: `condition_aggregator_jma`
 **Version**: 0.1.0 (first deploy via direct-Dart-XML-parse path)
 **Boundary record version**: 1.1
-**Authoring skill**: FDD (with AAA-class boundary template per sibling adapters)
+**Boundary record template**: shared across the sibling adapter packages
 **Date**: 2026-05-04
 
 ---
@@ -59,7 +59,7 @@ discipline):
 - **`init()` is no-op (JMA's public XML feed requires no init).**
   Documented explicitly so integrators do not assume hidden
   warm-up.
-- **Verbatim field passthrough (Article 17 (β) verbatim-relay
+- **Verbatim field passthrough (verbatim-relay
   discipline).** `eventClass` (JMA report family code), `headline`,
   `areaDescription`, `description` pass through unchanged. No
   app-class re-summarization that could alter authoritative
@@ -186,7 +186,7 @@ driver-decision substrate uses JMA authoritative wording verbatim
 `areaDescription`); this adapter is the postman for the
 publisher's letter, mapped into the source-neutral envelope.
 
-## 8 — Driver-facing loom
+## 8 — What the driver experiences
 
 **What the driver experiences when this package fires** (deploy-state):
 when JMA has issued a winter advisory for her current point inside
@@ -203,25 +203,25 @@ the same `Advisory` shape — both publishers' authoritative wording
 preserved verbatim through their respective adapters into the
 source-neutral typed event.
 
-**Sakichi reading**: this adapter is *the Japanese postman who
+**In plain terms**: this adapter is *the Japanese postman who
 carries JMA's letter into a uniform envelope so the multi-postman
 aggregator can stack it alongside other publishers' letters
 without rewriting any of them.* The adapter's restraint (no retry,
 no cache, no stream, no app-class re-summarization, no severity
 reassertion, no profile-driven branching, verbatim field
-passthrough) is the Sakichi-loom-discipline applied to per-source
-mapping: the loom does ONE thing well — direct typed re-projection
+passthrough) is the discipline it applies to per-source
+mapping: the adapter does ONE thing well — direct typed re-projection
 — and does NOT add layers the driver did not ask for and the
 publisher did not author.
 
-**Audible-to-edge-developer**: integrators reading the package API
+**For the integrating developer**: integrators reading the package API
 today see explicit `endpointBaseUrl` constructor parameter +
 explicit `init` lifecycle contract + explicit stub-state
 declaration in README + explicit deploy-graduation gate
 enumeration in CHANGELOG. Nothing patronizes the developer.
 
-**Driver-facing-loom field**: this section is the canonical
-driver-facing-loom declaration for `condition_aggregator_jma`
+**Driver-experience section**: this section is the package's
+declaration of what the driver experiences, for `condition_aggregator_jma`
 0.1.0 (first deploy via direct-Dart-XML-parse path). The jmaxml
 engagement-shape election (alpha/beta/gamma) for an upstream
 typed binding remains a separate open question (OQ-1); a future

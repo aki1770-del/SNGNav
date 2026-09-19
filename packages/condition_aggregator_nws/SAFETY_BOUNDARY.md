@@ -145,7 +145,7 @@ substrate uses NWS authoritative wording verbatim
 `areaDescription`); this adapter is the postman for the publisher's
 letter, mapped into the source-neutral envelope.
 
-## 8 — Driver-facing loom
+## 8 — What the driver experiences
 
 **What the driver experiences when this package fires**: when NWS has
 issued a winter alert for her current point inside the United States,
@@ -161,17 +161,17 @@ same `Advisory` shape — both publishers' authoritative wording
 preserved verbatim through their respective adapters into the
 source-neutral typed event.
 
-**Sakichi reading**: this adapter is *the U.S. postman who carries
+**In plain terms**: this adapter is *the U.S. postman who carries
 NWS's letter into a uniform envelope so the multi-postman aggregator
 can stack it alongside other publishers' letters without rewriting
 any of them.* The adapter's restraint (no retry, no cache, no
 stream, no app-class re-summarization, no severity reassertion, no
 profile-driven branching, `actualOnly: true` preserved) is the
-Sakichi-loom-discipline applied to per-source mapping: the loom does
+discipline it applies to per-source mapping: the adapter does
 ONE thing well — direct typed re-projection — and does NOT add
 layers the driver did not ask for and the publisher did not author.
 
-**Audible-to-edge-developer**: integrators reading the package API
+**For the integrating developer**: integrators reading the package API
 today see explicit `userAgent` requirement on the default
 constructor + explicit `withClient` test-injection constructor +
 explicit pass-through documentation of `actualOnly` + explicit

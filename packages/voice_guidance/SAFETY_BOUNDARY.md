@@ -3,9 +3,9 @@
 **Package**: `voice_guidance`
 **Version**: 0.7.0 (DEPLOY)
 **Boundary record version**: 1.3 (0.7.0 addendum §10: tactile/haptic accessibility hazard channel)
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-06
-**Anchor**: driver-facing-loom-as-default architectural discipline
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 
 ---
 
@@ -63,20 +63,20 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are TTS engine method calls (audible channel) + BLoC state updates. The package emits no control signal, holds no actuator authority, exposes no API that closes a control loop. The driver hears the announcement; the driver decides response; the driver always drives.
-**Axis anchor**: per the unit's driver-sovereignty axis substrate — driver is subject not object. The voice is meant to arrive in time and make sense; no announcement is safe to ignore, and the driver decides what to do with the information. The pace differentiation (0.4.0) is about respect for cognitive-load differences across `DriverProfile`s, not about removing the driver's agency.
+**Driver agency**: the driver is the subject, not the object. The voice is meant to arrive in time and make sense; no announcement is safe to ignore, and the driver decides what to do with the information. The pace differentiation (0.4.0) is about respect for cognitive-load differences across `DriverProfile`s, not about removing the driver's agency.
 
-## 8 — Driver-facing loom (D-VGC189-1)
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *voice arrives at a pace each driver-class can hear without losing context.* When `voice_guidance` fires through an integrator HMI:
-- HER hears the maneuver lead-in announcement ahead of the maneuver, at a pace tuned to HER `DriverProfile`. An older rural driver hears it at 0.70× engine-base; an experienced snow-zone driver hears it at engine-base (1.00×); a foreign-tourist driver in unexpected snow hears it at 0.70× engine-base.
-- HER hears the hazard announcement preempt a routing maneuver line — safety-priority interrupt is built into the BLoC's hazard handler.
-- HER hears arrival + deviation transitions at the same per-profile pace.
+**What the driver experiences when this package fires**: *voice arrives at a pace each driver-class can hear without losing context.* When `voice_guidance` fires through an integrator HMI:
+- The driver hears the maneuver lead-in announcement ahead of the maneuver, at a pace tuned to her `DriverProfile`. An older rural driver hears it at 0.70× engine-base; an experienced snow-zone driver hears it at engine-base (1.00×); a foreign-tourist driver in unexpected snow hears it at 0.70× engine-base.
+- The driver hears the hazard announcement preempt a routing maneuver line — safety-priority interrupt is built into the BLoC's hazard handler.
+- The driver hears arrival + deviation transitions at the same per-profile pace.
 
-**Sakichi reading**: the loom is *the announcer who matches HER hearing-pace, not who shouts at HER on a one-pace-fits-all schedule*. The pace differentiation is meant to let a driver who follows speech more slowly act on an earlier announcement; that effect has not been measured, and the per-profile rates are recorded decisions. A slower announcement is not one that is safe to ignore: the driver decides whether the conditions require action.
+**In plain terms**: the package is *the announcer who matches the driver's hearing-pace, not one who shouts at her on a one-pace-fits-all schedule*. The pace differentiation is meant to let a driver who follows speech more slowly act on an earlier announcement; that effect has not been measured, and the per-profile rates are recorded decisions. A slower announcement is not one that is safe to ignore: the driver decides whether the conditions require action.
 
-**Audible-to-edge-developer**: integrator reading `VoiceGuidanceConfig.forProfile()` API today sees the profile-class differentiation surfaced explicitly + the per-profile multiplier table published in `kSpeakingRateMultiplierByProfile` + package documentation that states the multipliers are recorded decisions that no cited source gives. Nothing patronizes the developer.
+**For the integrating developer**: integrator reading `VoiceGuidanceConfig.forProfile()` API today sees the profile-class differentiation surfaced explicitly + the per-profile multiplier table published in `kSpeakingRateMultiplierByProfile` + package documentation that states the multipliers are recorded decisions that no cited source gives. Nothing patronizes the developer.
 
-**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `voice_guidance` 0.4.0. Subsequent versions update this field on material changes to the driver-experience surface (rate-axis extensions, new profile classes, voice-actor differentiation, etc.).
+**Driver-experience section**: this section is the package's declaration of what the driver experiences, for `voice_guidance` 0.4.0. Subsequent versions update this field on material changes to the driver-experience surface (rate-axis extensions, new profile classes, voice-actor differentiation, etc.).
 
 **Driver-impact chain (≤4 hops)**:
 ```
@@ -85,13 +85,13 @@ navigation state stream + alert source (integrator)
     -> TtsEngine -> device audio
       -> driver in unexpected snow region hears the announcement
 ```
-Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
+Four hops; the driver is the terminal beneficiary.
 
-## 8.1 — Integrator-side driver-facing loom (D-VGC189-1; new in 0.5.0)
+## 8.1 — Integrator side: what reaches the driver (new in 0.5.0)
 
 **Operational discipline**: *the explainer ships the (condition, action) tuple at the package boundary so the integrator-developer is not silently absorbed responsibility for action-coupling.*
 
-**What HER experiences when 0.5.0 fires**: when an integrator supplies a `DriverProfile` to `VoiceGuidanceBloc` and the `NavigationState` carries an `alertCondition`, the hazard branch resolves `AlertExplainer.forConditionAndProfile(condition, profile)` and speaks the explainer's action string at the explainer's locale tag. HER hears:
+**What the driver experiences when 0.5.0 fires**: when an integrator supplies a `DriverProfile` to `VoiceGuidanceBloc` and the `NavigationState` carries an `alertCondition`, the hazard branch resolves `AlertExplainer.forConditionAndProfile(condition, profile)` and speaks the explainer's action string at the explainer's locale tag. The driver hears:
 
 - the per-(condition, profile) action coupled to the road-surface condition (e.g. `RoadSurfaceCondition.ice` + `DriverProfile.foreignTouristSnowZone` → *"Icy road. Slow to 30 km/h. Avoid sudden braking."*) instead of a free-form alert string an integrator might compose ad-hoc;
 - the announcement at the explainer's locale (`en` for foreign-tourist; `ja` for others) — the bloc switches the TTS engine language for the announcement so the EN-locale variant speaks in English without the integrator switching the bloc-wide config;
@@ -101,7 +101,7 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 
 **Driver-always-drives preserved**: the explainer's action verbs are advisory (*"reduce", "avoid", "maintain", "if possible"*); speed numbers (30 km/h / 20 km/h) are advisory reference points chosen by the package, not system-enforced limits. The bloc speaks the line; the driver decides response.
 
-**Audible-to-edge-developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `profile` parameter — defaults to null preserving pre-0.5.0 back-compat. An integrator that supplies no profile sees the historical free-form `alertMessage` rendering. The 0.5.0 wiring is opt-in at the integrator's choice.
+**For the integrating developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `profile` parameter — defaults to null preserving pre-0.5.0 back-compat. An integrator that supplies no profile sees the historical free-form `alertMessage` rendering. The 0.5.0 wiring is opt-in at the integrator's choice.
 
 **Driver-impact chain (≤4 hops)** — preserved with action-coupled rendering:
 ```
@@ -111,7 +111,7 @@ navigation state stream + alertCondition + driver profile (integrator)
       -> driver in unexpected snow region hears the action-coupled announcement
 ```
 
-## 8.2 — BudgetAwarePaceProfile driver-facing loom (new in 0.6.0)
+## 8.2 — BudgetAwarePaceProfile: what reaches the driver (new in 0.6.0)
 
 **Anchor**: the 12-second off-road glance budget of `navigation_safety` 0.9.0 `GlanceBudgetTracker`, taken from "Visual-Manual NHTSA Driver Distraction Guidelines for In-Vehicle Electronic Devices" (78 FR 24818, 2013; docket NHTSA-2010-0053), the first phase of NHTSA's "nonbinding, voluntary" guidelines, which recommend "a cumulative time spent glancing away from the roadway of 12 seconds or less" for a visual-manual task. They do not cover auditory-vocal tasks; slowing speech as that budget is consumed is this package's decision.
 
@@ -138,7 +138,7 @@ glance event source (integrator) -> GlanceBudgetTracker.budgetEvents
       -> driver in unexpected snow region hears the announcement at a calmer pace
 ```
 
-**Audible-to-edge-developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `glanceBudgetTracker` parameter — defaults to null preserving 0.5.0 back-compat. An integrator that supplies neither the tracker nor a non-null `config.budgetAwarePace` runs the 0.5.0 code path identically. The opt-in is integrator-class.
+**For the integrating developer**: integrator reading `VoiceGuidanceBloc` constructor today sees the new optional `glanceBudgetTracker` parameter — defaults to null preserving 0.5.0 back-compat. An integrator that supplies neither the tracker nor a non-null `config.budgetAwarePace` runs the 0.5.0 code path identically. The opt-in is integrator-class.
 
 ## 10 — Tactile (haptic) accessibility hazard channel (new in 0.7.0)
 
@@ -214,9 +214,9 @@ identically; no event-shape change.
 navigation state stream + alert severity (integrator)
   -> VoiceGuidanceBloc (this package; same severity gate as audio)
     -> HapticEngine -> device vibration motor
-      -> deaf / hard-of-hearing driver (or HER in a whiteout) feels the warning
+      -> deaf / hard-of-hearing driver (or any driver in a whiteout) feels the warning
 ```
-Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
+Four hops; the driver is the terminal beneficiary.
 
 ## 9 — Cross-references
 
@@ -234,11 +234,8 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 - `lib/src/voice_guidance_config.dart` `budgetAwarePace` field (0.6.0)
 - `lib/src/voice_guidance_bloc.dart` `_glanceBudgetSub` + `_effectiveSpeakingRate()` (0.6.0)
 - LICENSE: BSD-3-Clause (matches the rest of SNGNav)
-- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-- D-VGC188-1 / D-VGC188-2 (driver-sovereignty axis + 5-test framework)
-- AAA bylaws Article 17 (β) safe-default boundary
 - Composition: `navigation_safety_core` 0.7.0 SAFETY_BOUNDARY.md §6 (severity-not-profile invariant verbatim) + `navigation_safety_core` `assertUxDifferentiated()` activated 0.7.0 (the runtime hook this package's `voice_guidance:speakingRate` tag answers to)
 
 ---
 
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization. Subject = We / AAA. Verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review.
