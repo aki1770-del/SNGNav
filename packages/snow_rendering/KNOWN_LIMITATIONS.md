@@ -22,18 +22,18 @@ were surfaced by an adversarial multi-lens review (2026-07-06).
 
 ### 1. Reach — which feeds now supply humidity (PARTIALLY CLOSED)
 
-The fix is humidity-gated, so it reaches HER only on a feed that supplies
-humidity. Status of the feeds:
+The fix is humidity-gated, so it reaches a driver only through a feed that
+supplies humidity. Status of the feeds:
 
 - **`OpenMeteoWeatherProvider` — supplies humidity** (`relative_humidity_2m`,
   since driving_weather 0.4.4). Online path.
 - **KUKSA in-vehicle fusion (`vehicle_condition_fusion` 0.4.0) — NOW supplies
-  humidity** via the standard VSS leaf `Vehicle.Exterior.Humidity`, so the D3
-  compound-failure **offline** path (HER worst case) catches radiative-frost
+  humidity** via the standard VSS leaf `Vehicle.Exterior.Humidity`, so the
+  compound-failure **offline** path (the worst case: no network, no GPS) catches radiative-frost
   black ice from real vehicle sensors — BEFORE the friction/traction signals
-  fire (they only reveal ice after a slip). Reaches HER when her vehicle/IVI
+  fire (they only reveal ice after a slip). Reaches a driver when her vehicle/IVI
   runs the fusion AND publishes exterior humidity (the embedded/IVI integration
-  + the vehicle sensor are the remaining links, EIE's domain).
+  + the vehicle sensor are the remaining links; both are outside this package).
 - **`DigitrafficWeatherProvider` — does NOT supply humidity.** It synthesises a
   `WeatherCondition` from advisory severity (hardcoded temps, no real
   measurements), so it can supply neither a real temperature nor humidity for
@@ -45,8 +45,8 @@ humidity. Status of the feeds:
 **Remaining reach work:** (a) wire `OpenMeteoWeatherProvider` (or another
 humidity-bearing source) as a live in-drive feed for the phone path — an
 app-level decision with an offline-first-posture implication; (b) the
-embedded/IVI KUKSA integration so HER's actual vehicle runs the fusion. Until
-(a)/(b), the pre-trip briefing (MET Norway humidity) remains HER radiative-frost
+embedded/IVI KUKSA integration so the driver's actual vehicle runs the fusion. Until
+(a)/(b), the pre-trip briefing (MET Norway humidity) remains the driver's radiative-frost
 warning on the phone; the in-drive screen catches it on the KUKSA path and on
 any online open-meteo feed.
 
@@ -65,9 +65,9 @@ itself a safety harm.
 **Deliberate current stance (decided 2026-07-07): caution-add-only, no gate
 yet.** A wind/time gate is NOT added at this time, for two grounded reasons:
 (1) there is no field data on the real false-positive rate versus wind/time, so
-any threshold chosen now would be a guess — and guessing a safety parameter
-violates measure-first; (2) a gate applied to the in-drive path only would
-reopen the pre-trip↔in-drive contradiction this bond exists to close (the
+any threshold chosen now would be a guess — and a safety parameter should be
+measured, not guessed; (2) a gate applied to the in-drive path only would
+reopen the pre-trip↔in-drive contradiction this change exists to close (the
 pre-trip `radiativeFrostRisk` has no such gate either). The bounded over-warn
 (0–3 °C, dew point ≤ 0 — genuinely frost-prone conditions) is accepted as the
 fail-safe direction: a false "reduce speed" costs a driver a little time; a

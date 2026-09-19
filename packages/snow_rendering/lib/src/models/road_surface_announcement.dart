@@ -185,14 +185,14 @@ extension RoadSurfaceStateAnnouncement on RoadSurfaceState {
 /// conditions could not be assessed at all.
 ///
 /// This tier is why the Measured-or-Absent contract exists, and it is the
-/// D3 compound-failure moment — the feed is gone, and the only sensor still
+/// worst case — the feed is gone, and the only sensor still
 /// working is her own eyes. It therefore needs a voice, in the language the
 /// driver this app anchors on actually reads. Every OTHER surface state in
 /// this package already speaks Japanese; shipping the absence state in English
 /// only would mean that on the one night the network dies in Akita, the voice
 /// lane either falls back to English or says nothing — and silence on a safety
 /// surface reads as "nothing is wrong", which is the very defect this release
-/// removes from the type system, reappearing at the reach layer.
+/// removes from the type system, reappearing in what the driver hears.
 ///
 /// There is deliberately no [RoadSurfaceAnnouncement.termJa] and no JAF
 /// vocabulary entry: an unclassified surface has no surface class, and naming

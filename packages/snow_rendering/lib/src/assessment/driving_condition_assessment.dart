@@ -168,7 +168,7 @@ class DrivingConditionAssessment extends Equatable {
     RecommendedResponse response,
   ) {
     if (response == RecommendedResponse.conditionsUnknown) {
-      // The D3 compound-failure answer. When the feed is gone, the app SAYS SO
+      // The worst-case answer. When the feed is gone, the app SAYS SO
       // rather than painting "Conditions normal" over a road nobody measured.
       // Her own eyes are the sensor that still works.
       //

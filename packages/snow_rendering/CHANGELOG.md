@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.2
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
+- `pubspec.yaml`: two comments (and the version).
+- `KNOWN_LIMITATIONS.md`: five passages, reworded.
+- `lib/snow_rendering.dart`, `lib/src/assessment/driving_condition_assessment.dart`,
+  `lib/src/models/recommended_response.dart` and
+  `lib/src/models/road_surface_announcement.dart`: comments only.
+- Four test files: comments only.
+- `CHANGELOG.md`: the 0.1.0 entry and the 0.2.1 and 0.2.2 headings.
+
+Every changed Dart file was compared before and after with its comments removed:
+the code is identical. No other file changed.
+
 ## 0.3.1
 
 **`dart pub get` inside the published package now works. No code change.**
@@ -250,14 +275,14 @@ statement that one path still escapes:
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.2.2 — 2026-05-10 — Pana score recovery (Theme α P3)
+## 0.2.2 — 2026-05-10 — Pana score recovery
 
 - Trim pubspec `description` to within the pana 60–180 character target.
 - Add minimal `example/main.dart` for pana documentation scoring.
 - Apply `dart format` to clear any formatter findings.
 - No SDK source changes; metadata + format pass only.
 
-## 0.2.1 — 2026-05-10 — Refresh cascade-stale dependency constraint
+## 0.2.1 — 2026-05-10 — Refresh dependency constraint left stale by a sibling release
 
 - `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
   driving_weather 0.4.0 release earlier the same day).
@@ -302,7 +327,7 @@ statement that one path still escapes:
 
 ## 0.1.0
 
-- Initial extraction from `driving_conditions` (SNGNav P1, D-SC22-2).
+- Initial extraction from `driving_conditions`.
 - `RoadSurfaceState` — six-state road surface classification with grip factors.
 - `PrecipitationConfig` — particle configuration derived from weather conditions.
 - `VisibilityDegradation` — opacity and blur parameters from visibility distance.

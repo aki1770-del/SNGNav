@@ -32,7 +32,7 @@ void main() {
     test('radiative frost (+2C/70%RH no precip) → the assessment carries the black-ice advisory', () {
       // UNIT scope: proves that when the classifier returns blackIce for the
       // radiative-frost window, the assessment text is the black-ice advisory.
-      // This is NOT end-to-end: it does not prove the fix reaches HER's live
+      // This is NOT end-to-end: it does not prove the fix reaches a driver's live
       // screen — the live feeds (digitraffic, KUKSA) do not yet supply
       // humidityRH, so on those feeds the classifier abstains. See
       // KNOWN_LIMITATIONS.md (reach gap).

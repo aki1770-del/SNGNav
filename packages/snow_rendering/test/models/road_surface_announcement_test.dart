@@ -107,7 +107,7 @@ void main() {
     test(
         'HER Akita radiative-frost morning: classification-to-announcement '
         'end-to-end names black ice precisely', () {
-      // +2 °C, 70% RH, clear — the bond-#3 founding scenario. The classifier
+      // +2 °C, 70% RH, clear — the original radiative-frost scenario. The classifier
       // now detects black ice; the announcement must NAME it.
       final condition = WeatherCondition(
         precipType: PrecipitationType.none,

@@ -62,7 +62,7 @@ void main() {
 
     test('advisory SAYS SO — and never says "Conditions normal"', () {
       final a = DrivingConditionAssessment.fromCondition(unknown);
-      // The loom's third property: it stops, and it tells the weaver WHY.
+      // The guard's third property: it stops, and it tells the driver WHY.
       expect(a.advisoryMessage, contains('No conditions data'));
       expect(a.advisoryMessage, contains('drive to what you can see'));
       expect(a.advisoryMessage, isNot(contains('Conditions normal')));

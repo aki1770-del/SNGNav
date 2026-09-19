@@ -307,7 +307,7 @@ void main() {
 
   group('RoadSurfaceState.fromCondition — radiative-frost black ice', () {
     // The exact case the live in-drive screen used to classify DRY / full-grip
-    // while the pre-trip briefing (correctly) warned black ice. HER's Akita
+    // while the pre-trip briefing (correctly) warned black ice. A driver's Akita
     // pre-dawn commute: clear, no precip, air a couple of degrees above zero,
     // high humidity — a frosted bridge deck.
     test('no precip, +2C, 70% RH -> blackIce (was DRY: the contradiction)', () {
