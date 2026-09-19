@@ -2,7 +2,7 @@
 
 ## 0.7.3
 
-**Documentation only. No code change.**
+**Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
 
 Comments and documentation that used this project's internal shorthand now say
 the same thing in plain words. Where earlier entries in this changelog used that
