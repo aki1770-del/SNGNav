@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.1
+
+**`dart pub get` inside the published package, and in its example, now works.
+No code change.**
+
+The published 0.5.0 carried development-only overrides in two files, pointing at
+folders that exist only in this package's source repository:
+
+- `pubspec.yaml`: `../driving_weather`, `../driving_conditions`,
+  `../snow_rendering` and `../navigation_safety_calibration`. `dart pub get`
+  inside the downloaded package failed with exit code 66 ("depends on
+  navigation_safety_calibration from path which doesn't exist").
+- `example/pubspec.yaml`: the same four, as `../../<package>`, with the same
+  failure in `example/`.
+
+pub does not remove `dependency_overrides` when a package is published. Apps
+that depend on `vehicle_condition_fusion` were not affected: checked, an app
+depending on `vehicle_condition_fusion: 0.5.0` resolves normally.
+
+The package's overrides now live in `pubspec_overrides.yaml`, which pub does not
+publish; the example's live in `example/pubspec_overrides.yaml`, which
+`.pubignore` keeps out. The example's `driving_conditions` range is now the
+package's own, `>=0.6.0 <0.8.0`; it was `^0.6.0`, which refused the 0.7.x
+releases the package itself accepts. Apart from `pubspec.yaml`,
+`example/pubspec.yaml` and this changelog, the published files are identical to
+0.5.0.
+
 ## 0.5.0
 
 - **`driving_conditions` widened from `^0.6.0` to `>=0.6.0 <0.8.0`.** `^0.6.0` means
