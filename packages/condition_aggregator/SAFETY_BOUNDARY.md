@@ -2,7 +2,7 @@
 
 **Package**: `condition_aggregator`
 **Version**: 0.0.5 (published; early and evolving)
-**Boundary record version**: 1.0
+**Boundary record version**: 1.1 (2026-09-20: §3 and §8 corrected against the 0.0.10 code. A fetch failure is not staleness: only a source that cannot be read lands in `result.providerErrors`. The rest of the record states the boundary as written for 0.0.5.)
 **Boundary record template**: shared across the sibling adapter packages
 **Date**: 2026-05-03
 
@@ -52,9 +52,16 @@ discipline):
   is the canonical surface for surfacing publisher schema-drift /
   configuration errors before any caller depends on a broken provider.
   Per-provider fetch failures (transport timeout, transient parse
-  error) are captured into `result.providerErrors` so the integrator
-  can render staleness honestly without losing surviving providers'
-  data.
+  error) are captured into `result.providerErrors`, so the integrator
+  can show which sources could not be read without losing surviving
+  providers' data. A fetch failure is not staleness. A source that
+  answers with a document that has stopped being updated (a frozen
+  feed) raises no error, so it is not in `providerErrors`. Only an
+  adapter that implements `AdvisoryFeedFreshnessReporting` (from
+  0.0.10) can report it, in `result.staleSources`, which makes
+  `result.canAssertNoAdvisory` false. From any other adapter, a frozen
+  document that lists no advisories looks exactly like a current one
+  that lists none.
 - **No retry inside the aggregator.** Each adapter declares its own
   retry posture; the aggregator does not double-retry. Caller decides
   backoff cadence.
@@ -153,9 +160,15 @@ XML"; she sees the alert as her decision substrate. When two
 publishers' coverage overlaps her point and both have active alerts,
 she sees both — not a silent-coalesce that hides one source. When one
 publisher is transiently unavailable, she sees the other's advisories
-plus a staleness indicator the integrator chose to render from
-`result.providerErrors` — not a blank screen that hides the partial
-outage.
+plus a notice, which the integrator chose to render from
+`result.providerErrors`, that one source could not be read — not a
+blank screen that hides the partial outage. That notice means a source
+could not be reached; it says nothing about how old any data is. A
+publisher that keeps answering with a document that has stopped being
+updated is not in `result.providerErrors`. Unless its adapter reports
+that (`result.staleSources`), nothing at this interface tells the
+integrator, and she can be shown "no advisory" over a document that is
+no longer being written.
 
 **Sakichi reading**: the loom is *a multi-postman who carries each
 publisher's letter to the driver without rewriting it.* The loom
