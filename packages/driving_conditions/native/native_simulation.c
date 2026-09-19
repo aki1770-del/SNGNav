@@ -69,8 +69,8 @@ SimulationResponse simulation_run_batch(
   float visibility_meters
 ) {
   /* 0.7.0: the fleet term is gone from the composite. It never carried a real
-     reading — see SimulatedSafetyScore in the Dart lane for the four defects
-     and the genba that closed the question. The weights below are stated, sum
+     reading — see SimulatedSafetyScore in the Dart code for the four defects
+     and the measurement that settled it. The weights below are stated, sum
      to 1.0, and are NEVER re-normalised: re-normalising over "the terms that
      are present" is arithmetically identical to imputing the absent term as
      the mean of the present ones, which is how absence came to RAISE the
