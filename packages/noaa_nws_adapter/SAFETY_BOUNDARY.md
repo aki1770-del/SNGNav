@@ -52,7 +52,7 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Conformance status**: **not applicable at this scope; geographic mismatch.**
 **Reasoning**: NWS data is U.S.-region (contiguous US + Alaska + Hawaii + Puerto Rico + territories per README.md L162-165). Japanese-region drivers consume `jmaxml`-class adapter (separate package; jmaxml γ Path-A scheduled 2026-05-04 morning JST per D-VGC187-4). JIS / JASO conformance audit fires at the Japanese-region adapter not at this US-region adapter.
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to weather-data-adapter packages globally; surfaces relevant publication deltas to AAA at next monthly cycle. This package's JIS / JASO scope is geographic-mismatch-class; cron findings inform sibling jmaxml-adapter rather than this package.
+**JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them for weather-data-adapter packages. No output from that watch has been found, so this record no longer says so. This package's JIS / JASO scope is geographic-mismatch-class.
 
 ## 6 — Severity-not-profile invariant
 

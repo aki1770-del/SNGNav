@@ -102,12 +102,11 @@ construction.**
 shape; geographic-conformance audit fires at per-source adapters
 (NWS adapter is U.S.-region; JMA adapter is Japan-region; JIS / JASO
 applicability is per-region per-publisher).
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`):
-tracks JIS / JASO standard updates relevant to weather-data-adapter
-packages globally; surfaces relevant publication deltas to AAA at
-next monthly cycle. This interface package's JIS / JASO scope is
-delegated-to-adapter-class; cron findings inform per-region adapter
-packages rather than this interface.
+**JIS / JASO updates**: earlier versions of this record said a
+monthly watch tracked them for weather-data-adapter packages. No
+output from that watch has been found, so this record no longer
+says so. This interface package's JIS / JASO scope is
+delegated-to-adapter-class.
 
 ## 6 — Severity-not-profile invariant
 

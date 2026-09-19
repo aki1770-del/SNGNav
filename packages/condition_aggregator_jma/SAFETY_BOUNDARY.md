@@ -139,14 +139,12 @@ adapter is the seat for the meteorological-advisory leg.
   honored.
 - JASO automotive-driving-relevant standards do not currently
   govern JMA advisory feed consumption (JASO scope is hardware /
-  vehicle dynamics, not weather-data-feed consumption); however,
-  the AAA monthly cron tracks JIS / JASO publication deltas in
-  case a relevant new standard publishes.
+  vehicle dynamics, not weather-data-feed consumption).
 
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`):
-tracks JIS / JASO standard updates relevant to weather-data-adapter
-packages globally; surfaces relevant publication deltas to AAA at
-next monthly cycle. This package's JIS / JASO scope is
+**JIS / JASO updates**: earlier versions of this record said a
+monthly watch tracked them for weather-data-adapter packages. No
+output from that watch has been found, so this record no longer
+says so. This package's JIS / JASO scope is
 Japan-region-class and audit fires before deploy-graduation.
 
 ## 6 — Severity-not-profile invariant

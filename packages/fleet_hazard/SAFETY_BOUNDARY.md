@@ -38,7 +38,7 @@
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. `RoadCondition` vocabulary (`dry`, `snowy`, `icy`) is anchored to physical observation classes; JIS / JASO equivalents (where they exist for fleet-telemetry vocabulary) are reconciled by the integrator at the integration certification surface.
 **APPI / Japanese privacy**: per UPA spawn -45 §C5.T4 anchor — Japanese-domestic deployment of fleet telemetry must clear APPI individual-data-handling discipline at the `FleetProvider` source side; this package's aggregation discipline supports compliant integration but does not pre-empt APPI clearance at integrator scope.
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO + APPI standard updates relevant to fleet-telemetry packages; surfaces relevant publication deltas to AAA at next monthly cycle.
+**JIS / JASO and APPI updates**: earlier versions of this record said a monthly watch tracked them for fleet-telemetry packages. No output from that watch has been found, so this record no longer says so.
 
 ## 6 — Severity-not-profile invariant
 

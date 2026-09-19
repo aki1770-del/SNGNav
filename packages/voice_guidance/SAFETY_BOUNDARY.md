@@ -51,7 +51,7 @@ These five disciplines collectively form the package's SOTIF-class advisory-hone
 
 **Conformance status**: **applies at the integrator's HMI surface, not at this package.**
 **Reasoning**: Japanese-region driver-facing audio rendering surfaces in the integrator's HMI; this package emits the audio but does not specify display-class signage / icon-class HMI vocabulary that JIS / JASO standards regulate. Where a JIS / JASO standard regulates audio-class HMI directly (e.g. emergency-tone class), the integrator owns the audit at deployment.
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates; surfaces relevant publication deltas to AAA at next monthly cycle. Cron findings inform the integrator-class HMI rather than this audio-emission package directly.
+**JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them. No output from that watch has been found, so this record no longer says so.
 
 ## 6 — Severity-not-profile invariant
 
