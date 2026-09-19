@@ -1,3 +1,19 @@
+## 0.7.9
+
+**Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+
+- `SAFETY_BOUNDARY.md`: where the safety-boundary record used this project's
+  internal shorthand, it now says the same thing in plain words. No boundary
+  moved: the changed lines lost internal names and references, and nothing
+  changed about what the package does, what it does not do, or what it leaves
+  to you.
+  One statement in it is corrected: earlier versions said a monthly watch
+  tracked JIS / JASO standard updates. No output from that watch has been
+  found, so the record no longer says so.
+
+Apart from `pubspec.yaml` (the version), `SAFETY_BOUNDARY.md` and this
+changelog, the published files are identical to 0.7.8.
+
 ## 0.7.8
 
 A documentation release, plus a published example that now resolves. There is
