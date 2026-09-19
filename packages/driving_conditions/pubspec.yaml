@@ -3,7 +3,7 @@ description: >-
   Turn weather data into driving safety guidance. Road surface classification,
   grip estimation, visibility degradation, and Monte Carlo safety scoring.
   Pure Dart, no Flutter dependency.
-version: 0.7.1
+version: 0.7.2
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -28,16 +28,9 @@ dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
 
-# Monorepo development: resolve sibling package locally; published
-# releases resolve against pub.dev via the caret constraint above.
-dependency_overrides:
-  navigation_safety_core:
-    path: ../navigation_safety_core
-  driving_weather:
-    path: ../driving_weather
-  snow_rendering:
-    path: ../snow_rendering
-  navigation_safety_calibration:
-    path: ../navigation_safety_calibration
-  japanese_snow_vocabulary:
-    path: ../japanese_snow_vocabulary
+# Local development: sibling path overrides live in pubspec_overrides.yaml,
+# beside this file, never inline here. pub does not strip dependency_overrides
+# from a published pubspec, so an inline `path: ../<sibling>` shipped and made
+# `pub get` inside the published package fail ("path which doesn't exist") for
+# anyone outside this repository. pub does not publish a package-root
+# pubspec_overrides.yaml, and .pubignore lists it as well.
