@@ -2,8 +2,10 @@
 
 ## 0.5.1
 
-**`dart pub get` inside the published package now works, and two dependency
-ranges are wider. No code change.**
+**`dart pub get` inside the published package now works. This package's own
+code is unchanged, but its two sibling ranges are wider: if your app uses
+`DigitrafficWeatherProvider`, what it emits can change when you upgrade. See
+"What an upgrade changes" below.**
 
 The published 0.5.0 `pubspec.yaml` still carried development-only
 `dependency_overrides` pointing at `../condition_aggregator` and
@@ -16,13 +18,37 @@ remove `dependency_overrides` when a package is published. Apps that depend on
 `driving_weather: 0.5.0` resolves normally. The overrides now live in
 `pubspec_overrides.yaml`, which pub does not publish.
 
-**Also in this release, and you will see it in your lockfile:** the constraints
-on `condition_aggregator` and `condition_aggregator_digitraffic` were `^0.0.5`.
-On a `0.0.x` version a caret admits that one version only, so 0.5.0 held your app
-at `0.0.5` of both. They are now `>=0.0.5 <0.2.0`, so `pub get` can resolve the
-current releases (`condition_aggregator` 0.0.10 and
-`condition_aggregator_digitraffic` 0.0.8 on 2026-09-19). This package's own
-tests pass against those versions.
+### What an upgrade changes
+
+The constraints on `condition_aggregator` and `condition_aggregator_digitraffic`
+were `^0.0.5`. On a `0.0.x` version a caret admits that one version only, so
+0.5.0 held your app at `0.0.5` of both. They are now `>=0.0.5 <0.1.0`, so
+`pub upgrade` can move your app to the current releases: `condition_aggregator`
+0.0.10 and `condition_aggregator_digitraffic` 0.0.8 on 2026-09-19. The range
+stops below 0.1.0 because no 0.1.x of either package has been published, and a
+0.1.x is where a breaking change to them would go. No type or method signature
+you use changes, and this package's own tests pass at both ends of the range.
+
+If your app uses `DigitrafficWeatherProvider`, two fixes in
+`condition_aggregator_digitraffic` change what it emits:
+
+- **An announcement Digitraffic does not classify now has unknown severity, not
+  minor** (`condition_aggregator_digitraffic` 0.0.7). This package maps that to
+  `HazardAssertion.unknown` and ranks it above minor and moderate when it picks
+  the worst advisory near the point. A `WeatherCondition` that carried
+  `HazardAssertion.minor` or `HazardAssertion.moderate` can now carry
+  `HazardAssertion.unknown`. Its `hazard` verdict is `SafetyVerdict.unknown`
+  either way.
+- **Announcements east and west of the point are no longer dropped**
+  (`condition_aggregator_digitraffic` 0.0.8). The search box was 34-50% of its
+  documented width of about 55 km across Finland, the only country Digitraffic
+  covers. Announcements inside the documented box now arrive, so the worst
+  advisory near a point can be more severe than before, and a point where the
+  provider found no advisory can now return one. When that advisory is severe or
+  extreme, `hazard` becomes `SafetyVerdict.hazardous`.
+
+Both fixes make the provider more cautious, never less. Tests or screens that
+expect the old results for a given feed may now see these instead.
 
 Apart from `pubspec.yaml` and this changelog, the published files are identical
 to 0.5.0.
