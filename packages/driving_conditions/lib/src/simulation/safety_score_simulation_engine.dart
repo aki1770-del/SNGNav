@@ -11,7 +11,8 @@ import 'simulation_result.dart';
 /// Engine contract for safety score Monte Carlo simulation.
 ///
 /// The Dart API must NOT expose GPU buffer IDs, shader identifiers,
-/// engine scenes, native pointers, or platform channels (A306 §5.3).
+/// engine scenes, native pointers, or platform channels: callers depend only
+/// on the result, never on the backend that computed it.
 abstract interface class SafetyScoreSimulationEngine {
   /// Run a Monte Carlo simulation and return a [SimulationResult].
   ///

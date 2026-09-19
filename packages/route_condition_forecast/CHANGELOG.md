@@ -1,3 +1,18 @@
+## 0.2.3
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `CHANGELOG.md`: the 0.1.1 and 0.1.2 headings.
+
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment)
+and this changelog, the published files are identical to 0.2.2.
+
 ## 0.2.2
 
 **`dart pub get` inside the published package now works. No code change.**
@@ -151,7 +166,7 @@ segment carried positive evidence of a hazard. Check `hazard` and
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.1.2 — 2026-05-10 — Pana score recovery (Theme α P3)
+## 0.1.2 — 2026-05-10 — Pana score recovery
 
 - Trim pubspec `description` to within the pana 60–180 character target.
 - Add minimal `example/main.dart` for pana documentation scoring.
@@ -159,7 +174,7 @@ segment carried positive evidence of a hazard. Check `hazard` and
 - No SDK source changes; metadata + format pass only.
 
 
-## 0.1.1 — 2026-05-10 — Refresh cascade-stale dependency constraints
+## 0.1.1 — 2026-05-10 — Refresh dependency constraints left stale by sibling releases
 
 - `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
   driving_weather 0.4.0 release earlier the same day).

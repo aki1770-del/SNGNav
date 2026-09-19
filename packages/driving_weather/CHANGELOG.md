@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.2
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
+- `CHANGELOG.md`: one sentence in the 0.5.0 entry, and the 0.3.0 entry.
+
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
+`SAFETY_BOUNDARY.md` and this changelog, the published files are identical to
+0.5.1.
+
 ## 0.5.1
 
 **`dart pub get` inside the published package now works. No code change, and no
@@ -97,7 +117,8 @@ at every site where absent data used to fall through to the "clear road" branch,
 and you must decide what to do when the answer is `unknown`.
 
 That compile error is deliberate. It is the whole fix. A deprecation warning
-does not stop a loom; it annotates it while it keeps weaving defective cloth.
+does not stop the build; it annotates the code while the code keeps producing
+the wrong answer.
 
 The verdicts carry a deliberate **asymmetry**: positive evidence of a hazard
 fires even when other fields are absent, but the negative verdict ("all clear")
@@ -214,7 +235,7 @@ defect this release exists to remove, in one keystroke, and greps as nothing.
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 

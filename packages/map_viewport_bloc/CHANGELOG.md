@@ -1,3 +1,23 @@
+## 0.4.9
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
+- `CHANGELOG.md`: the 0.4.1 heading and the 0.3.0 entry.
+
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
+`SAFETY_BOUNDARY.md` and this changelog, the published files are identical to
+0.4.8.
+
 ## 0.4.8
 
 **The bundled example now resolves. No change to the package itself.**
@@ -119,7 +139,7 @@ No API or behaviour change.
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.4.1 — 2026-05-10 — Pana score recovery (Theme α P4)
+## 0.4.1 — 2026-05-10 — Pana score recovery
 
 - Trim pubspec `description` to within the pana 60–180 character target.
 - Apply `dart format` to clear any formatter findings.
@@ -160,7 +180,7 @@ No API or behaviour change.
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 

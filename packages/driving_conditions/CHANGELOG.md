@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.7.3
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
+  One statement in it is corrected: earlier versions said a monthly watch
+  tracked JIS / JASO standard updates. No output from that watch has been
+  found, so the record no longer says so. A note in it about an old README
+  mismatch is now marked as written on 2026-05-04.
+- `lib/src/simulation/safety_score_simulation_engine.dart`: one doc comment. It
+  cited an internal document; it now gives the reason in the sentence itself.
+- `native/native_simulation.c`: one comment. The compiled code is identical,
+  so a library you built from 0.7.1 or 0.7.2 does not need rebuilding for this
+  release.
+- `CHANGELOG.md`: the 0.5.1 heading and the 0.3.0 entry.
+
+Every changed Dart file was compared before and after with its comments removed:
+the code is identical. Apart from `pubspec.yaml` (the version) and the files
+listed above, the published files are identical to 0.7.2.
+
 ## 0.7.2
 
 **`dart pub get` inside the published package now works. No code change.**
@@ -46,15 +75,15 @@ clamped nowhere and `overall_mean` is never clamped either, which is provable fr
 published C source without running anything. **The honest statement is that the number is
 arbitrary and plausible, which is worse than a direction you could learn to expect.**
 
-⚑ **CORRECTION, measured on aarch64 2026-09-12 — "it saturates so you would notice" is FALSE on HER
-architecture.** The `1.0` above is one **x86-64** manifestation, not the defect's signature. Called
+⚑ **CORRECTION, measured on aarch64 2026-09-12 — "it saturates so you would notice" is FALSE on
+aarch64.** The `1.0` above is one **x86-64** manifestation, not the defect's signature. Called
 through the mismatched ABI on aarch64 with the 4th FP argument register (`s3`) preset, `overall_mean`
 comes back **unclamped and inheriting whatever is in that register**: `0.112216` · `0.312216` ·
 `1.712216` · `200000.015625`, against a correct control of `0.212216`. **The dangerous cases are the
 PLAUSIBLE ones** — `0.312216` on a 0–1 safety scale is indistinguishable from a real reading, and no
 range check, saturation heuristic or "looks wrong" instinct catches it. The same call on x86-64
 reproduced as `-nan`. **Any reasoning of the form "we would notice because it saturates" does not
-hold on the architecture HER vehicle runs.** Separately, and stated the right way round after an
+hold on an aarch64 in-vehicle system.** Separately, and stated the right way round after an
 independent re-measure caught it backwards: **0.7.0's struct SHRANK** — 0.6.0 carries seven
 fields (28 bytes, including `fleet_mean`), 0.7.0 carries six (24 bytes). So it is the
 **stale ≤0.6.0 library** that writes 28 bytes into the 24-byte buffer the 0.7.x Dart side
@@ -68,7 +97,7 @@ signature and 28-byte struct, each self-consistent with its own Dart side. **The
 break in this package's history is at 0.7.0.**
 `0.7.1` is guarded. **`0.7.0` has the 6-arg C and NO version symbol — the defect is reachable there
 with nothing to catch it**, and it is published and live. A consumer who upgrades 0.6.0 → 0.7.0 and
-reuses a previously built `.so` hits the founding defect unguarded. Both versions ship the C source.
+reuses a previously built `.so` hits the defect described above, unguarded. Both versions ship the C source.
 
 
 The native-vs-CPU parity test catches this, but **only if it runs, and it skips when the
@@ -715,7 +744,7 @@ No API or behaviour change.
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.5.1 — 2026-05-10 — Refresh cascade-stale dependency constraints
+## 0.5.1 — 2026-05-10 — Refresh dependency constraints left stale by sibling releases
 
 - `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
   driving_weather 0.4.0 release earlier the same day).
@@ -748,7 +777,7 @@ No API or behaviour change.
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 

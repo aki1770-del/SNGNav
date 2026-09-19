@@ -1,17 +1,17 @@
 #!/usr/bin/env dart
 // Differential ABI layout check for a `dart:ffi` boundary.
 //
-// METHOD AND AUTHORSHIP
-// ---------------------
-// The method is RUST-SYSTEMS-ENGINEER's (RSE), built 2026-09-12 while measuring
-// Eclipse iceoryx2: emit C `sizeof`/`_Alignof` for every struct, emit the Dart
-// `sizeOf` for its binding, diff. On its first run it caught a real defect —
-// `ffigen`, the standard generator, silently drops `__attribute__((aligned(n)))`,
-// producing 2 wrong struct sizes out of 60 with no warning and no `@ffi.Align`
-// anywhere in 25,581 generated lines. This file preserves that method out of a
-// session-scoped scratch directory and wires it onto a surface we ship.
+// METHOD
+// ------
+// The method was built 2026-09-12 while measuring Eclipse iceoryx2: emit C
+// `sizeof`/`_Alignof` for every struct, emit the Dart `sizeOf` for its binding,
+// diff. On its first run it caught a real defect — `ffigen`, the standard
+// generator, silently drops `__attribute__((aligned(n)))`, producing 2 wrong
+// struct sizes out of 60 with no warning and no `@ffi.Align` anywhere in 25,581
+// generated lines. This file keeps that method as a tool that ships with this
+// package, instead of a one-off script.
 //
-// FDD added per-field offsets, and the reason is not decoration. Measured
+// Per-field offsets were added to it, and the reason is not decoration. Measured
 // 2026-09-12 on this package's own struct: `SimulationResponse` is six 4-byte
 // scalars, so EVERY permutation of its fields has size 24 and alignment 4. A
 // size-and-alignment check returns CLEAN on a binding where `overallMean` reads
@@ -156,8 +156,8 @@ String _cStructBody(String source, String typeName) {
     // Typedef form: the name is the last identifier before the `;`. Read it
     // that way rather than stripping attributes: `__attribute__((aligned(16)))`
     // has nested parens, and a non-greedy strip leaves a stray `)` behind —
-    // which is how this parser first failed on the very case RSE built the
-    // method to catch.
+    // which is how this parser first failed on the very case the method was
+    // built to catch.
     var tail = source.substring(close + 1);
     final end = tail.indexOf(';');
     if (end < 0) continue;
@@ -231,7 +231,7 @@ List<DartField> parseDartStructFields(String source, String className) {
   // An optional library prefix is accepted everywhere a `dart:ffi` name can
   // appear: `extends ffi.Struct`, `@ffi.Uint8()`, `external ffi.Pointer<...>`.
   //
-  // ADDED 2026-09-12 BY FDD, on a real miss. `import 'dart:ffi' as ffi;` is
+  // Added 2026-09-12, on a real miss. `import 'dart:ffi' as ffi;` is
   // ordinary Dart and is what this repo's own bindings use. The parser required
   // the unprefixed spelling, so on the first real binding it was pointed at —
   // iceoryx2_ipc's `NativeRoadFriction extends ffi.Struct` — it reported
@@ -573,7 +573,7 @@ final class PairBinding extends Struct {
 }
 ''';
 
-// RSE's original catch: the C type carries __attribute__((aligned(16))) and the
+// The original catch: the C type carries __attribute__((aligned(16))) and the
 // generated Dart binding has no @Align. ffigen produces exactly this, silently.
 const String _fixtureAlignedC = '''
 #include <stdint.h>
@@ -609,7 +609,7 @@ final class WideBinding extends Struct {
 }
 ''';
 
-// PREFIXED SPELLING — `import 'dart:ffi' as ffi;`. Added 2026-09-12 by FDD when
+// PREFIXED SPELLING — `import 'dart:ffi' as ffi;`. Added 2026-09-12 when
 // the parser was taught to read it. Accepting a new spelling is not the same as
 // still GUARDING it: a prefix-tolerant regex that matched the class but silently
 // captured zero annotated fields would make every prefixed binding "agree" on a
@@ -742,7 +742,7 @@ int runSelfTest(String compiler) {
     because: 'REORDER',
   );
 
-  // RSE's original catch: ffigen silently drops __attribute__((aligned(n))).
+  // The original catch: ffigen silently drops __attribute__((aligned(n))).
   check(
     'known-bad/dropped-align-attribute',
     _fixtureAlignedC,

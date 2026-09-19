@@ -1,3 +1,26 @@
+## 0.2.3
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
+  One statement in it is corrected: earlier versions said a monthly watch
+  tracked JIS / JASO standard updates. No output from that watch has been
+  found, so the record no longer says so.
+- `CHANGELOG.md`: the 0.1.1 heading.
+
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
+`SAFETY_BOUNDARY.md` and this changelog, the published files are identical to
+0.2.2.
+
 ## 0.2.2
 
 **`dart pub get` inside the published package now works. No code change.**
@@ -184,7 +207,7 @@ no source/behavior change.
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.1.1 — 2026-05-10 — Refresh cascade-stale dependency constraints
+## 0.1.1 — 2026-05-10 — Refresh dependency constraints left stale by sibling releases
 
 - `driving_weather: ^0.3.0` → `^0.4.0` (consumer-side refresh after
   driving_weather 0.4.0 release earlier the same day).

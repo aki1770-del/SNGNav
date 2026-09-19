@@ -1,136 +1,117 @@
 # routing_bloc — Maintenance Mode
 
 **Package**: `routing_bloc`
-**Version**: 0.3.0
-**Disposition**: Maintenance-mode (edge-developer-component class).
-**Date**: 2026-05-06
+**Status**: maintenance mode
+**Since**: 2026-05-06 (recorded at version 0.3.0)
 
 ---
 
 ## Status
 
-This package is in **maintenance-mode**. No Q3 maturation push is
-planned; no new feature additions are admissible against this
-disposition. Bug-fix patches are admissible on the existing API
-surface; new-API surface additions are explicitly out-of-scope.
+This package is in **maintenance mode**. No new features are planned, and none
+will be added. Bug fixes to the existing API are in scope; additions to the API
+are not.
 
-The disposition was ratified as part of the unit's strategic
-clarification that *"Routing stays with incumbents (Yahoo!カーナビ,
-Google Maps)"* — i.e., end-user routing-as-product is owned by
-incumbents in the unit's target market (Japanese rural / snow-road
-edge developer scope). The unit's routing-class packages on pub.dev
-serve **edge developers** building parallel navigation tools, not
-end-driver routing-as-product directly.
+Routing for drivers is already served by established products (for example
+Yahoo!カーナビ and Google Maps). This project's routing packages are not meant to
+compete with them. They exist for developers who build their own navigation
+tools, and the project's own effort goes into road-condition, advisory and
+driver-assistance components for drivers on rural and snow-covered roads in
+Japan.
 
-`routing_bloc` is the bloc-state-machine layer that consumes
-`routing_engine`; both share the same maintenance-mode disposition
-(see `../routing_engine/MAINTENANCE_MODE.md`).
+`routing_bloc` is the bloc state-machine layer on top of `routing_engine`; both
+are in maintenance mode (see `../routing_engine/MAINTENANCE_MODE.md`).
 
 ## What this means
 
-### Admissible work
+### In scope
 
-- **Bug fixes** on the existing 0.3.0 API surface — `RouteState`
-  finite-state-machine correctness; transition correctness; idle /
-  loading / active / error state semantics. PATCH version bumps are
-  the path for these.
+- **Bug fixes** on the existing API — `RouteState` state-machine correctness;
+  transition correctness; idle / loading / active / error semantics. These ship
+  as PATCH releases.
 - **Documentation corrections** (README, dartdoc, CHANGELOG entries).
-- **Compatibility maintenance** with newer flutter_bloc / Flutter
-  SDK / Dart SDK; e.g., minor version bumps to the
-  `flutter_bloc` constraint as the upstream evolves.
-- **Test-class additions** that solidify existing semantics
-  without expanding the API surface.
-- **Security-class fixes** in transitive dependencies.
+- **Compatibility maintenance** with newer flutter_bloc / Flutter SDK / Dart
+  SDK; e.g., minor version bumps to the `flutter_bloc` constraint as the
+  upstream evolves.
+- **Tests** that pin down existing behaviour without expanding the API.
+- **Security fixes** in transitive dependencies.
 
-### Out-of-scope
+### Out of scope
 
-- New states beyond the four-state model (idle / loading / active
-  / error). The state machine shape is locked.
-- New events that require a state-machine extension. Integrators
-  wishing to add new events compose at their own boundary by
-  wrapping `routing_bloc` in a parent bloc.
-- New routing-engine integrations beyond the existing
-  `routing_engine` dependency. The bloc speaks to the engine
-  through the existing API; alternative backends are layered at
-  the engine package, not the bloc.
-- API-shape redesigns. The bloc shape is locked.
-- New events / payloads that change `RouteState` value-object
-  shape.
+- New states beyond the four-state model (idle / loading / active / error). The
+  state machine's shape is fixed.
+- New events that would need the state machine extended. To add your own
+  events, wrap `routing_bloc` in a parent bloc at your own boundary.
+- New routing-engine integrations beyond the existing `routing_engine`
+  dependency. The bloc talks to the engine through its existing API;
+  alternative backends belong in the engine package, not the bloc.
+- API redesigns. The bloc's shape is fixed.
+- New events or payloads that change the shape of the `RouteState` value
+  object.
 
-### Status communication
+### Where the status is stated
 
-- README and pub.dev publishing metadata reflect the
-  maintenance-mode disposition explicitly so edge-developer
-  consumers do not assume a roadmap commitment that does not
-  exist.
-- No SLA escalation is offered for this package; bug reports are
-  triaged at the unit's available cadence.
-- This disposition does NOT indicate "abandoned" — it indicates
-  "stable; durable contract; no roadmap push." The package
-  remains installable from pub.dev.
+- This file is where the status is recorded. The README and the pub.dev
+  listing do not mention it yet, so a developer who reads only those will not
+  see it.
+- No support-level commitment is offered for this package; bug reports are
+  triaged as maintainer time allows.
+- Maintenance mode does NOT mean "abandoned". It means "stable; the contract
+  holds; no new features." The package remains installable from pub.dev.
 
-## For consumers
+## For developers using this package
 
-If you are a Flutter edge developer integrating `routing_bloc`
-into a navigation tool you are building:
+If you are integrating `routing_bloc` into a navigation tool you are building:
 
-- **Pin to 0.3.x** in your `pubspec.yaml` if you want the durable
-  contract.
-- **Open issues** for bugs on the existing surface; the unit
-  triages at maintenance cadence.
-- **Do NOT depend** on new features landing — the disposition is
-  durable.
-- **Compose at your boundary** by wrapping `routing_bloc` in a
-  parent bloc when you need behaviors beyond idle / loading /
-  active / error.
-- **Migration path**: if your need outgrows the maintenance-mode
-  disposition, fork the package and evolve in your own namespace;
-  the unit's BSD-3-Clause license permits this freely.
+- **Pin to one minor line** in your `pubspec.yaml` (currently 0.4.x) if you
+  want a fixed contract.
+- **Open issues** for bugs on the existing API; they are triaged at
+  maintenance pace.
+- **Do NOT depend** on new features landing — maintenance mode is durable.
+- **Compose at your boundary** by wrapping `routing_bloc` in a parent bloc
+  when you need behaviours beyond idle / loading / active / error.
+- **If your needs outgrow maintenance mode**, fork the package and evolve it
+  under your own name; its BSD-3-Clause license permits this freely.
 
-## Why maintenance-mode (rationale)
+## Why maintenance mode
 
-The unit's strategic frame distinguishes between:
+Two kinds of software are kept apart here:
 
-- **Customer-facing-products** (e.g., end-driver routing apps): owned
-  by incumbents (Yahoo!カーナビ, Google Maps); not the unit's
+- **Products for drivers** (e.g., routing apps for end users): served by
+  established products (Yahoo!カーナビ, Google Maps); not this project's
   scope.
-- **Edge-developer-components** (e.g., `routing_engine`,
-  `routing_bloc`): packages that *help edge developers build their
-  own* navigation tools. These ship as Direction B
-  pub.dev packages but do not push toward end-user-product
-  maturation themselves.
+- **Components for developers** (e.g., `routing_engine`, `routing_bloc`):
+  packages that *help developers build their own* navigation tools. These ship
+  on pub.dev, but they are not pushed toward becoming a finished product
+  themselves.
 
-Routing-bloc state machines sit firmly in the
-edge-developer-component bucket. Continued maturation push (Q3
-escalation, new state introductions, multimodal extensions) would
-(a) duplicate incumbent product investment and (b) shift the unit
-away from the directions where its work materially helps the
-driver in unexpected snow on a Japanese rural road — which is the
-data-fusion / advisory / driver-assist component class, not
-routing-state-machine.
+A routing bloc state machine is a component for developers. Pushing it further
+(new states, multimodal extensions) would (a) duplicate what established
+products already do and (b) pull effort away from where the project's work
+helps a driver in unexpected snow on a rural road in Japan the most: data
+fusion, advisories and driver-assistance components, not a routing state
+machine.
 
-The maintenance-mode disposition keeps `routing_bloc` **healthy**
-(bug fixes, security maintenance, durable contract for
-edge-developer consumers) without diluting the unit's strategic
-push toward driver-assist component classes.
+Maintenance mode keeps `routing_bloc` **healthy** (bug fixes, security
+maintenance, a durable contract for the developers who depend on it) without
+diverting that effort.
 
 ## Cross-references
 
-- Sibling: `../routing_engine/MAINTENANCE_MODE.md` (parallel
-  disposition for the routing engine this bloc consumes).
-- Constitution + governance: package-class disposition discipline
-  per the unit's per-package boundary records (see
-  `SAFETY_BOUNDARY.md` siblings across other SNGNav packages
-  for the shape of per-package disciplines).
-- Direction B (edge-developer-component): the unit's strategic
-  pub.dev push lands data-fusion / advisory / safety-core
-  packages forward; routing-class packages stay in
-  maintenance-mode per this disposition.
+- Sibling: `../routing_engine/MAINTENANCE_MODE.md` (the same status for the
+  routing engine this bloc uses).
+- Packages in this repository record their scope in per-package documents
+  (see the `SAFETY_BOUNDARY.md` files in the other packages); this file does
+  the same for this package's maintenance status.
+- The project's active development goes into data-fusion, advisory and
+  safety-core packages; the routing packages stay in maintenance mode.
 
-## Disposition history
+## History
 
-- **2026-05-06**: Maintenance-mode disposition recorded at this
-  file as part of the unit's per-package documentation
-  discipline. Strategic-clarification anchor: routing-as-product
-  owned by incumbents; routing-class packages serve edge
-  developers.
+- **2026-05-06**: Maintenance mode recorded in this file, at version 0.3.0.
+  Reason: routing for drivers is served by established products; the routing
+  packages here serve developers.
+- **2026-09-20**: Reworded in plain language. The pinning example now names the
+  current minor line (0.4.x) instead of 0.3.x, the line current when the file
+  was written. An earlier sentence said the README and pub.dev listing state
+  this status; they do not, and the section above now says so.

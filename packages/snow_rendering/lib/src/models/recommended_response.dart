@@ -32,7 +32,7 @@ enum RecommendedResponse {
   /// moment would cry wolf until the driver stopped believing the alert, and
   /// she would then ignore it on the night it was real. Unknown is reported AS
   /// unknown — a state she can act on ("drive to what you can see"), which is
-  /// the D3 compound-failure answer when the feed is gone.
+  /// the worst-case answer when the feed is gone.
   conditionsUnknown,
 
   /// Hazardous but driveable with caution — reduce speed, increase following

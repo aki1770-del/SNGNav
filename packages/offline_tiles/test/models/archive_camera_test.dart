@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mbtiles/mbtiles.dart';
 import 'package:offline_tiles/offline_tiles.dart';
 
-/// ArchiveCamera — the loom that couples a host app's camera to the archive it
+/// ArchiveCamera — the mechanism that couples a host app's camera to the archive it
 /// actually ships.
 ///
 /// ## The defect this exists to catch, in one sentence
@@ -22,7 +22,7 @@ import 'package:offline_tiles/offline_tiles.dart';
 /// someone deletes ArchiveCamera and goes back to a constant, that group still
 /// documents exactly what breaks.
 void main() {
-  // The camera SNGNav's entrypoint hardcoded before this loom existed.
+  // The camera SNGNav's entrypoint hardcoded before ArchiveCamera existed.
   const legacyCenter = LatLng(35.1709, 136.8815); // Nagoya Station
   const legacyZoom = 11.0;
   const legacyMinZoom = 6.0;
@@ -70,9 +70,8 @@ void main() {
 
         // POSITIVE CONTROL — the instrument must be able to say "covered".
         // Without this, a resolver that returned false for everything would
-        // make the negative assertion below meaningless (CLAUDE.md §0: if the
-        // method could not have surfaced a counter-example, it measured
-        // nothing).
+        // make the negative assertion below meaningless: a method that could
+        // not have surfaced a counter-example has measured nothing.
         expect(
           manager.hasLocalCoverageForPoint(
             const LatLng(39.72, 140.10),

@@ -317,15 +317,15 @@ exactly — the top of the scale — where the pure-Dart engine returned `0.578`
 A saturated *"safe"* reading on a safety score, with no exception and no log
 line. **Refusing to run beats returning a number we cannot vouch for.**
 
-⚑ **CORRECTION, measured on aarch64 2026-09-12 — "it saturates so you would notice" is FALSE on HER
-architecture.** The `1.0` above is one **x86-64** manifestation, not the defect's signature. Called
+⚑ **CORRECTION, measured on aarch64 2026-09-12 — "it saturates so you would notice" is FALSE on
+aarch64.** The `1.0` above is one **x86-64** manifestation, not the defect's signature. Called
 through the mismatched ABI on aarch64 with the 4th FP argument register (`s3`) preset, `overall_mean`
 comes back **unclamped and inheriting whatever is in that register**: `0.112216` · `0.312216` ·
 `1.712216` · `200000.015625`, against a correct control of `0.212216`. **The dangerous cases are the
 PLAUSIBLE ones** — `0.312216` on a 0–1 safety scale is indistinguishable from a real reading, and no
 range check, saturation heuristic or "looks wrong" instinct catches it. The same call on x86-64
 reproduced as `-nan`. **Any reasoning of the form "we would notice because it saturates" does not
-hold on the architecture HER vehicle runs.** Separately, and stated the right way round after an
+hold on an aarch64 in-vehicle system.** Separately, and stated the right way round after an
 independent re-measure caught it backwards: **0.7.0's struct SHRANK** — 0.6.0 carries seven
 fields (28 bytes, including `fleet_mean`), 0.7.0 carries six (24 bytes). So it is the
 **stale ≤0.6.0 library** that writes 28 bytes into the 24-byte buffer the 0.7.x Dart side
@@ -339,7 +339,7 @@ signature and 28-byte struct, each self-consistent with its own Dart side. **The
 break in this package's history is at 0.7.0.**
 `0.7.1` is guarded. **`0.7.0` has the 6-arg C and NO version symbol — the defect is reachable there
 with nothing to catch it**, and it is published and live. A consumer who upgrades 0.6.0 → 0.7.0 and
-reuses a previously built `.so` hits the founding defect unguarded. Both versions ship the C source.
+reuses a previously built `.so` hits the defect described above, unguarded. Both versions ship the C source.
 
 
 The thrown error carries the library path and the remedy. **If you vendored this

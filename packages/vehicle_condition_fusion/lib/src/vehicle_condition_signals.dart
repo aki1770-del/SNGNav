@@ -52,7 +52,7 @@ class VehicleConditionSignals extends Equatable {
   /// Ambient outside relative humidity, PERCENT `[0, 100]`.
   ///
   /// Load-bearing for radiative-frost black ice on the OFFLINE in-vehicle path
-  /// (the D3 compound-failure worst case): with a real air-temperature AND a
+  /// (the compound-failure worst case: no network, no GPS): with a real air-temperature AND a
   /// real humidity sensor, the shared classifier can detect the clear-sky
   /// radiative-cooling window (surface below 0 °C while the air still reads
   /// +1…+3 °C) that friction/traction signals only reveal AFTER the wheels have
@@ -151,7 +151,7 @@ class VehicleConditionSignals extends Equatable {
   /// **Now mapped (v0.4.0).**
   ///  * `Vehicle.Exterior.Humidity` → [humidityRH] (PERCENT); with a real air
   ///    temperature it lets the shared classifier detect radiative-frost black
-  ///    ice on the offline in-vehicle path — the D3 worst-case where friction
+  ///    ice on the offline in-vehicle path — the worst case, where friction
   ///    signals only fire AFTER the wheels already slipped. Absent → `null`.
   ///
   /// **Intentionally NOT mapped.**

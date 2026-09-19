@@ -1,7 +1,7 @@
 /// Snow rendering — weather-to-rendering computation for driving safety.
 ///
 /// Converts a [WeatherCondition] from the `driving_weather` package into
-/// the full driving condition picture an edge developer needs to produce
+/// the full driving condition picture a developer needs to produce
 /// a weather-responsive map or navigation experience:
 ///
 /// - [RoadSurfaceState] — road surface classification and grip factor.

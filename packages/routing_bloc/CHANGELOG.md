@@ -1,3 +1,24 @@
+## 0.4.8
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `MAINTENANCE_MODE.md`: rewritten in plain words. Two statements in it were
+  out of date and are corrected: it said the README and the pub.dev listing
+  state the maintenance status (they do not; the file now says so), and its
+  pinning example named 0.3.x, the line current when it was written (it now
+  names the current line, 0.4.x). The status itself is unchanged.
+- `CHANGELOG.md`: the 0.3.0 entry.
+
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
+`MAINTENANCE_MODE.md` and this changelog, the published files are identical to
+0.4.7.
+
 ## 0.4.7
 
 **`flutter pub get` inside the published package, and in its example, now
@@ -95,7 +116,7 @@ published files are identical to 0.4.6.
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 
