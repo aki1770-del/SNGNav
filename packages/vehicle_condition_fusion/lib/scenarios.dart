@@ -3,7 +3,7 @@
 ///
 /// ## Why this library exists (the blank-page problem)
 ///
-/// An edge developer can `pub add vehicle_condition_fusion` today, but to SEE or
+/// A developer can `pub add vehicle_condition_fusion` today, but to SEE or
 /// test the fusion they still need vehicle signals — a databroker, a CAN bus, or
 /// a real car in a real snowstorm. This library lowers that floor: it ships
 /// hand-authored, physically-plausible signal traces and a one-line replay

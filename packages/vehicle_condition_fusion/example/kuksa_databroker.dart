@@ -1,6 +1,6 @@
 // Runnable KUKSA-databroker bridge for `vehicle_condition_fusion`.
 //
-// This shows the ONE wiring an edge developer writes to drive the
+// This shows the ONE wiring a developer writes to drive the
 // safety-calibrated fusion from a live Eclipse KUKSA databroker — and that the
 // bridge is a four-line map chain, because the package's `fromVss` + the
 // partial-frame carry-forward rail do the load-bearing work for you:

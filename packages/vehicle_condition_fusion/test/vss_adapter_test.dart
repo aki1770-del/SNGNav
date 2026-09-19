@@ -53,7 +53,7 @@ void main() {
     });
 
     test('Vehicle.Exterior.Humidity → humidityRH (the radiative-frost reach)', () {
-      // The offline D3-worst-case wire: a real exterior humidity sensor lets the
+      // The offline worst-case wire: a real exterior humidity sensor lets the
       // shared classifier catch radiative-frost black ice BEFORE the wheels slip.
       final s = VehicleConditionSignals.fromVss(const {
         'Vehicle.Exterior.AirTemperature': 2.0,

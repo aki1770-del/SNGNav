@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.2
+
+**Documentation only. No code change.**
+
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `lib/scenarios.dart`, `lib/src/vehicle_condition_signals.dart`,
+  `example/kuksa_databroker.dart` and `test/vss_adapter_test.dart`: comments only.
+- `CHANGELOG.md`: one line in the 0.4.0 entry.
+
+Every changed Dart file was compared before and after with its comments removed:
+the code is identical. Apart from `pubspec.yaml` (the version), the files above
+and this changelog, the published files are identical to 0.5.1.
+
 ## 0.5.1
 
 **`dart pub get` inside the published package, and in its example, now works.
@@ -181,7 +197,7 @@ hazard; it now abstains to `null` rather than to a fabricated `dry`.)
   AND a real humidity sensor the shared classifier
   (`isRadiativeFrostBlackIce` via `DrivingConditionAssessment.fromCondition`)
   can catch the clear-sky radiative-cooling window (surface below 0 °C while the
-  air still reads +1…+3 °C) on the D3 compound-failure worst case — BEFORE the
+  air still reads +1…+3 °C) on the compound-failure worst case — BEFORE the
   friction/TCS/ABS signals fire, which only reveal ice AFTER the wheels have
   already slipped. Honest fail-safe unchanged: a vehicle that does not publish
   humidity leaves `humidityRH` null and the classifier abstains — a missing
