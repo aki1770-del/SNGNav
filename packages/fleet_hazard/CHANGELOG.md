@@ -1,3 +1,20 @@
+## 0.6.2
+
+**Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO and APPI updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+
+- `SAFETY_BOUNDARY.md`: where the safety-boundary record used this project's
+  internal shorthand, it now says the same thing in plain words. No boundary
+  moved: the changed lines lost internal names and references, and nothing
+  changed about what the package does, what it does not do, or what it leaves
+  to you.
+  One statement in it is corrected: earlier versions said a monthly watch
+  tracked JIS / JASO and APPI updates for fleet-telemetry packages. No output
+  from that watch has been found, so the record no longer says so. A
+  quotation in it now matches its source word for word.
+
+Apart from `pubspec.yaml` (the version), `SAFETY_BOUNDARY.md` and this
+changelog, the published files are identical to 0.6.1.
+
 ## 0.6.1
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.
