@@ -68,7 +68,7 @@ absent fleet term is not folded in at any value. Disclosed in `CHANGELOG.md`.
 
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. Road-surface classification vocabulary and grip-factor magnitudes are anchored to physics-of-tire-grip published research (decision-tree thresholds at lines 44-49 README.md); JIS / JASO equivalents (where they exist for road-surface vocabulary) are reconciled by the integrator at the integration certification surface.
-**JIS / JASO updates**: not tracked on a schedule. Earlier versions of this record said a monthly watch tracked them for road-surface-classification packages; no such watch was ever scheduled. The mapping above is revisited when this record is revised.
+**JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them for road-surface-classification packages. No output from that watch has been found, so this record no longer says so. The mapping above is revisited when this record is revised.
 
 ## 6 — Severity-not-profile invariant
 

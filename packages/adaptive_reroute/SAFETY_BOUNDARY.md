@@ -49,7 +49,7 @@
 
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. Reroute-decision logic is geographically-agnostic (consumes typed `RouteForecast` from any region); JIS / JASO equivalents (where they exist for ADAS-routing-class advisory packages) are reconciled by the integrator at the integration certification surface.
-**JIS / JASO updates**: not tracked on a schedule. Earlier versions of this record said a monthly watch tracked them for advisory-class navigation packages; no such watch was ever scheduled. The mapping above is revisited when this record is revised.
+**JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them for advisory-class navigation packages. No output from that watch has been found, so this record no longer says so. The mapping above is revisited when this record is revised.
 
 ## 6 — Severity-not-profile invariant
 
