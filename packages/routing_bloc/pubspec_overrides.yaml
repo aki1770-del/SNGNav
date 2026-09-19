@@ -1,0 +1,11 @@
+# Local development only: resolve these sibling packages from this repository's
+# source instead of pub.dev. This file never reaches the published archive:
+# pub does not publish a package-root pubspec_overrides.yaml, and .pubignore
+# lists it as well. Do not move these back into pubspec.yaml -- pub does not
+# strip dependency_overrides from a published pubspec, and a shipped
+# `path: ../<sibling>` makes `pub get` fail for everyone outside this repository.
+dependency_overrides:
+  navigation_safety:
+    path: ../navigation_safety
+  navigation_safety_core:
+    path: ../navigation_safety_core

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.1
+
+**`dart pub get` inside the published package now works, and two dependency
+ranges are wider. No code change.**
+
+The published 0.5.0 `pubspec.yaml` still carried development-only
+`dependency_overrides` pointing at `../condition_aggregator` and
+`../condition_aggregator_digitraffic` -- folders that exist only in this
+package's source repository. `dart pub get` inside the downloaded package (to
+run its tests, or when an editor opened it) failed with exit code 66 ("depends
+on condition_aggregator_digitraffic from path which doesn't exist"). pub does not
+remove `dependency_overrides` when a package is published. Apps that depend on
+`driving_weather` were not affected: checked, an app depending on
+`driving_weather: 0.5.0` resolves normally. The overrides now live in
+`pubspec_overrides.yaml`, which pub does not publish.
+
+**Also in this release, and you will see it in your lockfile:** the constraints
+on `condition_aggregator` and `condition_aggregator_digitraffic` were `^0.0.5`.
+On a `0.0.x` version a caret admits that one version only, so 0.5.0 held your app
+at `0.0.5` of both. They are now `>=0.0.5 <0.2.0`, so `pub get` can resolve the
+current releases (`condition_aggregator` 0.0.10 and
+`condition_aggregator_digitraffic` 0.0.8 on 2026-09-19). This package's own
+tests pass against those versions.
+
+Apart from `pubspec.yaml` and this changelog, the published files are identical
+to 0.5.0.
+
 ## 0.5.0
 
 ### Safety defect in 0.4.4 and earlier — please read

@@ -2,7 +2,7 @@ name: routing_bloc
 description: >-
   Route lifecycle state machine (idle / loading / active / error) with
   glanceable progress UI. Works with any routing_engine backend.
-version: 0.4.6
+version: 0.4.7
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues
 topics:
@@ -35,13 +35,12 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   bloc_test: ^10.0.0
 
-# Monorepo development: use local path for sibling packages. Published
-# releases resolve against pub.dev via the caret constraint above.
-dependency_overrides:
-  navigation_safety:
-    path: ../navigation_safety
-  navigation_safety_core:
-    path: ../navigation_safety_core
+# Local development: sibling path overrides live in pubspec_overrides.yaml,
+# beside this file, never inline here. pub does not strip dependency_overrides
+# from a published pubspec, so an inline `path: ../<sibling>` shipped and made
+# `pub get` inside the published package fail ("path which doesn't exist") for
+# anyone outside this repository. pub does not publish a package-root
+# pubspec_overrides.yaml, and .pubignore lists it as well.
 
 flutter:
   uses-material-design: true

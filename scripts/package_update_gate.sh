@@ -40,14 +40,14 @@
 # provenance_gate().
 #
 # G7 closes the resolution-masking failure (the OTHER half of the monorepo-override hazard that
-# G6 does not reach). Six published packages ship monorepo-only `dependency_overrides: path:` on
-# their siblings (navigation_safety, routing_bloc, adaptive_reroute, driving_weather,
-# voice_guidance, driving_conditions). Neither CI (.github/workflows/ci.yml — every job runs
-# `pub get` HONORING those overrides) nor G1 (which also honors overrides) ever resolves a
-# package's DECLARED HOSTED sibling constraints against pub.dev. So they certify "works on my
-# local checkout," never "works for an edge developer who `pub add`s it." G7 reproduces the clean
-# consumer: it copies the package to a temp dir, DELETES only the `dependency_overrides:` block,
-# runs `dart`/`flutter pub get` (now resolving the declared caret constraints from pub.dev, NOT
+# G6 does not reach). Packages in this repository carry monorepo-only sibling `path:`
+# overrides -- since 2026-09-19 in a package-root pubspec_overrides.yaml (pub never publishes
+# it), before that inline in pubspec.yaml (which pub DID publish). Neither CI
+# (.github/workflows/ci.yml — every job runs `pub get` HONORING those overrides) nor G1 (which
+# also honors overrides) ever resolves a package's DECLARED HOSTED sibling constraints against
+# pub.dev. So they certify "works on my local checkout," never "works for an edge developer who
+# `pub add`s it." G7 reproduces the clean consumer: it copies the package to a temp dir, DELETES
+# the inline `dependency_overrides:` block AND any package-root pubspec_overrides.yaml, runs `dart`/`flutter pub get` (now resolving the declared caret constraints from pub.dev, NOT
 # local path), and — if that resolves — runs the package's own tests against the HOSTED siblings.
 #   VERDICT  PASS  pub-get resolves hosted AND tests pass (a clean `pub add` works).
 #            FAIL  declared hosted constraint will NOT resolve against published versions, OR
@@ -633,11 +633,22 @@ g7_siblings() {
     }' "$1"
 }
 
+# g7_override_bearing <pkgdir> — true when the package carries sibling overrides pub will honour:
+# an inline `dependency_overrides:` block in pubspec.yaml, or one in a package-root
+# pubspec_overrides.yaml.
+g7_override_bearing() {
+  grep -qE '^dependency_overrides:' "$1/pubspec.yaml" 2>/dev/null \
+    || grep -qE '^dependency_overrides:' "$1/pubspec_overrides.yaml" 2>/dev/null
+}
+
 hosted_resolve_gate() {
   local pkg="$1" name="$2" label="G7 hosted-resolve"
 
   # SKIP: nothing to strip — G1's normal resolve already exercised this package's hosted deps.
-  if ! grep -qE '^dependency_overrides:' "$pkg/pubspec.yaml" 2>/dev/null; then
+  # An override is either inline in pubspec.yaml or in a package-root pubspec_overrides.yaml,
+  # which pub honours exactly like the inline block. Checking only the inline block would print
+  # this SKIP for a package whose every sibling still resolves from a local path.
+  if ! g7_override_bearing "$pkg"; then
     printf '    %-14s SKIP (no dependency_overrides — G1 normal resolve already covers hosted deps)\n' "$label"
     return
   fi
@@ -674,7 +685,7 @@ hosted_resolve_gate() {
         "$label" "$sib" "$cons" "$lver" "$lpub"
       return
     fi
-  done < <(g7_siblings "$pkg/pubspec.yaml")
+  done < <(g7_siblings "$pkg/pubspec.yaml"; [[ -f "$pkg/pubspec_overrides.yaml" ]] && g7_siblings "$pkg/pubspec_overrides.yaml")
 
   # Build the clean-consumer copy: strip ONLY the override block; force a fresh resolve.
   local work; work="$(mktemp -d "$G7_TMP/${name}.XXXXXX")"
@@ -688,6 +699,10 @@ hosted_resolve_gate() {
   # example is a real but SEPARATE concern — out of G7's resolution-masking scope).
   rm -rf "$work/example"
   python3 "$G7_STRIP" "$work/pubspec.yaml" 2>/dev/null
+  # pub honours a package-root pubspec_overrides.yaml exactly like the inline block, so the
+  # clean consumer must not inherit it either -- left in, its `../<sibling>` paths would not
+  # exist in the temp copy and every package would FAIL for a reason no consumer has.
+  rm -f "$work/pubspec_overrides.yaml"
 
   # Flutter vs pure-Dart toolchain (same detection as catalog_census.sh).
   local tool="dart"
@@ -728,7 +743,7 @@ hosted_resolve_sweep() {
   for pkg in "$PKG_ROOT"/*/; do
     pkg="${pkg%/}"; name="$(basename "$pkg")"
     [[ -f "$pkg/pubspec.yaml" ]] || continue
-    grep -qE '^dependency_overrides:' "$pkg/pubspec.yaml" 2>/dev/null || continue
+    g7_override_bearing "$pkg" || continue
     any=1
     echo ">> $name  (v$(grep -m1 '^version:' "$pkg/pubspec.yaml" | awk '{print $2}'))  @ $pkg"
     hosted_resolve_gate "$pkg" "$name"

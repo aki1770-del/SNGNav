@@ -1,3 +1,31 @@
+## 0.4.7
+
+**`flutter pub get` inside the published package, and in its example, now
+works. No code change.**
+
+The published 0.4.6 carried development-only overrides in two files, pointing at
+folders that exist only in this package's source repository:
+
+- `pubspec.yaml`: `../navigation_safety` and `../navigation_safety_core`.
+  `flutter pub get` inside the downloaded package failed with exit code 66
+  ("depends on navigation_safety_core from path which doesn't exist").
+- `example/pubspec.yaml`: 28 `path: ../../<package>` overrides, with the same
+  failure in `example/` ("depends on voice_guidance from path which doesn't
+  exist"). Under them, the example also required `navigation_safety: ^0.5.0`,
+  and no 0.5.x of `navigation_safety` has ever been published (it went from
+  0.4.0 to 0.7.0), so the example could not have resolved even without the
+  overrides.
+
+Apps that depend on `routing_bloc` were not affected: checked, an app depending
+on `routing_bloc: 0.4.6` resolves normally.
+
+The package's overrides now live in `pubspec_overrides.yaml`, which pub does not
+publish; the example's live in `example/pubspec_overrides.yaml`, which
+`.pubignore` keeps out. The example now requires the ranges this package itself
+declares: `navigation_safety: ^0.9.0` and `routing_engine: '>=0.4.0 <0.7.0'`.
+Apart from `pubspec.yaml`, `example/pubspec.yaml` and this changelog, the
+published files are identical to 0.4.6.
+
 ## 0.4.6
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.

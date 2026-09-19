@@ -1,3 +1,21 @@
+## 0.5.9
+
+**The bundled example now resolves. No change to the package itself.**
+
+The published 0.5.8 `example/pubspec.yaml` carried 28 development-only
+`dependency_overrides`, each `path: ../../<package>` -- folders that exist only in
+this package's source repository. `flutter pub get` in the downloaded package's
+`example/` failed with exit code 66 ("depends on voice_guidance from path which
+doesn't exist"), and so did `flutter pub get` at the package root, which also
+resolves `example/` by default. Apps that depend on `offline_tiles` were not affected:
+checked, an app depending on `offline_tiles: 0.5.8` resolves normally.
+
+The overrides moved to `example/pubspec_overrides.yaml`, which `.pubignore` keeps
+out of the published package. The example now resolves every dependency from
+pub.dev, and `offline_tiles` itself from `../`. Apart from `example/pubspec.yaml`,
+`pubspec.yaml` (the version) and this changelog, the published files are
+identical to 0.5.8.
+
 ## 0.5.8
 
 **The offline map could show a green OFFLINE MAP badge over a blank grey

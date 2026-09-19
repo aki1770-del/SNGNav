@@ -7,3 +7,9 @@
 # unresolvable (`dart pub get` exit 66, "path which doesn't exist").
 pubspec_overrides.yaml
 example/pubspec_overrides.yaml
+
+# Build and test output. The repository-root .gitignore excludes these only
+# when publishing from inside the git work tree; named here so they stay out
+# of an archive built from a copy (measured 2026-09-19).
+build/
+coverage/

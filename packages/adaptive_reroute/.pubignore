@@ -1,0 +1,17 @@
+# Files that must never enter this package's published archive.
+#
+# Measured 2026-09-19 with `dart pub publish --dry-run` (Dart 3.11.1):
+# - a .pubignore REPLACES any .gitignore in the same directory for publishing
+#   (this package has no .gitignore of its own, so none is displaced);
+# - the repository-root .gitignore still applies when publishing from inside
+#   the git work tree, but not from a copy outside it, where build/ and
+#   coverage/ were published -- so they are named here, where they travel
+#   with the package.
+
+# Local-development sibling overrides. pub does not publish a package-root
+# pubspec_overrides.yaml by default; named here so no other pub can.
+pubspec_overrides.yaml
+
+# Build and test output.
+build/
+coverage/

@@ -1,3 +1,22 @@
+## 0.2.2
+
+**`dart pub get` inside the published package now works. No code change.**
+
+The published 0.2.1 `pubspec.yaml` still carried development-only
+`dependency_overrides` pointing at `../driving_weather` and `../routing_engine` -- folders that exist only in this
+package's source repository. Anyone who downloaded the package and ran
+`dart pub get` inside it (to run its tests, or when an editor opened it) got exit
+code 66: "depends on routing_engine from path which doesn't exist". pub does not remove
+`dependency_overrides` when a package is published.
+
+Apps that depend on `route_condition_forecast` were not affected: a dependency's overrides never
+apply to the app that uses it. Checked: an app depending on `route_condition_forecast: 0.2.1`
+resolves normally.
+
+The overrides now live in `pubspec_overrides.yaml`, which pub does not publish.
+Apart from `pubspec.yaml` and this changelog, the published files are identical
+to 0.2.1.
+
 ## 0.2.1
 
 - Widen `latlong2` from `^0.9.1` to `>=0.9.1 <0.11.0`.

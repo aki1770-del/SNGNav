@@ -33,12 +33,9 @@ dev_dependencies:
   test: ^1.25.0
   lints: ^5.1.1
 
-# Monorepo development: resolve sibling packages locally; published releases
-# resolve against pub.dev via the caret constraints above.
-dependency_overrides:
-  driving_weather:
-    path: ../driving_weather
-  navigation_safety_calibration:
-    path: ../navigation_safety_calibration
-  japanese_snow_vocabulary:
-    path: ../japanese_snow_vocabulary
+# Local development: sibling path overrides live in pubspec_overrides.yaml,
+# beside this file, never inline here. pub does not strip dependency_overrides
+# from a published pubspec, so an inline `path: ../<sibling>` shipped and made
+# `pub get` inside the published package fail ("path which doesn't exist") for
+# anyone outside this repository. pub does not publish a package-root
+# pubspec_overrides.yaml, and .pubignore lists it as well.

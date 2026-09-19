@@ -535,9 +535,232 @@ def _sibling_main():
     return 1
 
 
+# ===========================================================================
+# ARCHIVE-PATH LANE — added 2026-09-19.
+#
+# WHY: the example lane above asks whether a shipped example/pubspec.yaml
+# carries inline path overrides. It never asks the same question of the
+# package ROOT, and it never asks whether a pubspec_overrides.yaml actually
+# stays out of the archive -- so it ran green while, measured 2026-09-19
+# against the 36 published archives, SEVEN package roots shipped
+# `dependency_overrides` with a `path:` that leaves the archive:
+# adaptive_reroute 0.2.1, driving_conditions 0.7.1, driving_weather 0.5.0,
+# route_condition_forecast 0.2.1, routing_bloc 0.4.6, snow_rendering 0.3.0,
+# vehicle_condition_fusion 0.5.0. `pub get` inside each extracted archive:
+# exit 66, "path which doesn't exist".
+#
+# This lane asks every pubspec.yaml AND pubspec_overrides.yaml the archive
+# would carry, and judges the PATH (does it leave the archive?), not the
+# section it sits in.
+#
+# Which files the archive carries is decided the way pub decides it. Rules
+# measured with `dart pub publish --dry-run`, Dart 3.11.1, 2026-09-19:
+#   * a path with any segment starting with '.' never ships;
+#   * a pubspec.lock never ships, at any depth;
+#   * the package-ROOT pubspec_overrides.yaml never ships (a nested one,
+#     e.g. example/pubspec_overrides.yaml, DOES unless an ignore file names it);
+#   * in each directory from the repository root down, pub reads .pubignore if
+#     present, else .gitignore -- a .pubignore REPLACES that directory's
+#     .gitignore; the repository root's .gitignore still applies.
+# The pattern matching itself is git's (`git check-ignore --no-index` in a
+# scratch repository that mirrors those ignore files), so gitignore syntax is
+# not re-implemented here. This models publishing from inside the git work
+# tree, which is how this catalog publishes.
+# ===========================================================================
+
+
+def _path_values(text):
+    """Every `path:` value in a pubspec-shaped text, block or flow style."""
+    out = []
+    for line in text.split('\n'):
+        code = line.split('#', 1)[0]
+        for m in re.finditer(r'(?:^|[\s{,])path:\s*([^\s,}]+)', code):
+            out.append(m.group(1).strip().strip('"').strip("'"))
+    return out
+
+
+def _leaves_archive(rel_file, value):
+    target = os.path.normpath(os.path.join(os.path.dirname(rel_file), value))
+    return os.path.isabs(value) or target == '..' or target.startswith('..' + os.sep)
+
+
+def _shipped_subset(repo, pkgdir, rels):
+    """The package-relative paths in `rels` that pub would put in the archive.
+    Returns None when git is unavailable (UNVERIFIABLE, never a pass)."""
+    import shutil, subprocess, tempfile
+    todo = []
+    for r in rels:
+        parts = r.split('/')
+        if any(p.startswith('.') for p in parts):
+            continue
+        if parts[-1] == 'pubspec.lock' or r == 'pubspec_overrides.yaml':
+            continue
+        todo.append(r)
+    if not todo:
+        return []
+    repo = os.path.realpath(repo)
+    pkg_rel = os.path.relpath(os.path.realpath(pkgdir), repo)
+    tmp = tempfile.mkdtemp()
+    try:
+        try:
+            subprocess.run(['git', 'init', '-q', tmp], check=True, capture_output=True)
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        queries, dirs = [], {''}
+        for r in todo:
+            full = os.path.join(pkg_rel, r).replace(os.sep, '/')
+            parts = full.split('/')
+            for k in range(1, len(parts)):
+                dirs.add('/'.join(parts[:k]))
+                queries.append('/'.join(parts[:k]) + '/')   # a leading dir can exclude it too
+            queries.append(full)
+        for d in dirs:
+            for name in ('.pubignore', '.gitignore'):       # .pubignore REPLACES .gitignore
+                src = os.path.join(repo, d, name)
+                if os.path.isfile(src):
+                    os.makedirs(os.path.join(tmp, d), exist_ok=True)
+                    shutil.copyfile(src, os.path.join(tmp, d, '.gitignore'))
+                    break
+        p = subprocess.run(['git', '-c', 'core.excludesFile=/dev/null', '-C', tmp,
+                            'check-ignore', '--no-index', '--stdin'],
+                           input='\n'.join(queries) + '\n', capture_output=True, text=True)
+        if p.returncode not in (0, 1):
+            return None
+        ignored = {l.strip().rstrip('/') for l in p.stdout.splitlines() if l.strip()}
+        shipped = []
+        for r in todo:
+            full = os.path.join(pkg_rel, r).replace(os.sep, '/')
+            parts = full.split('/')
+            lead = ['/'.join(parts[:k]) for k in range(1, len(parts))]
+            if full in ignored or any(x in ignored for x in lead):
+                continue
+            shipped.append(r)
+        return shipped
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def archive_path_lane(root, quiet=False):
+    """FAIL on any pubspec the archive would carry whose path leaves the archive."""
+    findings, judged, skipped, unverifiable = [], 0, [], []
+    for pkgdir in sorted(glob.glob(os.path.join(root, 'packages/*'))):
+        pj = os.path.join(pkgdir, 'pubspec.yaml')
+        if not os.path.isfile(pj):
+            continue
+        name = os.path.basename(pkgdir)
+        if re.search(r'^publish_to:\s*["\']?none', open(pj, errors='replace').read(), re.M):
+            skipped.append(name)
+            continue
+        cands = []
+        for base, dnames, fnames in os.walk(pkgdir):
+            dnames[:] = [d for d in dnames if not d.startswith('.')]
+            for f in fnames:
+                if f in ('pubspec.yaml', 'pubspec_overrides.yaml'):
+                    cands.append(os.path.relpath(os.path.join(base, f), pkgdir).replace(os.sep, '/'))
+        ships = _shipped_subset(root, pkgdir, sorted(cands))
+        if ships is None:
+            unverifiable.append(name)
+            continue
+        for rel in ships:
+            judged += 1
+            text = open(os.path.join(pkgdir, rel), errors='replace').read()
+            for v in _path_values(text):
+                if _leaves_archive(rel, v):
+                    findings.append((name, rel, v))
+    if quiet:
+        return 1 if findings else (2 if unverifiable else 0)
+    print('\nsibling-constraint check — ARCHIVE PATHS (%d shipped pubspec files judged)' % judged)
+    for name in skipped:
+        print('  -     %s: publish_to none -- nothing of it is published, not judged' % name)
+    for name in unverifiable:
+        print('  ?     %s: UNVERIFIABLE -- git unavailable to decide what ships' % name)
+    if not findings:
+        if unverifiable:
+            print('  UNVERIFIABLE — not every package was judged. This is not a clean bill.')
+            return 2
+        print('  pass  no pubspec file the archive would carry has a path that leaves it')
+        return 0
+    for name, rel, v in findings:
+        print('  FAIL  %s/%s  path: %s' % (name, rel, v))
+        print('          ships in the archive and resolves OUTSIDE it. pub does not strip')
+        print('          dependency_overrides from a published pubspec; a stranger\'s')
+        print('          `pub get` inside the package exits 66 ("path which doesn\'t')
+        print('          exist"). Move root overrides to pubspec_overrides.yaml (pub never')
+        print('          publishes the root one); name any other in the package .pubignore.')
+    print('%d shipped path(s) a stranger cannot resolve.' % len(findings))
+    return 1
+
+
+def archive_path_self_test():
+    """Prove-it-fails, on the defects actually found and the rules measured."""
+    import shutil, subprocess, tempfile
+    ok = True
+
+    def case(label, files, want):
+        nonlocal ok
+        tmp = tempfile.mkdtemp()
+        try:
+            subprocess.run(['git', 'init', '-q', tmp], check=True, capture_output=True)
+            for rel, body in files.items():
+                path = os.path.join(tmp, rel)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                open(path, 'w').write(body)
+            got = archive_path_lane(tmp, quiet=True)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        good = got == want
+        ok = ok and good
+        print('  %s  %s  got=%s want=%s' % ('PASS' if good else 'FAIL', label, got, want))
+
+    root_gi = '.dart_tool/\n**/build/\npackages/*/coverage/\npackages/*/pubspec.lock\n'
+    ov_root = 'dependency_overrides:\n  sib:\n    path: ../sib\n'
+    ov_ex = 'dependency_overrides:\n  sib:\n    path: ../../sib\n'
+    ex = 'name: p_example\npublish_to: none\ndependencies:\n  p:\n    path: ../\n'
+    P = 'packages/p/'
+    print('\n  -- archive-path lane, on the defects actually found --')
+    case('CLASS-B: root pubspec.yaml inline override (driving_conditions 0.7.1 shape)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n' + ov_root}, 1)
+    case('CLASS-B, flow style: sib: {path: ../sib}',
+         {'.gitignore': root_gi,
+          P + 'pubspec.yaml': 'name: p\ndependency_overrides:\n  sib: {path: ../sib}\n'}, 1)
+    case('CLASS-A: example/pubspec.yaml inline override (offline_tiles 0.5.8 shape)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'example/pubspec.yaml': ex + ov_ex}, 1)
+    case('example/pubspec_overrides.yaml with NO ignore file SHIPS (measured)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'example/pubspec.yaml': ex, P + 'example/pubspec_overrides.yaml': ov_ex}, 1)
+    case('.pubignore REPLACES the package .gitignore: .gitignore names the file, .pubignore does not',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + '.gitignore': 'example/pubspec_overrides.yaml\n', P + '.pubignore': 'build/\n',
+          P + 'example/pubspec.yaml': ex, P + 'example/pubspec_overrides.yaml': ov_ex}, 1)
+    print('\n  -- and it passes the real fixes --')
+    case('THE FIX, root: overrides in the ROOT pubspec_overrides.yaml (pub never ships it)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'pubspec_overrides.yaml': ov_root}, 0)
+    case("THE FIX, example (main's mechanism): example/pubspec_overrides.yaml named in .pubignore",
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + '.pubignore': 'pubspec_overrides.yaml\nexample/pubspec_overrides.yaml\n',
+          P + 'example/pubspec.yaml': ex, P + 'example/pubspec_overrides.yaml': ov_ex}, 0)
+    case('example parent via `path: ../` stays INSIDE the archive',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'example/pubspec.yaml': ex}, 0)
+    case('publish_to: none package is not judged (nothing of it ships)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\npublish_to: none\n' + ov_root}, 0)
+    case('a pubspec under a directory the root .gitignore excludes (**/build/) does not ship',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'build/x/pubspec.yaml': 'name: junk\ndependency_overrides:\n  sib:\n'
+                                      '    path: ../../../sib\n'}, 0)
+    case('...and the same file outside build/ is judged and FAILS (the case above can fail)',
+         {'.gitignore': root_gi, P + 'pubspec.yaml': 'name: p\n',
+          P + 'kept/x/pubspec.yaml': 'name: junk\ndependency_overrides:\n  sib:\n'
+                                     '    path: ../../../sib\n'}, 1)
+    return ok
+
+
 def main():
     if '--self-test' in sys.argv:
-        return 0 if (self_test() and example_self_test()) else 1
+        return 0 if (self_test() and example_self_test()
+                     and archive_path_self_test()) else 1
     rc_sib = _sibling_main()
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
     mode = 'published' if '--published' in sys.argv else 'local'
@@ -545,10 +768,11 @@ def main():
     own = set(local)
     cat = local if mode == 'local' else published_catalog(sorted(own))
     rc_ex = example_lane(root, cat, own)
+    rc_arch = archive_path_lane(root)
     # A FAIL is louder than an UNVERIFIABLE: 1 wins over 2.
-    if 1 in (rc_sib, rc_ex):
+    if 1 in (rc_sib, rc_ex, rc_arch):
         return 1
-    if 2 in (rc_sib, rc_ex):
+    if 2 in (rc_sib, rc_ex, rc_arch):
         return 2
     return 0
 
