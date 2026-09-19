@@ -5,10 +5,11 @@
 **Author**: FSE (functional-safety-engineer), 2026-08-16
 **Status**: PRODUCER artifact. Not self-audited — see "Audit" at the foot.
 
-> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (AAA's record, v1.0,
-> 2026-05-03). That record states the package's SOTIF *posture*; this file
-> tabulates the *insufficiencies* that posture leaves, which the record's §3
-> declares as prose and never enumerates. Nothing here re-authors it.
+> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (the package's
+> safety-class boundary record, revision 1.1; first dated 2026-05-03). That
+> record states the package's SOTIF *posture*; this file tabulates the
+> *insufficiencies* that posture leaves, which the record's §3 declares as
+> prose and never enumerates. Nothing here re-authors it.
 
 ## Scope and ceiling
 
@@ -52,7 +53,7 @@ visible. The second clause failing is not.
 | **Consequence observed in our own stack** | `outputs/shadow-watch/records/2026-08.jsonl`, run `2026-08-16T02:07:02Z`, judging published `condition_aggregator 0.0.9` / `condition_aggregator_jma 0.3.1` / `driving_weather 0.5.0` / `compound_failure_advisor 0.1.2`, Niigata (54232). **The record carries both branches and instructs that neither be quoted alone, so both are here.** `drive` (true reading age) = **`heightenedCaution`**, reasons `[staleVisibility, highSpeedInDegradedConditions]`, unknowns `[visibilityReadingIsStale]`. `driveOnboard` (age zeroed, the in-car-sensor counterfactual) = **`continueDriving`, reasons `[]`, unknowns `[]`**. **The finding is what survives BOTH:** every reason and unknown in the `drive` branch concerns the *visibility reading's* age. **Neither branch says one word about the advisory feed being 81 days dead** — the caution she gets on the primary branch is the right caution for the wrong reason, and on the onboard branch she gets none at all. *An earlier draft quoted `driveOnboard` alone — the more dramatic branch — against the record's explicit instruction. Caught by AAA.* |
 | **Mitigation (code, 0.0.10)** | `AdvisoryFeedFreshnessReporting` — opt-in adapter capability reporting `AdvisoryFeedStaleness`. `AdvisoryAggregateResult.staleSources` carries it; **`canAssertNoAdvisory` returns `false` when it is non-empty**, which propagates to `fold`, `toLookup` and `requireCompleteLookup` from the single predicate. `AdvisoryLookupPartial.staleSources` carries the fact onto the sealed type so the integrator can say *which* source went quiet and *how long ago*. |
 | **Verifying test** | `test/frozen_feed_test.dart` — 8 tests, GREEN. **The RED proof is `tool/red_proof/`**, separate by necessity: the guard file references 0.0.10 types, so against 0.0.9 it does not fail, it fails to *load* — which proves nothing. `tool/red_proof/run_red_proof.sh` rebuilds pristine 0.0.9 from the pub-cache tarball and asserts a 0.0.9-API-only reproduction FAILS: verified 2026-08-16, **4/4 across `canAssertNoAdvisory` / `fold` / `requireCompleteLookup` / `toLookup`**, exit 0. *An earlier draft of this row said the 8-test file was "proven RED on unmodified 0.0.9" — a result that file cannot produce. Caught independently by AAA and DIA; corrected, and the correction named rather than quietly applied.* |
-| **Residual after mitigation** | **AoU-CA-004.** Reporting is opt-in and positive-only. An adapter that does not implement the capability can still serve a frozen document and still satisfy `canAssertNoAdvisory`. As of 2026-08-16, **zero of the five `AdvisoryProvider` implementations implement it.** The guard is armed and unfed. *(Was "six" in the first draft, counting `driving_weather`, which consumes but does not implement the contract — corrected on DIA's finding, 2026-08-16.)* |
+| **Residual after mitigation** | **AoU-CA-004.** Reporting is opt-in and positive-only. An adapter that does not implement the capability can still serve a frozen document and still satisfy `canAssertNoAdvisory`. As of 2026-08-16, **zero of the five `AdvisoryProvider` implementations implemented it.** *(Was "six" in the first draft, counting `driving_weather`, which consumes but does not implement the contract — corrected on DIA's finding, 2026-08-16.)* **Measured 2026-09-20, against the latest version of each adapter on pub.dev: one of the five implements it.** `condition_aggregator_jma` 0.7.0 (published 2026-08-28) does. JMA first implemented it in 0.3.2 (2026-08-16), dropped it in 0.5.0 (2026-08-21) and restored it in 0.7.0, so a project resolved to JMA 0.5.0, or to any version before 0.3.2, does not get it. `condition_aggregator_digitraffic` 0.0.8, `condition_aggregator_met_norway` 0.0.8, `condition_aggregator_nws` 0.0.7 and `condition_aggregator_owm_road_risk` 0.1.5 do not implement it. The guard is fed through the JMA adapter and unfed through the other four. |
 | **Why the residual was accepted rather than closed by default** | Defaulting unmeasured sources to "stale" would manufacture doubt on a clear day — the same class of lie as manufacturing calm, pointed the other way, and it would break every working integration to score a point. Defaulting to "fresh" is the defect being fixed. The honest third option is to report only what was measured and to **state the gap here** rather than pick a default that lies in one direction. |
 
 ### SOTIF-CA-002 — coverage gap renders as measured calm (OPEN, not mitigated here)
@@ -64,7 +65,7 @@ visible. The second clause failing is not.
 | **Triggering condition** | The query point lies outside an adapter's declared catalogue. The adapter answers successfully with an empty list **by design**. |
 | **Insufficiency** | The interface has no vocabulary for "this source does not cover this point." An out-of-catalogue empty answer is arithmetically identical to an in-catalogue calm, so `canAssertNoAdvisory` is `true` for a point no source ever looked at. |
 | **Measured occurrence** | Same run, Maebashi (42251) and Karuizawa (48331): `adapterCoversPoint: false`, `jmaCoverage: "OUTSIDE-ADAPTER-CATALOG"`, and the record's own words — *"An empty advisory list at this point is a COVERAGE GAP, not 'no warnings in force', and must never be read as a clear road."* Both served **`continueDriving` with empty reasons and empty unknowns.** |
-| **Status** | **OPEN. Not fixed in 0.0.10.** Named here rather than bundled: the mitigation is a per-adapter coverage predicate (`coversPoint(lat, lon)`) on the provider contract, which is a larger interface change and needs the adapter owners' consent, not FSE's unilateral edit. |
+| **Status** | **OPEN. Not fixed in 0.0.10.** Named here rather than bundled: the mitigation is a per-adapter coverage predicate (`coversPoint(lat, lon)`) on the provider contract, which is a larger interface change and needs the adapter owners' consent, not FSE's unilateral edit. **Measured 2026-09-20:** `condition_aggregator_jma` 0.7.0 no longer answers an out-of-catalogue point with an empty list. Without fetching anything, it returns one `minor` notice (`kJmaOutsideCoverageEventClass`) saying the point is outside the adapter's coverage and that no warning shown does not mean safe. The gap is now visible in the list, but nothing from that adapter makes `canAssertNoAdvisory` false: nothing was fetched, so nothing lands in `providerErrors` or `staleSources`. This interface still has no way to say "not covered", so the row stays OPEN. |
 | **Routed to** | NDI (adapter-family steward) + CT (build-track lead). FSE holds the row; FSE does not own the five adapter packages. |
 
 ### SOTIF-CA-003 — silence has no maximum age (OPEN, upstream)
@@ -86,7 +87,7 @@ visible. The second clause failing is not.
 | **Class** | Functional insufficiency (integration / information loss across a package seam) |
 | **Triggering condition** | Any state in which advisory completeness is in doubt — feed outage, frozen feed (CA-001), coverage gap (CA-002). |
 | **Insufficiency** | `compound_failure_advisor` never receives `AdvisoryAggregateResult`. Its input is a bare `AdvisoryLevel? advisorySeverity`, and **zero references to `canAssertNoAdvisory`, `AdvisoryLookup`, `staleSources` or `AdvisoryAggregateResult` exist anywhere in `driving_weather/lib` or `compound_failure_advisor/lib`** (measured 2026-08-16). Everything this table's CA-001 mitigation establishes is **discarded at that seam.** |
-| **The two lines that do it** | `compound_failure_advisor/lib/src/drive_situation.dart` declares *"`null` = no advisory in force"* — a positive assertion of calm. Four fields above it, `visibilityMeters` declares *"`null` = NO real reading in hand. `null` is a first-class unknown, never coerced to 'clear'."* **The same sentinel, opposite semantics, in adjacent fields of the same class.** Then `in_drive_advisor.dart:294` folds them: `case null: case AdvisoryLevel.minor: return 0;` |
+| **The two lines that do it** | `compound_failure_advisor/lib/src/drive_situation.dart` declares *"`null` = no advisory in force"* — a positive assertion of calm. Two fields above it, `visibilityMeters` declares *"`null` = NO real reading in hand. `null` is a first-class unknown, never coerced to 'clear'."* **The same sentinel, opposite semantics, two fields apart in the same class.** Then `in_drive_advisor.dart:294` folds them: `case null: case AdvisoryLevel.minor: return 0;` *(This row said "four fields above" and "adjacent fields" until 2026-09-20. Only `visibilityAgeSeconds` stands between them, and the file has not changed since 2026-06-27, so the count was wrong when it was written. Found by FSE on re-measurement.)* |
 | **Consequence** | Not-knowing and knowing-it-is-mild are **the same fact** to the advisor. Both yield concern 0, no escalation, `continueDriving`. There is no way to express "advisory state unknown" at all — the input state does not exist. |
 | **Reproduced** | 2026-08-16, scratch copy, 2 tests RED: *"an UNKNOWN advisory state must not render as a calm road"* → `Expected: not continueDriving / Actual: continueDriving`; *"UNKNOWN must be distinguishable from a MEASURED minor"* → identical action, reasons and unknowns. |
 | **Status** | **OPEN. NOT fixed here, and deliberately not fixed unilaterally.** The mitigation is a new input state on a published, HER-facing advisor's API. That is a build-track decision belonging to the package's owners, not an interface seat's edit. |
@@ -94,13 +95,28 @@ visible. The second clause failing is not.
 
 > ### ⚑ What this row costs the CA-001 fix — stated here, not buried
 >
-> **The CA-001 mitigation does not reach the driver through this unit's own
-> stack.** Two independent gaps sit between it and her: no adapter feeds it
-> (AoU-CA-004), and the advisor cannot receive it (CA-004). What CA-001 fixes is
-> the **interface contract an external integrator programs against** — real, and
-> the correct layer for this seat — but it is not, today, a change she would
-> experience. Claiming otherwise would be the verification overstatement
-> OPS-RULE-066 forbids, so it is claimed nowhere.
+> On 2026-08-16 two independent gaps sat between the CA-001 mitigation and the
+> driver: no adapter fed it (AoU-CA-004), and the advisor cannot receive it
+> (CA-004). **Measured 2026-09-20, one is closed and one is open.**
+>
+> - **Closed through the JMA adapter.** `condition_aggregator_jma` 0.7.0 reports
+>   a frozen feed, so a JMA document at least as old as that adapter's threshold
+>   (six hours by default) makes `canAssertNoAdvisory` false. That package's own test
+>   `test/defect_proof_current_api_test.dart` asserts it on the real Niigata
+>   document that was 81 days old on 2026-08-16. The other four adapters still
+>   do not report it (SOTIF-CA-001, residual).
+> - **Open.** `compound_failure_advisor` still cannot receive it (this row).
+>   Published `compound_failure_advisor` 0.1.2 and `driving_weather` 0.5.2
+>   contain no reference to `canAssertNoAdvisory`, `staleSources` or
+>   `AdvisoryAggregateResult`.
+>
+> So the mitigation reaches a driver only through integrator code that itself
+> reads `canAssertNoAdvisory` (directly, or through `fold`, `toLookup` or
+> `requireCompleteLookup`) or `staleSources`. Through `compound_failure_advisor`
+> it does not. What CA-001 fixes is the **interface contract an integrator
+> programs against**. This file claims no observation of it on a driver's
+> screen: claiming one without seeing it would be the verification
+> overstatement OPS-RULE-066 forbids.
 
 ---
 
@@ -111,33 +127,51 @@ FSC/TSC, no vehicle-level HARA. Those are literacy-only on this asset and are
 the integrator's, at their item boundary. A component that claimed to have done
 them would be over-claiming in exactly the shape this seat was re-scoped to stop.
 
-## Finding against the existing boundary record (routed, NOT actioned here)
+## Finding against the existing boundary record (corrected in its revision 1.1)
 
-`SAFETY_BOUNDARY.md` §3 states, of the five honesty disciplines:
+In revision 1.0, `SAFETY_BOUNDARY.md` §3 stated, of the five honesty
+disciplines:
 
 > "Per-provider fetch failures (transport timeout, transient parse error) are
 > captured into `result.providerErrors` so the integrator can render
 > **staleness** honestly without losing surviving providers' data."
 
-**That sentence conflates fetch-failure with staleness.** A frozen feed produces
-*no* fetch failure and *is* stale, so the named mechanism does not cover the
-named property — and the record reads as though it does. SOTIF-CA-001 is the
+**That sentence conflated fetch-failure with staleness.** A frozen feed produces
+*no* fetch failure and *is* stale, so the named mechanism did not cover the
+named property — and the record read as though it did. SOTIF-CA-001 is the
 measured proof.
 
-**AAA has since confirmed the finding and returned it enlarged**: the same
-conflation sits a second time in **§8**, the *driver-facing* declaration —
-*"she sees the other's advisories plus a staleness indicator the integrator
-chose to render from `result.providerErrors`."* That occurrence is the worse
-of the two, because it states what HER experience is. FSE named only §3; the
-§8 catch is AAA's.
+**AAA confirmed the finding and returned it enlarged**: the same conflation sat
+a second time in **§8**, the *driver-facing* declaration — *"she sees the
+other's advisories plus a staleness indicator the integrator chose to render
+from `result.providerErrors`."* That occurrence was the worse of the two,
+because it states what her experience is. FSE named only §3; the §8 catch is
+AAA's.
 
-**Owner: AAA.** Per FSE bylaws C1, FSE must not re-author AAA's
-`SAFETY_BOUNDARY` records, and has not — the file is byte-identical to HEAD
-(`836e364b…`). AAA reports its correction is **written but BLOCKED at the tool
-layer**, and names the block rather than routing around it. **Status: OWED, not
-fixed.** AAA additionally recorded its own debt: this record is v1.0 written
-against 0.0.5, and its promise to re-audit on material driver-experience change
-has gone unkept for five versions.
+**Status: corrected by AAA in revision 1.1 of `SAFETY_BOUNDARY.md`, the
+revision that ships beside this file.** FSE did not edit the record (FSE bylaws
+C1). What revision 1.1 changed, read from its diff:
+
+- **§3** now says `result.providerErrors` shows which sources could not be
+  read, and that *"a fetch failure is not staleness"*. A frozen feed raises no
+  error, so it is not in `providerErrors`. Only an adapter that implements
+  `AdvisoryFeedFreshnessReporting` can report it, in `result.staleSources`,
+  which makes `canAssertNoAdvisory` false. From any other adapter, a frozen
+  document that lists no advisories looks exactly like a current one.
+- **§8** now says that the notice an integrator renders from `providerErrors`
+  means a source could not be reached, and says nothing about how old any data
+  is. Unless the adapter reports staleness in `result.staleSources`, nothing at
+  this interface tells the integrator, and she can be shown "no advisory" over
+  a document that is no longer being written.
+- Its header gives the revision as 1.1 and says that the rest of the record
+  states the boundary as written for 0.0.5.
+
+**What revision 1.1 does not do.** AAA recorded its own debt on 2026-08-16: the
+record was written against 0.0.5, and its promise to be re-audited on material
+driver-experience change had gone unkept for five versions. Revision 1.1
+corrects §3 and §8 against the 0.0.10 code; outside those two sections the
+record is still as written for 0.0.5, as its own header says. This file does
+not rule on whether that meets the promise.
 
 ## Audit
 
