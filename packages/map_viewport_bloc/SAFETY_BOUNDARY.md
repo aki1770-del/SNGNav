@@ -3,9 +3,9 @@
 **Package**: `map_viewport_bloc`
 **Version**: 0.4.0 (DEPLOY)
 **Boundary record version**: 1.0 (founding; introduced with `ViewportRenderBudgetBloc` substrate)
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-06
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 **Related**: `navigation_safety_core` SAFETY_BOUNDARY.md (severity-not-profile + driver-always-drives invariants inherited verbatim through transitive `navigation_safety_core: ^0.10.0` dependency); `offline_tiles` SAFETY_BOUNDARY.md (PerformanceBudget producer); `snow_rendering` SAFETY_BOUNDARY.md (DataBudget producer).
 
 ---
@@ -47,13 +47,13 @@
 
 ## 7 — Driver-always-drives invariant
 
-**Status**: **applies in scope by design** per D-VGC188-1.
+**Status**: **applies in scope by design**.
 **Concrete locus**:
 - `lib/src/viewport_render_budget_bloc.dart` library-level docstring — *"the bloc emits state for the integrator HMI to render. It mounts no actuator; the driver always drives."*
 - All bloc reducers emit `ViewportRenderState` value-objects only; no actuator surface; no vehicle-state mutation.
 - The bloc never RAISES fidelity in response to a stream event (auto-relax-forbidden); only `ViewportBudgetReset` (integrator-driven) returns to HIGH. Auto-loosen is FORBIDDEN; this is the bloc-level mirror of the cap-override-with-confirmation pattern in `snow_rendering` 0.2.0 `DataBudget.relax`.
 
-## 8 — ViewportRenderBudgetBloc driver-facing-loom (new in 0.4.0)
+## 8 — ViewportRenderBudgetBloc: what reaches the driver (new in 0.4.0)
 
 **Operational discipline**: *the bloc composes per-frame and per-cycle budget streams into a single render-fidelity recommendation so the integrator HMI receives one coherent caution-add-direction-wins signal instead of two independent budget streams the integrator must invent composition rules for.*
 
@@ -84,4 +84,4 @@
 
 ---
 
-**Boundary record authored** by AAA (automotive-adas-analyst) under VAA-as-SEO operational pen authorization (spawn -86). Subject = We / AAA. Verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review.

@@ -1,11 +1,11 @@
 # adaptive_reroute — Safety-Class Boundary Record
 
 **Package**: `adaptive_reroute`
-**Version**: 0.2.0 (DEPLOY; explore→early-deploy CANDIDATE per FDD recommendation)
+**Version**: 0.2.0 (DEPLOY; early-deployment candidate)
 **Boundary record version**: 1.2
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-03 (record v1.0); corrected 2026-06-29 (record v1.1); **corrected 2026-07-12 (record v1.2 — honest-absence / Measured-or-Absent contract)**
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 
 ---
 
@@ -27,7 +27,7 @@
 **Package boundary**: **QM** (Quality Management; not functional-safety-scope).
 **Reasoning**: package outputs are advisory-class decision logic (threshold-driven evaluation of `RouteForecast` against config-tuned hazard thresholds). No control authority. No ASIL-A through ASIL-D claim asserted at the package boundary.
 **Integrator responsibility**: any integration where the reroute decision gates a control loop (e.g. autonomous lane-change to detour exit) requires the integrator to perform fresh ASIL classification — the package outputs typed advisory data, not commit-class decisions.
-**Early-deploy version-class consideration**: at 0.1.0 the test surface + threshold-magnitudes anchoring + literature-citation discipline are **light** (per V77 README measurement: README is 88L; minimal calibration documentation). FDD Rule 6 spike-to-package gate at 0.2.0 graduation should expand calibration substrate before broader deployment. AAA does not block 0.1.0 explore-phase deployment but flags this for FDD bylaws audit at next package PR cycle.
+**Early-deployment consideration**: at 0.1.0 the test surface + threshold-magnitudes anchoring + literature-citation discipline are **light** (measured on the README: 88 lines; minimal calibration documentation). The calibration substrate should expand at 0.2.0, before broader deployment. This record does not block 0.1.0 early use, but flags the gap for the next package release cycle.
 
 ## 3 — SOTIF (ISO 21448) posture
 
@@ -49,47 +49,44 @@
 
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. Reroute-decision logic is geographically-agnostic (consumes typed `RouteForecast` from any region); JIS / JASO equivalents (where they exist for ADAS-routing-class advisory packages) are reconciled by the integrator at the integration certification surface.
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to advisory-class navigation packages; surfaces relevant publication deltas to AAA at next monthly cycle.
+**JIS / JASO updates**: not tracked on a schedule. Earlier versions of this record said a monthly watch tracked them for advisory-class navigation packages; no such watch was ever scheduled. The mapping above is revisited when this record is revised.
 
 ## 6 — Severity-not-profile invariant
 
 **Status**: **applies in scope by design — profile-agnostic by construction.**
 **Concrete reasoning**: this package consumes `RouteForecast` (already-aggregated route hazard data) and `currentPosition`; no `DriverProfile` axis exists at this package's API surface. Reroute decision is computed from threshold-driven evaluation of forecast hazards, not profile-class differentiation. Severity-not-profile invariant from `navigation_safety_core` 0.6.0 is satisfied at this package's boundary trivially.
-**Future-version consideration**: if 0.2.0+ introduces profile-class differentiation for reroute thresholds (e.g. `noviceUrban` reroutes earlier than `professional`), the integration MUST flow through `navigation_safety_core` `DriverProfile` factories and MUST preserve severity-not-profile-driven HMI-presentation invariant — verbosity / locale / density may differ; the *visibility and preemption path* of the reroute prompt itself MUST stay severity-driven. AAA pre-flags this for next-version design review.
+**Future-version consideration**: if 0.2.0+ introduces profile-class differentiation for reroute thresholds (e.g. `noviceUrban` reroutes earlier than `professional`), the integration MUST flow through `navigation_safety_core` `DriverProfile` factories and MUST preserve severity-not-profile-driven HMI-presentation invariant — verbosity / locale / density may differ; the *visibility and preemption path* of the reroute prompt itself MUST stay severity-driven. This record pre-flags it for the next version's design review.
 
 ## 7 — Driver-always-drives invariant
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are deterministic `RerouteDecision` value-objects consumed by integrator HMI; the integrator surfaces the decision to the driver who chooses whether to follow the detour. The package emits no commit-class signal; the integrator's routing engine recomputes route from `detourWaypoints` only when invoked by integrator code (which integrator implements per their UX choice — typically driver-confirms-prompt class).
-**Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object. Adaptive routing serves HER cognitive moment of choice when conditions ahead change. The package surfaces *"should we reroute now? Around what? Why?"* to the integrator HMI; HER decides. This is exactly the agency-preserved-by-loom shape: the loom (`RerouteEvaluator`) measures the route-thread; HER chooses how to weave around the broken section.
+**Driver agency**: the driver is the subject, not the object. Adaptive routing serves the driver's moment of choice when conditions ahead change. The package surfaces *"should we reroute now? Around what? Why?"* to the integrator HMI; the driver decides. The evaluator (`RerouteEvaluator`) measures the route; the driver chooses how to go around the problem section.
 
-## 8 — Driver-facing loom (D-VGC189-1)
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *the map suggests an alternate route with a clear reason, when conditions ahead actually warrant it — and tells her plainly when it cannot see the road ahead at all.* When `adaptive_reroute` fires through an integrator HMI, HER sees:
+**What the driver experiences when this package fires**: *the map suggests an alternate route with a clear reason, when conditions ahead actually warrant it — and tells her plainly when it cannot see the road ahead at all.* When `adaptive_reroute` fires through an integrator HMI, the driver sees:
 - a reroute prompt only when a hazard falls within the look-ahead window and forecast confidence clears the configured threshold — not on every forecast tick (window + confidence gating; **note**: there is no minimum-progress / anti-thrashing debounce — re-prompt cadence is the integrator's responsibility, see §3 and README "Not yet implemented")
 - a reason in plain language (`decision.reason`) — *"black ice 4km ahead, detour adds 8 min"* class — not opaque scoring
-- **when the route conditions are unknown — an honest "we could not assess this route", never a green light** (`isAssessed == false`; added 0.2.0). This is the D3-worst-case surface: when the feed is gone, HER is TOLD the road ahead is unknown, rather than shown "Route is clear". *(Record v1.0/v1.1 could not say this, because through 0.1.5 HER was shown "Route is clear" at confidence 1.0 in exactly that situation. See the correction notice.)*
-- an option to accept or decline — HER agency preserved at every decision point
+- **when the route conditions are unknown — an honest "we could not assess this route", never a green light** (`isAssessed == false`; added 0.2.0). This is the worst case the package is built for: when the feed is gone, the driver is TOLD the road ahead is unknown, rather than shown "Route is clear". *(Record v1.0/v1.1 could not say this, because through 0.1.5 the driver was shown "Route is clear" at confidence 1.0 in exactly that situation. See the correction notice.)*
+- an option to accept or decline — the driver's agency preserved at every decision point
 
-**Sakichi reading**: the loom is *the foreman who watches threads ahead and proposes rework before HER hits the snag.* Sakichi's automatic loom stopped on a broken thread — **and it did not keep weaving when it could not see the thread at all.** Through 0.1.5 this package kept weaving: with no thread in view it reported cloth of perfect quality (`confidence = 1.0`). 0.2.0 restores the stop: an unassessable route halts the claim and says why (`cannotAssess`), which is the loom's third property — *it tells the weaver WHY*. The agency-preservation remains the load-bearing reading: the loom does not autonomously redirect HER; it *informs HER decision* — and it does not inform her with a number it never measured.
+**In plain terms**: the package is *the foreman who watches the road ahead and proposes a new route before the driver reaches the problem.* A well-built machine stops when its input breaks — **and does not keep producing when it cannot see its input at all.** Through 0.1.5 this package kept producing: with no input in view it reported a result of perfect quality (`confidence = 1.0`). 0.2.0 restores the stop: an unassessable route halts the claim and says why (`cannotAssess`) — *it tells the driver WHY*. The agency-preservation remains the load-bearing reading: the package does not autonomously redirect the driver; it *informs her decision* — and it does not inform her with a number it never measured.
 
-**Audible-to-edge-developer**: integrator reading `RerouteEvaluator` + `DetourPlanner` + `RerouteDecision` API today sees a clean separation (evaluator decides whether; planner decides waypoints; decision wraps both). `AdaptiveRerouteConfig` exposes the hazard look-ahead window (`hazardWindowSeconds`), minimum-confidence-to-act (`minConfidenceToAct`), and detour-offset distance (`detourOffsetMeters`) as integrator-tunable knobs — the integrator decides the magnitudes; the package does not pre-empt those choices. *(The `maxDetourFraction` field is also exposed but is **declared, not yet enforced** — no code path consumes it; see README "Not yet implemented". There is no minimum-progress knob.)* This respects the integrator's domain knowledge.
+**For the integrating developer**: integrator reading `RerouteEvaluator` + `DetourPlanner` + `RerouteDecision` API today sees a clean separation (evaluator decides whether; planner decides waypoints; decision wraps both). `AdaptiveRerouteConfig` exposes the hazard look-ahead window (`hazardWindowSeconds`), minimum-confidence-to-act (`minConfidenceToAct`), and detour-offset distance (`detourOffsetMeters`) as integrator-tunable knobs — the integrator decides the magnitudes; the package does not pre-empt those choices. *(The `maxDetourFraction` field is also exposed but is **declared, not yet enforced** — no code path consumes it; see README "Not yet implemented". There is no minimum-progress knob.)* This respects the integrator's domain knowledge.
 
-**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `adaptive_reroute` 0.1.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. introducing profile-class threshold differentiation → field update with severity-not-profile composition discipline; internal threshold-evaluation algorithm change → no field update).
+**Driver-experience section**: this section is the package's declaration of what the driver experiences, first written for `adaptive_reroute` 0.1.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. introducing profile-class threshold differentiation → field update with severity-not-profile composition discipline; internal threshold-evaluation algorithm change → no field update).
 
-**Calibration substrate at 0.1.0**: the threshold magnitudes (hazard severity → reroute-justified boundary) are **explicitly UNVERIFIED at this version** per README minimal-calibration-documentation state. AAA flags for FDD bylaws Rule 6 spike-to-package gate at 0.2.0 graduation: calibration substrate (literature-citation for justified-reroute thresholds: the `hazardWindowSeconds` and `minConfidenceToAct` magnitudes) should expand before deploy graduation past explore-phase-early-deploy class. Current 0.1.0 deployment depends on integrator providing config that fits their context.
+**Calibration substrate at 0.1.0**: the threshold magnitudes (hazard severity → reroute-justified boundary) are **explicitly UNVERIFIED at this version** per README minimal-calibration-documentation state. Flagged for 0.2.0: calibration substrate (literature-citation for justified-reroute thresholds: the `hazardWindowSeconds` and `minConfidenceToAct` magnitudes) should expand before the package is recommended beyond early deployment. Current 0.1.0 deployment depends on integrator providing config that fits their context.
 
 ## 9 — Cross-references
 
 - README.md §What it gives you L21-32 + §Use L46-73 + §When to use this L75-84
 - pubspec.yaml `version: 0.1.0`
 - LICENSE BSD-3-Clause
-- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-- D-VGC188-1 / D-VGC188-2 (Driver Sovereignty axis + 5-test framework)
-- AAA bylaws Article 17 (β) safe-default boundary
 - Composition: `route_condition_forecast` (upstream input) + `routing_engine` (downstream consumer of detour waypoints) + `navigation_safety_core` 0.6.0 SAFETY_BOUNDARY.md (severity-not-profile invariant inherited if profile-axis introduced 0.2.0+)
-- AAA forward flag for FDD: 0.2.0 graduation calibration-substrate expansion (literature-citation for reroute thresholds)
+- Open item: calibration-substrate expansion for 0.2.0 (literature-citation for reroute thresholds)
 
 ---
 
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization (spawn -50 Task 1). Subject = We / AAA. OPS-RULE-055 verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review.

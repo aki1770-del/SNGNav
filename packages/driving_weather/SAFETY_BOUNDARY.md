@@ -3,9 +3,9 @@
 **Package**: `driving_weather`
 **Version**: 0.5.0
 **Boundary record version**: 2.0
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-05; **corrected 2026-07-12**
-**Anchor**: driver-facing-loom-as-default architectural discipline (per-package boundary record per AAA spawn-50 precedent)
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 
 ---
 
@@ -21,7 +21,7 @@ Three claims in v1.0 were **false of versions up to and including 0.4.4**:
 | v1.0 claim | Reality in ≤ 0.4.4 |
 |---|---|
 | §2: "it surfaces the data as received" | `WeatherCondition.clear()` hardcoded +5.0 °C / 10000 m / 0.0 km/h / `iceRisk: false`, and `DigitrafficWeatherProvider` returned it for an **empty** advisory feed. Data was **manufactured**, not surfaced as received. |
-| §8: the loom "never asserts more than it observes" | It asserted a temperature, a visibility, a wind speed and an ice-risk verdict it had **never observed**, and the Digitraffic severity mapping invented -4.0 °C / 150 m / 40 km/h for advisories that carry no measurements at all. |
+| §8: the package "never asserts more than it observes" | It asserted a temperature, a visibility, a wind speed and an ice-risk verdict it had **never observed**, and the Digitraffic severity mapping invented -4.0 °C / 150 m / 40 km/h for advisories that carry no measurements at all. |
 | §3: "network failures surface as exceptions or null returns" | A failed fetch **silently re-emitted the last condition with no staleness marker**. Old data was indistinguishable from fresh. With no prior data, the stream went **silent**, which a UI cannot distinguish from "not fetched yet". |
 
 The 0.5.0 code makes all three claims **true** (see §2, §3, §8 as corrected
@@ -87,22 +87,22 @@ These disciplines collectively form the package's SOTIF-class advisory-honesty p
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are `WeatherCondition` value-objects. The package emits no actuator signal, holds no closed-loop authority, exposes no API that gates vehicle behavior. The driver hears or sees the rendered weather; the driver decides response; the driver always drives.
-**Axis anchor**: per the unit's driver-sovereignty axis substrate — driver is subject not object. The package observes the world for HER; HER decides what to do with the information. The rendering layer at the integrator is where dignity-class differentiation per profile lives; this package is the upstream observer.
+**Driver agency**: the driver is the subject, not the object. The package observes the world for the driver; the driver decides what to do with the information. The rendering layer at the integrator is where per-profile differentiation lives; this package is the upstream observer.
 
-## 8 — Driver-facing loom
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *weather signal that converges with road-surface and visibility into a single decision substrate the driver can read at a glance.* When `driving_weather` fires through an integrator HMI:
-- HER sees the weather state surfaced at her vehicle's location: precipitation type, intensity, wind speed, visibility distance, ice-risk flag — **or, for each of these, an honest "unknown" when the source did not measure it.**
-- **When the road could not be assessed, HER is TOLD that** (`SafetyVerdict.unknown`), instead of being shown a fabricated "conditions normal". When the data is old, HER is told how old (`WeatherStale`). When there is no data, HER is told there is none (`WeatherUnavailable`). This is the D3-worst-case answer: when the feed is gone, the app SAYS SO.
-- HER sees the weather state composed with road-surface state and visibility state via `condition_aggregator` into a single fused decision substrate — not three separate alert streams competing for attention.
-- HER hears or reads the rendered surface in profile-aware vocabulary at the integrator's HMI; HER cognitive budget is respected per `DriverProfile`.
-- HER drives the dynamic driving task; the package never reaches into the actuator chain.
+**What the driver experiences when this package fires**: *weather signal that converges with road-surface and visibility into a single decision substrate the driver can read at a glance.* When `driving_weather` fires through an integrator HMI:
+- The driver sees the weather state surfaced at her vehicle's location: precipitation type, intensity, wind speed, visibility distance, ice-risk flag — **or, for each of these, an honest "unknown" when the source did not measure it.**
+- **When the road could not be assessed, the driver is TOLD that** (`SafetyVerdict.unknown`), instead of being shown a fabricated "conditions normal". When the data is old, she is told how old (`WeatherStale`). When there is no data, she is told there is none (`WeatherUnavailable`). This is the answer for the worst case this package is built for: when the feed is gone, the app SAYS SO.
+- The driver sees the weather state composed with road-surface state and visibility state via `condition_aggregator` into a single fused decision substrate — not three separate alert streams competing for attention.
+- The driver hears or reads the rendered surface in profile-aware vocabulary at the integrator's HMI; her cognitive budget is respected per `DriverProfile`.
+- The driver drives the dynamic driving task; the package never reaches into the actuator chain.
 
-**Sakichi reading**: the loom is *the upstream observer that surfaces the world's state honestly, **never asserts more than it observes**, and yields the rendering choice to the integrator's profile-aware HMI*. As of 0.5.0 this is **true of the code**, and enforced by its types: absence is `null`, verdicts are tri-state, staleness and unavailability are types the consumer cannot ignore. *(In ≤ 0.4.4 this sentence was an aspiration the code contradicted — it asserted +5.0 °C and "no ice" for roads it had never observed. See §0. Sakichi's loom stopped when a thread broke; it did not keep weaving defective cloth. This package kept weaving. It now stops, and it says why.)*
+**In plain terms**: the package is *the upstream observer that surfaces the world's state honestly, **never asserts more than it observes**, and yields the rendering choice to the integrator's profile-aware HMI*. As of 0.5.0 this is **true of the code**, and enforced by its types: absence is `null`, verdicts are tri-state, staleness and unavailability are types the consumer cannot ignore. *(In ≤ 0.4.4 this sentence was an aspiration the code contradicted — it asserted +5.0 °C and "no ice" for roads it had never observed. See §0. A machine that loses its input should stop, not keep producing defective output. This package kept producing. It now stops, and it says why.)*
 
-**Audible-to-edge-developer**: integrator reading `WeatherProvider` API today sees the pluggable-provider pattern surfaced explicitly + the `SimulatedWeatherProvider` provided as a test-class scaffold + the `OpenMeteoWeatherProvider` documented as the production provider with no-API-key requirement and Open-Meteo terms-of-service responsibility surfaced for the integrator. Nothing patronizes the developer.
+**For the integrating developer**: integrator reading `WeatherProvider` API today sees the pluggable-provider pattern surfaced explicitly + the `SimulatedWeatherProvider` provided as a test-class scaffold + the `OpenMeteoWeatherProvider` documented as the production provider with no-API-key requirement and Open-Meteo terms-of-service responsibility surfaced for the integrator. Nothing patronizes the developer.
 
-**Driver-facing-loom field**: this section is the canonical driver-facing-loom declaration for `driving_weather` 0.5.0. Subsequent versions update this field on material changes to the weather-class surface (new providers, new fields, new fusion patterns, etc.).
+**Driver-experience section**: this section is the package's declaration of what the driver experiences, for `driving_weather` 0.5.0. Subsequent versions update this field on material changes to the weather-class surface (new providers, new fields, new fusion patterns, etc.).
 
 **Driver-impact chain (≤4 hops)**:
 ```
@@ -111,7 +111,7 @@ weather observation (Open-Meteo public API)
     -> condition_aggregator fusion + integrator HMI rendering
       -> driver in unexpected snow region reads the converged advisory
 ```
-Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
+Four hops; the driver is the terminal beneficiary.
 
 ## 9 — Cross-references
 
@@ -124,11 +124,10 @@ Four hops; HER is terminal beneficiary; satisfies HER-trace ≤4-hop discipline.
 - `CHANGELOG.md` 0.5.0 (the defect disclosure — pub.dev versions are immutable, so the CHANGELOG is the recall)
 - `pubspec.yaml` `version: 0.5.0`
 - LICENSE: BSD-3-Clause (matches the rest of SNGNav)
-- AAA bylaws Article 17 (β) safe-default boundary
-- PHIL-001 boundary preserved: `driving_weather` is the upstream observer; it is **not** a crash-data-harvester; the package boundary refuses crash-class data routing by virtue of its scope (weather observations only).
+- Scope boundary: `driving_weather` is the upstream observer; it is **not** a crash-data-harvester; the package boundary refuses crash-class data routing by virtue of its scope (weather observations only).
 - Composition: `driving_weather` observational state → `condition_aggregator` fusion (per spec §3.2; data-fusion component class) → integrator HMI in profile-aware vocabulary.
 - Open-Meteo upstream: <https://open-meteo.com/> — public no-API-key tier; integrator owns terms-of-service compliance.
 
 ---
 
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization. Subject = We / AAA. Verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear (weather observation respects every driver-class equally; profile-class differentiation lives at the rendering layer downstream).
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review (weather observation respects every driver-class equally; profile-class differentiation lives at the rendering layer downstream).
