@@ -3,9 +3,9 @@
 **Package**: `driving_conditions`
 **Version**: 0.6.0 (DEPLOY)
 **Boundary record version**: 2.0
-**Authoring skill**: AAA (automotive-adas-analyst)
+**Authored by**: the SNGNav maintainers (safety-boundary review)
 **Date**: 2026-05-03; **corrected 2026-07-12**
-**Anchor**: D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
+**Design rule**: this record states, in §8, what the driver experiences when the package's output reaches her.
 
 ---
 
@@ -61,14 +61,14 @@ absent fleet term is not folded in at any value. Disclosed in `CHANGELOG.md`.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
-**Touchpoint location**: **upstream consumer-side at `WeatherCondition` ingress.** This package consumes `WeatherCondition` from `driving_weather` (upstream); when the integrator's `driving_weather` consumer pulls from external feeds (NOAA / NWS / JMA / MET Norway), the WP.29 touchpoint is at that ingress not at this package's boundary. Per UPA `noaa_nws_adapter` 0.0.1 explore-phase pattern: any external-data adapter is itself the WP.29 touchpoint owner.
+**Touchpoint location**: **upstream consumer-side at `WeatherCondition` ingress.** This package consumes `WeatherCondition` from `driving_weather` (upstream); when the integrator's `driving_weather` consumer pulls from external feeds (NOAA / NWS / JMA / MET Norway), the WP.29 touchpoint is at that ingress not at this package's boundary. Following the `noaa_nws_adapter` 0.0.1 pattern: any external-data adapter is itself the WP.29 touchpoint owner.
 **Native engine surface**: `NativeSafetyScoreSimulationEngine` C FFI engine introduces a native-code surface. Integrators deploying with the native engine perform native-code-supply-chain WP.29 audit at integration time. The pure-Dart `CpuSafetyScoreSimulationEngine` is the cybersecurity-simpler default.
 
 ## 5 — JIS / JASO conformance
 
 **Conformance status**: **not mapped at this scope.**
 **Reasoning**: Japanese-domestic certification is integrator-class concern. Road-surface classification vocabulary and grip-factor magnitudes are anchored to physics-of-tire-grip published research (decision-tree thresholds at lines 44-49 README.md); JIS / JASO equivalents (where they exist for road-surface vocabulary) are reconciled by the integrator at the integration certification surface.
-**AAA monthly cron** (`aaa-jis-jaso-conformance-watcher-monthly`): tracks JIS / JASO standard updates relevant to road-surface-classification packages; surfaces relevant publication deltas to AAA at next monthly cycle.
+**JIS / JASO updates**: earlier versions of this record said a monthly watch tracked them for road-surface-classification packages. No output from that watch has been found, so this record no longer says so. The mapping above is revisited when this record is revised.
 
 ## 6 — Severity-not-profile invariant
 
@@ -80,35 +80,32 @@ absent fleet term is not folded in at any value. Disclosed in `CHANGELOG.md`.
 
 **Status**: **applies in scope by design.**
 **Concrete reasoning**: package outputs are deterministic typed value-objects (`DrivingConditionAssessment`, `SimulationResult`, `SafetyScore`) consumed by integrator code; the package emits no control signal, holds no actuator authority, exposes no API that closes a control loop. `advisoryMessage` field on `DrivingConditionAssessment` is the explicit advisory-class surface (advisory-mood text presented to driver via integrator HMI).
-**Axis anchor**: per `outputs/governance_transformation/our_axis_driver_sovereignty_2026_05_03.md` §1 — driver is subject not object. Monte Carlo simulation outputs (mean score + variance + incident count) inform HER decision; never substitute for HER decision. Variance reporting is the explicit honesty-discipline at the boundary: the integrator HMI surfaces *uncertainty*, the driver retains the agency to weigh it.
+**Driver agency**: the driver is the subject, not the object. Monte Carlo simulation outputs (mean score + variance + incident count) inform the driver's decision; they never substitute for it. Variance reporting is the explicit honesty-discipline at the boundary: the integrator HMI surfaces *uncertainty*, the driver retains the agency to weigh it.
 
-## 8 — Driver-facing loom (D-VGC189-1)
+## 8 — What the driver experiences
 
-**What HER experiences when this package fires**: *the safety score that says how confident the road feels right now, with honest variance.* When `driving_conditions` fires through an integrator HMI, HER sees:
+**What the driver experiences when this package fires**: *the safety score that says how confident the road feels right now, with honest variance.* When `driving_conditions` fires through an integrator HMI, the driver sees:
 - a road-surface classification (*"compactedSnow grip=0.30"*) in the language of physical condition not vendor jargon
 - an advisory message (`assessment.advisoryMessage`) in advisory mood not imperative-on-control
 - a safety score with variance (*"score: 0.42, variance: 0.08"*) — the variance signals to the integrator HMI when to surface uncertainty rather than confidence
 
-**Sakichi reading**: the loom measures the road-thread (precipitation + temperature + visibility + speed) and reports the tension HER cannot directly feel. The Monte Carlo run is the loom doing the measuring; HER does not have to scan grip and visibility independently. The variance is the loom's honesty. **Corrected in 0.7.0 (record v3.0)**: this line used to close *"confidence depends on whether your fleet-confidence input is real."* It never was real, for anyone, on any deployment — and the sentence put the burden of noticing that on the reader. A loom does not ask the weaver whether the thread it is measuring exists.
+**In plain terms**: the package measures the road (precipitation + temperature + visibility + speed) and reports what the driver cannot directly feel. The Monte Carlo run does the measuring; the driver does not have to scan grip and visibility independently. The variance is the measurement's honesty. **Corrected in 0.7.0 (record v3.0)**: this line used to close *"confidence depends on whether your fleet-confidence input is real."* It never was real, for anyone, on any deployment — and the sentence put the burden of noticing that on the reader. An instrument does not ask the person reading it whether the thing it is measuring exists.
 
-**Audible-to-edge-developer**: integrator reading `SafetyScoreSimulator.simulate()` API today sees explicit `seed` parameter for deterministic tests and explicit `NativeSafetyScoreSimulationEngine` opt-in for higher throughput. Nothing patronizes the developer's modeling choices. **Corrected in 0.7.0 (record v3.0)**: this line also advertised an "explicit `FleetConfidenceProvider` injection point for supplying real fleet data". That injection point is removed. It was never fed real fleet data by anyone, and describing it as the way to supply some was the documentation half of the defect the rest of this record describes. `FleetHazardConfidenceAdapter` remains exported and is read directly.
+**For the integrating developer**: integrator reading `SafetyScoreSimulator.simulate()` API today sees explicit `seed` parameter for deterministic tests and explicit `NativeSafetyScoreSimulationEngine` opt-in for higher throughput. Nothing patronizes the developer's modeling choices. **Corrected in 0.7.0 (record v3.0)**: this line also advertised an "explicit `FleetConfidenceProvider` injection point for supplying real fleet data". That injection point is removed. It was never fed real fleet data by anyone, and describing it as the way to supply some was the documentation half of the defect the rest of this record describes. `FleetHazardConfidenceAdapter` remains exported and is read directly.
 
 **Corrected in 0.6.0 (record v2.0)**: v1.0 claimed here that *"defaults are honest (0.8 explicit baseline; not hidden)"*. The NUMBER was explicit; its MEANING was not. `0.8` was returned for "no fleet data", and it is not a neutral value — it is an optimistic one, and it lifted `SafetyScore.overall`. An explicit fabrication is still a fabrication. In 0.6.0 the absence is typed (`confidence` is `double?`), the absent term is excluded from the weighted mean rather than defaulted, and `ConstantFleetConfidenceProvider(0.8)` survives ONLY as what it always honestly was: a caller ASSERTING a scenario (a test, a simulator) — the exact counterpart of `WeatherCondition.simulatedClear()`. `ConstantFleetConfidenceProvider.unavailable()` is the way to say "no fleet data".
 
-**Driver-facing-loom field**: this section is the canonical D-VGC189-1 declaration for `driving_conditions` 0.6.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. variance reporting shape change → field update; internal Monte Carlo iteration count change → no field update).
+**Driver-experience section**: this section is the package's declaration of what the driver experiences, for `driving_conditions` 0.6.0. Subsequent versions update this field on material changes to the driver-experience surface (e.g. variance reporting shape change → field update; internal Monte Carlo iteration count change → no field update).
 
 ## 9 — Cross-references
 
 - README.md §Core Models L36+ (RoadSurfaceState decision tree + grip table) + §SafetyScoreSimulator L113-126 (Monte Carlo formula) + §Works With L249-253
 - pubspec.yaml `version: 0.5.0` (canonical version-of-record; README L33 install string `^0.3.0` carries documentation drift to be reconciled at next README-pass)
 - LICENSE BSD-3-Clause
-- D-VGC189-1 (driver-facing-loom-as-default architectural discipline)
-- D-VGC188-1 / D-VGC188-2 (Driver Sovereignty axis + 5-test framework)
-- AAA bylaws Article 17 (β) safe-default boundary
 - Composition: navigation_safety_core 0.6.0 SAFETY_BOUNDARY.md (severity-not-profile invariant inherited at HMI scope)
 
 ---
 
-**Note on documentation drift**: README.md L33 install string declares `^0.3.0` but pubspec.yaml line 6 is `version: 0.5.0`. AAA flags for next README-pass; not a safety-class boundary divergence (the safety boundary is the version-of-record per pubspec, which is 0.5.0). FDD bylaws Rule 6 spike-to-package gate covers this drift class at next package PR cycle.
+**Note on documentation drift (written 2026-05-04)**: README.md L33 install string then declared `^0.3.0` while pubspec.yaml line 6 was `version: 0.5.0`. Flagged for the next README pass; not a safety-class boundary divergence (the safety boundary is the version-of-record per pubspec, which was then 0.5.0).
 
-**Boundary record authored** by AAA per VAA-as-SEO operational pen authorization (spawn -50 Task 1). Subject = We / AAA. OPS-RULE-055 verbatim citation discipline observed. PHIL-001 8-test PASS preserved at boundary scope. D4 dignity audit clear.
+**Boundary record authored** by the SNGNav maintainers as part of the package's safety review. Quotations in this record are verbatim. At the scope of this boundary, the record passed the project's design review and its equal-treatment review.
