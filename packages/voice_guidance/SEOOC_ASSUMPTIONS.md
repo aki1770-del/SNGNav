@@ -15,8 +15,9 @@ the structurally honest form for a component that has **no item**.
 
 QM / advisory / information-only. **No ASIL, no item, no actuator.** This
 package closes no control loop and this document asserts none — consistent with
-`SAFETY_BOUNDARY.md:65` and with eighteen of the nineteen boundary records in
-this repo. The driver hears; the driver decides; the driver always drives.
+`SAFETY_BOUNDARY.md:65` and with all nineteen boundary records in this repo
+(re-measured 2026-09-20; this line said "eighteen of the nineteen" until then).
+The driver hears; the driver decides; the driver always drives.
 
 **An assumption of use is a debt, not a disclaimer.** Each one below is a thing
 the integrator must supply or verify. Stating it does not discharge it — it
@@ -68,8 +69,11 @@ rather than a silent pass.
 - **The integrator must test for it**: `if (engine is DeliveryObservable)`.
 - **Absence of the interface is not evidence of delivery.** An engine that
   cannot be asked has not answered "yes".
-- Of the four engines shipped here, **one** implements it: `FlutterTtsEngine`.
-  `LinuxTtsEngine`, `NoOpTtsEngine` and any integrator engine do not.
+- Of the three engines shipped here, **one** implements it: `FlutterTtsEngine`.
+  `LinuxTtsEngine` and `NoOpTtsEngine` do not, and neither does an engine you
+  write yourself unless you implement it. *(This line said "four engines shipped
+  here" until 2026-09-20; three classes implement `TtsEngine`, and an integrator's
+  own engine is not shipped here.)*
 
 ### AoU-VG-002 — `delivered` is the synthesiser's word, not the driver's
 

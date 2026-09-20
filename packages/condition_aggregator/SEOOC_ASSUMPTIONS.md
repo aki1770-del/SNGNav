@@ -67,22 +67,30 @@ predicate.
 **Behavioural consequence for you**: if you use an adapter that opts into
 freshness reporting, a previously-`complete` lookup can now be `partial`. That
 is the fix, not a regression — but it is a behaviour change and you are being
-told plainly rather than left to find it. **No adapter opted in as of
-2026-08-16**, so this is inert until one does.
+told plainly rather than left to find it. **No adapter had opted in on
+2026-08-16.** Measured 2026-09-20: `condition_aggregator_jma` 0.7.0 has, so on
+that adapter this is live, not inert.
 
 ---
 
-## AoU-CA-004 — ⚑ THE ONE THAT COSTS YOU: freshness is opt-in, and nobody has opted in
+## AoU-CA-004 — ⚑ THE ONE THAT COSTS YOU: freshness is opt-in, and only one adapter has opted in
 
 **Assumption**: you do **not** read an empty `staleSources` as proof that your
 sources are current.
 
 Empty means *"no source reported itself stale"*, and that includes *"no source
 is capable of reporting."* Freshness reporting requires the adapter to implement
-`AdvisoryFeedFreshnessReporting`. **As of 2026-08-16, zero of the five adapter
-packages implementing `AdvisoryProvider` do** — `condition_aggregator_jma`,
+`AdvisoryFeedFreshnessReporting`. **On 2026-08-16, none of the five adapter
+packages implementing `AdvisoryProvider` did** — `condition_aggregator_jma`,
 `condition_aggregator_nws`, `condition_aggregator_met_norway`,
 `condition_aggregator_digitraffic`, `condition_aggregator_owm_road_risk`.
+
+**Measured 2026-09-20, against the latest version of each on pub.dev: one of the
+five does.** `condition_aggregator_jma` 0.7.0 (published 2026-08-28) implements
+it; it first did so in 0.3.2 (2026-08-16), dropped it in 0.5.0 (2026-08-21) and
+restored it in 0.7.0. `condition_aggregator_nws` 0.0.7,
+`condition_aggregator_met_norway` 0.0.8, `condition_aggregator_digitraffic`
+0.0.8 and `condition_aggregator_owm_road_risk` 0.1.5 do not.
 
 *(Corrected 2026-08-16 on DIA's audit finding: an earlier draft of this row said
 "six" and counted `driving_weather`, which **consumes** this interface but does
@@ -90,30 +98,34 @@ not implement `AdvisoryProvider`. The error overstated unfixed exposure — the
 safe direction — but it sat in a document integrators quote, so it is corrected
 here and the correction is named rather than silently applied.)*
 
-**So: the guard added in 0.0.10 is armed and unfed.** Against the adapters that
-exist today it changes nothing, and a frozen feed still satisfies
-`canAssertNoAdvisory` through every one of them.
+**So: the guard added in 0.0.10 is fed through one adapter and unfed through the
+other four.** Through the JMA adapter at 0.7.0, a frozen feed makes
+`canAssertNoAdvisory` false. Through the other four, a frozen feed still
+satisfies it.
 
 **Two rosters, because they are different questions and conflating them was an
 error in the first draft:**
 
 * **Who CAN report freshness** — the **five** packages implementing
   `AdvisoryProvider`: `condition_aggregator_jma`, `_nws`, `_met_norway`,
-  `_digitraffic`, `_owm_road_risk`. **Zero do.**
-* **Who is AFFECTED by this release** — **seven** direct consumers: those five
+  `_digitraffic`, `_owm_road_risk`. **One does** — `_jma`, from 0.7.0 (measured
+  2026-09-20). None did on 2026-08-16.
+* **Who was AFFECTED by the 0.0.10 change** (measured 2026-08-16) — **seven**
+  direct consumers: those five
   plus `driving_weather` and `drive_situation_fusion`, which consume the
   interface without implementing the provider contract. *`drive_situation_fusion`
   was missing from this row's first draft and from every verification claim
   FSE made; AAA found it and independently confirmed all seven analyze clean
   and pass their tests unchanged.*
 
-**⚑ The sharpest fact, and it is AAA's catch, not FSE's:**
-`condition_aggregator_jma` **already holds the measurement.** It parses
-`reportDatetime`, carries `kJmaDefaultStaleFeedThreshold` and
-`buildStaleFeedNotice`, and knows the Niigata document is 81.9 days old — and
-it does not implement `AdvisoryFeedFreshnessReporting`. **The adapter holding
-the plug is not plugged in, in HER mother's prefecture.** One edit closes it.
-Routed to **NDI** (adapter-family steward) and **CT** (build-track lead).
+**⚑ The sharpest fact on 2026-08-16, and it was found in review, not by this
+file's author:** `condition_aggregator_jma` **already held the measurement.** It
+parses `reportDatetime`, carries `kJmaDefaultStaleFeedThreshold` and
+`buildStaleFeedNotice`, and knew the Niigata document was 81.9 days old — and it
+did not implement `AdvisoryFeedFreshnessReporting`. The adapter holding the plug
+was not plugged in, in the snow-country prefecture this project is built for.
+**Closed since:** 0.3.2 implemented it, 0.5.0 dropped it, and it has been
+implemented again from 0.7.0.
 
 **What you must do if feed-freshness matters to you** — and on a winter-driving
 surface it does:
@@ -155,6 +167,13 @@ point no source ever looked at.
 2026-08-16 at Maebashi (42251) and Karuizawa (48331), both of which rendered as
 clear roads outside the JMA adapter's six-prefecture catalogue.
 
+**Measured 2026-09-20:** the JMA adapter at 0.7.0 no longer answers an
+out-of-catalogue point with an empty list. Without fetching anything it returns
+one `minor` notice saying the point is outside that adapter's coverage and that
+no warning shown does not mean safe. The gap is now visible in the list, but
+nothing from that adapter makes `canAssertNoAdvisory` false there, so this
+assumption stands unchanged.
+
 ---
 
 ## AoU-CA-009 — ⚑ Completeness does not survive into `compound_failure_advisor` (SOTIF-CA-004, OPEN)
@@ -167,10 +186,13 @@ input is a bare `AdvisoryLevel?`, and zero references to `canAssertNoAdvisory`,
 `compound_failure_advisor/lib` or `driving_weather/lib`.
 
 **Worse than dropped — inverted.** `drive_situation.dart` declares
-**`null` = no advisory in force**, a positive assertion of calm, while four
+**`null` = no advisory in force**, a positive assertion of calm, while two
 fields above it `visibilityMeters` declares **`null` = NO real reading in hand…
-never coerced to "clear"**. The same sentinel, opposite semantics, adjacent
-fields of one class. `in_drive_advisor.dart:294` then folds them:
+never coerced to "clear"**. The same sentinel, opposite semantics, two fields
+apart in one class. *(This paragraph said "four fields above" and "adjacent"
+until 2026-09-20; only `visibilityAgeSeconds` stands between them, and that file
+has not changed since 2026-06-27, so the count was wrong when written.)*
+`in_drive_advisor.dart:294` then folds them:
 `case null: case AdvisoryLevel.minor: return 0;`
 
 **Consequence**: not-knowing and knowing-it-is-mild are the same fact to that
@@ -209,7 +231,7 @@ partial inverts the asymmetry the package is built on.
 |---|---|---|
 | CA-001 | No — stated only. Architectural, unenforceable at this layer. | — |
 | CA-002 | Partially — `fold` / sealed `AdvisoryLookup` make skipping it hard; `advisories.isEmpty` remains reachable. | `advisory_lookup.dart` |
-| CA-003 | **Yes** | `canAssertNoAdvisory`; `test/frozen_feed_test.dart` (8 tests, proven RED then GREEN) |
+| CA-003 | **Yes** | `canAssertNoAdvisory`; `test/frozen_feed_test.dart` (8 tests, GREEN). The RED proof against 0.0.9 is `tool/red_proof/` (4/4): that guard file references types 0.0.10 introduced, so against 0.0.9 it does not fail, it fails to load, and cannot be the RED evidence. *(This cell read "proven RED then GREEN" until 2026-09-20; the sibling `SOTIF_INSUFFICIENCIES.md` had already retracted that claim.)* |
 | CA-004 | **No — this is the residual.** Stated, not enforced. | `test/frozen_feed_test.dart` group "no cry-wolf" pins the deliberate no-op |
 | CA-005 | No — delegated by design. | `AdvisoryFeedStaleness` doc |
 | CA-006 | **No — OPEN**, SOTIF-CA-002. | — |
@@ -217,15 +239,23 @@ partial inverts the asymmetry the package is built on.
 | CA-008 | No — inverting it is the integrator's choice to make wrongly. | — |
 | CA-009 | **No — OPEN**, SOTIF-CA-004, and it is the row standing between CA-003 and the driver. | reproduction in `SOTIF_INSUFFICIENCIES.md` |
 
-**Three of nine are enforced or partially enforced. Six are stated.** That
+**Two of nine are enforced or partially enforced. Seven are stated.** That
 ratio is the honest state of this component and is written here rather than
 smoothed, because an assumptions-of-use document whose rows all claim
-enforcement is the failure mode it exists to prevent.
+enforcement is the failure mode it exists to prevent. *(This paragraph said
+"three" and "six" until 2026-09-20; the table above it says CA-002 partially and
+CA-003 yes, and nothing else.)*
 
 **And two of the unenforced rows — CA-004 and CA-009 — sit between the CA-003
-fix and any real driver.** No adapter feeds the guard, and the advisor could not
-receive it if one did. **This release therefore changes nothing HER would
-experience**, and that sentence belongs here rather than in a footnote.
+fix and any real driver.** On 2026-08-16 no adapter fed the guard and the
+advisor could not receive it if one did, so 0.0.10 changed nothing a driver
+would experience. **Measured 2026-09-20: the first of those two is closed** —
+the JMA adapter feeds the guard from 0.7.0 — **and the second is open**:
+`compound_failure_advisor` 0.1.2 and `driving_weather` 0.5.2 contain no
+reference to `canAssertNoAdvisory`, `staleSources` or `AdvisoryAggregateResult`.
+The fix therefore reaches a driver only through integrator code that reads the
+predicate or `staleSources` itself, and that sentence belongs here rather than
+in a footnote.
 
 ## Audit
 

@@ -22,8 +22,11 @@ never earned.
 **This package closes no control loop, and this table asserts none.** Per
 `SAFETY_BOUNDARY.md:65` — *"exposes no API that closes a control loop. The
 driver hears the announcement; the driver decides response; the driver always
-drives."* Eighteen of the nineteen `SAFETY_BOUNDARY.md` records in this repo
-assert the same thing, and this table is consistent with all of them.
+drives."* All nineteen `SAFETY_BOUNDARY.md` records in this repo assert the same
+thing — re-measured 2026-09-20 — and this table is consistent with all of them.
+*(This sentence said "eighteen of the nineteen" until then; seventeen say it in
+those words, and `condition_aggregator_owm_road_risk` and
+`rosbridge_dart_client` say it in equivalent ones.)*
 
 **The error term stops at the transducer.** Every observation tabulated here
 answers *"did the utterance complete?"* — never *"did she comply?"* Her response
@@ -54,6 +57,15 @@ on the speak path.
 
 ## Insufficiency rows
 
+**Where the RED evidence for rows VG-001..006 lives.** It is
+`test/delivery_observation_invariants_test.dart`, this package's own guard file,
+run against `936fb2b` — the commit before the 0.7.6 fixes. Re-run 2026-09-20 at
+that commit: **8 of its 11 tests fail there**, and the 3 that pass are the
+positive controls. *(Until 2026-09-20 the VG-001 row cited a file
+`test/fse_delivery_red_proof_test.dart`, which has never existed in any branch
+of this repo. The proofs were real and are reproducible; the path was not, and a
+proof a reader cannot run is an assertion wearing the clothes of evidence.)*
+
 ### SOTIF-VG-001 — an utterance the platform never received reads as delivered
 
 | field | value |
@@ -65,7 +77,7 @@ on the speak path.
 | **Output to the integrator** | `lastDelivery == SpeechDelivery.delivered` for a critical warning that was never handed to the platform. Indistinguishable from a warning she actually heard. |
 | **Foreseeable misuse it invites** | None required. The failure needs no misuse: the documented reading (`if (engine.lastDelivery == delivered)`) produces the wrong answer. That is what makes it an insufficiency rather than a usage error. |
 | **Detectability before mitigation** | **Nil at this interface.** No test in the package exercised `lastDelivery` at all — 0 of 13 test files referenced it on the day it shipped. |
-| **Measured occurrence** | 2026-09-02, reproduced against `936fb2b` in `test/fse_delivery_red_proof_test.dart` (RED PROOF A): after a completed utterance and a latched `MissingPluginException`, `speak('Black ice. Slow down now.')` issued **no** platform call (`verifyNever`) and `lastDelivery` read `delivered`. |
+| **Measured occurrence** | 2026-09-02, reproduced against `936fb2b` (RED PROOF A): after a completed utterance and a latched `MissingPluginException`, `speak('Black ice. Slow down now.')` issued **no** platform call (`verifyNever`) and `lastDelivery` read `delivered`. Reproducible today: the guard test *"an utterance the platform never received is NOT delivered"* fails at `936fb2b` (re-run 2026-09-20). |
 | **Mitigation (code, 0.7.6)** | **INV-1 (freshness)**: `_abandonOpenUtterance()` + `_lastDelivery = unknown` are now the **first two statements** of `speak()`, ahead of every early return. `lastDelivery` describes the current call or nothing. |
 | **Verifying test** | `test/delivery_observation_invariants_test.dart` — *"an utterance the platform never received is NOT delivered"*. Proven RED against `936fb2b` before the guard landed. |
 | **Residual** | None for this row. |
