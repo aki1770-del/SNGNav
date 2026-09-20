@@ -1,247 +1,262 @@
 # condition_aggregator_jma — Safety-Class Boundary Record
 
 **Package**: `condition_aggregator_jma`
-**Version**: 0.1.0 (first deploy via direct-Dart-XML-parse path)
-**Boundary record version**: 1.1
+**Version**: 0.7.1 — re-derived against the 0.7.0 code, which 0.7.1 ships
+unchanged (compared file by file, comments excluded)
+**Boundary record version**: 2.0 (2026-09-20)
 **Boundary record template**: shared across the sibling adapter packages
-**Date**: 2026-05-04
+**Date**: 2026-09-20
 
 ---
+
+## 0 — What changed since this record was written for 0.1.0
+
+Record 1.1 described a stub: it accepted a latitude and longitude, fetched
+nothing, and returned an empty list. That is not what this package does. If
+you read the earlier record, six things are different:
+
+- **It fetches.** The adapter is the network edge: it reads one JSON
+  document per prefecture office over HTTPS. The earlier record said this
+  layer performed no network I/O.
+- **An uncatalogued point is answered, not silently empty.** The adapter
+  covers 13 of the 58 offices JMA publishes. A point outside those 13 now
+  returns one notice saying so. Up to and including 0.5.0 it returned an
+  empty list — the same value a covered prefecture returns when nothing is
+  in force. That changed in 0.7.0.
+- **This adapter now writes advisories of its own.** They report on the
+  channel, not on the weather. See §3.
+- **Severity is mapped.** The earlier record said every severity was
+  `unknown` until a later version.
+- **`init()` is no longer a no-op.** It refuses an empty User-Agent.
+- **The conformance audit the earlier record promised "before graduation"
+  is not recorded**, and the package has been published since 0.1.0. See §5.
 
 ## 1 — SAE J3016 driver-task regime
 
 **Level**: L0 / L1 supportive use only.
-**Driver-task assignment**: the driver performs the dynamic driving
-task at all times. `JmaAdvisoryProvider.fetchActiveAdvisoriesAtPoint(lat, lon)`
-returns a list of typed `Advisory` records consumed by the
-integrator's SNGNav weather/condition pipeline; integrator HMI
-surfaces relevant JMA advisories to the driver; the driver decides
-response.
-**No L2+ claim.** The package is a stateless mapping wrapper
-(stub today, real mapping at deploy-graduation); no automation,
-no handover, no control authority anywhere in the dependency
-chain ending at this adapter.
+**Driver-task assignment**: the driver performs the dynamic driving task at
+all times. `JmaAdvisoryProvider.fetchActiveAdvisoriesAtPoint(lat, lon)`
+returns typed `Advisory` records consumed by the integrator's
+weather/condition pipeline; the integrator's HMI surfaces them; the driver
+decides the response.
+**No L2+ claim.** The package fetches and maps published data and emits
+notices about its own read. No automation, no handover, no control
+authority anywhere in the dependency chain ending at this adapter.
 
 ## 2 — ISO 26262 ASIL classification
 
-**Package boundary**: **QM** (Quality Management; not
-functional-safety scope).
-**Reasoning**: package output is published-JMA-data-as-Dart-objects
-mapped from the upstream parser's typed record shape to the
-source-neutral `Advisory`. The substrate is JMA disaster-info XML
-(JMA authority is the publisher; the feed is open public-data
-class). At adapter boundary the package performs typed field
-re-projection only; no safety-critical assertion is added beyond
-what the publisher (and the upstream parser) carry. No ASIL
-claim.
-**Integrator responsibility**: any integration where JMA advisory
-data gates a control loop requires the integrator to perform fresh
-ASIL classification. This adapter does not pre-empt that
-classification; it renders publisher-authoritative advisory data
-in the source-neutral `Advisory` Dart-typed form.
+**Package boundary**: **QM** (Quality Management; not functional-safety
+scope).
+**Reasoning**: the output is JMA's published warning data as Dart objects,
+plus this adapter's own notices about the state of the read. No
+safety-critical assertion is added to the publisher's data: the event term
+is JMA's, and the severity is derived from that term by a fixed suffix rule
+(§6). The adapter's own notices are the lowest severity and carry event
+identities that the suffix rule can never grade as a hazard.
+**Integrator responsibility**: any integration where JMA advisory data
+gates a control loop requires the integrator to perform a fresh ASIL
+classification. This adapter does not pre-empt that classification.
 
 ## 3 — SOTIF (ISO 21448) posture
 
 **Stance**: **advisory not control.**
-**Reasoning**: SOTIF addresses Safety Of The Intended Functionality
-at automated-driving-feature scope. This package delivers neither
-feature nor control; it delivers consumable advisory data from
-JMA via the upstream parser binding to the integrator pipeline.
+**Reasoning**: SOTIF addresses Safety Of The Intended Functionality at
+automated-driving-feature scope. This package delivers neither feature nor
+control; it delivers published advisory data, and it states plainly when it
+could not look.
 
-**Honesty discipline at adapter boundary** (SOTIF-class operational
-discipline):
-- **No retry inside this adapter.** Transient failure handling
-  belongs to the underlying parser/HTTP layer; the aggregator's
-  warn-and-continue posture captures the error.
-- **No cache, no stream, no polling at this layer.** Stateless
-  beyond construction-time configuration; consumer owns refresh
-  cadence.
-- **`init()` is no-op (JMA's public XML feed requires no init).**
-  Documented explicitly so integrators do not assume hidden
-  warm-up.
-- **Verbatim field passthrough (verbatim-relay
-  discipline).** `eventClass` (JMA report family code), `headline`,
-  `areaDescription`, `description` pass through unchanged. No
-  app-class re-summarization that could alter authoritative
-  meaning. No translation away from Japanese unless an explicit
-  separate translation-layer adapter is composed downstream.
-- **Severity / certainty / urgency map to CAP-class enums at
-  deploy-graduation per a per-report-family table.** No
-  re-classification authority is asserted — the table is
-  publisher-class normalization for cross-publisher merge, not
-  authoritative reclassification. Original JMA term preserved in
-  `eventClass`.
-- **Region resolution from WGS84 lat/lon → JMA region code lands
-  at deploy-graduation.** Today (stub) the lat/lon are accepted
-  but the stub returns empty; at graduation, the region resolution
-  is the load-bearing privacy-respecting boundary (no precision
-  beyond region-of-record needed; driver location is not
-  exfiltrated to the publisher).
+**What passes through unchanged, and what this adapter supplies**:
+- `eventClass` is JMA's own term for the warning (e.g. `大雪警報`). The
+  document carries a numeric code; the term comes from a 15-entry table
+  this package ships. A warning whose code is not in that table is dropped.
+- `headline` is the document's own `headlineText`, verbatim, and may be
+  empty. `description` carries the same string: the source has no separate
+  description field, and this adapter does not write one.
+- `areaDescription` is the prefecture (office) label this adapter supplies,
+  in Japanese — not a per-area name from the document.
+- `effective` is the document's own timestamp. **`expires` is always
+  `null`**: the publisher declares no expiry here, so an advisory from this
+  source never expires by itself and `isExpiredAt` answers `false` forever.
+  Judge currency from the feed's age (below), never from `expires`.
+- Nothing is translated, summarised or re-worded. Cancellations (`解除`) and
+  the feed's own "no warnings in force" marker are filtered out.
 
-These six disciplines form the package's SOTIF-class
-advisory-honesty posture: the integrator (and the driver through
-them) sees what JMA actually published, mapped into the
-source-neutral typed shape for multi-source aggregation, with
-explicit error surfaces preserved through the upstream parser
-binding.
+**Advisories this adapter writes itself.** Four report on the channel:
+the point is outside the catalogue, the document has stopped being updated,
+the path it is read from may have been retired, and a containing prefecture
+could not be read. They are exported as `kJmaFeedHealthEventClasses` —
+**key on the set, not on one member**, because which one is emitted depends
+on how old a document is. Each is `AdvisorySeverity.minor`, carries no
+警報 / 注意報 suffix, and is in Japanese, like the warnings beside it. They
+say *what is not known*; they are never a statement about the weather. The
+short-time tier carries a fifth notice of the same kind on its own surface
+(below).
+
+**Coverage, stated as a limit**: this adapter ships bounding boxes for 13
+offices — eight Hokkaido regional offices, Aomori, Iwate, Akita, Yamagata
+and Niigata. **For the other 45 offices it has no data at all**, and says
+so in band rather than returning an empty list. An empty list from this
+adapter means a covered prefecture was read and nothing was in force.
+
+**Border points over-warn by design**: the boxes are rectangles that
+overlap along shared borders, so a point can sit in more than one. Every
+containing prefecture is fetched and the deduplicated union returned, so a
+driver near a border never misses the neighbour's warning.
+
+**Feed liveness is measured, and reported twice.** Each document's own
+timestamp is compared against a threshold this adapter owns (6 hours by
+default). When it is exceeded, the age is reported to the aggregator
+through `feedStaleness` — which makes `AdvisoryAggregateResult.canAssertNoAdvisory`
+false — **and** as an in-band notice, because a frozen feed's worst shape is
+an empty answer, and an empty answer cannot carry a field. Past a second
+threshold (7 days by default) the notice changes identity: it stops saying
+"not updated" and says the path may have been retired, which points at a
+fix rather than at waiting.
+
+**When a read fails, nothing is presented as an all-clear**: if every
+containing prefecture fails, the fetch throws. If some succeed and some
+fail, the warnings are returned with an incomplete-read notice. If the
+union is empty and any containing prefecture failed, it throws rather than
+answer with a silence.
+
+**No retry, no cache, no stream, no polling.** The consumer owns the
+refresh cadence. The provider holds one HTTP client (release it with
+`close()`), an initialised flag, and the staleness reading of the most
+recent query only.
 
 ## 4 — WP.29 cybersecurity touchpoint
 
-**Touchpoint location**: **delegated to the upstream parser binding
-boundary at deploy-graduation.**
+**Touchpoint location**: **at this package.** This is a change from record
+1.1, which delegated it to a parser binding that was never built.
 
-This package performs no network I/O directly today (stub). At
-deploy-graduation, the upstream parser binding is the audit
-surface for: TLS to the JMA XML feed endpoint; rate-limit
-accounting; XML parse hardening (XXE / billion-laughs class
-defenses live at the parser binding, not here); CAP-class field
-mapping.
+**The concrete surface**:
+- Network: HTTPS `GET` to `https://www.jma.go.jp/bosai/warning/data/r8/`,
+  one document per office code. No credentials, no API key, no cookies.
+  The path this package read through 0.6.0 was retired by the publisher in
+  May 2026; it is kept in the source as a named constant so a reader can
+  see what was replaced, and it is not fetched.
+- Location privacy: the driver's latitude and longitude are resolved to
+  office codes **on the device**. Only the office code appears in the URL.
+  The publisher never receives the point.
+- Identity: a non-empty User-Agent is required by `init()` and is sent with
+  every request. It carries whatever the integrator puts in it; treat it as
+  deployment configuration, not as a secret.
+- Response handling: a 256 KiB cap per document, a 30-second budget per
+  request and for the whole border batch, and strict UTF-8 decoding
+  (malformed bytes are rejected, not replaced). Parsing is `dart:convert`
+  on JSON; the short-time tier parses XML with `xml ^6.5.0`.
+- Output integrity: `Advisory` is an equatable value object. No executable
+  content, no deserialisation of code.
+- Supply chain: `condition_aggregator` (`>=0.0.10`, the version that
+  introduced the freshness contract), `http`, `xml`.
 
-**Concrete WP.29 surface at this layer (today + deploy-state)**:
-- Input validation: at deploy-state, this package consumes typed
-  records from the upstream parser binding (already validated at
-  parse-time); no string parse here. Today, the stub accepts
-  WGS84 lat/lon double values; out-of-range values are not
-  rejected at this layer (graduation will add rejection).
-- Output integrity: `Advisory` is Equatable value-object; no
-  executable content; no deserialization-class RCE surface.
-- Privacy: zero PII handled at this adapter; substrate is
-  geographic-public-alert class. Driver lat/lon is consumed at
-  this layer ONLY to resolve regional JMA-feed segments; no
-  precision beyond region-of-record is exfiltrated to the
-  publisher. Region-resolution scheme lands at deploy-graduation.
-- Supply-chain: depends on `condition_aggregator` (path) +
-  `xml: ^6.5.0` (well-known Dart XML parser). At deploy-state,
-  upstream parser binding is added (engagement-shape election
-  pending); the chosen shape determines whether transitive deps
-  include WASM runtime (WASM bridge path) or pure-Dart codegen
-  output (Dart-native port path).
-
-**WP.29-class operational discipline**: integrators deploying this
-adapter perform WP.29 audit at their app boundary. This adapter's
-audit surface is small and boundary-clean today (stub) and stays
-small at deploy-graduation (the parser binding is the network
-edge, not this adapter).
+**Operational discipline**: integrators deploying this adapter perform
+their own WP.29 audit at their app boundary, including the User-Agent they
+configure and their own TLS trust store.
 
 ## 5 — JIS / JASO conformance
 
-**Conformance status**: **applies in scope at deploy-graduation;
-conformance audit fires before graduation.**
-
-**Reasoning**: JMA data is Japanese-region (the JMA's authority is
-Japan Meteorological Agency by Japanese law). Japanese-domain
-adapters are the natural seat of JIS / JASO conformance audit; this
-adapter is the seat for the meteorological-advisory leg.
-
-**JIS / JASO touchpoints at deploy-graduation**:
-- JIS character encoding (UTF-8 / Shift_JIS) handling at the
-  upstream parser binding boundary; XML-declared encoding is
-  honored.
-- JASO automotive-driving-relevant standards do not currently
-  govern JMA advisory feed consumption (JASO scope is hardware /
-  vehicle dynamics, not weather-data-feed consumption).
-
-**JIS / JASO updates**: earlier versions of this record said a
-monthly watch tracked them for weather-data-adapter packages. No
-output from that watch has been found, so this record no longer
-says so. This package's JIS / JASO scope is
-Japan-region-class and audit fires before deploy-graduation.
+**Conformance status**: **not mapped at this scope.**
+**Reasoning**: Japanese-domestic certification is an integrator-class
+concern. A Japanese-domain adapter is the natural seat for a JIS / JASO
+audit of the meteorological-advisory leg, and this adapter is that seat —
+but record 1.1 said such an audit would fire "before deploy-graduation",
+and **no audit is recorded.** The package has been published since 0.1.0
+(2026-05-04). Until one is run, treat this section as unmapped, not as
+cleared.
+**Character encoding**: the JSON path is decoded as strict UTF-8 at this
+layer; the short-time tier honours the XML declaration of the document the
+integrator supplies.
+**JIS / JASO updates**: earlier versions of this record said a monthly
+watch tracked them for weather-data-adapter packages. No output from that
+watch has been found, so this record no longer says so.
 
 ## 6 — Severity-not-profile invariant
 
 **Status**: **applies in scope by design — profile-agnostic by
 construction.**
-
-**Concrete reasoning**: this package consumes typed JMA forecast
-records at the upstream parser binding boundary and produces
-`Advisory` value-objects with CAP-class severity (extreme / severe
-/ moderate / minor / unknown — at deploy-graduation; today all are
-unknown via stub). The mapping is publisher-class normalization
-(JMA's 警報 / 注意報 / 特別警報 → CAP scale) and is enum-to-enum
-with no profile-driven branching. No `DriverProfile` axis exists
-at this package's API surface. CAP severity is publisher-class
-assertion (JMA-authoritative); downstream consumers compose with
-`navigation_safety_core` profile-tuned thresholds at a later layer
-which preserves the severity-not-profile-driven HMI-presentation
-invariant.
-
-**Composition pattern (deploy-state)**: JMA report family +
-publisher term → JMA forecast record → `Advisory.severity`
-(CAP-normalized via per-report-family table) → `AdvisoryAggregator`
-typed merge → `driving_conditions` + `navigation_safety_core` →
-integrator HMI.
+**Concrete reasoning**: `Advisory.severity` is derived from the suffix of
+JMA's own term — 特別警報 is extreme, 危険警報 is checked before the bare
+警報 so a level-4 warning is not under-graded, 警報 is severe, 注意報 is
+lower. It is a fixed rule over the publisher's vocabulary, not a judgment
+about a driver: no `DriverProfile` axis exists at this package's API, and
+nothing branches on one. `certainty` and `urgency` are `unknown`, because
+the source states neither and this adapter will not invent them. The
+adapter's own notices are always `minor`.
+**Composition pattern**: JMA warning code → this adapter's term table →
+`Advisory.severity` by suffix → `AdvisoryAggregator` typed merge →
+`driving_conditions` / `navigation_safety_core` profile-tuned presentation
+→ integrator HMI. The profile axis enters downstream, never here.
 
 ## 7 — Driver-always-drives invariant
 
 **Status**: **applies in scope by design.**
-
-**Concrete reasoning**: package outputs are typed `Advisory`
-records carrying public-domain JMA advisory data; the package
-emits no control signal, holds no actuator authority, exposes no
-API that closes a control loop. The substrate flows via aggregator
-→ integrator HMI to the driver as advisory information; the driver
-decides response (continue, slow down, detour, abort trip). The
-driver-decision substrate uses JMA authoritative wording verbatim
-(`Advisory.eventClass`, `headline`, `description`,
-`areaDescription`); this adapter is the postman for the
-publisher's letter, mapped into the source-neutral envelope.
+**Concrete reasoning**: the package emits typed `Advisory` records and
+nothing else. It holds no actuator authority and exposes no API that closes
+a control loop. The driver decides the response — continue, slow down,
+detour, abort. The publisher's wording is carried unchanged; where this
+adapter speaks in its own words, it speaks about the read, not about the
+road.
 
 ## 8 — What the driver experiences
 
-**What the driver experiences when this package fires** (deploy-state):
-when JMA has issued a winter advisory for her current point inside
-Japan, she sees a typed `Advisory` event surface through the
-integrator HMI with severity / certainty / urgency / area /
-effective / expires normalized at the boundary — and with JMA's
-exact wording for the report family code, headline, area
-description, and multi-paragraph description. She does not see
-"raw XML". She does not see app-class re-summarization that
-paraphrases the publisher. When her route crosses into the United
-States (composition with the NWS-class adapter inside the same
-aggregator), she sees NWS-published advisories surfacing through
-the same `Advisory` shape — both publishers' authoritative wording
-preserved verbatim through their respective adapters into the
-source-neutral typed event.
+**What the driver experiences when this package fires**: inside the 13
+covered offices, when JMA has a warning in force for her point, she sees a
+typed advisory through the integrator's HMI carrying JMA's own term for the
+warning and the document's own headline, in Japanese, with the prefecture
+named. Near a prefecture border she may see the neighbouring prefecture's
+warning too; that is deliberate over-warning, not a duplicate.
 
-**In plain terms**: this adapter is *the Japanese postman who
-carries JMA's letter into a uniform envelope so the multi-postman
-aggregator can stack it alongside other publishers' letters
-without rewriting any of them.* The adapter's restraint (no retry,
-no cache, no stream, no app-class re-summarization, no severity
-reassertion, no profile-driven branching, verbatim field
-passthrough) is the discipline it applies to per-source
-mapping: the adapter does ONE thing well — direct typed re-projection
-— and does NOT add layers the driver did not ask for and the
-publisher did not author.
+She may also see a sentence this package wrote, not the publisher: that her
+point is outside what this adapter covers, that the document has not been
+updated, that its path may have been retired, or that one prefecture could
+not be read. Those say that something is **not known**. The one that
+matters most is the first: for 45 of the 58 offices JMA publishes, this
+adapter has nothing, and until 0.7.0 it said nothing — an empty list, the
+same answer a quiet, covered prefecture gives. A driver in a Nagano
+blizzard was told exactly what a driver on a clear Akita road was told.
+That is the defect this record now describes as closed in 0.7.0.
 
-**For the integrating developer**: integrators reading the package API
-today see explicit `endpointBaseUrl` constructor parameter +
-explicit `init` lifecycle contract + explicit stub-state
-declaration in README + explicit deploy-graduation gate
-enumeration in CHANGELOG. Nothing patronizes the developer.
+**In plain terms**: this adapter is *the postman for one publisher's
+letters in thirteen prefectures, who also tells you when the letterbox is
+empty because he was never sent there.* It does not rewrite the letter, and
+it does not pretend an unvisited street is quiet.
 
-**Driver-experience section**: this section is the package's
-declaration of what the driver experiences, for `condition_aggregator_jma`
-0.1.0 (first deploy via direct-Dart-XML-parse path). The jmaxml
-engagement-shape election (alpha/beta/gamma) for an upstream
-typed binding remains a separate open question (OQ-1); a future
-major version may swap the direct-parse path for the elected
-binding, at which point this field is re-audited. Subsequent
-versions update on material changes to the driver-experience
+**For the integrating developer**: read `kJmaFeedHealthEventClasses` to
+tell this adapter's own notices from the publisher's warnings, and key on
+the whole set. Read `feedStaleness` for the measured age of what you were
+just served, and gate any "no warnings" message on
+`canAssertNoAdvisory` rather than on an empty list. `expires` is always
+`null` here, so do not age advisories with it. Supply a real User-Agent;
+`init()` will refuse an empty one. Call `close()` when you are done with
+the provider. The short-time bulletin tier is a parser you feed with a
+document you fetched yourself — this package does not fetch it.
+
+**Driver-experience section**: this section is the package's declaration of
+what the driver experiences, re-derived for 0.7.x against the shipped code.
+Subsequent versions update it on material changes to the driver-experience
 surface.
 
 ## 9 — Cross-references
 
-- `condition_aggregator` interface package: defines the
-  `AdvisoryProvider` contract this adapter satisfies.
-- `condition_aggregator_nws`: sibling adapter for the NOAA / NWS
-  publisher leg of the same `Advisory` envelope.
-- `noaa_nws_adapter`: the lower-level NWS HTTP wrapper composing
-  with the sibling adapter; there is no equivalent lower-level
-  package on the JMA side today (substrate-state: no Dart binding
-  for the upstream parser; engagement-shape election pending).
-- Package SAFETY_BOUNDARY.md siblings: `voice_guidance`,
-  `driving_consent`, `driving_weather`, `kalman_dr`,
-  `condition_aggregator_nws`, `noaa_nws_adapter`,
-  `navigation_safety_core`, `navigation_safety` —
-  per-package boundary-record discipline at the data-fusion class.
+- `condition_aggregator` interface package: defines the `AdvisoryProvider`
+  contract this adapter satisfies, and the freshness-reporting contract it
+  implements from `0.0.10`.
+- `condition_aggregator_nws`: sibling adapter for the NOAA / NWS publisher
+  leg of the same `Advisory` envelope; `noaa_nws_adapter` is the lower-level
+  HTTP wrapper beneath it. There is no equivalent lower-level package on
+  the JMA side: this adapter reads the publisher's JSON directly.
+- `test/outside_coverage_test.dart`, `test/jma_r8_warning_test.dart`,
+  `test/frozen_feed_test.dart`, `test/jma_shorttime_test.dart`: the
+  behaviours this record describes, as executable checks.
+- Package `SAFETY_BOUNDARY.md` siblings: `condition_aggregator`,
+  `condition_aggregator_nws`, `noaa_nws_adapter`, `voice_guidance`,
+  `driving_weather`, `navigation_safety_core` — per-package boundary-record
+  discipline at the data-fusion class.
+
+---
+
+**Boundary record authored** by the SNGNav maintainers as part of the
+package's safety review. Quotations in this record are verbatim. At the
+scope of this boundary, the record passed the project's design review and
+its equal-treatment review.
