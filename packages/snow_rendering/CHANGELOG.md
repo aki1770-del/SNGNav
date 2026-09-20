@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.3
+
+**Documentation only. No code change.**
+
+`sngnav_coverage.yaml` is corrected against this package's code.
+
+- **S-044 said it "maps RoadSurface enum to shader params". There are no shader
+  parameters here** — the word "shader" does not occur anywhere in `lib/`. What
+  `RoadSurfaceState.fromCondition` returns is a classification carrying a grip
+  factor; the mapping to anything drawn is the application's, as the package
+  documentation has always said. There is also no type named `RoadRenderState`.
+- **S-046 understated what is here.** The file said the render state is stateless
+  and transition handling was open. Debouncing exists: `HysteresisFilter`
+  requires a new value in at least 2 of the last 3 readings before it is
+  adopted, and distinguishes "no readings yet" from "a reading whose value is
+  null". What is still open is animated interpolation between states.
+- **S-043 and S-045** named a `PrecipitationParams.fromWeather()` and a
+  `VisibilityFactor.compute(weatherData)` that do not exist. They are
+  `PrecipitationConfig.fromCondition(WeatherCondition)`, whose null return means
+  the feed reported no precipitation at all rather than "none", and
+  `VisibilityDegradation.compute(visibilityMeters)`.
+- **S-048** now says explicitly that `DataBudget` governs network fetches and is
+  not the particle-density cap that row is about.
+- **The total was 62 and the registry holds 66.** The seven `sngnav_coverage.yaml`
+  files in the repository are the registry; counted on 2026-09-20 they enumerate
+  66 unique ids, S-001 to S-066. 62 was never true of any population: all seven
+  files were written in one commit on 2026-04-05 and the union was already 66
+  that day.
+- **`version:` said 0.1.0** for a package shipping 0.3.x. It now equals the
+  package version, and a check in the repository fails the build if they drift
+  apart again.
+
 ## 0.3.2
 
 **Documentation only. No code change.**

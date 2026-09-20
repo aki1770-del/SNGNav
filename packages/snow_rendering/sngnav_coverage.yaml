@@ -1,15 +1,27 @@
 # SNGNav Coverage Declaration — snow_rendering
 # Schema version: 1.0
 # Package: snow_rendering
-# Updated: 2026-04-05
+# Updated: 2026-09-20
 #
 # Each scenario entry declares whether this package contributes coverage.
 # status: covered | partial | uncovered
-# covered_by: field name or feature in this package
-# scenario_id: matches the canonical 62-scenario registry
+# covered_by: the API in this package that provides it, or null
+# confidence: confirmed_with_test — a test in test/ exercises the behaviour
+#             partial            — read the note; the claim is qualified there
+# scenario_id: an id in the scenario registry. There is no single registry file:
+#   the seven sngnav_coverage.yaml files in this repository are the registry, and
+#   the repository README has the current picture in its "Scenario Coverage"
+#   section. Counted on 2026-09-20 they enumerate 66 unique ids (S-001–S-066).
+#   Up to 0.3.2 this file declared a total of 62. That number was never true of
+#   any population: all seven files were written in one commit (6c390ad,
+#   2026-04-05) and the union was already 66 on that day.
+#
+# One thing to read before the rows: this package is COMPUTATION ONLY. It
+# produces the parameters a renderer needs; it draws nothing, and the word
+# "shader" does not occur anywhere in lib/.
 
 package: snow_rendering
-version: "0.1.0"
+version: "0.3.3"
 maintainer: aki1770@gmail.com
 
 scenarios:
@@ -17,55 +29,87 @@ scenarios:
   - id: S-043
     name: Precipitation particle parameters from weather data
     status: covered
-    covered_by: PrecipitationParams.fromWeather() factory
+    covered_by: PrecipitationConfig.fromCondition(WeatherCondition), returning
+      particle count, velocity, size and lifetime — or null
     confidence: confirmed_with_test
+    note: >-
+      The type was named PrecipitationParams and the factory fromWeather() in
+      earlier versions of this file. The return is NULLABLE: null means the feed
+      did not report precipitation at all, and a caller must not read it as "no
+      precipitation" — PrecipitationConfig.none, with particleCount 0, is that.
 
   - id: S-044
     name: Road surface classification to render state
     status: covered
-    covered_by: RoadRenderState.fromSurface() — maps RoadSurface enum to shader params
+    covered_by: RoadSurfaceState.fromCondition(WeatherCondition), giving one of
+      six states, each carrying a gripFactor
     confidence: confirmed_with_test
+    note: >-
+      Earlier versions of this file said this "maps RoadSurface enum to shader
+      params". It does not: there are no shader parameters here and no type
+      named RoadRenderState. What a caller receives is a classification and a
+      grip coefficient, and the mapping to anything drawn is the application's.
+      fromCondition returns null rather than guessing benignly when the weather
+      does not permit a classification.
 
   - id: S-045
     name: Visibility degradation factor
     status: covered
-    covered_by: VisibilityFactor.compute(weatherData) in VisibilityModel
+    covered_by: VisibilityDegradation.compute(visibilityMeters), giving overlay
+      opacity (capped at 0.9) and Gaussian blur sigma
     confidence: confirmed_with_test
+    note: >-
+      The type was named VisibilityFactor / VisibilityModel and took
+      "weatherData" in earlier versions of this file. It takes a visibility in
+      metres. The opacity cap is deliberate — the overlay never fully occludes
+      the view.
 
   - id: S-046
     name: Render state changes with weather transition
     status: partial
-    covered_by: RoadRenderState is stateless (computed on demand); transition animation open
+    covered_by: HysteresisFilter<T>, which requires a new value to appear in at
+      least `threshold` of the last `windowSize` readings (defaults 2 of 3)
+      before it is adopted
     confidence: partial
-    note: Animated state transition between surface types open — see CONTRIBUTING.md
+    note: >-
+      Earlier versions of this file said the render state is stateless and
+      transition handling was open. Half of that is now wrong: debouncing
+      EXISTS, it is the filter named above, and it distinguishes "no readings
+      yet" from "a reading whose value is null". What is still open is animated
+      interpolation between surface states — this package hands a caller a
+      settled state, not a tween. Open — see CONTRIBUTING.md in the repository.
 
   - id: S-047
     name: Night vs day render parameter adjustment
     status: uncovered
     covered_by: null
-    note: Time-of-day illumination model open — see CONTRIBUTING.md
+    note: Time-of-day illumination model open — see CONTRIBUTING.md in the repository.
 
   - id: S-048
     name: Heavy snow particle density cap (performance)
     status: uncovered
     covered_by: null
-    note: Performance-aware particle cap open — see CONTRIBUTING.md
+    note: >-
+      PrecipitationConfig carries a particle count, but nothing caps it against
+      a frame budget. DataBudget in this package governs network fetches, not
+      particle counts, and must not be read as this cap. Open — see
+      CONTRIBUTING.md in the repository.
 
   - id: S-049
     name: Tire track rendering on snow surface
     status: uncovered
     covered_by: null
-    note: Open scenario slot — see CONTRIBUTING.md
+    note: Open scenario slot — see CONTRIBUTING.md in the repository.
 
   - id: S-050
     name: Ice sheen reflectance model
     status: uncovered
     covered_by: null
-    note: Open scenario slot — see CONTRIBUTING.md
+    note: Open scenario slot — see CONTRIBUTING.md in the repository.
 
 coverage_summary:
-  total_scenarios: 62
+  total_scenarios: 66
   this_package_covers: 3
   this_package_partial: 1
-  this_package_uncovered: 58
-  weighted_contribution: 0.048
+  this_package_uncovered: 62
+  weighted_contribution: 0.045
