@@ -2,18 +2,25 @@
 
 **Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO and APPI updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
 
-- `SAFETY_BOUNDARY.md`: where the safety-boundary record used this project's
-  internal shorthand, it now says the same thing in plain words. No boundary
-  moved: the changed lines lost internal names and references, and nothing
-  changed about what the package does, what it does not do, or what it leaves
-  to you.
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed.
+
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
   One statement in it is corrected: earlier versions said a monthly watch
   tracked JIS / JASO and APPI updates for fleet-telemetry packages. No output
   from that watch has been found, so the record no longer says so. A
   quotation in it now matches its source word for word.
+- `CHANGELOG.md`: the 0.5.0 and 0.3.0 entries.
 
-Apart from `pubspec.yaml` (the version), `SAFETY_BOUNDARY.md` and this
-changelog, the published files are identical to 0.6.1.
+Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
+`SAFETY_BOUNDARY.md` and this changelog, the published files are identical to
+0.6.1.
 
 ## 0.6.1
 
@@ -66,7 +73,7 @@ found it on its first run.
 
 ## 0.5.0
 
-**Breaking — anonymization fix (dignity-class).** A retained `HazardZone` no
+**Breaking — anonymization fix.** A retained `HazardZone` no
 longer carries a re-identifiable per-vehicle trail. Previously a zone retained
 the full `List<FleetReport>`, including each report's `vehicleId` — so the
 "anonymized, aggregated" claim in the safety boundary was false: a zone held a
@@ -109,7 +116,7 @@ Migration: construct `HazardZone` with `reports: <ZoneObservation>[...]` and a
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 
