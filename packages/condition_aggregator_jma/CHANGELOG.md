@@ -14,7 +14,7 @@
 
 ## 0.7.1
 
-**Documentation only. No library code change. The main correction is one 0.7.0 made and did not write down: for a point outside this package's bounding-box catalogue, 0.7.0 stopped returning an empty list and began returning a low-severity "not covered here" advisory. Its entry never said so. A doc comment inside the package still said the empty list was returned "Through 0.7.x", which is wrong — 0.7.0 is the version that changed it — and now says "Before 0.7.0". Also corrected: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+**Documentation only. No library code change. The main correction is one 0.7.0 made and did not write down: for a point outside this package's bounding-box catalogue, 0.7.0 stopped returning an empty list and began returning a low-severity "not covered here" advisory. Its entry never said so. The safety-boundary record, which still described the 0.1.0 stub, is rewritten against what the shipped code does. A doc comment inside the package still said the empty list was returned "Through 0.7.x", which is wrong — 0.7.0 is the version that changed it — and now says "Before 0.7.0". Also corrected: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
 
 If you are already on 0.7.0, this is what changed under you. 45 of JMA's 58
 offices are not in `kJmaPrefectureBoundingBoxes`. Hand the provider a lat/lon in
@@ -37,10 +37,12 @@ the same thing in plain words. No fact in them changed. JMA's own vocabulary is
 kept as JMA writes it: `R8` is 令和8年, the name of the restructured 防災気象情報
 feed and the literal `r8` path segment, and is not our shorthand.
 
-- `SAFETY_BOUNDARY.md`: the JIS / JASO sentence corrected; elsewhere the changed
-  lines lost internal names and references only. No boundary moved, and nothing
-  changed about what the package does, what it does not do, or what it leaves to
-  you.
+- `SAFETY_BOUNDARY.md`: rewritten against what 0.7.0 actually does. Earlier
+  versions of this record described the 0.1.0 stub, which returned an empty list
+  and reported nothing about its own feed; they had not been revised as the
+  package changed. The record now states the boundary of the shipped code. The
+  JIS / JASO sentence is corrected, and elsewhere the changed lines lost internal
+  names and references only.
 - `README.md`: two headings and three passages reworded.
 - `lib/condition_aggregator_jma.dart`, `lib/src/jma_advisory_mapper.dart`,
   `lib/src/jma_advisory_provider.dart`, `lib/src/jma_shorttime_mapper.dart`:
