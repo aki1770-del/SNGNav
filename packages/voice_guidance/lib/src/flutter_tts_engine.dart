@@ -80,7 +80,7 @@ class FlutterTtsEngine implements TtsEngine, DeliveryObservable {
     if (_completionWired) return;
     _completionWired = true;
     try {
-      // ⚑ WDA-D4-OBS O-3, 2026-09-02. `awaitSpeakCompletion(true)` USED TO BE
+      // Found in review, 2026-09-02: `awaitSpeakCompletion(true)` USED TO BE
       // CALLED HERE and it was a break we very nearly published.
       // flutter_tts-4.2.5:330 declares `static const MethodChannel _channel`:
       // ONE platform handler per process. Flipping that mode changes the
@@ -173,11 +173,11 @@ class FlutterTtsEngine implements TtsEngine, DeliveryObservable {
       await _guardPluginCall(() => _flutterTts.speak(text));
       return;
     }
-    // ⚑ WDA-D4-OBS O-2, 2026-09-02. This USED TO await completion under an 8s
+    // Found in review, 2026-09-02: this USED TO await completion under an 8s
     // bound. Signature unchanged, timing changed — invisible to the analyzer
     // and to a green suite. Measured against the real bloc: the maneuver
     // handler's late `emit(idle)` landed INSIDE the hazard announcement,
-    // widening a ~2ms false-idle window to 401ms on HER hazard path, and up to
+    // widening a ~2ms false-idle window to 401ms on the hazard path, and up to
     // seconds under the real bound. `bloc` 9.2.x processes events concurrently
     // by default, so the two handlers interleave.
     // speak() therefore resolves on QUEUE exactly as it always did. Delivery is

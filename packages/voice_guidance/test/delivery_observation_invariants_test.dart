@@ -145,7 +145,7 @@ void main() {
     });
   });
 
-  group('INV-6 availability is not a tautology (HER IVI target)', () {
+  group('INV-6 availability is not a tautology (the Linux IVI target)', () {
     test('isAvailable() is false when the binary is not on PATH', () async {
       final engine = LinuxTtsEngine(
         executable: 'spd-say-does-not-exist-xyz',

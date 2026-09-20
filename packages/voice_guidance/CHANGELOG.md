@@ -1,6 +1,6 @@
 ## 0.7.9
 
-**Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+**Documentation and test names only. No library code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
 
 - `SAFETY_BOUNDARY.md`: where the safety-boundary record used this project's
   internal shorthand, it now says the same thing in plain words. No boundary
@@ -10,9 +10,25 @@
   One statement in it is corrected: earlier versions said a monthly watch
   tracked JIS / JASO standard updates. No output from that watch has been
   found, so the record no longer says so.
+- `analysis_options.yaml`: the comment above the analyzer's strict modes now
+  says what the modes do, instead of pointing at an internal review note.
+- `lib/src/flutter_tts_engine.dart` (two comments) and
+  `lib/src/voice_guidance_bloc.dart` (two comments): they named an internal
+  review item, or used this project's internal name for the driver. They now
+  say the same thing in plain words. The code is identical.
+- `test/delivery_observation_invariants_test.dart`: one test group's name.
+- `test/hazard_locale_ordering_test.dart`: renamed from
+  `test/vaa_hazard_locale_ordering_test.dart`, whose name used this project's
+  internal shorthand. Its contents are unchanged.
+- `CHANGELOG.md`: the 0.6.2 and 0.6.1 headings, and the 0.7.0, 0.6.0, 0.5.0 and
+  0.3.0 entries.
 
-Apart from `pubspec.yaml` (the version), `SAFETY_BOUNDARY.md` and this
-changelog, the published files are identical to 0.7.8.
+Every changed file in `lib/` was compared before and after with its comments
+removed: the code is identical. Apart from one group name and one file name,
+the tests are identical.
+
+Apart from `pubspec.yaml` (the version) and the files listed above, the
+published files are identical to 0.7.8.
 
 ## 0.7.8
 
@@ -236,7 +252,7 @@ No API or behaviour change.
 ## 0.7.0 — 2026-06-14 — add the tactile (haptic) accessibility hazard channel
 
 Adds an opt-in tactile hazard channel so a deaf / hard-of-hearing
-driver — or HER in a roaring-wind whiteout where speech cannot
+driver — or any driver in a roaring-wind whiteout where speech cannot
 carry — receives the **same hazard warning** a hearing driver gets,
 off the **same severity gate**, via a tactile channel, with a
 grammar that **distinguishes severity** (a single undifferentiated
@@ -350,7 +366,7 @@ desktop haptic is fabricated.
   source already declared `sdk: ^3.10.0`. Restores `pub get` for embedded/automotive Dart
   consumers on Dart 3.10.x.
 
-## 0.6.2 — 2026-05-10 — Pana score recovery (Theme α P3)
+## 0.6.2 — 2026-05-10 — Pana score recovery
 
 - Trim pubspec `description` to within the pana 60–180 character target.
 - Add minimal `example/main.dart` for pana documentation scoring.
@@ -358,7 +374,7 @@ desktop haptic is fabricated.
 - No SDK source changes; metadata + format pass only.
 
 
-## 0.6.1 — 2026-05-10 — Refresh cascade-stale dependency constraint
+## 0.6.1 — 2026-05-10 — Refresh dependency constraint left stale by a sibling release
 
 - `routing_engine: ^0.3.0` → `^0.4.0` (consumer-side refresh after
   routing_engine 0.4.0 release earlier the same day).
@@ -403,7 +419,7 @@ respond to live cognitive-load state. When the driver's cumulative
 off-road glance time approaches the NHTSA Phase 2 12-second budget,
 the same baseline-pace voice announcement competes for attention
 against an already-overloaded cognitive channel. 0.6.0 closes this
-loom by composing the static baseline with a dynamic budget-aware
+gap by composing the static baseline with a dynamic budget-aware
 multiplier; the result is slower-speak under high cognitive load,
 preserved baseline-speak when the budget has barely been consumed.
 
@@ -493,7 +509,7 @@ raw `alertMessage` for the hazard branch.
 core-package boundary, but voice rendering still spoke the raw
 free-form `alertMessage`. The 0.5.0 wiring brings the
 per-(condition, profile) action vocabulary to the audio channel
-HER actually hears, so the integration is action-coupled in the
+the driver actually hears, so the integration is action-coupled in the
 driver's register at the locale appropriate to the profile.
 
 ### Tests
@@ -581,7 +597,7 @@ Strayer-AAA auditory-load study (PMC7283540).
 
 ## 0.3.0
 
-- Harmonize package version to 0.3.0 for Sprint 80 Direction F.
+- Harmonize package version to 0.3.0, in step with the other packages in this repository.
 - Align internal ecosystem dependency constraints to ^0.3.0 where applicable.
 - No breaking API changes in this package for this release.
 

@@ -1,7 +1,8 @@
 include: package:flutter_lints/flutter.yaml
 
-# Strict-mode flags (per SNGNav review 2026-04-25 P2 finding #12).
-# V14 protection for future contributions; codebase currently strict-clean.
+# Strict analyzer modes: no implicit casts from `dynamic`, no inference that
+# falls back to `dynamic`, and no raw generic types. The code already passes
+# all three; the flags hold new contributions to the same standard.
 analyzer:
   language:
     strict-casts: true

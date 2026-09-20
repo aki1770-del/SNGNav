@@ -91,7 +91,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
   /// Optional tactile (haptic) engine for the accessibility hazard channel
   /// (0.7.0). When supplied, the bloc fires a tactile cue ADDITIVELY beside
   /// the existing TTS speak in the hazard dispatch — off the SAME severity
-  /// gate — so a deaf / hard-of-hearing driver (or HER in a roaring-wind
+  /// gate — so a deaf / hard-of-hearing driver (or any driver in a roaring-wind
   /// whiteout where speech cannot carry) receives the same hazard warning a
   /// hearing driver gets, via a tactile channel.
   ///
@@ -292,7 +292,7 @@ class VoiceGuidanceBloc extends Bloc<VoiceGuidanceEvent, VoiceGuidanceState> {
 
     // Accessibility (0.7.0): fire the tactile cue ADDITIVELY beside the
     // audio, off the SAME severity gate the audio uses, so a deaf /
-    // hard-of-hearing driver (or HER in a roaring-wind whiteout) receives
+    // hard-of-hearing driver (or any driver in a roaring-wind whiteout) receives
     // the same hazard warning. Fire-and-forget so the haptic channel can
     // NEVER delay, gate, or silence audio; the engine's cue() never throws
     // (honest degradation), so the unawaited future cannot surface an
