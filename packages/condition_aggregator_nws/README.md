@@ -34,7 +34,7 @@ The adapter defines:
 - Not a renderer. The package returns typed `Advisory` value objects;
   the integrator HMI surfaces them.
 
-## HER-trace (≤4-hop)
+## From publisher to driver (4 hops)
 
 ```
 NWS api.weather.gov /alerts/active
@@ -46,7 +46,7 @@ NWS api.weather.gov /alerts/active
 
 4 hops.
 
-## Driver-facing loom
+## What the driver experiences
 
 When NWS has issued a winter alert for the driver's current point
 inside the U.S., the integrator HMI surfaces a typed `Advisory` event
@@ -112,8 +112,9 @@ for (final a in result.advisories) {
   `noaa_nws_adapter` raises `NoaaNwsHttpException` (transport) and
   `NoaaNwsParseException` (GeoJSON shape mismatch). At fan-out time
   inside `AdvisoryAggregator`, these are captured into
-  `result.providerErrors` so the integrator surfaces staleness
-  honestly.
+  `result.providerErrors` so the integrator can say which source could not
+  be read. That is an outage, not staleness: a source that keeps serving a
+  document which has stopped being updated raises no error.
 - **`actualOnly` filter is delegated to the underlying client.**
   `NoaaNwsClient` defaults to `actualOnly: true` (Test / Exercise /
   System / Draft entries excluded). Production driver-facing flows
@@ -125,7 +126,7 @@ for (final a in result.advisories) {
 ## Dependency posture
 
 - Pure Dart. No Flutter dependency.
-- Runtime: `condition_aggregator` (path), `noaa_nws_adapter` (path).
+- Runtime: `condition_aggregator`, `noaa_nws_adapter` (both from pub.dev).
 - Dev: `test`, `lints`.
 - Strict-cast / strict-inference / strict-raw-types analyser settings.
 

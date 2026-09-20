@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.0.8
+
+**Documentation only. No code change. Two corrections. The first is about what a driver can be shown: the README said per-provider errors let the integrator surface staleness honestly. They do not. `result.providerErrors` names sources that could not be read, which is an outage; a source that keeps answering with a document that has stopped being updated raises no error at all. The second: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+
+A third, smaller correction: the README said this package's runtime dependencies
+are wired by path. In the published package they are ordinary pub.dev
+dependencies, and have been since 0.0.5. The line now says so. The dependency
+constraints themselves are unchanged from 0.0.7.
+
+Documentation and comments that used this project's internal shorthand now say
+the same thing in plain words. No fact in them changed.
+
+- `README.md`: the pass-through note above; the dependency-posture line; two
+  headings.
+- `SAFETY_BOUNDARY.md`: the JIS / JASO sentence corrected; elsewhere the changed
+  lines lost internal names and references only. No boundary moved.
+- `lib/condition_aggregator_nws.dart`: one doc comment.
+- `pubspec.yaml`: the version.
+- `CHANGELOG.md`: this entry.
+
+The one changed Dart file was compared with the published 0.0.7 after removing
+comments: the token streams are identical. Apart from the files listed above,
+the published files are identical to 0.0.7.
+
 ## 0.0.7 — 2026-06-30 — Doc honesty
 
 - Docs: library dartdoc no longer claims `Phase: explore` /

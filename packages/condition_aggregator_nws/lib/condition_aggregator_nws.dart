@@ -8,7 +8,7 @@
 ///
 /// Published to pub.dev.
 ///
-/// Driver-facing loom: when NWS has issued a winter alert for the
+/// What the driver experiences: when NWS has issued a winter alert for the
 /// driver's current point inside the U.S., the integrator HMI surfaces
 /// a typed `Advisory` event with severity / certainty / urgency / area /
 /// effective / expires normalized — as the driver's decision substrate,
