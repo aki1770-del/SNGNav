@@ -112,6 +112,7 @@ NavigationSafetyConfig _relaxTo10(NavigationSafetyConfig b) =>
       infoVisibilityMeters: b.infoVisibilityMeters,
       warningVisibilityMeters: 10,
       criticalVisibilityMeters: b.criticalVisibilityMeters,
+      criticalGripScoreFloor: b.criticalGripScoreFloor,
       alertsPerMinuteCapOverride: b.alertsPerMinuteCapOverride,
     );
 

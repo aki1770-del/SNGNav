@@ -39,7 +39,64 @@ class SafetyScore extends Equatable {
        visibilityScore = _clamp01(visibilityScore),
        fleetConfidenceScore = _clamp01(fleetConfidenceScore);
 
+  /// Severity for this score under [config] — the WORSE of the composite
+  /// verdict and the per-axis verdict.
+  ///
+  /// ## Why two verdicts and not one
+  ///
+  /// [overall] is a MEAN of the axes. A mean answers "how good are
+  /// conditions on aggregate"; severity asks "how bad is the worst thing
+  /// here". The two come apart precisely when one axis is catastrophic and
+  /// the other is fine — **black ice under a clear sky**. With
+  /// [visibilityScore] at 1.0 the mean is >= 0.5, while every shipped
+  /// [NavigationSafetyConfig.warningScoreFloor] is 0.30-0.40, so
+  /// [AlertSeverity.critical] was UNREACHABLE at any grip whatsoever and
+  /// [gripScore] `0.0` under clear air returned [AlertSeverity.info]. This
+  /// type carried the per-axis numbers all along and the decision discarded
+  /// them.
+  ///
+  /// The correction is not a lower floor. Lowering a threshold so one
+  /// number crosses it drags every other road across with it, and a model
+  /// that shouts at everything is the cry-wolf failure. Instead [overall]
+  /// keeps its stated meaning and fixed weights, the axes are read
+  /// separately, and the worse verdict wins.
+  ///
+  /// ## The property that makes this safe to add
+  ///
+  /// Taking the WORSE verdict is monotone: it can only raise severity,
+  /// never lower it, so no alert that fires today can be silenced by it.
+  /// Measured over the whole `(grip, visibility)` plane at default floors,
+  /// every promotion is out of a band that was ALREADY alerting and ZERO
+  /// cells are promoted out of `none` — it sharpens alerts, it does not
+  /// add them. Both properties are asserted in
+  /// `test/grip_axis_critical_test.dart`.
+  ///
+  /// ## What is NOT covered yet
+  ///
+  /// Only grip has a per-axis floor here. [NavigationSafetyConfig] also
+  /// declares `criticalVisibilityMeters` — profile-tuned and
+  /// literature-cited — and **nothing in this package reads it**; the
+  /// visibility axis therefore still reaches the decision only through the
+  /// mean. Wiring it is a separate, deliberate change, because it moves
+  /// behaviour for consumers on a second axis.
   AlertSeverity? toAlertSeverity(NavigationSafetyConfig config) {
+    final composite = _compositeSeverity(config);
+    // A grip score at or below the floor means the road brakes no better
+    // than glare ice. That is independently lethal — it does not become
+    // survivable because she can see it coming.
+    //
+    // `gripScore` of 0 is never an encoding of "no grip sensor": an
+    // unreadable reading is rejected upstream in `driving_conditions`
+    // (`requireMeasured`), and `_clamp01` above maps a non-finite value to 0
+    // *deliberately*, so that uncertainty alerts conservatively. Both
+    // readings of 0 want this alert.
+    if (gripScore < config.criticalGripScoreFloor) {
+      return AlertSeverity.critical;
+    }
+    return composite;
+  }
+
+  AlertSeverity? _compositeSeverity(NavigationSafetyConfig config) {
     if (overall < config.warningScoreFloor) {
       return AlertSeverity.critical;
     }

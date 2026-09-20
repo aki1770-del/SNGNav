@@ -14,6 +14,14 @@ import 'navigation_safety_context.dart';
 import 'session_state_provider.dart';
 import 'vehicle_threshold_overrides.dart';
 
+/// Glare-ice over dry-pavement braking deceleration, `1.5 / 5.5 m/s^2`.
+///
+/// Both magnitudes are published in
+/// `navigation_safety_calibration/lib/src/speed_dependent_visibility.dart`.
+/// See [NavigationSafetyConfig.criticalGripScoreFloor] for the derivation and
+/// for the honest bound on those magnitudes.
+const double _glareIceGripRatio = 1.5 / 5.5;
+
 class NavigationSafetyConfig extends Equatable {
   final double safeScoreFloor;
   final double infoScoreFloor;
@@ -32,6 +40,55 @@ class NavigationSafetyConfig extends Equatable {
   final int infoVisibilityMeters;
   final int warningVisibilityMeters;
   final int criticalVisibilityMeters;
+
+  /// Grip score at or below which grip ALONE is critical, whatever the
+  /// composite score says.
+  ///
+  /// ## Why a per-axis floor exists at all
+  ///
+  /// `SafetyScore.overall` is a MEAN of the axes (`0.5 * grip +
+  /// 0.5 * visibility` in `driving_conditions`). A mean answers "how good
+  /// are conditions on aggregate". Severity asks a different question:
+  /// "how bad is the worst thing here". Those come apart exactly when one
+  /// axis is catastrophic and the other is fine — black ice under a clear
+  /// sky. With visibility at 1.0 the mean is >= 0.5, while every shipped
+  /// [warningScoreFloor] is 0.30-0.40, so `critical` was UNREACHABLE at
+  /// any grip value, and a grip score of zero scored `info`. The mean was
+  /// not mis-tuned; it was the wrong shape for the question.
+  ///
+  /// The fix is not a lower floor — lowering it to make one number cross
+  /// would promote every other road with it. [overall] keeps its stated
+  /// meaning and its fixed weights. The axes are read SEPARATELY and the
+  /// worst verdict wins.
+  ///
+  /// ## Where the number comes from
+  ///
+  /// `1.5 / 5.5` = 0.2727..., the ratio of glare-ice to dry-pavement
+  /// braking deceleration, both published in this workspace's
+  /// `navigation_safety_calibration/lib/src/speed_dependent_visibility.dart`
+  /// ("5.5 m/s^2, a typical passenger-car dry-pavement value ... ~3.0 m/s^2
+  /// for compacted snow; ~1.5 m/s^2 for glare ice"). Read as a fraction of
+  /// available dry-pavement grip — which is what a `[0,1]` grip score means
+  /// — a road at or below this ratio brakes no better than glare ice.
+  /// Compacted snow sits at 3.0/5.5 = 0.545 and is deliberately well clear
+  /// of this floor: this is the glare-ice line, not the winter-road line.
+  ///
+  /// **Honest bound**: the 1.5 and 5.5 magnitudes are that package's stated
+  /// typical values, not measurements this unit has taken in the field. The
+  /// SHAPE of the rule does not depend on them; the exact number does.
+  ///
+  /// ## What this costs
+  ///
+  /// Measured over a 101x101 grid of the whole `(grip, visibility)` plane
+  /// at default floors: the rule promotes only cells that were ALREADY
+  /// alerting (`warning`->`critical` and `info`->`critical`), and promotes
+  /// ZERO cells out of `none`. It cannot create an alert where there is
+  /// silence today, and it cannot lower any severity — both asserted in
+  /// `test/grip_axis_critical_test.dart`. A grid is a statement about the
+  /// geometry of the rule, NOT a false-positive rate: this unit has no
+  /// measured distribution of real road conditions, so the on-road
+  /// frequency of this promotion is UNVERIFIED.
+  final double criticalGripScoreFloor;
 
   /// Optional override for the per-profile alerts/min cap used by
   /// [AlertDensityThrottle]. When `null` (the default), the throttle
@@ -352,6 +409,7 @@ class NavigationSafetyConfig extends Equatable {
       infoVisibilityMeters: infoVisibility,
       warningVisibilityMeters: warningVisibility,
       criticalVisibilityMeters: criticalVisibility,
+      criticalGripScoreFloor: base.criticalGripScoreFloor,
       alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
     );
 
@@ -736,6 +794,7 @@ class NavigationSafetyConfig extends Equatable {
       infoVisibilityMeters: infoVisibility,
       warningVisibilityMeters: warningVisibility,
       criticalVisibilityMeters: criticalVisibility,
+      criticalGripScoreFloor: base.criticalGripScoreFloor,
       alertsPerMinuteCapOverride: newCap,
     );
   }
@@ -831,6 +890,7 @@ class NavigationSafetyConfig extends Equatable {
     this.infoVisibilityMeters = 1000,
     this.warningVisibilityMeters = 200,
     this.criticalVisibilityMeters = 50,
+    this.criticalGripScoreFloor = _glareIceGripRatio,
     this.alertsPerMinuteCapOverride,
   }) {
     // Conservative-on-uncertain invariant at the config boundary
@@ -876,6 +936,24 @@ class NavigationSafetyConfig extends Equatable {
     if (warningScoreFloor < 0 || warningScoreFloor > 1) {
       throw RangeError.range(warningScoreFloor, 0, 1, 'warningScoreFloor');
     }
+    // Same conservative-on-uncertain reasoning as the score floors above: a
+    // non-finite grip floor makes `gripScore < floor` always false, silently
+    // disabling the per-axis critical rule instead of failing loudly.
+    if (!criticalGripScoreFloor.isFinite) {
+      throw ArgumentError.value(
+        criticalGripScoreFloor,
+        'criticalGripScoreFloor',
+        'must be finite',
+      );
+    }
+    if (criticalGripScoreFloor < 0 || criticalGripScoreFloor > 1) {
+      throw RangeError.range(
+        criticalGripScoreFloor,
+        0,
+        1,
+        'criticalGripScoreFloor',
+      );
+    }
     if (safeScoreFloor < infoScoreFloor) {
       throw ArgumentError(
         'safeScoreFloor ($safeScoreFloor) must be >= infoScoreFloor ($infoScoreFloor)',
@@ -907,6 +985,7 @@ class NavigationSafetyConfig extends Equatable {
     infoVisibilityMeters,
     warningVisibilityMeters,
     criticalVisibilityMeters,
+    criticalGripScoreFloor,
     alertsPerMinuteCapOverride,
   ];
 }
