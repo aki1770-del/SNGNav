@@ -24,8 +24,8 @@
 ///
 /// ## This is not hypothetical — it is the live state of the stack
 ///
-/// Measured 2026-08-16 by the unit's own winter instrument
-/// (`outputs/shadow-watch/records/2026-08.jsonl`, run `2026-08-16T02:07:02Z`),
+/// Measured 2026-08-16 by this project's own winter monitoring
+/// (a record kept outside this package, run `2026-08-16T02:07:02Z`),
 /// judging the PUBLISHED packages `condition_aggregator 0.0.9` /
 /// `condition_aggregator_jma 0.3.1` / `driving_weather 0.5.0` /
 /// `compound_failure_advisor 0.1.2`:
@@ -39,7 +39,7 @@
 ///   **What survives BOTH: every reason names the VISIBILITY reading's age.
 ///   Neither branch says one word about the advisory feed being 81 days
 ///   dead.** An earlier draft quoted the onboard branch alone — the more
-///   dramatic one — against the record's own instruction. Caught by AAA.
+///   dramatic one — against the record's own instruction. Caught in review.
 /// * Akita `050000` — **2026-05-28T06:11+09:00**, age **1924.93 h**.
 /// * Yamagata `060000` — **2026-05-28T09:48+09:00**, age **1921.32 h**.
 ///   The feeds did not freeze in lockstep, so no single "frozen at T" holds.
@@ -86,10 +86,11 @@
 ///
 /// *This note exists because the first draft claimed "proven RED 4/4 against
 /// unmodified 0.0.9" while leaving nothing on disk that could reproduce it.
-/// DIA caught it in audit and was right: a proof that exists only in the
+/// A reviewer caught it and was right: a proof that exists only in the
 /// author's session is an assertion wearing the clothes of evidence.*
 ///
-/// Author: FSE (functional-safety-engineer). SOTIF row SOTIF-CA-001.
+/// Author: the SNGNav maintainers (functional-safety review). SOTIF row
+/// SOTIF-CA-001.
 library;
 
 import 'package:condition_aggregator/condition_aggregator.dart';
@@ -241,7 +242,7 @@ void main() {
       'HOW LONG ago', () async {
     final r = await read();
 
-    // A stop with no restart is a wall, not a loom. Refusing the all-clear
+    // A stop with no restart is a wall, not a fix. Refusing the all-clear
     // is only half the duty; the other half is giving her something to act
     // on. She is owed what we do not know, not an apology.
     expect(r.hasStaleSource, isTrue);

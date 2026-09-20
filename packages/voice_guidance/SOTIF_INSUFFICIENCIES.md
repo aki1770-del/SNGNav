@@ -2,14 +2,16 @@
 
 **Package**: `voice_guidance`
 **Applies from**: 0.7.6 (the version the SOTIF-VG-001..006 mitigations land in)
-**Author**: FSE (functional-safety-engineer), 2026-09-02
-**Status**: PRODUCER artifact. Not self-audited — see "Audit" at the foot.
+**Author**: the SNGNav maintainers (functional-safety review), 2026-09-02
+**Status**: Not self-audited — see "Audit" at the foot.
 
-> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (AAA's record, v1.3).
+> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (the package's
+> safety-class boundary record, v1.3).
 > That record states the package's SOTIF *posture* and enumerates five
 > advisory-honesty disciplines at §3. This file tabulates the insufficiencies
-> that posture leaves. **Delivery observation is not among AAA's five**, which
-> is the gap this table exists to name. Nothing here re-authors that record.
+> that posture leaves. **Delivery observation is not among that record's
+> five**, which is the gap this table exists to name. Nothing here re-authors
+> it.
 
 ## Scope and ceiling
 
@@ -38,9 +40,9 @@ is not our signal and must never become one. The choice stays hers.
 > **and state truthfully whether that rendering was observed to complete.**
 
 The second clause is the safety-relevant half. The first clause failing is
-audible. The second clause failing is not — it is a **Vision 14 silent
-failure**: *"a function that returns a success-shaped value while the operation
-failed is a loom weaving through a broken warp."* `Future<void> speak(String)`
+audible. The second clause failing is not — it is a **silent failure**: a
+function that returns a success-shaped value while the operation underneath it
+failed. `Future<void> speak(String)`
 (`lib/src/tts_engine.dart:59`) is success-shaped by its return type. Until
 0.7.6 it returned normally in every case, including cases in which the platform
 never received the utterance at all.
@@ -144,10 +146,10 @@ proof a reader cannot run is an assertion wearing the clothes of evidence.)*
 |---|---|
 | **ID** | SOTIF-VG-006 |
 | **Class** | Performance insufficiency (of the availability predicate) |
-| **Triggering condition** | Any Linux host — **which is HER IVI target** (`default_tts_engine_io.dart:10-12` returns `LinuxTtsEngine` for `Platform.isLinux`) — on which `speech-dispatcher` is not installed. A Yocto image ships only what a recipe puts in it. |
+| **Triggering condition** | Any Linux host — **which is this project's in-vehicle target** (`default_tts_engine_io.dart:10-12` returns `LinuxTtsEngine` for `Platform.isLinux`) — on which `speech-dispatcher` is not installed. A Yocto image ships only what a recipe puts in it. |
 | **Insufficiency** | `_defaultResolveExecutable` **returned its argument unchanged** (`linux_tts_engine.dart:38-40` at `936fb2b`). `isAvailable()` therefore returned `true` for every non-disposed engine on every Linux host, regardless of whether any speech binary existed. The subsequent `ProcessException` was caught and swallowed by `speak()`, so the only downstream signal was silence. |
 | **Output to the integrator** | An integrator asking *"can this device speak?"* received `true` from a device that cannot. |
-| **Detectability before mitigation** | **Nil, and the test suite actively concealed it.** All five `LinuxTtsEngine` tests inject `resolveExecutable`; the test named *"isAvailable returns false when executable is missing"* injects `(_) => null` and therefore exercises the stub, not the product. The default resolver — the only one that runs in production — was covered by nothing. *Per CLAUDE.md §0: if the method could not have surfaced a counter-example, it has measured nothing.* |
+| **Detectability before mitigation** | **Nil, and the test suite actively concealed it.** All five `LinuxTtsEngine` tests inject `resolveExecutable`; the test named *"isAvailable returns false when executable is missing"* injects `(_) => null` and therefore exercises the stub, not the product. The default resolver — the only one that runs in production — was covered by nothing. *A test that could not have surfaced a counter-example has measured nothing.* |
 | **Measured occurrence** | 2026-09-02, RED PROOF E against `936fb2b`: `LinuxTtsEngine(executable: 'spd-say-does-not-exist-xyz').isAvailable()` returned `true`. |
 | **Mitigation (code, 0.7.6)** | **INV-6 (availability is not a tautology)**: the default resolver now resolves against `PATH`, or checks the file for a path-qualified executable, and returns `null` when nothing exists. |
 | **Verifying test** | Three tests exercising the **default** resolver — absent-on-PATH, absent absolute path, and a positive control (`sh`) so the guard cannot pass by always answering `false`. |
@@ -162,12 +164,12 @@ proof a reader cannot run is an assertion wearing the clothes of evidence.)*
 | field | value |
 |---|---|
 | **Class** | Functional insufficiency (specification gap) |
-| **Triggering condition** | Any deployment on Linux — HER IVI target. |
+| **Triggering condition** | Any deployment on Linux — this project's in-vehicle target. |
 | **Insufficiency** | `LinuxTtsEngine` does not implement `DeliveryObservable`. It has no verdict of any kind. `speak()` spawns `spd-say` via `Process.start` and returns as soon as the **process is spawned** (`linux_tts_engine.dart:88-103` **at `936fb2b`**; the file shifted when INV-6 landed); the exit code is awaited only to null out the handle. `spd-say` is a *client* that hands text to the `speech-dispatcher` daemon and exits, so even its exit code would not evidence audio. |
-| **Consequence** | Every mitigation above applies to `FlutterTtsEngine` — the **mobile** engine. On the target D2 names as the invariant (*"a scene she understands in a glance, on her real IVI target, offline"*), delivery observation is **absent**, not merely imperfect. |
-| **Status** | **OPEN. Not fixed in 0.7.6.** Closing it means either a `speech-dispatcher` client that subscribes to `SSIP` `END`/`CANCEL` index-mark events, or replacing `spd-say` with a library binding — a dependency and packaging decision that is EIE's and YRA's (Yocto image contents), not FSE's unilateral edit. |
+| **Consequence** | Every mitigation above applies to `FlutterTtsEngine` — the **mobile** engine. On the in-vehicle target this project treats as its invariant — a scene she understands in a glance, on the real target, offline — delivery observation is **absent**, not merely imperfect. |
+| **Status** | **OPEN. Not fixed in 0.7.6.** Closing it means either a `speech-dispatcher` client that subscribes to `SSIP` `END`/`CANCEL` index-mark events, or replacing `spd-say` with a library binding — a dependency and packaging decision for whoever owns the Yocto image contents, not a unilateral edit by this table's author. |
 | **Guard in place meanwhile** | `test/delivery_observation_invariants_test.dart` asserts `isNot(isA<DeliveryObservable>())`. When the engine becomes observable that test goes RED and forces this row and `SEOOC_ASSUMPTIONS.md` to be revised in the same change. |
-| **Routed to** | EIE (embedded/on-target) + YRA (recipe) + CT (build-track lead). |
+| **Routed to** | The maintainers of the embedded target and of its Yocto recipe. |
 
 ### SOTIF-VG-008 — the observation is not read by anything (OPEN)
 
@@ -176,9 +178,9 @@ proof a reader cannot run is an assertion wearing the clothes of evidence.)*
 | **Class** | Functional insufficiency (the observation terminates in a private field) |
 | **Measured** | 2026-09-02. `lastDelivery` is read by **zero** call sites outside the two files that define it — repo-wide `grep` across all `*.dart`. `VoiceGuidanceBloc` calls `await _ttsEngine.speak(...)` and then emits `VoiceGuidanceStatus.idle` **unconditionally** (`voice_guidance_bloc.dart:318-320`, and `:284-286` for maneuvers). |
 | **Insufficiency** | `VoiceGuidanceStatus` is `{ idle, speaking, muted }` (`voice_guidance_state.dart:6`) — **there is no vocabulary for "we tried to warn her and could not confirm it."** Worse, `lastHazardMessage` is written *before* the speak (`:313-315`) and never revised, so the bloc's own state records the hazard as announced whatever the outcome. The 0.7.6 engine now knows the truth and the system still discards it. |
-| **Status** | **OPEN by design of this change.** Adding a state to a published state model consumed by our own app (`example/lib/main.dart:605, 776, 970`) is a driver-facing-loom change, which is AAA's record and CT's build-track call — not FSE's to make unilaterally. **Named here so it is not inherited silently.** |
-| **Recommended shape** (FSE assessment, not a decision) | Additive and back-compatible: carry the verdict onto `VoiceGuidanceState` beside `lastHazardMessage`, so an integrator can *render* an unconfirmed warning differently — persist the hazard chip rather than clearing it, repeat at the next safe opportunity, or surface a "voice unavailable" indicator. **Not** by suppressing anything: see the standing constraint above. |
-| **Routed to** | AAA (boundary record §8 driver-facing loom) + CT + WDA (any consumer-visible change). |
+| **Status** | **OPEN by design of this change.** Adding a state to a published state model consumed by our own app (`example/lib/main.dart:605, 776, 970`) changes the driver-facing surface the safety-boundary record describes, which is that record's and the build maintainers' call — not this table's author's to make unilaterally. **Named here so it is not inherited silently.** |
+| **Recommended shape** (an assessment, not a decision) | Additive and back-compatible: carry the verdict onto `VoiceGuidanceState` beside `lastHazardMessage`, so an integrator can *render* an unconfirmed warning differently — persist the hazard chip rather than clearing it, repeat at the next safe opportunity, or surface a "voice unavailable" indicator. **Not** by suppressing anything: see the standing constraint above. |
+| **Routed to** | The maintainers of the safety-boundary record (its §8 driver-facing section) and of any consumer-visible change. |
 
 ### SOTIF-VG-009 — delivered ≠ audible; the escalation channel is unobserved too (OPEN)
 
@@ -186,10 +188,10 @@ proof a reader cannot run is an assertion wearing the clothes of evidence.)*
 |---|---|
 | **Class** | Functional insufficiency (bound of the strongest verdict we can produce) |
 | **Insufficiency** | `SpeechDelivery.delivered` means *the engine reported the utterance finished*. It does not mean audio reached her: device volume at zero, a muted or ducked stream, audio focus held elsewhere, a Bluetooth handoff mid-utterance, a failed IVI amplifier. **No TTS API exposes acoustic confirmation.** The honest ceiling of this package's observation is the transducer boundary, and `delivered` must be read as *"the synthesiser finished"*, never *"she heard it."* |
-| **Compounding** | The channel one would escalate *to* has the same shape. `HapticEngine.cue` returns `Future<void>` and is contractually forbidden to throw (`haptic_engine.dart:17, 38`); the bloc fires it `unawaited` (`voice_guidance_bloc.dart:304`). It is success-shaped by construction — **Vision 14 in the fallback**. `KNOWN_LIMITATIONS.md` already states this honestly for haptic (*"'Available' means 'the platform channel did not report missing', NOT 'a motor is present and felt'"*); **no equivalent statement existed for audio** until this table. |
+| **Compounding** | The channel one would escalate *to* has the same shape. `HapticEngine.cue` returns `Future<void>` and is contractually forbidden to throw (`haptic_engine.dart:17, 38`); the bloc fires it `unawaited` (`voice_guidance_bloc.dart:304`). It is success-shaped by construction — **the same silent-failure shape in the fallback**. `KNOWN_LIMITATIONS.md` already states this honestly for haptic (*"'Available' means 'the platform channel did not report missing', NOT 'a motor is present and felt'"*); **no equivalent statement existed for audio** until this table. |
 | **Consequence for the escalation question** | Escalating modality on an unobserved audio delivery raises the probability she is reached. It does **not** close anything, because the second channel returns a success-shaped value too. An escalation policy built on either verdict must be honest that it is redundancy, not confirmation. |
 | **Status** | **OPEN and, at the acoustic layer, not closable by this package.** Mitigation is bounded honesty: state the ceiling (done here and in `SEOOC_ASSUMPTIONS.md`), and never let `delivered` be read as *heard*. |
-| **Routed to** | AAE (on-device modality/accessibility lens) + AAA. |
+| **Routed to** | The maintainers of on-device alert delivery and of the safety-boundary record. |
 
 ---
 
@@ -201,8 +203,9 @@ are deliberately absent — those are vehicle-level and belong to the integrator
 
 ## Audit
 
-FSE is a producer and is never its own auditor. This table and the 0.7.6 code
-changes it describes are submitted for audit to **AAA** (dignity / standards
-mapping, and holder of the `SAFETY_BOUNDARY.md` record this file attaches to)
-and **DIA** (propagation and temporal integrity). Nothing here is cleared until
-they say so; where they have not read, this table is **UNVERIFIED, not cleared**.
+The author of this table never audits its own work. This table and the 0.7.6
+code changes it describes were submitted for independent review of standards
+mapping (by the holder of the `SAFETY_BOUNDARY.md` record this file attaches to)
+and of propagation and temporal integrity. Nothing here is cleared until those
+reviews say so; where they have not read, this table is **UNVERIFIED, not
+cleared**.

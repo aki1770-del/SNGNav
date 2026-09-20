@@ -2,12 +2,13 @@
 
 **Package**: `voice_guidance`
 **Applies from**: 0.7.6
-**Author**: FSE (functional-safety-engineer), 2026-09-02
+**Author**: the SNGNav maintainers (functional-safety review), 2026-09-02
 **Form**: ISO 26262 Part 10 Safety-Element-out-of-Context assumptions of use —
 the structurally honest form for a component that has **no item**.
-**Status**: PRODUCER artifact. Not self-audited — see "Audit" at the foot.
+**Status**: Not self-audited — see "Audit" at the foot.
 
-> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (AAA's record, v1.3).
+> **ATTACHES TO, does not replace, `SAFETY_BOUNDARY.md`** (the package's
+> safety-class boundary record, v1.3).
 > Companion to `SOTIF_INSUFFICIENCIES.md`, which tabulates the insufficiencies
 > these assumptions bound.
 
@@ -47,12 +48,13 @@ observed it, and nothing in the package said it was unobserved.
 > warned" rests on that assumption and inherits it whether or not the
 > integrator has noticed.
 
-This is a **Vision 14** shape: *a function that returns a success-shaped value
-while the operation failed.* `Future<void> speak(String)`
+This is a **silent-failure** shape: *a function that returns a success-shaped
+value while the operation underneath it failed.* `Future<void> speak(String)`
 (`lib/src/tts_engine.dart:59`) is success-shaped by its return type; before
 0.7.6 it returned normally even when the platform never received the utterance.
 `SpeechDelivery` (0.7.5) began to answer this, and 0.7.6 makes its answer
-trustworthy — but only on one of the two shipped engines. The rest of AoU-VG-000
+trustworthy — but only on `FlutterTtsEngine`, not on the Linux engine that runs
+on the in-vehicle target. The rest of AoU-VG-000
 remains the integrator's, itemised below.
 
 ---
@@ -102,7 +104,8 @@ daemon and exits, so its exit code would not evidence audio either.
   against `PATH` instead of returning its argument unchanged, so a Yocto image
   without `speech-dispatcher` reports `false` rather than `true`. **Resolving a
   binary proves it exists, never that it speaks.**
-- Tracked as `SOTIF-VG-007` (OPEN), routed to EIE + YRA + CT.
+- Tracked as `SOTIF-VG-007` (OPEN), raised with the maintainers of the embedded
+  target and of its Yocto image.
 
 ### AoU-VG-004 — The verdict is per-engine state, not per-utterance history
 
@@ -161,7 +164,8 @@ revision.
 - **An integrator reading only `VoiceGuidanceState` cannot tell a confirmed
   hazard announcement from an unconfirmed one.** To observe delivery today, hold
   a reference to the engine and read it directly.
-- Tracked as `SOTIF-VG-008` (OPEN), routed to AAA + CT + WDA.
+- Tracked as `SOTIF-VG-008` (OPEN), raised with the maintainers of the safety
+  boundary record and of any consumer-visible change.
 
 ---
 
@@ -174,6 +178,7 @@ earned.
 
 ## Audit
 
-FSE produces; **AAA + DIA audit**. Submitted for audit and not cleared until
-they say so. Where they have not read, this document is **UNVERIFIED, not
-cleared**.
+The author of this document never audits its own work. It was submitted for
+independent review of standards mapping and of document integrity, and is not
+cleared until those reviews say so. Where they have not read, this document is
+**UNVERIFIED, not cleared**.

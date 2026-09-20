@@ -4,15 +4,15 @@
 **Applies from**: 0.0.10
 **Form**: ISO 26262 Part 10 Safety-Element-out-of-Context — the structurally
 honest form for a component **without an item**.
-**Author**: FSE (functional-safety-engineer), 2026-08-16
-**Status**: PRODUCER artifact. **Not self-audited.** Submitted for independent
-audit to AAA + DIA; both returned 2026-08-16 and their findings are applied
-below. Attaches to `SAFETY_BOUNDARY.md`; replaces nothing in it.
+**Author**: the SNGNav maintainers (functional-safety review), 2026-08-16
+**Status**: **Not self-audited.** Submitted for independent review of standards
+mapping and of document integrity; both returned 2026-08-16 and their findings
+are applied below. Attaches to `SAFETY_BOUNDARY.md`; replaces nothing in it.
 
 > *This line read "independently audited" while no audit had yet happened.
-> **AAA named it as the certification-adjacent overclaim its charter forbids** —
-> on an ISO-26262-Part-10-shaped document an integrator reads that as assurance
-> that existed. Corrected same-day on the finding. The sibling
+> **The standards review named it a certification-adjacent overclaim** — on an
+> ISO-26262-Part-10-shaped document an integrator reads that as assurance that
+> existed. Corrected same-day on the finding. The sibling
 > `SOTIF_INSUFFICIENCIES.md` said "Not self-audited" and was right.*
 
 ## What an SEooC statement is, and why this package needs one
@@ -92,7 +92,7 @@ restored it in 0.7.0. `condition_aggregator_nws` 0.0.7,
 `condition_aggregator_met_norway` 0.0.8, `condition_aggregator_digitraffic`
 0.0.8 and `condition_aggregator_owm_road_risk` 0.1.5 do not.
 
-*(Corrected 2026-08-16 on DIA's audit finding: an earlier draft of this row said
+*(Corrected 2026-08-16 on an audit finding: an earlier draft of this row said
 "six" and counted `driving_weather`, which **consumes** this interface but does
 not implement `AdvisoryProvider`. The error overstated unfixed exposure — the
 safe direction — but it sat in a document integrators quote, so it is corrected
@@ -115,8 +115,8 @@ error in the first draft:**
   plus `driving_weather` and `drive_situation_fusion`, which consume the
   interface without implementing the provider contract. *`drive_situation_fusion`
   was missing from this row's first draft and from every verification claim
-  FSE made; AAA found it and independently confirmed all seven analyze clean
-  and pass their tests unchanged.*
+  this file's author made; the review found it and independently confirmed all
+  seven analyze clean and pass their tests unchanged.*
 
 **⚑ The sharpest fact on 2026-08-16, and it was found in review, not by this
 file's author:** `condition_aggregator_jma` **already held the measurement.** It
@@ -133,7 +133,7 @@ surface it does:
 1. Prefer an adapter that implements `AdvisoryFeedFreshnessReporting`, or
 2. Wrap the adapter yourself — the interface is public and small — reading the
    publisher's own document timestamp and reporting it, or
-3. Measure freshness out of band, as this unit's own winter instrument does,
+3. Measure freshness out of band, as this project's own winter monitoring does,
    and treat the result as an input to your own gate.
 
 We chose to state this rather than default unmeasured sources to "stale", which
@@ -199,9 +199,9 @@ has not changed since 2026-06-27, so the count was wrong when written.)*
 advisor. There is no way to express "advisory state unknown" — the input state
 does not exist. Reproduced RED 2026-08-16.
 
-**Status: OPEN**, routed to CT + SDE/FDD. Not fixed here: it changes a
-published, HER-facing advisor's API, which is not an interface seat's
-unilateral edit.
+**Status: OPEN**, raised with the maintainers of `compound_failure_advisor`.
+Not fixed here: it changes a published, driver-facing advisor's API, which is
+not this file's author's to change unilaterally.
 
 ---
 
@@ -259,6 +259,7 @@ in a footnote.
 
 ## Audit
 
-FSE **produces**; it is never its own auditor (FSE bylaws C1). Submitted to
-**AAA** (auditor-veto on the QM/SEooC boundary) and **DIA** (integrity /
-propagation). Verdicts ride with the delivery record.
+The author of this document never audits its own work. It was submitted for
+independent review of standards mapping (including the QM / SEooC boundary) and
+of document integrity. Those verdicts are kept with the project's delivery
+record.
