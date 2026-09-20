@@ -41,7 +41,7 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 /// 白馬村 (Hakuba, 長野県) — a real snow-country point in an office this
-/// package does not serve. Chosen because it is exactly HER case: heavy
+/// package does not serve. Chosen because it is exactly the driver's case: heavy
 /// snow, mountain pass, and an office (200000 長野県) in the unserved 45.
 const double kNaganoLat = 36.698;
 const double kNaganoLon = 137.862;

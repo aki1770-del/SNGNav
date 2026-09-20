@@ -21,7 +21,8 @@ is what caught `'010000'` -- a code JMA does not have, which every point in
 the snowiest prefecture in Japan resolved to. That master carries only
 `{name, parent}`. It has NO GEOMETRY. So the boxes cannot come from it, and
 they must not come from anyone's memory: a bounding box written from recall
-decides whether HER prefecture is read at all, and is a Promise-1 violation.
+decides whether the driver's prefecture is read at all, and would be a claim
+made without measuring it.
 
 They come from the only geometry actually on this disk: the OSM extracts.
 

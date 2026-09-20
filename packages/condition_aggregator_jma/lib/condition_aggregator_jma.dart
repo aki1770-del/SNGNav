@@ -62,7 +62,7 @@
 /// arbitrarily old. Judge liveness from `reportDatetime` — see
 /// [JmaAdvisoryProvider.staleFeedThreshold] and CHANGELOG 0.5.0.
 ///
-/// HER-trace (≤4-hop) end-to-end:
+/// From publisher to driver, end to end (4 hops):
 ///   JMA windowless per-prefecture warning JSON (気象庁防災情報)
 ///     → `JmaAdvisoryProvider` (this adapter; HTTP + JSON parse + filter)
 ///     → `AdvisoryAggregator` typed merge with sibling adapters
@@ -70,13 +70,13 @@
 ///       unexpected snow on a Japanese road.
 /// 4 hops.
 ///
-/// Driver-facing loom: when JMA has issued a surfaced-class warning —
+/// What the driver experiences: when JMA has issued a surfaced-class warning —
 /// 大雪 / 暴風雪 / 着雪 in winter, or 大雨 / 暴風・強風 / 雷 / 濃霧 in
 /// sudden summer / typhoon turmoil — for the driver's current point in
 /// Japan, the integrator HMI surfaces a typed `Advisory` event with
 /// severity / certainty / urgency / area / effective / expires
 /// normalized at the boundary, with JMA's exact wording preserved
-/// verbatim per Article 17 (β) verbatim-relay discipline. The driver
+/// verbatim; the publisher's words are relayed unchanged. The driver
 /// always drives.
 ///
 /// Composition:

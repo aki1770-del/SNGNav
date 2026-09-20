@@ -189,7 +189,7 @@ const String kJmaInfoTypeCorrect = '訂正';
 ///
 /// ⚑ A THROW, never an empty list. `[]` from a parser is byte-identical to a
 /// verified all-clear, and an all-clear this package did not verify is the
-/// false negative that reaches HER as silence.
+/// false negative that reaches the driver as silence.
 class JmaShortTimeParseException implements Exception {
   final String message;
   const JmaShortTimeParseException(this.message);

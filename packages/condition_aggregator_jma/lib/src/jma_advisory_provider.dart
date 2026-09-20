@@ -86,7 +86,7 @@ const String kJmaRetiredWarningJsonBaseUrl =
 /// EVERY per-prefecture fetch uses this as its OWN per-request timeout — an
 /// interior single fetch and each border sibling alike. There is deliberately
 /// **no shorter border budget**: a single budget everywhere never times out
-/// HER OWN slow-but-valid warning arriving late on a marginal snow-link
+/// the driver's own slow-but-valid warning arriving late on a marginal snow-link
 /// (whether interior or at a border). The same value is also the OUTER **batch
 /// backstop** for the whole concurrent border fetch — only reached in the
 /// theoretical case where the `Future.wait` combinator machinery itself stalls
@@ -98,7 +98,7 @@ const String kJmaRetiredWarningJsonBaseUrl =
 /// discarding a fast sibling's success; the only cost of a single budget is
 /// latency — a hung border neighbour can make the union take up to this budget
 /// before it returns (carrying the in-band incomplete-read notice). That
-/// latency is preferred over ever dropping HER own slow-but-valid warning.
+/// latency is preferred over ever dropping the driver's own slow-but-valid warning.
 const Duration kJmaFetchWallClockBudget = Duration(seconds: 30);
 
 /// Per-prefecture warning JSON byte cap. The live response is tiny
@@ -302,7 +302,8 @@ class JmaAdvisoryProvider
     // Every per-prefecture fetch — interior single fetch and each border
     // sibling alike — uses the SINGLE [kJmaFetchWallClockBudget] (30 s) as its
     // per-request timeout. There is deliberately NO shorter border budget: a
-    // shorter cap would time out HER OWN slow-but-valid warning arriving late
+    // shorter cap would time out the driver's own slow-but-valid warning arriving
+    // late
     // on a marginal snow-link at a border — the near side answering a real
     // 大雪警報 on a 10–30 s link while the other containing prefecture answers
     // fast-empty — turning a real warning into a captured failure → empty union
@@ -312,7 +313,7 @@ class JmaAdvisoryProvider
     // success; the only cost of the single budget is latency — a hung border
     // neighbour can make the union take up to the budget before it returns
     // (carrying the in-band incomplete-read notice). That latency is preferred
-    // over ever dropping HER own slow-but-valid warning.
+    // over ever dropping the driver's own slow-but-valid warning.
 
     final batch = Future.wait(<Future<_PrefectureFetchResult>>[
       for (final code in prefectureCodes) _fetchPrefecture(code),
@@ -513,7 +514,7 @@ class JmaAdvisoryProvider
   ///     blocking the whole `Future.wait` (which only resolves once EVERY
   ///     sibling resolves). The SAME budget is used for an interior single
   ///     fetch and for every border sibling — there is deliberately no shorter
-  ///     border budget, which would only time out HER OWN slow-but-valid
+  ///     border budget, which would only time out the driver's own slow-but-valid
   ///     marginal-link warning into a false 'unavailable';
   ///   * a broad `catch (Object)` so even a non-[JmaAdvisoryFetchException]
   ///     (e.g. a raw `FormatException` escaping `utf8.decode` of malformed

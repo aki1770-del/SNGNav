@@ -221,7 +221,7 @@ const String _yamagataWarningJsonWithBoufuusetsuKeihou = '''
 /// Yamagata (060000) warning JSON carrying only a 乾燥注意報 (code 21 —
 /// outside the surfaced set) — a fast, in-force-but-nothing-surfaced
 /// ("fast-empty") sibling used by the border-slow-own-warning regression
-/// test, where HER OWN prefecture answers a real snow warning on a slow
+/// test, where the driver's own prefecture answers a real snow warning on a slow
 /// link while the other containing prefecture answers quickly with no
 /// surfaced warning. (Through 0.3.0 this fixture used 雷注意報, code 14;
 /// that class surfaces from 0.4.0, so the empty-contribution role moved
@@ -381,7 +381,7 @@ void main() {
       final ooyuki = byClass['大雪警報']!;
       expect(ooyuki.source, equals(AdvisorySource.jmaJapan));
       expect(ooyuki.severity, equals(AdvisorySeverity.severe));
-      // Driver-facing label is the Japanese prefecture name (D4: a
+      // Driver-facing label is the Japanese prefecture name (a
       // Japanese-reading driver reads it to disambiguate a border over-warn).
       expect(ooyuki.areaDescription, equals('秋田県'));
       expect(ooyuki.headline, equals('秋田県では、１５日夜のはじめ頃まで大雪に警戒してください。'));
@@ -869,7 +869,7 @@ void main() {
       );
     });
 
-    test('eventClass preserves JMA event-name verbatim (Article 17 β)', () {
+    test('eventClass preserves JMA event-name verbatim', () {
       expect(
         mapJmaWarningToAdvisory(record('暴風雪警報', '02')).eventClass,
         equals('暴風雪警報'),
@@ -977,7 +977,7 @@ void main() {
       );
       expect(byClassToArea['雷注意報'], equals({'秋田県'}));
       // The neighbouring prefecture's warning is present and correctly
-      // labelled in Japanese (D4) — the south-Akita driver sees Yamagata's
+      // labelled in Japanese — the south-Akita driver sees Yamagata's
       // 暴風雪警報 labelled 山形県, distinct from their own 秋田県 warning.
       expect(byClassToArea['暴風雪警報'], equals({'山形県'}));
       expect(byClassToArea['大雪警報'], equals({'秋田県'}));
@@ -1535,7 +1535,7 @@ void main() {
     // A 2-prefecture BORDER fetch with a HUNG sibling bounds at the single
     // per-request budget (~30 s) — the near-side Akita 大雪警報 is preserved
     // (never discarded) and the hung Yamagata sibling is signalled in-band. The
-    // Chair-ratified trade (D-VGC, 2026-06-30): a hung border neighbour may add
+    // The trade decided on 2026-06-30: a hung border neighbour may add
     // up to ~30 s of latency before the union returns, which is preferred over
     // EVER dropping a slow-but-valid warning (the false-negative a shorter cap
     // would reintroduce — see the slow-own-warning test below).
@@ -1582,14 +1582,15 @@ void main() {
       });
     });
 
-    // The Chair-ratified regression closer (the round-5 her-trace MUST): at a
-    // BORDER, HER OWN prefecture answers a real 大雪警報 on a marginal ~15 s link
+    // The regression closer this behaviour required: at a
+    // BORDER, the driver's own prefecture answers a real 大雪警報 on a marginal
+    // ~15 s link
     // while the OTHER containing prefecture answers fast with no snow warning.
     // Under the single 30 s budget her 15 s warning is SERVED. FAILS against the
     // rejected 10 s-at-border code: the 15 s fetch would time out at 10 s →
     // captured failure; the fast-empty sibling → empty union + a failure →
     // incomplete-read THROW → her 大雪警報 lost (a strict regression vs 0.2.0).
-    test('a BORDER fetch where HER OWN prefecture returns a 大雪警報 at ~15 s '
+    test("a BORDER fetch where the driver's own prefecture returns a 大雪警報 at ~15 s "
         '(the other fast-empty) SERVES the warning — no false unavailable', () {
       fakeAsync((async) {
         final provider = JmaAdvisoryProvider(
@@ -1601,7 +1602,7 @@ void main() {
               // (success, but nothing for the snow classes) → empty contribution.
               return _utf8Response(_yamagataWarningJsonDryOnly, 200);
             }
-            // HER own prefecture (Akita) answers a real 大雪警報 at ~15 s.
+            // The driver's own prefecture (Akita) answers a real 大雪警報 at ~15 s.
             return Future<http.Response>.delayed(
               const Duration(seconds: 15),
               () => _utf8Response(_akitaWarningJsonWithOoyukiKeihou, 200),
@@ -1648,7 +1649,7 @@ void main() {
     });
   });
 
-  group('jmaPrefectureNameJa — driver-facing Japanese label (D4)', () {
+  group('jmaPrefectureNameJa — driver-facing Japanese label', () {
     test('returns the Japanese prefecture name for catalogued codes', () {
       expect(jmaPrefectureNameJa('050000'), equals('秋田県'));
       expect(jmaPrefectureNameJa('060000'), equals('山形県'));

@@ -249,9 +249,9 @@ void main() {
   group(
     'the snow tier does NOT reach this adapter\'s northern prefectures',
     () {
-      test('Akita — HER mother\'s prefecture — is NOT a 短時間大雪 issuance area, '
-          'per JMA introduction_bosaisokuho.pdf R8.2. Recorded so no one '
-          'justifies this tier on HER.', () {
+      test('Akita — the prefecture this package was built for — is NOT a '
+          '短時間大雪 issuance area, per JMA introduction_bosaisokuho.pdf R8.2. '
+          'Recorded so no one justifies this tier on a driver there.', () {
         expect(kJmaShortSnowIssuedPrefecturesJa.contains('秋田県'), isFalse);
         expect(kJmaShortSnowIssuedPrefecturesJa.contains('北海道'), isFalse);
         expect(kJmaShortSnowIssuedPrefecturesJa.contains('青森県'), isFalse);

@@ -11,7 +11,7 @@ const _r8Akita = 'test/fixtures/jma_warning_r8_050000.frozen_2026-08-23.json';
 const _offices = 'test/fixtures/jma_area_offices.frozen_2026-08-24.json';
 String _read(String p) => File(p).readAsStringSync();
 
-/// Akita city — HER mother's prefecture.
+/// Akita city — the snow-country prefecture this package was built for.
 const _akitaLat = 39.7186;
 const _akitaLon = 140.1024;
 
@@ -108,7 +108,7 @@ void main() {
     });
   });
 
-  group('the stale loom SURVIVES the switch and covers the NEW path', () {
+  group('stale-feed notice SURVIVES the switch and covers the NEW path', () {
     test('a live r8 read injects NO stale notice', () async {
       final mock = MockClient(
         (_) async => http.Response(
@@ -165,7 +165,7 @@ void main() {
     );
   });
 
-  group('the loom that would have caught the migration', () {
+  group('the check that would have caught the migration', () {
     test('NEGATIVE CONTROL — at 88 days the notice must say the PATH MAY BE '
         'RETIRED, not merely that data is old. Measured fact: the 0.5.0 '
         'stale notice DID fire for 87 days and nothing moved, because '

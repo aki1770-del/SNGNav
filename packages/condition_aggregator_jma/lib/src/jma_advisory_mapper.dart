@@ -5,8 +5,8 @@
 ///
 /// All surfaced advisory event names — the winter-snow classes plus the
 /// downpour / typhoon-wind / thunder / fog turmoil classes added in
-/// 0.4.0 — are passed through `Advisory.eventClass` verbatim per AAA
-/// Article 17 (β) verbatim-relay discipline. The CAP-class severity
+/// 0.4.0 — are passed through `Advisory.eventClass` verbatim; the
+/// publisher's words are relayed unchanged. The CAP-class severity
 /// mapping is conservative (警報 → severe; 注意報 → moderate;
 /// 危険警報 → extreme; 特別警報 → extreme).
 ///
@@ -84,7 +84,7 @@ import 'package:condition_aggregator/condition_aggregator.dart';
 /// no Advisory is ever produced for it (correct — the source does not
 /// publish that class). See CHANGELOG 0.2.0.
 /// 特別警報 (emergency / level-50) snow codes `36` + `32` added in
-/// 0.2.0 (AAA safety-audit gap: the highest-severity snow class — strictly
+/// 0.2.0 (a gap found in safety review: the highest-severity snow class — strictly
 /// more dangerous than 警報 — was missing). Verified directly against the
 /// JMA bosai warning frontend's own served `code2WarningInfo` lookup
 /// (2026-06-26): the page inlines
@@ -738,7 +738,7 @@ AdvisorySeverity _severityForEventName(String name) {
 /// meta-advisory naming the [failedPrefectureCodes] that could not be fetched
 /// for a border point whose reachable prefecture(s) DID return warnings.
 ///
-/// Why this exists (HER-trace): at a border, returning only the reachable
+/// Why this exists (what reaches the driver): at a border, returning only the reachable
 /// prefecture's warnings while silently discarding an unreachable sibling
 /// would present a PARTIAL read as a COMPLETE, fully-successful one — a silent
 /// under-warn at the exact degraded-connectivity scenario this package exists
@@ -798,7 +798,7 @@ Advisory buildIncompleteReadNotice(List<String> failedPrefectureCodes) {
 ///
 /// ⚑ **Why this exists, and why none of the other three could say it.**
 ///
-/// Through 0.7.x, a lat/lon that fell outside every box in
+/// Before 0.7.0, a lat/lon that fell outside every box in
 /// [kJmaPrefectureBoundingBoxes] made the provider return `const <Advisory>[]`
 /// — **the same value it returns for a prefecture it fully covers, fetched
 /// successfully, with no warnings in force.** Measured against JMA's own area
@@ -898,7 +898,7 @@ const Set<String> kJmaFeedHealthEventClasses = <String>{
 /// ⚑ **Why this is distinct from [kJmaStaleFeedEventClass], and why a bigger
 /// number on the existing notice would not have done.**
 ///
-/// The 0.5.0 stale-feed loom worked exactly as designed. Measured live on
+/// The 0.5.0 stale-feed notice worked exactly as designed. Measured live on
 /// 2026-08-23 it emitted 「秋田県 の気象警報・注意報の情報が約87日更新されて
 /// いません」— correct, honest, and independently reproducing the 87-day
 /// figure. **And nothing moved for 87 days.**
@@ -907,13 +907,13 @@ const Set<String> kJmaFeedHealthEventClasses = <String>{
 /// reads as *the publisher has gone quiet* — a condition an integrator can do
 /// nothing about and will reasonably wait out. The actual condition was *JMA
 /// migrated on 2026-05-29 and this path was retired*, which an integrator can
-/// fix in one line. A loom that reports the wrong cause is not a smaller loom;
+/// fix in one line. A check that reports the wrong cause is not a smaller check;
 /// it points the reader away from the fix.
 ///
 /// So this notice says a different thing, not a louder thing: the path may
 /// have been retired, and a successor should be looked for.
 ///
-/// ⚑ **Its limit, stated because a loom whose bound is hidden is worse than
+/// ⚑ **Its limit, stated because a check whose bound is hidden is worse than
 /// none.** This fires on ABSOLUTE AGE on the path we read. It cannot see a
 /// migration on the day it happens, and it cannot distinguish a retired path
 /// from a publisher outage lasting longer than the threshold — both look
@@ -986,14 +986,14 @@ const String kJmaStaleFeedEventClass = '気象情報の更新停止';
 /// meta-advisory stating that the JMA warning document for
 /// [prefectureCodes] has not been updated for [age].
 ///
-/// **Why this exists (HER-trace, one hop).** A JMA warning document that stops
+/// **Why this exists (one hop from the driver).** A JMA warning document that stops
 /// being rewritten fails in two directions and the package could express
 /// neither:
 ///
 ///   * it keeps reporting a warning that ended months ago as `status=発表` —
 ///     measured 2026-08-16, Akita served a 2026-05-28 雷注意報 as in force,
 ///     and our own winter instrument recorded that dead advisory as an ACTIVE
-///     hazard 230 times over HER mother's prefecture;
+///     hazard 230 times over Akita prefecture;
 ///   * or it reports **nothing**, and an empty list is the identical value a
 ///     genuinely clear sky produces — measured the same day, Niigata's
 ///     document was 81 days old and carried no warnings at all.

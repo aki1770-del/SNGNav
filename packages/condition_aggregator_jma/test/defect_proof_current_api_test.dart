@@ -101,7 +101,7 @@ void main() {
         health,
         isNotEmpty,
         reason:
-            'served as an ACTIVE hazard 230 times over HER mother\'s '
+            'served as an ACTIVE hazard 230 times over Akita '
             'prefecture with nothing marking the document dead',
       );
       expect(health.single.severity, AdvisorySeverity.minor);

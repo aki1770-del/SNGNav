@@ -208,7 +208,7 @@ Japan:
 6. The integrator HMI surfaces the typed `Advisory` event with
    severity / certainty / urgency / area / effective / expires
    normalized at the boundary, with JMA's exact wording preserved
-   verbatim per Article 17 (β) verbatim-relay discipline.
+   verbatim; the publisher's words are relayed unchanged.
 
 > **Note on `暴風雪注意報`.** The JMA bosai warning JSON has no code
 > for `暴風雪注意報`; JMA's official 注意報 taxonomy has no such class.
@@ -217,7 +217,7 @@ Japan:
 > kept in `kJmaSnowAdvisoryEventNames` for back-compat but the source
 > never emits it.
 
-### Driver-facing loom
+### What the driver experiences
 
 When JMA has issued a surfaced-class warning — snow / blizzard in
 winter, or downpour / typhoon-wind / thunder / fog in sudden summer
@@ -228,7 +228,7 @@ NWS records. The driver sees JMA's authoritative wording verbatim
 (event name, area name, headline) without aggregator-class
 re-summarization. The driver always drives.
 
-### HER-trace (≤4 hops)
+### From publisher to driver (4 hops)
 
 ```
 JMA windowless per-prefecture warning JSON (気象庁防災情報)
@@ -237,8 +237,8 @@ JMA windowless per-prefecture warning JSON (気象庁防災情報)
   → integrator HMI surfaces advisory to driver in unexpected snow.
 ```
 
-4 hops. D3 anchor: helps the driver in unexpected snow on a
-Japanese road. D5 value chain: evidence → contribution →
+4 hops. The purpose: help the driver in unexpected snow on a
+Japanese road. The chain of value: evidence → contribution →
 architecture → edge developer → driver.
 
 ### What this package does NOT do
@@ -282,7 +282,7 @@ architecture → edge developer → driver.
 - otherwise → `AdvisorySeverity.unknown`
 
 The publisher's authoritative event name is preserved in
-`Advisory.eventClass` either way per Article 17 (β).
+`Advisory.eventClass` either way.
 
 **Spoken-channel gating guidance (habituation / cry-wolf).** 雷注意報 is
 near-chronically in force on the Sea-of-Japan coast in winter, and

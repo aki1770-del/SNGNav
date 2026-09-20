@@ -12,9 +12,59 @@
 > log is its own defect.** Read a heading here as "this work happened", not as
 > "this version exists".
 
+## 0.7.1
+
+**Documentation only. No library code change. The main correction is one 0.7.0 made and did not write down: for a point outside this package's bounding-box catalogue, 0.7.0 stopped returning an empty list and began returning a low-severity "not covered here" advisory. Its entry never said so. A doc comment inside the package still said the empty list was returned "Through 0.7.x", which is wrong — 0.7.0 is the version that changed it — and now says "Before 0.7.0". Also corrected: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+
+If you are already on 0.7.0, this is what changed under you. 45 of JMA's 58
+offices are not in `kJmaPrefectureBoundingBoxes`. Hand the provider a lat/lon in
+one of them and 0.5.0 and earlier returned `const <Advisory>[]` —
+byte-identical to the answer for a covered prefecture that was fetched
+successfully with nothing in force. 0.7.0 returns a single `Advisory` instead,
+event class `kJmaOutsideCoverageEventClass` (`気象警報の提供対象外地域`),
+severity `minor`, carrying no 警報 / 注意報 suffix so it can never be graded as a
+hazard. That is deliberate: "we do not cover this place" and "nothing is wrong"
+should not be the same bytes. But code that read an empty list as "no advisories
+here" now receives one, and 0.7.0's entry gave you no warning of it.
+`test/outside_coverage_test.dart`, shipped in 0.7.0, covers the behaviour.
+Nothing about the behaviour changes in 0.7.1.
+
+The 0.7.0 entry also said "STAGED, NOT PUBLISHED". 0.7.0 was published on
+2026-08-28; that line is corrected.
+
+Documentation and comments that used this project's internal shorthand now say
+the same thing in plain words. No fact in them changed. JMA's own vocabulary is
+kept as JMA writes it: `R8` is 令和8年, the name of the restructured 防災気象情報
+feed and the literal `r8` path segment, and is not our shorthand.
+
+- `SAFETY_BOUNDARY.md`: the JIS / JASO sentence corrected; elsewhere the changed
+  lines lost internal names and references only. No boundary moved, and nothing
+  changed about what the package does, what it does not do, or what it leaves to
+  you.
+- `README.md`: two headings and three passages reworded.
+- `lib/condition_aggregator_jma.dart`, `lib/src/jma_advisory_mapper.dart`,
+  `lib/src/jma_advisory_provider.dart`, `lib/src/jma_shorttime_mapper.dart`:
+  doc comments only, including the "Before 0.7.0" correction above.
+- `test/condition_aggregator_jma_test.dart`,
+  `test/defect_proof_current_api_test.dart`,
+  `test/jma_r8_provider_switch_test.dart`, `test/jma_shorttime_test.dart`,
+  `test/outside_coverage_test.dart`: comments, and six test and group names.
+  Those names are string literals, so they are the only changed tokens in the
+  package's Dart files; what each test asserts is untouched.
+- `tool/derive_prefecture_boxes.py`: two sentences of the module docstring. The
+  tool's `--help` text is a separate literal and is unchanged.
+- `pubspec.yaml`: the version.
+- `CHANGELOG.md`: this entry, the 0.7.0 publication line, and thirteen earlier
+  passages reworded.
+
+Every changed Dart file under `lib/` was compared with the published 0.7.0 after
+removing comments: the token streams are identical, so no library code moved.
+Apart from the files listed above, the published files are identical to 0.7.0.
+
 ## 0.7.0 — 2026-08-24 — The provider now reads the path JMA actually serves
 
-**STAGED, NOT PUBLISHED.** Publishing is Chair-only voice.
+**Published to pub.dev on 2026-08-28.** Earlier copies of this entry said
+"STAGED, NOT PUBLISHED", which stopped being true on that date.
 
 **BREAKING.** The default feed path and its document schema both change, and a
 catalogue code is removed. Read "Migration" below before upgrading.
@@ -75,13 +125,13 @@ ever told a false all-clear — but Hokkaido was never served. Replaced with the
 胆振・日高 / 石狩・空知・後志 / 渡島・檜山. Verified live: Sapporo, Asahikawa and
 Wakkanai all now return in-force advisories.
 
-### The loom for the NEXT migration
+### What will catch the NEXT migration
 
 ⚑ **The root cause was never "we were on the wrong URL". It was that JMA
 migrated and nothing noticed for 87 days.** Switching the path closes this
 instance and leaves the class open.
 
-The 0.5.0 stale-feed loom worked exactly as designed — measured live, it emitted
+The 0.5.0 stale-feed notice worked exactly as designed — measured live, it emitted
 「約87日更新されていません」and independently reproduced the 87-day figure. **And
 nothing moved for 87 days.** The gap was not the alarm. It was the DIAGNOSIS:
 「更新されていません」reads as *the publisher has gone quiet*, which an integrator
@@ -94,7 +144,7 @@ staleness) the notice says a **different thing**, not a louder thing: this
 configured path may no longer be served, and a successor should be looked for.
 It would have fired on day 8 of 87.
 
-**Its limit, stated because a loom whose bound is hidden is worse than none:**
+**Its limit, stated because a check whose bound is hidden is worse than none:**
 it fires on absolute age on the path we read. It cannot see a migration on the
 day it happens, and it cannot distinguish a retired path from a publisher
 outage longer than the threshold — both look identical from one URL. A
@@ -308,7 +358,7 @@ produced an empty list. It now says which.
   does not fix that, and it is the larger defect.**
 * Consequence in our own winter instrument: **307 advisories served across 624
   hourly records, 100% with `expires: null`** — 230 from the Akita feed and 77
-  from the Yamagata border feed, over HER mother's prefecture.
+  from the Yamagata border feed, over Akita prefecture.
 
 ### ⚑ BEHAVIOUR CHANGE — read this before upgrading
 
@@ -497,7 +547,7 @@ stays true as written).
   (6 snow-zone prefectures — coverage widening is a separate, deliberate
   bump), the border-union / partial-read behaviour (0.3.0), `init()`, the
   politeness constants (30 s budget / 256 KiB cap / User-Agent requirement),
-  and verbatim event-name relay (Article 17 β).
+  and verbatim event-name relay.
 
 ## 0.3.0 — 2026-06-29 — Conservative prefecture union at borders (over-warn on resolution; partial reads signalled)
 
@@ -529,7 +579,7 @@ fetches **every** containing prefecture's warning JSON and surfaces the
   for an interior single fetch and for every border sibling — there is
   **deliberately no shorter border budget**. (An earlier draft used a shorter
   10 s per-request cap at borders; it was removed because it could time out
-  **HER own slow-but-valid warning**: if her prefecture answers a real 大雪警報
+  **the driver's own slow-but-valid warning**: if her prefecture answers a real 大雪警報
   on a marginal 10–30 s link while the other containing prefecture answers
   fast-empty, the 10 s cap turned her warning into a captured failure → empty
   union + a failure → incomplete-read throw → she got **nothing**. Never drop a
@@ -642,7 +692,7 @@ the JMA disaster-info **atom feed** (`extra.xml` + per-prefecture report XML) to
 the **windowless per-prefecture warning JSON**
 (`https://www.jma.go.jp/bosai/warning/data/warning/{areacode}.json`).
 
-- **Why (safety — false-negative fix):** an independent safety audit (AAA) found
+- **Why (safety — false-negative fix):** an independent safety review found
   that **both** JMA atom feeds (`extra.xml` and `extra_l.xml`) carry a
   window / scroll-off false-negative for a snow-WARNING package. The atom feed is
   a recent-*publication* window (a stream of the latest reports). A warning that
@@ -670,7 +720,7 @@ the **windowless per-prefecture warning JSON**
   report `<Kind><Code>` used by the old path (e.g. `06`=大雪警報 here, vs `33` in
   the report XML), so the codes were re-derived, not carried over.
 - **特別警報 (emergency) snow codes added — worst-case coverage.** An independent
-  safety audit (AAA) flagged that the catalog mapped 警報 / 注意報 but **not** the
+  safety review flagged that the catalog mapped 警報 / 注意報 but **not** the
   highest-severity 特別警報 (emergency / `level:50`) snow class — strictly more
   dangerous than 警報, and an unacceptable silent gap for a worst-case
   winter-safety package. Codes `36` (大雪特別警報) and `32` (暴風雪特別警報) were
@@ -695,7 +745,7 @@ the **windowless per-prefecture warning JSON**
   catalog (6 snow-zone prefectures, unchanged), `init()` (still validates the
   User-Agent), `source` / attribution, the severity-by-suffix mapping
   (警報→severe / 注意報→moderate / 特別警報→extreme), and verbatim event-name
-  relay (Article 17 β).
+  relay.
 - **API changes:**
   - Added: `kJmaWarningJsonBaseUrl`, `kJmaWarningJsonMaxBytes`,
     `kJmaSnowWarningCodes`, `parseJmaWarningJson`, `JmaWarningRecord`,
@@ -827,7 +877,7 @@ does not block this version's publish.
   Points outside the catalog return empty without an HTTP fetch.
 - Severity mapping: 警報 → `severe`; 注意報 → `moderate`;
   特別警報 → `extreme`. JMA's verbatim event name is preserved in
-  `Advisory.eventClass` either way per Article 17 (β).
+  `Advisory.eventClass` either way.
 - ≥6 new tests covering: prefecture-code resolution, atom-feed
   parse, report-XML parse, snow-class filter, prefecture filter,
   HTTP 5xx → exception, body-cap → exception, no-fetch on
@@ -839,7 +889,8 @@ does not block this version's publish.
   `version: 0.0.1` → `0.1.0`; added `http: ^1.0.0`; bumped
   `condition_aggregator: ^0.0.2` → `^0.0.3` (matching
   pub.dev-latest).
-- README "Status" replaced "explore-phase scaffold" with the
+- README "Status" replaced "explore-phase scaffold" — the package's own
+  wording at the time for an early version not yet published — with the
   direct-parse deploy posture.
 - Library doc + provider doc + mapper doc updated to reflect the
   direct-parse path; the placeholder JMA-report-family code
@@ -861,9 +912,9 @@ does not block this version's publish.
   Hokkaido / Aomori / Iwate / Akita / Yamagata / Niigata) — adding
   prefectures is a deliberate version bump.
 
-## 0.0.1 — 2026-05-06 — Explore-phase scaffold
+## 0.0.1 — 2026-05-06 — Early scaffold, never published
 
 **Status: superseded by 0.1.0.** This version was never published
 (`publish_to: none`); it shipped on disk as the API-shape lock so
-consuming packages could wire against the interface during
-explore-phase. See 0.1.0 for the first deployed shape.
+consuming packages could wire against the interface before the first
+release. See 0.1.0 for the first deployed shape.
