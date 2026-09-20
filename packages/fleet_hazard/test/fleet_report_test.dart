@@ -100,7 +100,7 @@ void main() {
       expect(report.isRecent(maxAge: const Duration(minutes: 30)), true);
     });
 
-    test('default confidence is 0.8', () {
+    test('confidence is the value the caller stated', () {
       final report = FleetReport(
       confidence: 0.8,
         vehicleId: 'V-009',

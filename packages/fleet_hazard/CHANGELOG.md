@@ -1,11 +1,26 @@
 ## 0.6.2
 
-**Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO and APPI updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
+**Documentation and test names only. No library code change. Two corrections. The scenario-coverage file said stale-report expiry was covered; it is not, and it now says so — `HazardAggregator.aggregate()` does not filter by age. And earlier versions said a monthly watch tracked JIS / JASO and APPI updates; no output from that watch has been found, so the safety-boundary record no longer says so.**
 
 Comments and documentation that used this project's internal shorthand now say
 the same thing in plain words. Where earlier entries in this changelog used that
 shorthand, they were reworded; no fact in them changed.
 
+- `sngnav_coverage.yaml`: corrected against the code. Every `covered_by` named
+  something that does not exist in this package (`HazardCluster`, `GeoClusterer`,
+  `HazardZoneBuilder`, `HazardReport.expiresAt`); each now names the API that
+  actually provides it. Two statuses were wrong. "Stale report expiry" was
+  `covered` and is now `partial`: `FleetReport.isRecent()` exists, but the
+  caller applies it, and `HazardAggregator.aggregate()` selects on condition
+  only — so a report of any age can build a zone. **If you need freshness,
+  filter before you aggregate.** "Zone merge when clusters overlap" was
+  `partial`, claiming a radius overlap check this package has never had, and is
+  now `uncovered`. The file's own declared package version and date were stale
+  and are current, and its totals are recounted: the scenario registry holds 66
+  ids, not the 62 this file declared.
+- `test/fleet_report_test.dart`: one test's name. It read "default confidence is
+  0.8". `confidence` has been required since 0.6.0, and the test passes `0.8`
+  itself. The test's code is unchanged.
 - `analysis_options.yaml`: the comment above the analyzer's strict modes now
   says what the modes do, instead of pointing at an internal review note.
 - `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
@@ -18,9 +33,8 @@ shorthand, they were reworded; no fact in them changed.
   quotation in it now matches its source word for word.
 - `CHANGELOG.md`: the 0.5.0 and 0.3.0 entries.
 
-Apart from `pubspec.yaml` (the version), `analysis_options.yaml` (one comment),
-`SAFETY_BOUNDARY.md` and this changelog, the published files are identical to
-0.6.1.
+Apart from `pubspec.yaml` (the version) and the files listed above, the
+published files are identical to 0.6.1.
 
 ## 0.6.1
 

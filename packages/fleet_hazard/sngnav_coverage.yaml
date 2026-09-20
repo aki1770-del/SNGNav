@@ -1,15 +1,23 @@
 # SNGNav Coverage Declaration — fleet_hazard
 # Schema version: 1.0
 # Package: fleet_hazard
-# Updated: 2026-04-05
+# Updated: 2026-09-20
 #
 # Each scenario entry declares whether this package contributes coverage.
 # status: covered | partial | uncovered
-# covered_by: field name or feature in this package
-# scenario_id: matches the canonical 62-scenario registry
+# covered_by: the API in this package that provides it, or null
+# scenario_id: an id in the scenario registry. There is no single registry file:
+#   the seven sngnav_coverage.yaml files in this repository are the registry, and
+#   the repository README has the current picture in its "Scenario Coverage"
+#   section. Counted on 2026-09-20 they enumerate 66 unique ids (S-001–S-066);
+#   the other six files still declare a total of 62 and need the same correction
+#   this file has had.
+#
+# Every covered_by below names an API that exists in lib/ at this version, and
+# every "confirmed_with_test" names behaviour a test in test/ exercises.
 
 package: fleet_hazard
-version: "0.3.0"
+version: "0.6.2"
 maintainer: aki1770@gmail.com
 
 scenarios:
@@ -17,61 +25,73 @@ scenarios:
   - id: S-034
     name: Multiple reports cluster into hazard zone
     status: covered
-    covered_by: HazardCluster + GeoClusterer (DBSCAN-inspired geographic grouping)
+    covered_by: HazardAggregator.aggregate() groups hazard reports that lie within
+      clusterRadius (default 3000 m) of one another, following the chain
     confidence: confirmed_with_test
 
   - id: S-035
     name: Severity aggregation across clustered reports
     status: covered
-    covered_by: HazardZone.severity = max(report.severity) in aggregation
+    covered_by: HazardZone.severity, set in HazardAggregator — icy if any report in
+      the cluster is icy, otherwise snowy
     confidence: confirmed_with_test
 
   - id: S-036
     name: Stale report expiry
-    status: covered
-    covered_by: HazardReport.expiresAt enforced in HazardZoneBuilder
-    confidence: confirmed_with_test
+    status: partial
+    covered_by: FleetReport.isRecent(), which the caller applies
+    confidence: partial
+    note: >-
+      HazardAggregator.aggregate() does NOT filter by age. It selects on
+      condition only, so a report of any age can build a zone. A caller who
+      needs freshness must filter with FleetReport.isRecent() (default max age
+      15 minutes), or their own rule, before aggregating. Earlier versions of
+      this file declared this scenario covered, which was not so.
 
   - id: S-037
     name: Single-vehicle report isolation (no cluster)
     status: covered
-    covered_by: min cluster size = 1 (solo report promoted to zone)
+    covered_by: HazardAggregator.aggregate() — a lone hazard report becomes its own
+      zone, with the radius clamped up to minZoneRadius (500 m)
     confidence: confirmed_with_test
 
   - id: S-038
     name: Zone merge when clusters overlap
-    status: partial
-    covered_by: radius overlap check implemented; weighted centroid merge not yet
-    confidence: partial
-    note: Weighted centroid merge open — see CONTRIBUTING.md
+    status: uncovered
+    covered_by: null
+    note: >-
+      Reports within clusterRadius of one another join a single cluster, so this
+      is about zones that remain separate: their radii can overlap and nothing
+      merges them. Earlier versions of this file claimed a radius overlap check
+      that has never existed here. Open — see CONTRIBUTING.md in the repository.
 
   - id: S-039
     name: Report confidence decay over time
     status: uncovered
     covered_by: null
-    note: Open scenario slot — see CONTRIBUTING.md
+    note: Open scenario slot — see CONTRIBUTING.md in the repository.
 
   - id: S-040
     name: V2X hazard report ingestion
     status: uncovered
     covered_by: null
-    note: V2X provider interface open — see CONTRIBUTING.md
+    note: V2X provider interface open — see CONTRIBUTING.md in the repository.
 
   - id: S-041
     name: Cross-vehicle report deduplication
     status: uncovered
     covered_by: null
-    note: Open scenario slot — see CONTRIBUTING.md
+    note: Open scenario slot — see CONTRIBUTING.md in the repository.
 
   - id: S-042
     name: Fleet hazard zone export to routing engine
     status: uncovered
     covered_by: null
-    note: Routing integration open — see CONTRIBUTING.md
+    note: Routing integration open — see CONTRIBUTING.md in the repository.
 
 coverage_summary:
-  total_scenarios: 62
-  this_package_covers: 4
+  total_scenarios: 66
+  this_package_covers: 3
   this_package_partial: 1
-  this_package_uncovered: 57
-  weighted_contribution: 0.065
+  this_package_uncovered: 62
+  weighted_contribution: 0.045
