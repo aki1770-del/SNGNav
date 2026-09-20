@@ -32,10 +32,13 @@ Nothing about the behaviour changes in 0.7.1.
 The 0.7.0 entry also said "STAGED, NOT PUBLISHED". 0.7.0 was published on
 2026-08-28; that line is corrected.
 
-Documentation and comments that used this project's internal shorthand now say
-the same thing in plain words. No fact in them changed. JMA's own vocabulary is
-kept as JMA writes it: `R8` is 令和8年, the name of the restructured 防災気象情報
-feed and the literal `r8` path segment, and is not our shorthand.
+Separately from the corrections above: documentation, comments and test names
+that used this project's internal shorthand now say the same thing in plain
+words. That pass changed wording only, and every fact it touched is unchanged.
+Where a fact did change it is named above, or in the list below. JMA's own
+vocabulary is kept as JMA writes it: `R8` is 令和8年, the name of the
+restructured 防災気象情報 feed and the literal `r8` path segment, and is not
+our shorthand.
 
 - `SAFETY_BOUNDARY.md`: rewritten against what 0.7.0 actually does. Earlier
   versions of this record described the 0.1.0 stub, which returned an empty list
@@ -48,15 +51,16 @@ feed and the literal `r8` path segment, and is not our shorthand.
   `lib/src/jma_advisory_provider.dart`, `lib/src/jma_shorttime_mapper.dart`:
   doc comments only, including the "Before 0.7.0" correction above.
 - `test/condition_aggregator_jma_test.dart`,
-  `test/defect_proof_current_api_test.dart`,
+  `test/defect_proof_current_api_test.dart`, `test/frozen_feed_test.dart`,
   `test/jma_r8_provider_switch_test.dart`, `test/jma_shorttime_test.dart`,
-  `test/outside_coverage_test.dart`: comments, and six test and group names.
-  Those names are string literals, so they are the only changed tokens in the
-  package's Dart files; what each test asserts is untouched.
+  `test/outside_coverage_test.dart`: comments, six test and group names, and
+  one message a failing test prints. Those are all string literals, so they are
+  the only changed tokens in the package's Dart files; what each test asserts
+  is untouched.
 - `tool/derive_prefecture_boxes.py`: two sentences of the module docstring. The
   tool's `--help` text is a separate literal and is unchanged.
 - `pubspec.yaml`: the version.
-- `CHANGELOG.md`: this entry, the 0.7.0 publication line, and thirteen earlier
+- `CHANGELOG.md`: this entry, the 0.7.0 publication line, and sixteen earlier
   passages reworded.
 
 Every changed Dart file under `lib/` was compared with the published 0.7.0 after
@@ -199,8 +203,8 @@ not get to decide what a driver is allowed to be told.
 
 ## 0.6.0 — 2026-08-24 — The path we read was retired on 2026-05-29, and nobody told us
 
-**STAGED, NOT PUBLISHED.** Publishing is Chair-only voice. This describes a
-staged working tree.
+**STAGED, NOT PUBLISHED.** This describes a staged working tree; 0.6.0 has no
+release.
 
 ### The headline defect: we have been reading a retired path for 87 days
 
@@ -445,7 +449,8 @@ known holders of the defective 0.3.1 are **our own** shadow-watch instrument
 (`^0.3.1`) and **our own app** (`^0.3.0`). Under Dart's caret rule for
 `0.x`, `^0.3.0` and `^0.3.1` both mean `>=x <0.4.0`, so **neither admits 0.4.0
 or this 0.5.0.** A `0.3.2` backport is the only vehicle that reaches either.
-That decision, and any publish, is the Chair's.
+Whether to cut that backport, and whether to publish it, was undecided when
+this was written.
 
 
 ## 0.4.0 — 2026-07-11 — Surfaced warning classes widened: downpour / typhoon-wind / thunder / fog turmoil classes added (snow-only → all-season)
@@ -456,13 +461,13 @@ typhoon-wind / thunder / fog turmoil classes are added, so a driver caught in
 sudden summer / typhoon turmoil (大雨・暴風-class events) sees JMA's in-force
 warnings on the same path that already served the winter-snow classes.
 
-reach-disposition(sngnav-app): pin-lift `^0.3.0` → `^0.4.0` queued behind the
-Chair publish batch (hosted resolve; the app's 荒天ウォッチ warnings lane is
-the consumer this widening exists for). The SNGNav monorepo pre-trip surface
-consumes by path and keeps its winter-scoped road-condition merge — the
-turmoil classes reach it as advisory-card work, recorded as a paired W3
-follow-on on the portfolio board (its "no active winter warning" caption
-stays true as written).
+Downstream, in our own application: lifting its dependency pin `^0.3.0` →
+`^0.4.0` was queued behind a later release round (the app's 荒天ウォッチ
+warnings lane is the consumer this widening exists for). The SNGNav monorepo
+pre-trip surface consumes this package by path and keeps its winter-scoped
+road-condition merge — the turmoil classes reach it as advisory-card work,
+tracked as a follow-on (its "no active winter warning" caption stays true as
+written).
 
 - **New surfaced classes (9), keyed on the bosai warning JSON numeric
   `code`:**

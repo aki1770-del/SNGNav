@@ -9,10 +9,10 @@
 /// `bosai/forecast/` path on the same host was fresh the same second, so
 /// this is a frozen warning surface, not an outage and not our cache.
 ///
-/// Why these tests exist (HER-trace, one hop): Akita 050000 still lists
-/// 雷注意報 `status=発表` from 2026-05-28, and our own winter instrument
-/// served that dead advisory as an ACTIVE hazard 230 times on HER
-/// mother's prefecture. Niigata 150000 is the same disease with the
+/// Why these tests exist (one hop from the driver): Akita 050000 still
+/// lists 雷注意報 `status=発表` from 2026-05-28, and this project's own
+/// winter monitoring served that dead advisory as an ACTIVE hazard 230
+/// times over Akita prefecture. Niigata 150000 is the same disease with the
 /// opposite sign — an 81-day-old document carrying zero warnings, which
 /// renders as a clear road.
 ///
@@ -108,7 +108,7 @@ void main() {
           health,
           isNotEmpty,
           reason:
-              'served as an ACTIVE hazard 230 times on HER mother\'s '
+              'served as an ACTIVE hazard 230 times over Akita '
               'prefecture with nothing marking it dead',
         );
         expect(health.single.severity, AdvisorySeverity.minor);
@@ -133,7 +133,8 @@ void main() {
         // ...but the document's own age must still reach the consumer.
         // Today `reportDatetime` is parsed and then DISCARDED whenever the
         // warning list is empty, so this fact is unreachable — the exact
-        // hole our winter instrument names in its own hourly output:
+        // hole this project's own winter monitoring names in its own
+        // hourly output:
         // "a frozen feed with zero warnings is indistinguishable from a
         // calm day."
         final feed = parseJmaFeed(body, prefectureCode: '150000');
