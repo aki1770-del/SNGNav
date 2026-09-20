@@ -2,14 +2,30 @@
 
 **Documentation and test names only. No library code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
 
-- `SAFETY_BOUNDARY.md`: where the safety-boundary record used this project's
-  internal shorthand, it now says the same thing in plain words. No boundary
-  moved: the changed lines lost internal names and references, and nothing
-  changed about what the package does, what it does not do, or what it leaves
-  to you.
+Comments and documentation that used this project's internal shorthand now say
+the same thing in plain words. Where earlier entries in this changelog used that
+shorthand, they were reworded; no fact in them changed. The safety files listed
+below also correct three statements of their own, and those are named there.
+
+- `SAFETY_BOUNDARY.md`: the safety-boundary record is reworded the same way. No
+  boundary moved: the changed lines lost internal names and references, and
+  nothing changed about what the package does, what it does not do, or what it
+  leaves to you.
   One statement in it is corrected: earlier versions said a monthly watch
   tracked JIS / JASO standard updates. No output from that watch has been
   found, so the record no longer says so.
+- `SEOOC_ASSUMPTIONS.md` and `SOTIF_INSUFFICIENCIES.md`, which attach to that
+  record: the same rewording, and three statements of their own corrected.
+  Both said the "the driver always drives" assumption held for eighteen of the
+  nineteen safety-boundary records in this repository; re-measured on
+  2026-09-20, all nineteen assert it (seventeen in those words, two in
+  equivalent ones). One said four engines ship here; three do. And the evidence
+  for the delivery-observation rows was cited to
+  `test/fse_delivery_red_proof_test.dart`, **a file that has never existed in
+  this repository**. The proofs themselves are real: they are now cited to the
+  guard file that holds them, `test/delivery_observation_invariants_test.dart`,
+  re-run against `936fb2b`, the commit before the 0.7.6 fixes, where 8 of its
+  11 tests fail and the 3 that pass are positive controls.
 - `analysis_options.yaml`: the comment above the analyzer's strict modes now
   says what the modes do, instead of pointing at an internal review note.
 - `lib/src/flutter_tts_engine.dart` (two comments) and
