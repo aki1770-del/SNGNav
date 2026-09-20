@@ -30,7 +30,7 @@
 ## 4 — WP.29 cybersecurity touchpoint
 
 **Touchpoint location**: **upstream consumer-side at `FleetProvider` ingress.** This package consumes `FleetReport` records via `FleetProvider` interface; when the integrator implements `FleetProvider` against a network telemetry source, the WP.29 touchpoint is at that ingress not at this package's boundary.
-**Privacy interaction**: per README.md §Works With (L169) — *"Fleet data sharing requires explicit consent"* via `driving_consent`. WP.29 touchpoint at integrator's `FleetProvider` implementation must compose with `driving_consent` policy gates; per-driver telemetry without consent is a WP.29-cybersecurity boundary breach and a breach of the project's design principles (first item under "What We Do Not Build", verbatim: *"the driver's personal incident data is never the product"*).
+**Privacy interaction**: per README.md §Works With — *"Fleet data sharing requires explicit consent"* via `driving_consent`. WP.29 touchpoint at integrator's `FleetProvider` implementation must compose with `driving_consent` policy gates; per-driver telemetry without consent is a WP.29-cybersecurity boundary breach and a breach of the project's design principles (first item under "What We Do Not Build", verbatim: *"the driver's personal incident data is never the product"*).
 **Scope boundary**: `FleetReport` — the *input atom* to aggregation — carries `vehicleId`. **As of 0.5.0 the retained aggregate carries no `vehicleId`**: `HazardAggregator.aggregate()` strips the key when it constructs each zone, so `HazardZone.reports` is a `List<ZoneObservation>` (position / condition / timestamp / confidence only). The unique-vehicle count is computed at aggregation time and stored as `HazardZone.vehicleCount`, so the honest "N vehicles reported" count is preserved without retaining a re-identifiable per-vehicle trail. (Prior to 0.5.0 the zone retained the full `List<FleetReport>`, including `vehicleId` mapped to each report's `position` + `timestamp` — a per-vehicle trail; this record's earlier "never mapped to driver identity inside this package's substrate" claim was inaccurate for the retained structure and is corrected here.) Integrator implementations MUST still preserve the boundary at the `FleetProvider` source side — feeding identified-driver telemetry into this package would breach the boundary at the *ingress* scope (the input `FleetReport` still carries `vehicleId` for clustering before it is dropped).
 
 ## 5 — JIS / JASO conformance
@@ -44,7 +44,7 @@
 
 **Status**: **applies in scope by design — profile-agnostic by construction.**
 **Concrete reasoning**: this package is profile-agnostic; `HazardZone.severity` is computed from `List<FleetReport>` road-condition observations (physical-class) + cluster vehicleCount + average confidence. No `DriverProfile` axis exists here. Severity-not-profile invariant from `navigation_safety_core` 0.6.0 is satisfied at this package's boundary trivially.
-**Composition pattern**: per README.md §Works With (L165-169) — `fleet_hazard` outputs feed `map_viewport_bloc` Z3 layer + `driving_conditions` (via `FleetHazardConfidenceAdapter`). At map-rendering scope, severity drives visual weight (severity-driven, never profile-driven, per `navigation_safety_core` invariant inherited).
+**Composition pattern**: per README.md §Works With — `fleet_hazard` outputs feed `map_viewport_bloc` Z3 layer + `driving_conditions` (via `FleetHazardConfidenceAdapter`). At map-rendering scope, severity drives visual weight (severity-driven, never profile-driven, per `navigation_safety_core` invariant inherited).
 
 ## 7 — Driver-always-drives invariant
 
@@ -67,7 +67,7 @@
 
 ## 9 — Cross-references
 
-- README.md §Features L15-21 + §Integration Pattern L57-127 + §Implement a provider L129-151 + §Works With L163-169
+- README.md §Features + §Integration Pattern + §Implement a provider + §Works With
 - pubspec.yaml `version: 0.5.0`
 - LICENSE BSD-3-Clause
 - Composition: `navigation_safety_core` 0.6.0 SAFETY_BOUNDARY.md (severity-not-profile invariant inherited at HMI scope) + `driving_conditions` 0.5.0 SAFETY_BOUNDARY.md (`FleetHazardConfidenceAdapter` composition path) + `driving_consent` (consent-gate composition required for ingress)
