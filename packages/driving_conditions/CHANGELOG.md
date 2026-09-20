@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+**`SimulatedSafetyScore.toAlertSeverity` no longer re-implements the severity
+comparisons — it delegates to `navigation_safety_core`'s `SafetyScore`.**
+
+It carried its own copy of the three threshold `if`s, documented as "the same
+thresholds" that package applies. They were the same until they were not: when
+`SafetyScore` gained a per-axis critical grip floor — so that zero grip under a
+clear sky reaches `critical` instead of `info` — this copy did not inherit it,
+and the type that COMPOSES the mean was the one still giving the wrong verdict
+on black ice. A duplicated decision is a second decision that nothing keeps in
+step. There is now one, and
+`test/simulation/grip_axis_critical_test.dart` asserts the two paths agree
+across the whole score plane.
+
+`overall` is unchanged: still `0.5 * grip + 0.5 * visibility`, still never
+re-normalised.
+
 ## 0.7.1
 
 **The native library must now declare its ABI, and a mismatch is REFUSED rather than read.**

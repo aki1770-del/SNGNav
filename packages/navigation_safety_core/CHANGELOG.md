@@ -1,5 +1,53 @@
 # Changelog
 
+## Unreleased
+
+**A single catastrophic axis now reaches `critical`. Black ice under a clear
+sky could not, at any grip value.**
+
+`SafetyScore.overall` is a MEAN of the axes. A mean answers "how good are
+conditions on aggregate"; severity asks "how bad is the worst thing here". The
+two come apart exactly when one axis is lethal and the other is fine. With
+`visibilityScore` at 1.0 the mean is >= 0.5, while every shipped
+`warningScoreFloor` is 0.30-0.40 — so `AlertSeverity.critical` was
+**unreachable however bad the grip was**, and `gripScore: 0.0` under clear air
+returned `AlertSeverity.info`. This type carried the per-axis numbers all
+along and the decision discarded them.
+
+**`SafetyScore.toAlertSeverity` now returns the WORSE of the composite verdict
+and a per-axis grip verdict.** `overall` keeps its stated meaning and its fixed
+weights; no threshold was lowered. Lowering one so a single number crosses it
+would drag every other road across with it, which is the cry-wolf failure.
+
+**New:** `NavigationSafetyConfig.criticalGripScoreFloor`, default `1.5 / 5.5`
+= 0.2727..., the ratio of glare-ice to dry-pavement braking deceleration —
+both magnitudes published in `navigation_safety_calibration`'s
+`speed_dependent_visibility.dart`. Compacted snow sits at `3.0 / 5.5` = 0.545
+and is deliberately well clear of it: this is the glare-ice line, not the
+winter-road line. *Honest bound: those magnitudes are that package's stated
+typical values, not field measurements taken by this unit.* The floor is
+severity-class and a `VehicleThresholdOverrides` transform that changes it is
+refused, like the score floors.
+
+**Behaviour change for consumers.** `toAlertSeverity` can now return a higher
+severity for inputs whose `overall` is unchanged. It is **monotone**: it can
+only raise severity, never lower it, so no alert that fires today is silenced.
+Measured across the whole `(grip, visibility)` plane at default floors, every
+promotion is out of a band that was ALREADY alerting and **zero** cells are
+promoted out of `none` — it sharpens alerts, it does not add them. Both
+properties are asserted in `test/grip_axis_critical_test.dart`. A consumer
+that passes `gripScore: 0.0` as a placeholder for "no grip sensor" will now
+see `critical`; `0.0` was never a valid encoding of absence (see
+`driving_conditions`' `requireMeasured`, which rejects an unreadable sensor
+rather than substituting a value in either direction).
+
+**Still not wired, and named here rather than left to be discovered:**
+`criticalVisibilityMeters` is declared, profile-tuned and literature-cited,
+and **nothing in this package reads it**. The visibility axis still reaches
+the decision only through the mean. `SafetyScenario.gripCritical` and
+`gripWarning` are likewise declared with **zero producers**. Wiring them moves
+behaviour on a second axis and is a separate, deliberate change.
+
 ## 0.11.6
 
 A vehicle-class override is now refused where it is REGISTERED, not on the

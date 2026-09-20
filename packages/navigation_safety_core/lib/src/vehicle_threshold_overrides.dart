@@ -106,6 +106,7 @@
 ///         infoVisibilityMeters: base.infoVisibilityMeters,
 ///         warningVisibilityMeters: base.warningVisibilityMeters + 30,
 ///         criticalVisibilityMeters: base.criticalVisibilityMeters,
+///         criticalGripScoreFloor: base.criticalGripScoreFloor,
 ///         alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
 ///       ),
 /// });
@@ -499,6 +500,22 @@ class VehicleThresholdOverrides {
         ),
       );
     }
+    // The per-axis grip floor is severity-class, exactly like the score
+    // floors above: it decides WHETHER she is told the road is lethal, not
+    // how the telling is worded. A vehicle transform that could lower it
+    // would re-open, per vehicle, the black-ice-under-clear-sky gap the
+    // floor exists to close.
+    if (adjusted.criticalGripScoreFloor != baseline.criticalGripScoreFloor) {
+      return _OverrideOutcome.rejected(
+        VehicleOverrideRejection(
+          token: token,
+          field: 'criticalGripScoreFloor',
+          invariant: VehicleOverrideInvariant.severityNotProfile,
+          baselineValue: baseline.criticalGripScoreFloor,
+          rejectedValue: adjusted.criticalGripScoreFloor,
+        ),
+      );
+    }
 
     return _OverrideOutcome.accepted(adjusted);
   }
@@ -605,6 +622,7 @@ class VehicleThresholdOverrides {
       infoVisibilityMeters: baseline.infoVisibilityMeters,
       warningVisibilityMeters: baseline.warningVisibilityMeters + 50,
       criticalVisibilityMeters: baseline.criticalVisibilityMeters,
+      criticalGripScoreFloor: baseline.criticalGripScoreFloor,
       alertsPerMinuteCapOverride: baseline.alertsPerMinuteCapOverride,
     );
   }
