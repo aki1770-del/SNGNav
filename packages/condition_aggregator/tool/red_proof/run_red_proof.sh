@@ -13,7 +13,7 @@
 # Why this script exists: the guard test (`test/frozen_feed_test.dart`) cannot
 # compile against 0.0.9, because five of its eight tests reference symbols
 # 0.0.10 introduced. Saying "it failed 4/4 on 0.0.9" was therefore not
-# re-derivable from the repository. DIA caught that in audit 2026-08-16. This
+# re-derivable from the repository. A reviewer caught that on 2026-08-16. This
 # script makes the claim reproducible by anyone, forever.
 set -uo pipefail
 

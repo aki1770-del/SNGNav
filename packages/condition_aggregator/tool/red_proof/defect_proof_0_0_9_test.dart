@@ -8,8 +8,8 @@
 /// not a demonstration of anything.
 ///
 /// So the sentence *"the guard was proven RED against unmodified 0.0.9"* was,
-/// as first written, not re-derivable from anything left on disk. **DIA caught
-/// that in audit on 2026-08-16 and it was the correct catch**: a proof that
+/// as first written, not re-derivable from anything left on disk. **A reviewer
+/// caught that on 2026-08-16 and it was the correct catch**: a proof that
 /// exists only in the author's session is an assertion, not evidence.
 ///
 /// This file is the repair. It uses **only the symbol set published in 0.0.9**,
@@ -39,7 +39,7 @@
 ///
 /// Measured live 2026-08-16: JMA `bosai/warning/data/warning/150000.json`
 /// (Niigata) last written **2026-05-26T15:45+09:00** — 1963.37 h — zero
-/// warnings. The unit's winter instrument served that point as
+/// warnings. This project's winter monitoring served that point as
 /// `continueDriving` with an empty reasons list and an empty unknowns list.
 library;
 
