@@ -7,18 +7,18 @@
 /// packages (e.g. `condition_aggregator_nws`, `condition_aggregator_jma`)
 /// implement [AdvisoryProvider] and depend on this package.
 ///
-/// Published to pub.dev. Graduated from the explore phase once the
-/// interface tests + first adapter wire were green per the FDD bylaws
-/// spike-to-package promotion gate.
+/// Published to pub.dev. It became a published package once the interface
+/// tests and the first adapter wired against it were green, which is this
+/// project's bar for promoting a spike to a package.
 ///
-/// HER-trace (≤4-hop) end-to-end:
+/// From publisher to driver, end to end (4 hops):
 ///   publisher advisory feed (NWS / JMA / etc.)
 ///     → per-source adapter (`condition_aggregator_<source>`)
 ///     → `AdvisoryAggregator` typed merge
 ///     → integrator HMI surfaces advisory to the driver in unexpected snow
 /// 4 hops.
 ///
-/// Driver-facing loom: when a publisher (NWS, JMA, etc.) has issued an
+/// What the driver experiences: when a publisher (NWS, JMA, etc.) has issued an
 /// advisory for the driver's current point, the integrator HMI surfaces
 /// a typed `Advisory` event with severity / certainty / urgency / area /
 /// effective / expires normalized across sources — as the driver's

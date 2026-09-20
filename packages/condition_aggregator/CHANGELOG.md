@@ -1,11 +1,52 @@
 # Changelog
 
+## 0.0.11
+
+**Documentation only. No library code change. Two corrections. The first is about what a driver can be shown: the safety-boundary record said an integrator could render staleness honestly from `result.providerErrors`. It cannot. A fetch failure is not staleness, and a source that keeps answering with a document that has stopped being updated raises no error at all. The second: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the record no longer says so.**
+
+On the first correction. `result.providerErrors` lists sources that could not be
+read. It says nothing about how old any data is. A publisher that keeps serving
+a document which stopped being written is not in that list, and unless its
+adapter implements `AdvisoryFeedFreshnessReporting` (added in 0.0.10) and
+reports it in `result.staleSources`, nothing at this interface tells you. A
+frozen document that lists no advisories looks exactly like a current one that
+lists none — so "nothing is in force" can reach a driver over a feed nobody is
+writing any more. `SAFETY_BOUNDARY.md` sections 3 and 8, and the README, now
+say that.
+
+Documentation and comments that used this project's internal shorthand now say
+the same thing in plain words. No fact in them changed.
+
+- `SAFETY_BOUNDARY.md`: sections 3 and 8 corrected as above, and the
+  boundary-record version raised to 1.1. The JIS / JASO sentence is corrected.
+  Elsewhere the changed lines lost internal names and references only; no
+  boundary moved, and nothing changed about what the package does, what it does
+  not do, or what it leaves to you.
+- `SOTIF_INSUFFICIENCIES.md`: the status lines now state only what holds with
+  the corrected record, and two further rows were corrected against measurement.
+- `SEOOC_ASSUMPTIONS.md`: the same stale claims corrected to match.
+- `README.md`: the "per-provider failures do not abort the fan-out" note no
+  longer calls an outage staleness; the adapter-boundary note, two headings and
+  one paragraph reworded.
+- `lib/condition_aggregator.dart`, `lib/src/advisory.dart`,
+  `lib/src/advisory_aggregator.dart`: doc comments only.
+- `test/frozen_feed_test.dart`, `tool/red_proof/defect_proof_0_0_9_test.dart`,
+  `tool/red_proof/run_red_proof.sh`: comments only.
+- `pubspec.yaml`: the version, and one comment.
+- `CHANGELOG.md`: this entry, and four earlier passages reworded.
+
+Every changed Dart file was compared with the published 0.0.10 after removing
+comments: the token streams are identical, so no code moved. The shell script is
+identical with its comment lines removed. Apart from the files listed above, the
+published files are identical to 0.0.10.
+
 ## 0.0.10 — A feed that stopped being written could still say "no advisory in force"
 
 **An honesty fix at the one predicate that gates a positive all-clear — and it
 is inert until an adapter feeds it. Both halves of that sentence are load-bearing.**
 
-*This release was headlined "Safety fix" in draft. AAA's audit called that a
+*This release was headlined "Safety fix" in draft. An independent safety
+review called that a
 reach claim for a guard that cannot currently fire, and it was right: the
 headline is the line that travels, and it would have travelled further than the
 truth. Corrected before publish.*
@@ -225,7 +266,7 @@ is what lets a system be honest without crying wolf.
 
 - Docs: library dartdoc no longer claims `Phase: explore` /
   `publish_to: none`; corrected to reflect the published-to-pub.dev state
-  (the explore-phase graduation already fired). No code change.
+  (the package was already published to pub.dev). No code change.
 
 ## 0.0.6 — 2026-06-26 — Dev-first on-ramp
 
@@ -233,8 +274,9 @@ is what lets a system be honest without crying wolf.
   governance prose moved to Background. README now opens with a one-sentence
   description, the `dart pub add condition_aggregator` line, and a copy-paste
   `## Quick start` snippet (self-contained, no peer deps required) demonstrating
-  the real `AdvisoryAggregator` fan-out. The mission/HER-trace/composition prose
-  is preserved verbatim under `## Background & provenance`.
+  the real `AdvisoryAggregator` fan-out. The prose about purpose, the path
+  from publisher to driver, and composition is preserved verbatim under
+  `## Background & provenance`.
 - `example/main.dart` now demonstrates the `AdvisoryAggregator` fan-out
   (init → fetch → typed merge → per-provider error list), matching the
   quickstart snippet, instead of only constructing a single `Advisory` struct.
@@ -277,8 +319,8 @@ each publisher's terms.
 
 - **`AdvisorySource.metNorway`** enum value — Norwegian
   Meteorological Institute (MET Norway) publisher attribution.
-  Backstops the second deep-dive substrate publisher in the
-  active engagement portfolio per the unit's substrate prep.
+  Backstops the second publisher this project studied in depth
+  when preparing the adapter family.
 - **`AdvisorySourceAttribution` extension** on `AdvisorySource`
   with `attributionString` getter producing CC-BY-4.0-compliant
   credit text per source. Stable format (change requires major

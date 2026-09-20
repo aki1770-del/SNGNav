@@ -3,10 +3,10 @@ description: >-
   Source-neutral interface for severity-qualified meteorological-advisory
   aggregation. Defines Advisory event + AdvisoryProvider for per-source
   adapters. Pure Dart.
-version: 0.0.10
+version: 0.0.11
 
-# Deploy-graduated 2026-05-03 per FDD bylaws Rule 6 (i)-(vi) all-green
-# + Komada-voice pre-authorization carried by the authoring spawn.
+# Published to pub.dev since 2026-05-03, after its promotion checklist
+# passed in full and the release was authorised.
 # Default publish target = https://pub.dev (no `publish_to:` line).
 
 repository: https://github.com/aki1770-del/sngnav

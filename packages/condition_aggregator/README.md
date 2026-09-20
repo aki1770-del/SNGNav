@@ -127,16 +127,19 @@ Running the snippet (`dart run example/quickstart.dart`) prints:
 - **Per-provider failures do not abort the fan-out.** When one provider
   raises during `fetchActiveAdvisoriesAtPoint`, its error is captured
   in `result.providerErrors`; surviving providers' advisories appear
-  in `result.advisories`. The integrator surfaces staleness to the
-  driver honestly (e.g. "JMA unavailable; NWS data shown").
+  in `result.advisories`. The integrator can tell the driver which source
+  could not be read (e.g. "JMA unavailable; NWS data shown"). That is an
+  outage, not staleness: a source that keeps serving a document which has
+  stopped being updated raises no error, and only an adapter implementing
+  `AdvisoryFeedFreshnessReporting` reports that, in `result.staleSources`.
 
 - **`Advisory` is Equatable.** Stream de-duplication can use
   `distinct()` directly.
 
 - **Adapter package boundary is per-publisher.** Each publisher (NWS,
   JMA, JARTIC, NEXCO, prefectural, etc.) ships its own
-  `condition_aggregator_<source>` package. License, cybersecurity, and
-  AAA-class safety boundary are audited per adapter package, not at
+  `condition_aggregator_<source>` package. License, cybersecurity and
+  safety-boundary review happen per adapter package, not at
   this interface.
 
 ## Real adapters
@@ -223,7 +226,7 @@ The interface defines:
 - Not a control loop. The package emits no actuator signal; the driver
   always drives.
 
-### HER-trace (≤4-hop)
+### From publisher to driver (4 hops)
 
 ```
 publisher advisory feed (NWS / JMA / etc.)
@@ -237,15 +240,15 @@ event with severity / certainty / urgency / area / effective / expires
 normalized across whichever publisher (NWS, JMA, etc.) issued the
 underlying alert.
 
-### Driver-facing loom
+### What the driver experiences
 
 When a publisher (NWS, JMA, etc.) has issued an advisory for the
 driver's current point, the integrator HMI surfaces a typed `Advisory`
 event with severity / certainty / urgency / area / effective / expires
 normalized across sources — as the driver's decision substrate, not as
-raw GeoJSON or XML feed text. The Sakichi reading: the loom is a
+raw GeoJSON or XML feed text. In plain terms, the package is a
 multi-postman who carries each publisher's letter to the driver
-without rewriting it; the loom does ONE thing well — typed merge with
+without rewriting it; it does ONE thing well — typed merge with
 warn-and-continue per-provider failure handling — and does NOT add
 layers the driver did not ask for and the publishers did not author.
 

@@ -16,7 +16,7 @@ import 'package:equatable/equatable.dart';
 /// Source attribution for an [Advisory] — names the publisher whose
 /// authority underwrites the record.
 ///
-/// Severity-not-profile invariant (per AAA bylaws + D4): all sources are
+/// Severity-not-profile invariant (every driver is served equally): all sources are
 /// represented at the interface; the integrator does not pre-filter by
 /// region or driver-profile at this layer. Per-region adapter selection
 /// happens at composition time in the consuming app.
@@ -106,7 +106,7 @@ class Advisory extends Equatable {
   /// JMA — report-family code `VPWW54`, `VPCJ51`.
   /// The interface preserves the publisher's vocabulary; downstream
   /// renderers MAY localize but the publisher string is the canonical
-  /// substrate per Article 17 (β) verbatim-relay discipline.
+  /// substrate; the publisher's words are relayed unchanged.
   final String eventClass;
 
   /// Normalized severity per CAP scale.

@@ -245,7 +245,7 @@ class AdvisoryAggregateResult {
   /// Call this before any code path that would tell a driver the road is clear.
   /// Nothing throws it unless you ask — 0.0.7 callers are untouched.
   ///
-  /// A stop with no restart is a wall, not a loom, so the exception says what
+  /// A stop with no restart is a wall, not a fix, so the exception says what
   /// broke, why we refuse to guess, and the way forward.
   void requireCompleteLookup() {
     if (canAssertNoAdvisory) return;
