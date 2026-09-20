@@ -22,7 +22,7 @@ import 'winter_alert.dart';
 
 /// Retry policy for transient network failures on the NWS endpoint.
 ///
-/// Driver-facing loom: *"winter alert in publisher's exact wording,
+/// What the driver experiences: *"winter alert in publisher's exact wording,
 /// even when the publisher's network briefly hiccups."* A single
 /// transient failure (5xx, brief connection reset, brief DNS
 /// hiccup) should not silently drop the alert reach for the driver

@@ -109,7 +109,7 @@ class WinterAlertCircle extends Equatable {
 /// publisher only declared a free-form area description (in which case
 /// the prose lives in [WinterAlert.areaDesc]).
 ///
-/// Driver-facing loom: *"winter alert covers a precise geographic area
+/// What the driver experiences: *"winter alert covers a precise geographic area
 /// on the route, not just an abstract zone identifier."* The polygon
 /// shape supports the integrator's per-route geofence-class question
 /// "does this alert intersect my route?" without flying out to a

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.9
+
+**Documentation only. No code change. Two corrections. The safety-boundary record said this package was never published (`publish_to: none`); 0.0.1 has been on pub.dev since 2026-05-03, so the record was wrong from the day it was written. And earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the record no longer says so.**
+
+Documentation and comments that used this project's internal shorthand now say
+the same thing in plain words. No fact in them changed.
+
+- `SAFETY_BOUNDARY.md`: the two publication statements corrected as above; the
+  JIS / JASO sentence corrected; a promise of a re-check at first publication,
+  for which no record exists, replaced by what is true. Elsewhere the changed
+  lines lost internal names, attributions and references only. No boundary
+  moved, and nothing changed about what the package does, what it does not do,
+  or what it leaves to you.
+- `lib/src/noaa_nws_client.dart`, `lib/src/winter_alert.dart`: one doc comment
+  each.
+- `pubspec.yaml`: the version.
+- `CHANGELOG.md`: this entry.
+
+Both changed Dart files were compared with the published 0.0.8 after removing
+comments: the token streams are identical. Apart from the files listed above,
+the published files are identical to 0.0.8.
+
 ## 0.0.8 — 2026-07-02 — Out-of-coverage short-circuit (behavior change)
 
 `api.weather.gov` covers the United States **and its territories**. Handed
