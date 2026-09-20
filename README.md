@@ -681,26 +681,34 @@ positive case actually execute.
 The scenario registry tracks which real-world driving situations the architecture
 covers. There is no single registry file: the seven `sngnav_coverage.yaml` files, one
 per package root, *are* the registry. They enumerate 66 unique scenario IDs
-(`S-001`–`S-066`) while each still declares a total of 62 — the two numbers disagree
-and the files need reconciling.
+(`S-001`–`S-066`) while six of the seven still declare a total of 62 — those two
+numbers disagree and those six files need reconciling. `fleet_hazard`'s was
+reconciled on 2026-09-20 and declares 66.
 
 | Package | Covered | Partial | Total contrib | Status |
 |---------|:-------:|:-------:|:-------------:|--------|
 | `navigation_safety` | 5 | 1 | 0.05 | [![nav](https://img.shields.io/badge/coverage-8%25-yellow)](packages/navigation_safety/sngnav_coverage.yaml) |
 | `driving_conditions` | 7 | 1 | 0.11 | [![dc](https://img.shields.io/badge/coverage-13%25-yellow)](packages/driving_conditions/sngnav_coverage.yaml) |
 | `driving_weather` | 5 | 2 | 0.08 | [![dw](https://img.shields.io/badge/coverage-11%25-yellow)](packages/driving_weather/sngnav_coverage.yaml) |
-| `fleet_hazard` | 4 | 1 | 0.065 | [![fh](https://img.shields.io/badge/coverage-8%25-yellow)](packages/fleet_hazard/sngnav_coverage.yaml) |
+| `fleet_hazard` | 3 | 1 | 0.045 | [![fh](https://img.shields.io/badge/coverage-6%25-yellow)](packages/fleet_hazard/sngnav_coverage.yaml) |
 | `snow_rendering` | 3 | 1 | 0.048 | [![sr](https://img.shields.io/badge/coverage-6%25-yellow)](packages/snow_rendering/sngnav_coverage.yaml) |
 | `route_condition_forecast` | 6 | 0 | 0.097 | [![rcf](https://img.shields.io/badge/coverage-10%25-yellow)](packages/route_condition_forecast/sngnav_coverage.yaml) |
 | `adaptive_reroute` | 6 | 0 | 0.097 | [![ar](https://img.shields.io/badge/coverage-10%25-yellow)](packages/adaptive_reroute/sngnav_coverage.yaml) |
 | **Total** | **36** | **6** | **~55%** | 24 scenarios open |
 
+**The Total row is not recomputed, and no longer equals the column above it.** Only the
+`fleet_hazard` row has been measured against its package's code (2026-09-20, for 0.6.2:
+one scenario moved out of Covered and one out of Partial). The other six rows are the
+numbers their files declare, unverified, so summing them would put a precise-looking
+total on six unmeasured figures. The Total moves when those six are measured.
+
 **What "covered" means**: the package declares a `covered_by` capability and asserts a
 test exercises it. Partial = the signal is ingested but the threshold or subtype logic
 is incomplete. Open = no coverage anywhere in the architecture today.
 
-**Bound, measured 2026-08-08 — the `covered_by` fields are stale.** All seven files are
-stamped `Updated: 2026-04-05` and each declares a package version behind the registry.
+**Bound, measured 2026-08-08 — the `covered_by` fields are stale.** Six of the seven
+files are stamped `Updated: 2026-04-05` and declare a package version behind the
+registry; `fleet_hazard`'s was corrected against its code on 2026-09-20.
 A dozen-plus code symbols named as evidence resolve to zero Dart files anywhere in the
 repo — most are pre-rename names whose capability survives under a new one
 (`RoadSurface*` → `RoadSurfaceState`, `MonteCarloSafetyScorer` → `SafetyScoreSimulator`,
@@ -714,10 +722,14 @@ Two entries deserve naming, because they are not renames:
   values)`. That behaviour was deliberately **removed**: offline now yields an
   explicitly-absent reading (`WeatherStale` with a real age, or `WeatherUnavailable`),
   never a reassuring default. The scenario is covered; the description is not.
-- **S-036 "Stale report expiry"** says expiry is *enforced*. It is available, not
-  enforced: `FleetReport.isRecent({maxAge: 15min})` exists and is unit-tested, but
-  `HazardAggregator.aggregate` never calls it, so a stale report still clusters into a
-  hazard zone unless you filter first.
+- **S-036 "Stale report expiry"** said expiry was *enforced*, and was declared
+  `covered`. It is available, not enforced: `FleetReport.isRecent({maxAge: 15min})`
+  exists and is unit-tested, but `HazardAggregator.aggregate` never calls it, so a
+  stale report still clusters into a hazard zone unless you filter first. That warning
+  stands; what changed on 2026-09-20 is that `fleet_hazard`'s own file now says it —
+  the scenario is `partial`, and the note tells the caller to filter. Until then the
+  correction lived only here, and this README ships in no package archive, so anyone
+  reading the file on pub.dev was told the opposite.
 
 The open cells are the founding document of the contributor swarm. If you own a
 domain (fleet operator, OEM winter testing, V2X, ADAS), one of those open cells
