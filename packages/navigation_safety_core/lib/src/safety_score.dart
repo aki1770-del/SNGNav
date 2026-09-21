@@ -50,10 +50,14 @@ class SafetyScore extends Equatable {
   /// the other is fine — **black ice under a clear sky**. With
   /// [visibilityScore] at 1.0 the mean is >= 0.5, while every shipped
   /// [NavigationSafetyConfig.warningScoreFloor] is 0.30-0.40, so
-  /// [AlertSeverity.critical] was UNREACHABLE at any grip whatsoever and
-  /// [gripScore] `0.0` under clear air returned [AlertSeverity.info]. This
-  /// type carried the per-axis numbers all along and the decision discarded
-  /// them.
+  /// [AlertSeverity.critical] was UNREACHABLE at any grip whatsoever.
+  /// Measured on 0.11.9 at [gripScore] `0.0` with [visibilityScore] `1.0`:
+  /// [AlertSeverity.info] on three of the six [DriverProfile] baselines
+  /// (`snowZoneExperienced`, `professional`, `agriculturalForestry`) and on
+  /// the default config, and [AlertSeverity.warning] on the other three
+  /// (`ageingRural`, `noviceUrban`, `foreignTouristSnowZone`). An advisory
+  /// grade either way, on a road she cannot stop on. This type carried the
+  /// per-axis numbers all along and the decision discarded them.
   ///
   /// The correction is not a lower floor. Lowering a threshold so one
   /// number crosses it drags every other road across with it, and a model
@@ -81,9 +85,13 @@ class SafetyScore extends Equatable {
   /// behaviour for consumers on a second axis.
   AlertSeverity? toAlertSeverity(NavigationSafetyConfig config) {
     final composite = _compositeSeverity(config);
-    // A grip score at or below the floor means the road brakes no better
-    // than glare ice. That is independently lethal — it does not become
+    // A grip score BELOW the floor means the road brakes no better than
+    // glare ice. That is independently lethal — it does not become
     // survivable because she can see it coming.
+    //
+    // The comparison is strict, matching `_compositeSeverity` below and the
+    // score floors it uses: a score exactly EQUAL to the floor is not
+    // critical on grip alone.
     //
     // `gripScore` of 0 is never an encoding of "no grip sensor": an
     // unreadable reading is rejected upstream in `driving_conditions`

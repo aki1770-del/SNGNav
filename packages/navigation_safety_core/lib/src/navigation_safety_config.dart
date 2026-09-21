@@ -41,8 +41,12 @@ class NavigationSafetyConfig extends Equatable {
   final int warningVisibilityMeters;
   final int criticalVisibilityMeters;
 
-  /// Grip score at or below which grip ALONE is critical, whatever the
-  /// composite score says.
+  /// Grip score BELOW which grip ALONE is critical, whatever the composite
+  /// score says.
+  ///
+  /// The comparison is STRICT (`gripScore < criticalGripScoreFloor`),
+  /// matching the three score floors: a grip score exactly EQUAL to this
+  /// value is not critical on grip alone.
   ///
   /// ## Why a per-axis floor exists at all
   ///
@@ -53,8 +57,10 @@ class NavigationSafetyConfig extends Equatable {
   /// axis is catastrophic and the other is fine — black ice under a clear
   /// sky. With visibility at 1.0 the mean is >= 0.5, while every shipped
   /// [warningScoreFloor] is 0.30-0.40, so `critical` was UNREACHABLE at
-  /// any grip value, and a grip score of zero scored `info`. The mean was
-  /// not mis-tuned; it was the wrong shape for the question.
+  /// any grip value. A grip score of zero scored `info` on three of the six
+  /// profile baselines and on the default config, and `warning` on the
+  /// other three — an advisory grade either way. The mean was not
+  /// mis-tuned; it was the wrong shape for the question.
   ///
   /// The fix is not a lower floor — lowering it to make one number cross
   /// would promote every other road with it. [overall] keeps its stated
@@ -79,15 +85,37 @@ class NavigationSafetyConfig extends Equatable {
   ///
   /// ## What this costs
   ///
-  /// Measured over a 101x101 grid of the whole `(grip, visibility)` plane
-  /// at default floors: the rule promotes only cells that were ALREADY
-  /// alerting (`warning`->`critical` and `info`->`critical`), and promotes
-  /// ZERO cells out of `none`. It cannot create an alert where there is
-  /// silence today, and it cannot lower any severity — both asserted in
-  /// `test/grip_axis_critical_test.dart`. A grid is a statement about the
-  /// geometry of the rule, NOT a false-positive rate: this unit has no
-  /// measured distribution of real road conditions, so the on-road
-  /// frequency of this promotion is UNVERIFIED.
+  /// **It can never LOWER a severity.** Taking the worse of two verdicts is
+  /// monotone, so no alert that fires today can be silenced by this rule.
+  /// That holds for every `(overall, gripScore)` pair, with no condition
+  /// attached; measured downward movement is ZERO on both surfaces below.
+  ///
+  /// **Whether it can raise SILENCE to an alert depends on the surface, and
+  /// the honest answer is yes — off one particular plane.**
+  ///
+  /// - On the plane where `overall` is the MEAN of the axes
+  ///   (`0.5*grip + 0.5*visibility`, which is what `driving_conditions`
+  ///   computes): over a 101x101 grid at default floors, every promotion is
+  ///   out of a band that was ALREADY alerting, and **zero** cells are
+  ///   promoted out of `none`. This is what
+  ///   `test/grip_axis_critical_test.dart` asserts, and it is the only
+  ///   surface it asserts over.
+  /// - **Off that plane, it is not zero.** [SafetyScore] takes `overall` as
+  ///   a value the CALLER supplies; nothing requires it to be the mean of
+  ///   the axes it is carried with. Over the independent
+  ///   `(overall, gripScore)` grid at default floors — 10,201 cells —
+  ///   **588 cells move from `none` to `critical`.** A caller passing
+  ///   `overall: 0.9` with `gripScore: 0.0` is telling this package the
+  ///   road is nearly ideal and has no grip; the rule answers the second
+  ///   half, and that is the intended behaviour, not a defect. It is stated
+  ///   here because "it cannot create an alert where there is silence" is
+  ///   **false on that surface**, and an integrator computing `overall`
+  ///   their own way is on it.
+  ///
+  /// A grid is a statement about the geometry of the rule, NOT a
+  /// false-positive rate: this unit has no measured distribution of real
+  /// road conditions, so the on-road frequency of this promotion is
+  /// UNVERIFIED.
   final double criticalGripScoreFloor;
 
   /// Optional override for the per-profile alerts/min cap used by
@@ -552,8 +580,8 @@ class NavigationSafetyConfig extends Equatable {
     final readable = supplied > _dryBrakingDecelerationMps2
         ? _dryBrakingDecelerationMps2
         : (supplied < _minBrakingDecelerationMps2
-            ? _minBrakingDecelerationMps2
-            : supplied);
+              ? _minBrakingDecelerationMps2
+              : supplied);
     return frostClassified && _inferredIceBrakingDecelerationMps2 < readable
         ? _inferredIceBrakingDecelerationMps2
         : readable;

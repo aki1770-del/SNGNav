@@ -58,9 +58,12 @@ void main() {
       }
     });
 
-    test('grip at the glare-ice floor is critical under clear air', () {
+    test('grip just below the glare-ice floor is critical under clear air', () {
       final config = NavigationSafetyConfig();
       // 1.5 / 5.5 m/s^2 — the package's own glare-ice-over-dry braking ratio.
+      // The comparison is STRICT, so the value tested is just below the
+      // floor, not at it. The name said "at" while the body tested below;
+      // a test whose name and body disagree is a test nobody can read.
       final score = SafetyScore(
         overall: 0.5 * _glareIceFloor + 0.5,
         gripScore: _glareIceFloor - 0.001,
@@ -68,6 +71,19 @@ void main() {
         fleetConfidenceScore: 1.0,
       );
       expect(score.toAlertSeverity(config), AlertSeverity.critical);
+    });
+
+    test('grip exactly AT the floor is not critical on grip alone', () {
+      // The other side of the strict comparison, asserted so the boundary
+      // is pinned by a test rather than by a comment.
+      final config = NavigationSafetyConfig();
+      final score = SafetyScore(
+        overall: 0.5 * _glareIceFloor + 0.5,
+        gripScore: _glareIceFloor,
+        visibilityScore: 1.0,
+        fleetConfidenceScore: 1.0,
+      );
+      expect(score.toAlertSeverity(config), isNot(AlertSeverity.critical));
     });
   });
 
