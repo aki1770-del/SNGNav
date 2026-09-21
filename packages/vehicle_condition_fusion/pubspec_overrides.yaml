@@ -5,6 +5,14 @@
 # strip dependency_overrides from a published pubspec, and a shipped
 # `path: ../<sibling>` makes `pub get` fail for everyone outside this repository.
 dependency_overrides:
+  # driving_conditions is resolved from path below, and the in-tree
+  # driving_conditions 0.7.4 requires navigation_safety_core >=0.11.10 --
+  # a version that is not published yet. Without this entry pub resolves the
+  # core from pub.dev, finds only 0.11.9, and version solving fails. Overriding
+  # a path-resolved sibling obliges us to override ITS in-repo siblings too;
+  # driving_conditions/ and routing_bloc/ already carry this same entry.
+  navigation_safety_core:
+    path: ../navigation_safety_core
   driving_weather:
     path: ../driving_weather
   driving_conditions:

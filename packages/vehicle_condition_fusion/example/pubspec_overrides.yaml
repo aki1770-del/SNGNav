@@ -10,6 +10,12 @@
 # four path overrides shipped to pub.dev and made the example unresolvable
 # (exit 66) for every consumer.
 dependency_overrides:
+  # Same closure as ../pubspec_overrides.yaml: the path-resolved
+  # driving_conditions 0.7.4 needs navigation_safety_core >=0.11.10, which is
+  # not on pub.dev yet. `flutter pub get` in the parent also resolves this
+  # example, so omitting it fails the parent's resolve too.
+  navigation_safety_core:
+    path: ../../navigation_safety_core
   driving_weather:
     path: ../../driving_weather
   driving_conditions:
