@@ -1,5 +1,100 @@
 # Changelog
 
+## 0.11.10
+
+`SafetyScore.toAlertSeverity` decided severity from `overall` alone, and
+`overall` is a MEAN of the axes. With `visibilityScore` at 1.0 the mean is at
+least 0.5, while the highest `warningScoreFloor` this package ships is 0.40, so
+`AlertSeverity.critical` was **unreachable at any grip value whatsoever**, and
+`gripScore: 0.0` under a clear sky returned `AlertSeverity.info`. Measured on
+0.11.9: grip 0.0 with visibility 1.0 returns `info` on the default config and
+`warning` on `ageingRural`. Black ice under a clear sky is the road this
+package exists for, and it had no shape in which to say so.
+
+This release reads the grip axis separately and returns the WORSE of the
+composite verdict and the grip verdict. No threshold was lowered: lowering one
+so a single number crosses it drags every other road across with it.
+
+**New: `NavigationSafetyConfig.criticalGripScoreFloor`**, default `1.5 / 5.5` =
+0.2727…, the ratio of glare-ice to dry-pavement braking deceleration. Both
+magnitudes are published in `navigation_safety_calibration`'s
+`speed_dependent_visibility.dart`. Read as a fraction of available dry-pavement
+grip — which is what a `[0,1]` grip score means — a road at or below this ratio
+brakes no better than glare ice. Compacted snow sits at `3.0 / 5.5` = 0.545 and
+is deliberately well clear of it: this is the glare-ice line, not the
+winter-road line. The field is validated like the score floors: non-finite is
+refused, and outside `[0, 1]` is refused.
+
+**What changes for you.** `toAlertSeverity` can return a higher severity for
+inputs whose `overall` is unchanged. It never returns a lower one. Measured
+over a 101×101 grid of the whole `(grip, visibility)` plane, on the default
+config and on all six `DriverProfile` baselines — 71,407 cells:
+
+- 9,721 cells change, every one of them upward;
+- **0 cells move downward**, so no alert 0.11.9 delivers is silenced;
+- **0 cells move out of `none`**, so this release cannot make the package speak
+  where 0.11.9 was silent.
+
+Every change is `warning` → `critical` (7,723 cells) or `info` → `critical`
+(1,998 cells). Asserted in `test/grip_axis_critical_test.dart`.
+
+**If you pass `gripScore: 0.0` to mean "no grip reading", read this before
+upgrading.** Those inputs now return `critical`. `0.0` was never a valid
+encoding of absence in this package: `SafetyScore` clamps a non-finite value to
+`0.0` deliberately, so that an unreadable reading alerts rather than reassures.
+If your integration used `0.0` as a placeholder, it was already asking for the
+most alarming answer, and now it gets it. Pass a measured value, or do not
+build a `SafetyScore`.
+
+**If you rate-limit alerts with `AlertDensityThrottle`, read this too.** This is
+the one place the new severity is visible beyond the returned value. A
+`critical` bypasses `alertsPerMinuteCap` and still consumes a slot in the
+rolling window. Cells promoted to `critical` therefore (a) fire where the cap
+would have dropped them, and (b) take a slot, so a LATER non-critical alert can
+be dropped sooner than on 0.11.9. The first is the point of the release. The
+second is a cost, and it is stated here rather than left to be found: on a road
+she cannot stop on, this package now spends the window on the alert about the
+road.
+
+**Run together with 0.11.9's black-ice change, deliberately.** 0.11.9 made the
+package warn earlier on sub-zero roads by braking at an inferred 0.981 m/s² on
+frost-classified readings. That change and this one both concern a
+lethal-traction road and were authored separately. They are now asserted
+together in `test/grip_axis_with_black_ice_context_test.dart`: the black-ice
+context moves `warningVisibilityMeters` and `warningTemperatureCelsius` and
+leaves all three score floors and the grip floor untouched; a road that is both
+frost-classified and gripless is `critical` on every profile; and across the
+score plane a frost-classified road is never assigned a LOWER severity than the
+same score on a road that is not.
+
+**`VehicleThresholdOverrides`**: `criticalGripScoreFloor` is severity-class,
+like the score floors. A transform that changes it in either direction is
+refused and reported as `severityNotProfile`, and the refused field goes back
+to the baseline while the rest of the transform is judged on its own — the same
+collect-every-rejection behaviour 0.11.9 established for the other fields. The
+config rebuilt on the rejection path names this field explicitly, so a baseline
+carrying a non-default floor keeps it instead of being handed the package
+default.
+
+**Bounds**
+
+- The 1.5 and 5.5 m/s² magnitudes are `navigation_safety_calibration`'s stated
+  typical values, not measurements this unit took on a road. The SHAPE of the
+  rule does not depend on them; the exact number does.
+- A grid is a statement about the geometry of the rule. It is not a
+  false-positive rate: this package has no measured distribution of real road
+  conditions, so how often this promotion happens on a real winter road is
+  **unmeasured**.
+- Only grip has a per-axis floor. `criticalVisibilityMeters` is declared,
+  profile-tuned and cited, and **nothing in this package reads it**; the
+  visibility axis still reaches the decision only through the mean.
+  `SafetyScenario.gripCritical` and `SafetyScenario.gripWarning` are likewise
+  declared with **no producer**. Wiring either moves behaviour on a second axis
+  and is a separate release.
+- No API is removed and no signature changes. A consumer that does not
+  construct `NavigationSafetyConfig` with this field, and whose grip scores stay
+  above 0.2727, gets the severities 0.11.9 gave it.
+
 ## 0.11.9
 
 0.11.8 computed the braking part of the warning-visibility floor at 5.5 m/s²,

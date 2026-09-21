@@ -358,8 +358,13 @@ for the full discussion.
 - **`SafetyScore`** — an `overall` score the caller supplies, carried
   with `gripScore`, `visibilityScore` and `fleetConfidenceScore`; each
   is clamped to 0–1, and a non-finite value becomes 0.
-  `toAlertSeverity` maps `overall` alone against a config's score
-  floors.
+  `toAlertSeverity` returns the WORSE of two verdicts: `overall`
+  against the config's score floors, and `gripScore` against
+  `NavigationSafetyConfig.criticalGripScoreFloor`. The second exists
+  because `overall` is a mean, and a mean cannot say that one axis
+  alone is lethal — black ice under a clear sky. Through 0.11.9 it
+  mapped `overall` alone, and `critical` was unreachable at any grip
+  value once visibility was good.
 - **`SafetyScenario`** — a named, versioned id for the kind of hazard
   an alert describes (a class, not an enum); `WellKnownScenarios`
   holds ready-made ids in the sensing, routing, signal, dynamics and

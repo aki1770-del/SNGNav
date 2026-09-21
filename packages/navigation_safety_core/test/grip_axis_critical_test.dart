@@ -203,7 +203,8 @@ void main() {
         expect(
           allClearDisturbed,
           0,
-          reason: 'the axis rule must not create an alert where there is '
+          reason:
+              'the axis rule must not create an alert where there is '
               'silence today — it sharpens alerts, it does not add them',
         );
       },

@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.4
+
+`SimulatedSafetyScore.toAlertSeverity` no longer re-implements the severity
+comparisons. It delegates to `navigation_safety_core`'s `SafetyScore`.
+
+It carried its own copy of the three threshold `if`s, documented in its own
+doc comment as "the same thresholds" that package applies. They were the same
+until they were not: `navigation_safety_core` 0.11.10 reads the grip axis
+separately, so that zero grip under a clear sky reaches `critical` instead of
+`info`, and this copy did not inherit that. The type that COMPOSES the mean was
+the one still giving the wrong verdict on black ice. A duplicated decision is a
+second decision that nothing keeps in step. There is one now, and
+`test/simulation/grip_axis_critical_test.dart` asserts the two paths agree
+across the whole score plane.
+
+**What changes for you.** For the same inputs, `toAlertSeverity` can return a
+higher severity than 0.7.3 returned, and never a lower one — the same
+measured bound `navigation_safety_core` 0.11.10 states, because this is now the
+same code path. `overall` is unchanged: still `0.5 * grip + 0.5 * visibility`,
+still never re-normalised, and no other value this package computes moves.
+
+**This release requires `navigation_safety_core` 0.11.10 or newer.** The
+lower bound moves from 0.10.0 to 0.11.10; 0.7.3 accepted `>=0.10.0 <0.12.0`.
+
+- If your pubspec does not list `navigation_safety_core`, upgrading this
+  package moves it too, and nothing else is needed.
+- If your pubspec lists it with a range that allows 0.11.10, such as
+  `>=0.10.0 <0.12.0`, upgrade both together:
+  `dart pub upgrade driving_conditions navigation_safety_core`.
+- If your pubspec pins it below 0.11.10, 0.7.3 is the newest version of this
+  package that resolves with it.
+
+The bound is there because without it this release is silent. Measured: with
+`navigation_safety_core` 0.11.9 resolved, 0.7.4 analyzes clean, compiles, runs,
+and returns `info` for zero grip under perfect visibility — exactly what 0.7.3
+returned. The delegation compiles against 0.11.9 because the method signature
+is the same; only the rule behind it is missing. A release that installs
+successfully and changes nothing is worse than one that refuses to resolve,
+because nothing tells you.
+
+**Bounds**
+
+- The behaviour change is `navigation_safety_core`'s. This release is what
+  makes the SIMULATED path agree with the real one; read that package's 0.11.10
+  entry for the measured extent of the change and its bounds.
+- `requireMeasured` is unchanged: an unreadable sensor is still rejected rather
+  than given a substituted value in either direction.
+
 ## 0.7.3
 
 **Documentation only. No code change. One correction: earlier versions said a monthly watch tracked JIS / JASO standard updates. No output from that watch has been found, so the safety-boundary record no longer says so.**
