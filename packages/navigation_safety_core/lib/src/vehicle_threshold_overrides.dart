@@ -135,6 +135,7 @@
 ///         infoVisibilityMeters: base.infoVisibilityMeters,
 ///         warningVisibilityMeters: base.warningVisibilityMeters + 30,
 ///         criticalVisibilityMeters: base.criticalVisibilityMeters,
+///         criticalGripScoreFloor: base.criticalGripScoreFloor,
 ///         alertsPerMinuteCapOverride: base.alertsPerMinuteCapOverride,
 ///       ),
 /// });
@@ -666,6 +667,21 @@ class VehicleThresholdOverrides {
       adjusted.alertsPerMinuteCapOverride,
       baseline.alertsPerMinuteCapOverride,
     );
+    // The per-axis grip floor is severity-class, exactly like the score
+    // floors above: it decides WHETHER she is told the road is lethal, not
+    // how the telling is worded. A vehicle transform that could lower it
+    // would re-open, per vehicle, the black-ice-under-clear-sky gap the
+    // floor exists to close.
+    //
+    // Collected like every other field rather than returned on first sight:
+    // an early return here would discard a legal warning raise made in the
+    // same transform, which is the defect 0.11.9 fixed for the other
+    // fields. It is not re-introduced for this one.
+    mayNotChange(
+      'criticalGripScoreFloor',
+      adjusted.criticalGripScoreFloor,
+      baseline.criticalGripScoreFloor,
+    );
 
     if (rejections.isEmpty) return _OverrideOutcome(adjusted, rejections);
 
@@ -688,6 +704,12 @@ class VehicleThresholdOverrides {
         infoVisibilityMeters: baseline.infoVisibilityMeters,
         warningVisibilityMeters: warningVisibility,
         criticalVisibilityMeters: baseline.criticalVisibilityMeters,
+        // Named explicitly, not left to the parameter default. A baseline
+        // may legally carry a floor other than the package default, and
+        // omitting it here would hand back the default instead — silently
+        // LOWERING the floor for that integrator on the one path where a
+        // transform already misbehaved.
+        criticalGripScoreFloor: baseline.criticalGripScoreFloor,
         alertsPerMinuteCapOverride: baseline.alertsPerMinuteCapOverride,
       ),
       rejections,
@@ -824,6 +846,7 @@ class VehicleThresholdOverrides {
       infoVisibilityMeters: baseline.infoVisibilityMeters,
       warningVisibilityMeters: baseline.warningVisibilityMeters + 50,
       criticalVisibilityMeters: baseline.criticalVisibilityMeters,
+      criticalGripScoreFloor: baseline.criticalGripScoreFloor,
       alertsPerMinuteCapOverride: baseline.alertsPerMinuteCapOverride,
     );
   }
