@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.11.11
+
+**Corrects a false sentence in 0.11.10's changelog, and the test that let it
+through. No behaviour change: `toAlertSeverity` is identical to 0.11.10.**
+Read this if you sized your alert handling by 0.11.10's release note.
+
+### What 0.11.10 said, and what is true
+
+0.11.10 said, of its own sweep:
+
+> **0 cells move out of `none`**, so this release cannot make the package speak
+> where 0.11.9 was silent.
+
+**The count is true of that sweep. The conclusion drawn from it is false.**
+
+`overall` is not computed by this package — the README calls it "an `overall`
+score the caller supplies" — so it is a THIRD independent input, and
+`SafetyScore` never checks it against the axes. The sweep held it to
+`0.5 * grip + 0.5 * visibility`, our own weighting. On that slice the
+counter-example is not absent, it is **arithmetically impossible**: with
+`gripScore` below `criticalGripScoreFloor` (0.2727...) the 50/50 mean cannot
+exceed `0.5 * 0.2727... + 0.5` = **0.635**, while the lowest `safeScoreFloor`
+this package ships is **0.80**. "Silent on 0.11.9 and alerting on 0.11.10"
+could not occur in that grid whatever the rule did, so `expect(..., 0)` passed
+while proving nothing.
+
+**Measured over the surface the constructor actually accepts** — `overall`
+swept independently of the axes, 101 values each across the default config and
+all six `DriverProfile` baselines, 7,212,107 cells:
+
+- **359,156 cells move out of `none`** — silent on 0.11.9, alerting on 0.11.10;
+- **0 cells move downward.** No alert 0.11.9 delivers is silenced. This is the
+  one claim of 0.11.10's note that survives on the wider surface, and it
+  survives intact.
+
+The smallest statement of it, measured against both published archives rather
+than recomputed: `SafetyScore(overall: 0.8, gripScore: 0.0, visibilityScore:
+1.0, fleetConfidenceScore: 1.0)` returns `null` on 0.11.9 and
+`AlertSeverity.critical` on 0.11.10.
+
+### What this means for you
+
+**If your `overall` is our 50/50 mean, 0.11.10's note did not mislead you.**
+The grid covers your case and its counts hold.
+
+**If your `overall` is anything else** — a different weighting, more axes, a
+model of your own, or the `overallMean` that `driving_conditions`' native
+simulation engine passes through from FFI — then **0.11.10 can alert where
+0.11.9 was silent**: wherever `gripScore` is below 0.2727... while your
+`overall` sits at or above your `safeScoreFloor`. That is new alert volume on
+input that was previously silent. Size `AlertDensityThrottle` for it — a
+`critical` bypasses `alertsPerMinuteCap` and still consumes a slot in the
+rolling window.
+
+**The direction is intended.** A road that brakes no better than glare ice
+should not be silent because the sky is clear; that is what 0.11.10 is for.
+What was wrong was telling you it could not happen.
+
+### The test
+
+`test/grip_axis_critical_test.dart` now sweeps `overall` independently of the
+axes, so the claim can fail. The derived-mean sweep is kept and renamed to say
+it is a slice, with the arithmetic above recorded beside its zero. The four
+counts 0.11.10 printed — 71,407 cells, 9,721 promoted, 7,723 `warning` to
+`critical`, 1,998 `info` to `critical` — were cited as "Asserted in
+`test/grip_axis_critical_test.dart`" and were asserted nowhere in that file;
+they are asserted now, so the citation is true.
+
 ## 0.11.10
 
 `SafetyScore.toAlertSeverity` decided severity from `overall` alone, and
@@ -34,6 +102,11 @@ config and on all six `DriverProfile` baselines — 71,407 cells:
 - **0 cells move downward**, so no alert 0.11.9 delivers is silenced;
 - **0 cells move out of `none`**, so this release cannot make the package speak
   where 0.11.9 was silent.
+  **CORRECTED IN 0.11.11 — the second half of this line is FALSE.** The count
+  is true of the sweep named above, which holds `overall` to
+  `0.5 * grip + 0.5 * visibility`. Swept independently, as the constructor
+  accepts it, **359,156 cells do move out of `none`**. The published 0.11.10
+  archive cannot be changed and still reads as written; see 0.11.11.
 
 Every change is `warning` → `critical` (7,723 cells) or `info` → `critical`
 (1,998 cells). Asserted in `test/grip_axis_critical_test.dart`.

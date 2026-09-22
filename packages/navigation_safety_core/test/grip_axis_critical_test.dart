@@ -161,16 +161,14 @@ void main() {
     });
 
     test(
-      'the per-axis rule NEVER lowers severity, over the whole score plane',
+      'the per-axis rule NEVER lowers severity, over the derived-mean slice',
       () {
-        // The safety property: adding the axis rule can only raise severity.
-        // No alert that fires today can be silenced by this change.
-        const rank = {
-          null: 0,
-          AlertSeverity.info: 1,
-          AlertSeverity.warning: 2,
-          AlertSeverity.critical: 3,
-        };
+        // READ THE BOUND IN THE NAME. This sweep RECOMPUTES `overall` from
+        // the two axes. `overall` is not derived by this package — the
+        // README calls it "an `overall` score the caller supplies" — so it
+        // is a THIRD independent input, and this loop walks a 2-D slice of
+        // a 3-D domain. The group below sweeps the surface the constructor
+        // actually accepts.
         final config = NavigationSafetyConfig();
         var promoted = 0;
         var allClearDisturbed = 0;
@@ -180,20 +178,7 @@ void main() {
             final grip = i / (n - 1);
             final visibility = j / (n - 1);
             final overall = 0.5 * grip + 0.5 * visibility;
-
-            // Composite-only band — the pre-fix rule, recomputed here so the
-            // comparison is against behaviour, not against a remembered table.
-            final AlertSeverity? before;
-            if (overall < config.warningScoreFloor) {
-              before = AlertSeverity.critical;
-            } else if (overall < config.infoScoreFloor) {
-              before = AlertSeverity.warning;
-            } else if (overall < config.safeScoreFloor) {
-              before = AlertSeverity.info;
-            } else {
-              before = null;
-            }
-
+            final before = _compositeOnly(config, overall);
             final after = SafetyScore(
               overall: overall,
               gripScore: grip,
@@ -202,28 +187,167 @@ void main() {
             ).toAlertSeverity(config);
 
             expect(
-              rank[after]! >= rank[before]!,
+              _rank[after]! >= _rank[before]!,
               isTrue,
               reason:
                   'grip=$grip visibility=$visibility: severity FELL from '
                   '$before to $after — the axis rule must be monotone',
             );
-            if (rank[after]! > rank[before]!) promoted++;
+            if (_rank[after]! > _rank[before]!) promoted++;
             if (before == null && after != null) allClearDisturbed++;
           }
         }
         // It does change something — a rule that promotes nothing is ornament.
         expect(promoted, greaterThan(0));
-        // And it never turns an all-clear into an alert: every promotion is
-        // from a band that was ALREADY alerting.
-        expect(
-          allClearDisturbed,
-          0,
-          reason:
-              'the axis rule must not create an alert where there is '
-              'silence today — it sharpens alerts, it does not add them',
-        );
+        // Zero here is ARITHMETIC, NOT EVIDENCE. On this slice, grip below
+        // `criticalGripScoreFloor` (0.2727…) caps the 50/50 mean at
+        // 0.5 * 0.2727… + 0.5 = 0.635, while the LOWEST `safeScoreFloor`
+        // this package ships is 0.80. "silent before AND alerting after" is
+        // unsatisfiable here, so this counter cannot be anything but 0
+        // whatever the rule does. It is pinned to say so, not to reassure.
+        expect(allClearDisturbed, 0);
       },
     );
   });
+
+  group('the free `overall` surface the constructor accepts', () {
+    // `SafetyScore` clamps each field to [0,1] and does NOTHING else: it
+    // never recomputes `overall` from the axes and never checks the two
+    // against each other. Any integrator whose `overall` is not our 50/50
+    // mean — a different weighting, more axes, a model of their own, or the
+    // FFI `overallMean` that `driving_conditions`' native engine passes
+    // straight through — lives OFF the slice above.
+    late int freeCells, freePromoted, freeOutOfNone, freeLowered;
+    late int slicedCells, slicedPromoted, slicedOutOfNone, slicedLowered;
+    late int slicedWarningToCritical, slicedInfoToCritical;
+
+    setUpAll(() {
+      const n = 101;
+      final configs = <NavigationSafetyConfig>[
+        NavigationSafetyConfig(),
+        ...DriverProfile.values.map(NavigationSafetyConfig.forProfile),
+      ];
+
+      slicedCells = slicedPromoted = slicedOutOfNone = slicedLowered = 0;
+      slicedWarningToCritical = slicedInfoToCritical = 0;
+      for (final c in configs) {
+        for (var i = 0; i < n; i++) {
+          for (var j = 0; j < n; j++) {
+            final grip = i / (n - 1), vis = j / (n - 1);
+            final overall = 0.5 * grip + 0.5 * vis;
+            slicedCells++;
+            final b = _compositeOnly(c, overall);
+            final a = SafetyScore(
+              overall: overall,
+              gripScore: grip,
+              visibilityScore: vis,
+              fleetConfidenceScore: 1.0,
+            ).toAlertSeverity(c);
+            if (_rank[a]! > _rank[b]!) slicedPromoted++;
+            if (_rank[a]! < _rank[b]!) slicedLowered++;
+            if (b == null && a != null) slicedOutOfNone++;
+            if (b == AlertSeverity.warning && a == AlertSeverity.critical) {
+              slicedWarningToCritical++;
+            }
+            if (b == AlertSeverity.info && a == AlertSeverity.critical) {
+              slicedInfoToCritical++;
+            }
+          }
+        }
+      }
+
+      freeCells = freePromoted = freeOutOfNone = freeLowered = 0;
+      for (final c in configs) {
+        for (var k = 0; k < n; k++) {
+          final overall = k / (n - 1);
+          for (var i = 0; i < n; i++) {
+            for (var j = 0; j < n; j++) {
+              final grip = i / (n - 1), vis = j / (n - 1);
+              freeCells++;
+              final b = _compositeOnly(c, overall);
+              final a = SafetyScore(
+                overall: overall,
+                gripScore: grip,
+                visibilityScore: vis,
+                fleetConfidenceScore: 1.0,
+              ).toAlertSeverity(c);
+              if (_rank[a]! > _rank[b]!) freePromoted++;
+              if (_rank[a]! < _rank[b]!) freeLowered++;
+              if (b == null && a != null) freeOutOfNone++;
+            }
+          }
+        }
+      }
+    });
+
+    test('the numbers the CHANGELOG cites are the numbers measured', () {
+      // 0.11.10 printed these four counts and said they were "Asserted in
+      // test/grip_axis_critical_test.dart". They were asserted nowhere.
+      // They are asserted here, so the citation is true.
+      expect(slicedCells, 71407);
+      expect(slicedPromoted, 9721);
+      expect(slicedWarningToCritical, 7723);
+      expect(slicedInfoToCritical, 1998);
+      expect(slicedLowered, 0);
+      expect(slicedOutOfNone, 0);
+    });
+
+    test('no alert 0.11.9 delivers is silenced, on the WHOLE surface', () {
+      // The safety property, and the one that must never break. It holds
+      // off the slice as well as on it: 7,212,107 cells, none lowered.
+      expect(freeCells, 7212107);
+      expect(freeLowered, 0);
+      expect(freePromoted, 1357440);
+    });
+
+    test('the release DOES speak where 0.11.9 was silent', () {
+      // 0.11.10's CHANGELOG said it "cannot make the package speak where
+      // 0.11.9 was silent". Off the derived slice it can, and this is the
+      // count. A test that could not have produced this number is a test
+      // that proved nothing.
+      expect(
+        freeOutOfNone,
+        359156,
+        reason:
+            'cells that are silent on 0.11.9 and alerting on 0.11.10, over '
+            'the free (overall, grip, visibility) surface on all seven '
+            'configs — new alert volume an integrator must expect',
+      );
+    });
+
+    test('the probe that the derived slice could not reach', () {
+      // Measured against the PUBLISHED 0.11.9 archive: `null`.
+      // A legal construction: every field is in [0,1].
+      final score = SafetyScore(
+        overall: 0.8, // NOT 0.5 * 0.0 + 0.5 * 1.0 — the caller's own number
+        gripScore: 0.0, // the road brakes like glare ice
+        visibilityScore: 1.0, // under a clear sky
+        fleetConfidenceScore: 1.0,
+      );
+      expect(
+        score.toAlertSeverity(NavigationSafetyConfig()),
+        AlertSeverity.critical,
+      );
+      // And it is unreachable on the derived slice: with grip 0.0 the
+      // 50/50 mean is at most 0.5, never 0.8.
+      expect(0.5 * 0.0 + 0.5 * 1.0, lessThan(0.8));
+    });
+  });
+}
+
+const _rank = <AlertSeverity?, int>{
+  null: 0,
+  AlertSeverity.info: 1,
+  AlertSeverity.warning: 2,
+  AlertSeverity.critical: 3,
+};
+
+/// The 0.11.9 rule, recomputed so the comparison is against behaviour and
+/// not a remembered table. Verified against the published 0.11.9 archive:
+/// composite-only, against these same three floors.
+AlertSeverity? _compositeOnly(NavigationSafetyConfig c, double overall) {
+  if (overall < c.warningScoreFloor) return AlertSeverity.critical;
+  if (overall < c.infoScoreFloor) return AlertSeverity.warning;
+  if (overall < c.safeScoreFloor) return AlertSeverity.info;
+  return null;
 }
