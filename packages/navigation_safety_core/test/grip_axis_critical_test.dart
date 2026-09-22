@@ -358,6 +358,29 @@ void main() {
         expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
         final section = text.substring(from, to);
 
+        // ⚑ CORRECTION MARKERS ARE EXCLUDED, AND THE REASON IS MEASURED.
+        //
+        // I argued that pinning order costs nothing because these entries are
+        // published and frozen. FDD measured: published, and NOT frozen. The
+        // 0.11.10 entry has been corrected in place three times since it
+        // published, each time by adding a marker — and correcting a
+        // published entry in place is this package's documented practice,
+        // used five times in this thread alone, precisely because the archive
+        // cannot be changed. Markers RE-QUOTE figures, which is why several
+        // counts appear twice at all. So an ordinary future marker re-quoting
+        // a correct count reddened this test while the document was right.
+        //
+        // Brittleness-by-design is the argument that justifies the C
+        // whitelist, and it does NOT transfer here. There it guards a safety
+        // identity that should not change without the assertion changing with
+        // it. Here it would fire on the most common edit this unit makes to
+        // these entries, and a guard that cries wolf on routine work is one a
+        // reader stops believing.
+        //
+        // COST OF THE EXCLUSION, stated rather than implied: a figure
+        // re-quoted INSIDE a marker is no longer covered. Measured, that is
+        // exactly one occurrence today.
+
         // ⚑ ORDERED LIST, not a set and not a multiset.
         //
         // v1 used `contains` per figure — satisfied by any occurrence, and
@@ -389,7 +412,8 @@ void main() {
             .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
             .toList();
 
-        final cited = citedIn(section);
+        final prose = _withoutCorrectionMarkers(section);
+        final cited = citedIn(prose);
         final expected = <int>[
           freeCells,
           freeOutOfNone,
@@ -400,7 +424,6 @@ void main() {
           slicedInfoToCritical,
           slicedCells,
           slicedPromoted,
-          freeOutOfNone,
           slicedWarningToCritical,
           slicedInfoToCritical,
         ];
@@ -425,20 +448,20 @@ void main() {
         //
         // OUT-OF-SET: a value no measurement produces.
         expect(
-          citedIn(section.replaceFirst(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
             _thousands(freeOutOfNone),
             _thousands(freeOutOfNone + 1),
-          )),
+          ))),
           isNot(expected),
           reason: 'an out-of-set corruption was not detected',
         );
         // IN-SET, ONE OF TWO — the case being cited twice used to rescue, and
         // the side v2's control never touched.
         expect(
-          citedIn(section.replaceFirst(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
             _thousands(slicedCells),
             _thousands(slicedPromoted),
-          )),
+          ))),
           isNot(expected),
           reason:
               'changing ONE of two occurrences of a cited figure to ANOTHER '
@@ -447,15 +470,32 @@ void main() {
         );
         // IN-SET, TRANSPOSITION — multiset-invariant, so only order sees it.
         expect(
-          citedIn(section
+          citedIn(_withoutCorrectionMarkers(section
               .replaceAll(_thousands(slicedWarningToCritical), '@@')
               .replaceAll(
                   _thousands(slicedInfoToCritical), _thousands(slicedWarningToCritical))
-              .replaceAll('@@', _thousands(slicedInfoToCritical))),
+              .replaceAll('@@', _thousands(slicedInfoToCritical)))),
           isNot(expected),
           reason:
               'swapping two figures cited the same number of times was not '
               'detected; a multiset cannot see this and a set cannot either',
+        );
+        // AND THE OTHER SIDE OF A CONTROL: it must NOT fire on the routine
+        // edit. Adding a correction marker that re-quotes a correct figure is
+        // what this unit does to these entries constantly, and it reddened
+        // the previous version while the document was right.
+        expect(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
+            '- ${_thousands(slicedPromoted)} cells change',
+            '- ${_thousands(slicedPromoted)} cells change\n'
+                '  **CORRECTED IN 0.11.13 — the wording above.** The '
+                '${_thousands(slicedPromoted)} figure is right.\n',
+          ))),
+          expected,
+          reason:
+              'adding an ordinary correction marker that re-quotes a CORRECT '
+              'figure made this test red. That is a false red on the most '
+              'common edit these entries receive.',
         );
       },
     );
@@ -527,6 +567,23 @@ String _thousands(int n) {
   for (var i = 0; i < digits.length; i++) {
     if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
     out.write(digits[i]);
+  }
+  return out.toString();
+}
+
+/// Drops correction-marker blocks from [section].
+///
+/// A marker runs from the line carrying `CORRECTED IN` to the next blank line.
+/// Markers re-quote figures by design — that is what makes a correction
+/// recognisable to a reader who acted on the old wording — so counting their
+/// figures makes routine, correct corrections fail.
+String _withoutCorrectionMarkers(String section) {
+  final out = StringBuffer();
+  var inMarker = false;
+  for (final line in section.split('\n')) {
+    if (line.contains('CORRECTED IN ')) inMarker = true;
+    if (inMarker && line.trim().isEmpty) inMarker = false;
+    if (!inMarker) out.writeln(line);
   }
   return out.toString();
 }
