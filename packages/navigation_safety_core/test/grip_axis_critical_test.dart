@@ -1,13 +1,33 @@
 /// Black ice under a clear sky: one axis is catastrophic, the other is fine.
 ///
-/// The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
-/// `driving_conditions`). A mean cannot express "one axis alone is lethal":
-/// with visibility at 1.0, `overall >= 0.5`, while every shipped
-/// `warningScoreFloor` is 0.30-0.40. So a grip score of ZERO under clear air
-/// scored `info` on the default config and could NOT reach `critical` at any
-/// grip value. Google Maps working, GPS working, sky clear, road lethal — the
-/// exact condition this product exists for, and the severity model had no
-/// shape in which to say it.
+/// ⚑ **CORRECTED IN 0.11.12. THE 0.11.11 ARCHIVE SHIPPED THIS PARAGRAPH
+/// UNCORRECTED, AND IT STATED THE TWO CLAIMS 0.11.11 EXISTS TO RETRACT.** It
+/// read, verbatim, so that a reader who acted on it can recognise it:
+///
+/// > *The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
+/// > `driving_conditions`). ... So a grip score of ZERO under clear air scored
+/// > `info` on the default config and could NOT reach `critical` at any grip
+/// > value.*
+///
+/// **`overall` is NOT a mean** — it is a third input the caller supplies and
+/// this package only clamps — and **`critical` WAS reachable**: on 0.11.9,
+/// `SafetyScore(overall: 0.2, gripScore: 1.0, visibilityScore: 1.0,
+/// fleetConfidenceScore: 1.0)` returns `critical` at PERFECT grip, because the
+/// composite returns `critical` whenever `overall` is below
+/// `warningScoreFloor` (default 0.30). This file was the one the 0.11.11
+/// changelog named as the remedy, so a reader who followed our own correction
+/// to check it met the false premise in its first paragraph.
+///
+/// The true statement follows.
+///
+/// WHEN `overall` IS the 50/50 mean of the axes — which is what
+/// `driving_conditions` supplies — a mean cannot express "one axis alone is
+/// lethal": with visibility at 1.0, `overall >= 0.5`, while every shipped
+/// `warningScoreFloor` is 0.30-0.40. So on that slice a grip score of ZERO
+/// under clear air scored `info` on the default config and could not reach
+/// `critical` at any grip value. Google Maps working, GPS working, sky clear,
+/// road lethal — the exact condition this product exists for, and the severity
+/// model had no shape in which to say it.
 ///
 /// These tests fail on the composite-only rule and pass on the per-axis rule.
 library;

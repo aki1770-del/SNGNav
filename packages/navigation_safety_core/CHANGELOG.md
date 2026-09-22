@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.12
+
+**0.11.11 corrected the changelog, the README and the API docs, and shipped the
+false premise in its own test file — the very file 0.11.11's changelog names as
+the remedy.** If you followed that pointer to check our correction, the first
+paragraph you read contradicted it.
+
+`test/grip_axis_critical_test.dart` opened, in the published 0.11.11 archive:
+
+> *The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
+> `driving_conditions`). ... So a grip score of ZERO under clear air scored
+> `info` on the default config and could NOT reach `critical` at any grip
+> value.*
+
+Those are the two statements 0.11.11 exists to retract, stated as unqualified
+fact. **`overall` is not a mean** — it is a third input the caller supplies,
+which this package only clamps — and **`critical` was reachable at perfect
+grip** whenever `overall` fell below `warningScoreFloor` (default 0.30). Both
+are true only on the 50/50 slice, and the paragraph did not say so. It now
+does, and it quotes what it used to say, so a reader who acted on the old
+wording can recognise it.
+
+**The 0.11.11 archive cannot be changed and still reads as published.** This
+entry is how you learn that; it is not a silent fix. Nothing in `lib/` changed
+and `toAlertSeverity` is identical to 0.11.11 — this is a documentation
+correction in a file that ships.
+
+**What was checked, so this is not one-site whack-a-mole.** Every file in the
+package was swept for both retracted claims. This was the ONLY remaining site
+where either stood unqualified and unmarked; every other occurrence is either
+inside a `CORRECTED IN 0.11.11` marker or already carries its slice qualifier.
+
 ## 0.11.11
 
 **Corrects a false sentence in 0.11.10's changelog, and the test that let it
