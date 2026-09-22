@@ -4,7 +4,12 @@
 
 **Corrects a false sentence in 0.11.10's changelog, and the test that let it
 through. No behaviour change: `toAlertSeverity` is identical to 0.11.10.**
-Read this if you sized your alert handling by 0.11.10's release note.
+**The same false premise was live in the API documentation and the README —
+where more people meet it than ever open a changelog — and this release
+corrects those lines in place rather than only reporting them here.**
+Read this if you sized your alert handling by 0.11.10's release note, or if
+you read what `SafetyScore` or `criticalGripScoreFloor` told you about
+`overall`.
 
 ### What 0.11.10 said, and what is true
 
@@ -204,8 +209,16 @@ default.
   conditions, so how often this promotion happens on a real winter road is
   **unmeasured**.
 - Only grip has a per-axis floor. `criticalVisibilityMeters` is declared,
-  profile-tuned and cited, and **nothing in this package reads it**; the
-  visibility axis still reaches the decision only through the mean.
+  profile-tuned and cited, and **nothing in this package reads it to decide a
+  severity**. Nor does `toAlertSeverity` read `visibilityScore` at all: the
+  visibility axis reaches the decision ONLY through whatever the caller folded
+  into `overall`, so a caller whose `overall` ignores visibility gets a
+  severity that ignores visibility, and this package does not notice.
+  **CORRECTED IN 0.11.11 — this line read "the visibility axis still reaches
+  the decision only through the mean".** That carried the same false premise
+  the rest of this entry exists to correct, and it also UNDERSTATED the gap:
+  `overall` need not be a mean, and `visibilityScore` is read by nothing in
+  the severity decision.
   `SafetyScenario.gripCritical` and `SafetyScenario.gripWarning` are likewise
   declared with **no producer**. Wiring either moves behaviour on a second axis
   and is a separate release.
