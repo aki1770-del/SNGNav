@@ -323,98 +323,142 @@ void main() {
       expect(slicedOutOfNone, 0);
     });
 
-    test('...and the CHANGELOG is READ, not assumed', () {
-      // ⚑ THIS TEST'S NAME PROMISED A COUPLING IT DID NOT HAVE. Until now the
-      // test above asserted integer literals and never opened CHANGELOG.md,
-      // so editing the changelog failed nothing and editing this test
-      // re-checked no document. That is the same shape as a totality claim
-      // scoped to one function: a NAME promising a coupling the
-      // implementation does not have.
-      //
-      // It is not academic. 0.11.11 quoted a tolerance that was true when it
-      // published and false 28 minutes later, because the suite moved and
-      // nothing re-checked the document. This closes that loop for the
-      // figures below: change the measurement OR change the entry, and this
-      // goes red.
-      final changelog = File('${Directory.current.path}/CHANGELOG.md');
-      expect(
-        changelog.existsSync(),
-        isTrue,
-        reason:
-            'CHANGELOG.md is absent, so the citations this test exists to '
-            'check were NOT checked. Do not read that as a pass.',
-      );
-      final text = changelog.readAsStringSync();
+    test(
+      'the comma-formatted counts in the 0.11.11 and 0.11.10 entries are the '
+      'counts measured, in the order the entries print them — read from the '
+      'file',
+      () {
+        // ⚑ THIS TEST'S NAME ONCE PROMISED A COUPLING IT DID NOT HAVE. The
+        // test above asserts integer literals and never opens CHANGELOG.md,
+        // so editing the changelog failed nothing and editing that test
+        // re-checked no document. The name is now what it does, and nothing
+        // more: SIX comma-formatted figures inside TWO entries. FDD measured
+        // the section at 37 distinct numeric tokens; this covers 7 of them.
+        // The tolerances, the sweep dimension and two line-number citations
+        // are NOT covered. An over-claimed guard is how a reader stops
+        // looking.
+        //
+        // It is not academic. 0.11.11 quoted a tolerance that was true when
+        // it published and false 28 minutes later, because the suite moved
+        // and nothing re-checked the document. This closes that loop for the
+        // figures below — and for those only.
+        final changelog = File('${Directory.current.path}/CHANGELOG.md');
+        expect(
+          changelog.existsSync(),
+          isTrue,
+          reason:
+              'CHANGELOG.md is absent, so the citations this test exists to '
+              'check were NOT checked. Do not read that as a pass.',
+        );
+        final text = changelog.readAsStringSync();
 
-      // Scope to the entries these measurements belong to.
-      final from = text.indexOf('## 0.11.11');
-      final to = text.indexOf('## 0.11.9');
-      expect(from, greaterThanOrEqualTo(0), reason: 'no 0.11.11 entry');
-      expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
-      final section = text.substring(from, to);
+        final from = text.indexOf('## 0.11.11');
+        final to = text.indexOf('## 0.11.9');
+        expect(from, greaterThanOrEqualTo(0), reason: 'no 0.11.11 entry');
+        expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
+        final section = text.substring(from, to);
 
-      // ⚑ A WHITELIST, NOT `contains`. The first version of this test used
-      // `contains` for each measured value, and that is satisfied by ANY
-      // occurrence: these figures are each cited TWICE, so corrupting one of
-      // the two left the check green. I caught that only because a control
-      // happened to fire, which is the same near-miss I have been warned
-      // about twice. So the rule is inverted: EVERY comma-formatted figure in
-      // these two entries must be a number this test measured, or one of the
-      // few explicitly allowed non-measurements. A wrong digit anywhere in
-      // the section fails, wherever it sits and however many times the right
-      // figure also appears.
-      const allowedNonMeasurements = <int>{
-        200000, // the run-count range the driving_conditions suite asserts
-      };
-      final measured = <int>{
-        slicedCells,
-        slicedPromoted,
-        slicedWarningToCritical,
-        slicedInfoToCritical,
-        freeCells,
-        freeOutOfNone,
-      };
+        // ⚑ ORDERED LIST, not a set and not a multiset.
+        //
+        // v1 used `contains` per figure — satisfied by any occurrence, and
+        // each of these is cited TWICE, so corrupting one of the two passed.
+        // v2 compared SETS, which fixed corruption to a value OUTSIDE the
+        // measured set and did not fix the twice-cited case it was built for:
+        // changing one of two `71,407` to `9,721` kept both sets equal.
+        // A MULTISET catches that one — measured — but NOT a straight swap of
+        // two figures cited the same number of times, which leaves the
+        // multiset identical while both sentences become false.
+        //
+        // The ordered list catches both, because a transposition changes the
+        // sequence. These two entries are published and frozen, so pinning
+        // their order costs nothing a rewrite should not pay.
+        const allowedNonMeasurements = <int>{
+          200000, // the run-count range the driving_conditions suite asserts
+        };
+        final measured = <int>{
+          slicedCells,
+          slicedPromoted,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+          freeCells,
+          freeOutOfNone,
+        };
 
-      final cited = RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
-          .allMatches(section)
-          .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
-          .toSet();
+        List<int> citedIn(String s) => RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
+            .allMatches(s)
+            .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
+            .toList();
 
-      expect(
-        cited.difference(measured).difference(allowedNonMeasurements),
-        isEmpty,
-        reason:
-            'the 0.11.11/0.11.10 entries cite a figure this test did not '
-            'measure. Either the entry was edited away from what was '
-            'measured, or a measurement moved and the entry did not follow '
-            'it — which is exactly how 0.11.11 came to quote a tolerance that '
-            'was true when it published and false 28 minutes later.',
-      );
-      expect(
-        measured.difference(cited),
-        isEmpty,
-        reason:
-            'a figure this test measures is no longer cited in the entries at '
-            'all, so the citation this test exists to check is gone',
-      );
+        final cited = citedIn(section);
+        final expected = <int>[
+          freeCells,
+          freeOutOfNone,
+          200000,
+          slicedCells,
+          slicedPromoted,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+          slicedCells,
+          slicedPromoted,
+          freeOutOfNone,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+        ];
+        expect(
+          cited,
+          expected,
+          reason:
+              'the comma-formatted figures in the 0.11.11/0.11.10 entries are '
+              'no longer the measured ones in the order the entries print '
+              'them. Either an entry was edited away from what was measured, '
+              'or a measurement moved and the entry did not follow it — which '
+              'is exactly how 0.11.11 came to quote a tolerance that was true '
+              'when it published and false 28 minutes later.',
+        );
+        expect(
+          cited.toSet().difference(measured).difference(allowedNonMeasurements),
+          isEmpty,
+          reason: 'a cited figure is not one this test measured',
+        );
 
-      // CONTROL: the check must be able to say no.
-      final corrupted = section.replaceFirst(
-        _thousands(freeOutOfNone),
-        _thousands(freeOutOfNone + 1),
-      );
-      final citedCorrupted = RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
-          .allMatches(corrupted)
-          .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
-          .toSet();
-      expect(
-        citedCorrupted.difference(measured).difference(allowedNonMeasurements),
-        isNotEmpty,
-        reason:
-            'corrupting ONE of the two occurrences of a cited figure was not '
-            'detected, so this check cannot discriminate',
-      );
-    });
+        // CONTROLS, BOTH SIDES.
+        //
+        // OUT-OF-SET: a value no measurement produces.
+        expect(
+          citedIn(section.replaceFirst(
+            _thousands(freeOutOfNone),
+            _thousands(freeOutOfNone + 1),
+          )),
+          isNot(expected),
+          reason: 'an out-of-set corruption was not detected',
+        );
+        // IN-SET, ONE OF TWO — the case being cited twice used to rescue, and
+        // the side v2's control never touched.
+        expect(
+          citedIn(section.replaceFirst(
+            _thousands(slicedCells),
+            _thousands(slicedPromoted),
+          )),
+          isNot(expected),
+          reason:
+              'changing ONE of two occurrences of a cited figure to ANOTHER '
+              'MEASURED figure was not detected — the exact case that passed '
+              'the set comparison',
+        );
+        // IN-SET, TRANSPOSITION — multiset-invariant, so only order sees it.
+        expect(
+          citedIn(section
+              .replaceAll(_thousands(slicedWarningToCritical), '@@')
+              .replaceAll(
+                  _thousands(slicedInfoToCritical), _thousands(slicedWarningToCritical))
+              .replaceAll('@@', _thousands(slicedInfoToCritical))),
+          isNot(expected),
+          reason:
+              'swapping two figures cited the same number of times was not '
+              'detected; a multiset cannot see this and a set cannot either',
+        );
+      },
+    );
 
     test('no alert 0.11.9 delivers is silenced, on the WHOLE surface', () {
       // The safety property, and the one that must never break. It holds
