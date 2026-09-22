@@ -32,6 +32,8 @@
 /// These tests fail on the composite-only rule and pass on the per-axis rule.
 library;
 
+import 'dart:io';
+
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
@@ -321,6 +323,99 @@ void main() {
       expect(slicedOutOfNone, 0);
     });
 
+    test('...and the CHANGELOG is READ, not assumed', () {
+      // ⚑ THIS TEST'S NAME PROMISED A COUPLING IT DID NOT HAVE. Until now the
+      // test above asserted integer literals and never opened CHANGELOG.md,
+      // so editing the changelog failed nothing and editing this test
+      // re-checked no document. That is the same shape as a totality claim
+      // scoped to one function: a NAME promising a coupling the
+      // implementation does not have.
+      //
+      // It is not academic. 0.11.11 quoted a tolerance that was true when it
+      // published and false 28 minutes later, because the suite moved and
+      // nothing re-checked the document. This closes that loop for the
+      // figures below: change the measurement OR change the entry, and this
+      // goes red.
+      final changelog = File('${Directory.current.path}/CHANGELOG.md');
+      expect(
+        changelog.existsSync(),
+        isTrue,
+        reason:
+            'CHANGELOG.md is absent, so the citations this test exists to '
+            'check were NOT checked. Do not read that as a pass.',
+      );
+      final text = changelog.readAsStringSync();
+
+      // Scope to the entries these measurements belong to.
+      final from = text.indexOf('## 0.11.11');
+      final to = text.indexOf('## 0.11.9');
+      expect(from, greaterThanOrEqualTo(0), reason: 'no 0.11.11 entry');
+      expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
+      final section = text.substring(from, to);
+
+      // ⚑ A WHITELIST, NOT `contains`. The first version of this test used
+      // `contains` for each measured value, and that is satisfied by ANY
+      // occurrence: these figures are each cited TWICE, so corrupting one of
+      // the two left the check green. I caught that only because a control
+      // happened to fire, which is the same near-miss I have been warned
+      // about twice. So the rule is inverted: EVERY comma-formatted figure in
+      // these two entries must be a number this test measured, or one of the
+      // few explicitly allowed non-measurements. A wrong digit anywhere in
+      // the section fails, wherever it sits and however many times the right
+      // figure also appears.
+      const allowedNonMeasurements = <int>{
+        200000, // the run-count range the driving_conditions suite asserts
+      };
+      final measured = <int>{
+        slicedCells,
+        slicedPromoted,
+        slicedWarningToCritical,
+        slicedInfoToCritical,
+        freeCells,
+        freeOutOfNone,
+      };
+
+      final cited = RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
+          .allMatches(section)
+          .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
+          .toSet();
+
+      expect(
+        cited.difference(measured).difference(allowedNonMeasurements),
+        isEmpty,
+        reason:
+            'the 0.11.11/0.11.10 entries cite a figure this test did not '
+            'measure. Either the entry was edited away from what was '
+            'measured, or a measurement moved and the entry did not follow '
+            'it — which is exactly how 0.11.11 came to quote a tolerance that '
+            'was true when it published and false 28 minutes later.',
+      );
+      expect(
+        measured.difference(cited),
+        isEmpty,
+        reason:
+            'a figure this test measures is no longer cited in the entries at '
+            'all, so the citation this test exists to check is gone',
+      );
+
+      // CONTROL: the check must be able to say no.
+      final corrupted = section.replaceFirst(
+        _thousands(freeOutOfNone),
+        _thousands(freeOutOfNone + 1),
+      );
+      final citedCorrupted = RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
+          .allMatches(corrupted)
+          .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
+          .toSet();
+      expect(
+        citedCorrupted.difference(measured).difference(allowedNonMeasurements),
+        isNotEmpty,
+        reason:
+            'corrupting ONE of the two occurrences of a cited figure was not '
+            'detected, so this check cannot discriminate',
+      );
+    });
+
     test('no alert 0.11.9 delivers is silenced, on the WHOLE surface', () {
       // The safety property, and the one that must never break. It holds
       // off the slice as well as on it: 7,212,107 cells, none lowered.
@@ -379,4 +474,15 @@ AlertSeverity? _compositeOnly(NavigationSafetyConfig c, double overall) {
   if (overall < c.infoScoreFloor) return AlertSeverity.warning;
   if (overall < c.safeScoreFloor) return AlertSeverity.info;
   return null;
+}
+
+/// Renders [n] with thousands separators, the way the CHANGELOG writes them.
+String _thousands(int n) {
+  final digits = n.toString();
+  final out = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
+    out.write(digits[i]);
+  }
+  return out.toString();
 }

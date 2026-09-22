@@ -114,14 +114,18 @@ than take this paragraph's word. **No measured figure is quoted here that the
 suite does not re-derive:** earlier drafts of this entry quoted departures
 taken from one-off grids, and those numbers moved when the grid moved.
 
-**CORRECTED IN 0.11.12 — BOTH SENTENCES ABOVE.** The suite does not assert
-1e-3, and did not when this shipped. Re-measured over the input space actually
-reachable — the contract enforces finiteness only, so any finite speed, grip
-factor or visibility is legal — float32 accumulation exceeds 1e-3, and the
-bound is **1e-2**. So this paragraph named a figure the suite does not
-re-derive, in the sentence telling you to go and check it, one line above the
-sentence promising exactly that could not happen — and it overstated the
-guarantee by an order of magnitude. See 0.11.12.
+**CORRECTED IN 0.11.12 — BOTH SENTENCES ABOVE, AND NOT THE WAY IT LOOKS.**
+**When 0.11.11 published, the suite DID assert 1e-3 and this paragraph was
+true.** The tolerance was re-measured 28 minutes later — over the input space
+actually reachable, since the contract enforces finiteness only, so any finite
+speed, grip factor or visibility is legal — float32 accumulation exceeds 1e-3,
+and the bound became **1e-2**. Nothing moved this document when that happened.
+So the failure is not a figure quoted carelessly: **the document was right and
+the test moved underneath it**, which is precisely the weakness in anchoring a
+document to a suite — the anchor holds only if changing the suite re-checks the
+document, and nothing did. Read today, the paragraph names a bound the suite
+does not assert, one line above the sentence promising that could not happen,
+and overstates the guarantee by an order of magnitude. See 0.11.12.
 
 **If your `overall` is anything else** — a different weighting, more axes, a
 model of your own — then **0.11.10 can alert where 0.11.9 was silent**:

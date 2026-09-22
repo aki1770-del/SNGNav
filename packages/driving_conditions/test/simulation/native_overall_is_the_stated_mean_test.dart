@@ -180,6 +180,21 @@ const List<String> _permittedDefines = <String>[
   '#define SIMULATION_ABI_VERSION 2u',
 ];
 
+/// The include surface, pinned by the SAME argument a third time.
+///
+/// A translation unit is the source AFTER preprocessing, and this check scans
+/// BEFORE it, so an `#include` is a way to bring in text the scan never sees.
+/// FDD grades the attack that needs it low-realism — it takes a mid-function
+/// include and a macro over a clock call, and nobody would write that. It is
+/// recorded as the demonstrable EDGE of the totality claim rather than as a
+/// plausible defect, and pinned because closure costs three lines and leaving
+/// a known edge unpinned after being shown it is not a defensible choice.
+const List<String> _permittedIncludes = <String>[
+  '#include <math.h>',
+  '#include <stdint.h>',
+  '#include <time.h>',
+];
+
 /// The function surface, pinned for the same reason as the macros and by the
 /// same argument — a CALL carries no identity term either. A new function is
 /// a new place for the arithmetic to live.
@@ -362,6 +377,19 @@ void main() {
               'a macro was added or changed. A macro expanding to a statement '
               'carries no identity term at its use site, so it would pass the '
               'whitelist above; pinning the #define set is what closes that.',
+        );
+
+        expect(
+          RegExp(r'^#include[^\n]*', multiLine: true)
+              .allMatches(_scannedSource(raw))
+              .map((m) => m.group(0)!.trim())
+              .toList(),
+          _permittedIncludes,
+          reason:
+              'an #include was added, removed or changed. This check scans the '
+              'source BEFORE preprocessing, so an include is text the scan '
+              'never sees — the demonstrable edge of the totality claim, and '
+              'the same argument that pins the macros and the functions.',
         );
 
         expect(
