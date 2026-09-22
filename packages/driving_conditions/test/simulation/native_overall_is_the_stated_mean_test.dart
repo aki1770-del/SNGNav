@@ -63,17 +63,47 @@ const double _gripFloor = 1.5 / 5.5;
 /// blind to a defect this test catches.
 const double _identityEpsilon = 1e-5;
 
+/// Off-lattice tolerances, MEASURED rather than derived. Each is the worst
+/// departure seen on the unmutated engine over 20,000 pseudo-random samples
+/// with continuous speed / grip / visibility across all six surfaces:
+///
+///   runs <= 1000       worst 1.2815e-06   ->  1e-5 tolerance,  7.8x headroom
+///   1000..200,000      worst 5.3436e-05   ->  1e-3 tolerance, 18.7x headroom
+///
+/// A 0.85 multiplicative override — the ordinary way an override is written —
+/// produces about 7.5e-02, so both tolerances catch it by one to four orders.
+const double _epsilonLowRuns = 1e-5;
+const double _epsilonHighRuns = 1e-3;
+const int _lowRunCeiling = 1000;
+
+/// The top of the range this file asserts. Above it, float32 accumulation
+/// dominates and is NOT monotone in run count, so no bound is claimed.
+const int _maxAssertedRuns = 200000;
+
 /// The per-run weighting in `native_simulation.c`.
 const String _realWeighting =
     'float overall = grip_score * 0.5f + visibility_score * 0.5f;';
 const String _brokenWeighting =
     'float overall = grip_score * 0.7f + visibility_score * 0.3f;';
 
-/// Assignments to a bare `overall`, comments removed first. The real kernel
-/// assigns it exactly once; a second assignment is how a surface-, speed- or
-/// grip-conditional override hides from a sweep that does not happen to vary
-/// the trigger.
-final RegExp _overallAssignment = RegExp(r'(?<![_A-Za-z0-9])overall\s*=(?!=)');
+/// WRITES to a bare `overall`, comments removed first — plain AND compound.
+///
+/// ⚑ v2 OF THIS PATTERN MATCHED ONLY `=`, AND WAS REFUTED. `overall *= 0.85f`
+/// is how anyone actually writes an override, and it returned zero matches, so
+/// four conditional overrides passed the static check. The blind spot was not
+/// the exotic macro case this file used to name; it was the ordinary one.
+final RegExp _overallWrite =
+    RegExp(r'(?<![_A-Za-z0-9])overall\s*(?:[-+*/%^&|]|<<|>>)?=(?!=)');
+
+/// WRITES to the accumulator. Scaling here changes `overallMean` while never
+/// touching `overall`, so the check above cannot see it: `total_overall +=
+/// overall * 0.9f` is invisible to any pattern that watches `overall` alone.
+final RegExp _totalOverallWrite =
+    RegExp(r'(?<![_A-Za-z0-9])total_overall\s*(?:[-+*/%^&|]|<<|>>)?=(?!=)');
+
+/// The accumulation statement itself. What is accumulated must be `overall`,
+/// unscaled — the count above cannot tell `+= overall;` from `+= overall*0.9f;`.
+const String _accumulation = 'total_overall += overall;';
 
 String _stripComments(String c) => c
     .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
@@ -218,74 +248,186 @@ void main() {
     );
 
     test(
-      'the C assigns `overall` exactly once, so no conditional override can '
-      'hide behind a parameter this sweep does not vary',
+      '`overall` is WRITTEN exactly once and accumulated UNSCALED, so a '
+      'conditional override cannot hide behind a trigger the sweep misses',
       () {
-        final stripped = _stripComments(source.readAsStringSync());
+        final raw = source.readAsStringSync();
+        final stripped = _stripComments(raw);
+
         expect(
-          _overallAssignment.allMatches(stripped).length,
+          _overallWrite.allMatches(stripped).length,
           1,
           reason:
-              'the kernel assigns `overall` more than once. A second '
-              'assignment is how a conditional reweighting hides from a '
-              'behavioural sweep; if this is intentional, the sweep above '
-              'must be widened over whatever the new condition reads.',
-        );
-        // Control on the control: the check must SEE the attack, and must not
-        // be fooled by the word appearing in a comment.
-        expect(
-          _overallAssignment
-              .allMatches(_stripComments(_surfaceAttack(source.readAsStringSync())))
-              .length,
-          greaterThan(1),
-          reason: 'the static check is blind to a second assignment',
+              'the kernel writes `overall` more than once. A second write — '
+              'plain OR compound, `overall *= k` included — is how a '
+              'conditional reweighting hides from a behavioural sweep. If it '
+              'is intentional, the sweep must be widened over whatever the '
+              'new condition reads.',
         );
         expect(
-          _overallAssignment
-              .allMatches(_stripComments('/* overall = 9; */ // overall = 8;'))
+          _totalOverallWrite.allMatches(stripped).length,
+          2,
+          reason:
+              'the accumulator is written somewhere other than its '
+              'initialisation and the one accumulation statement',
+        );
+        expect(
+          _accumulation.allMatches(stripped).length,
+          1,
+          reason:
+              'the accumulation is no longer the unscaled `$_accumulation`. '
+              'Scaling HERE moves overallMean while never touching `overall`, '
+              'so the write-count above cannot see it.',
+        );
+
+        // CONTROLS. Each must SEE its attack, and none may fire on a comment.
+        for (final attack in <String, String>{
+          'surface-conditional (compound)': _surfaceAttack(raw),
+          'exact-run-count trigger': raw.replaceFirst(
+            _realWeighting,
+            '$_realWeighting\n    if (runs == 100001u) { overall *= 0.85f; }',
+          ),
+          'grip-band trigger': raw.replaceFirst(
+            _realWeighting,
+            '$_realWeighting\n    if (grip_factor > 0.26f && grip_factor < '
+                '0.28f) { overall *= 0.85f; }',
+          ),
+        }.entries) {
+          final a = _stripComments(attack.value);
+          expect(
+            _overallWrite.allMatches(a).length,
+            greaterThan(1),
+            reason: 'the write check is blind to: ${attack.key}',
+          );
+        }
+        final scaled = _stripComments(
+          raw.replaceFirst(_accumulation, 'total_overall += overall * 0.9f;'),
+        );
+        expect(
+          _accumulation.allMatches(scaled).length,
+          0,
+          reason: 'the accumulation check is blind to a scaled accumulator',
+        );
+        expect(
+          _overallWrite
+              .allMatches(_stripComments(
+                  '/* overall *= 9; */ // total_overall += overall * 2;'))
               .length,
           0,
-          reason: 'the static check counts comments, so it will false-positive',
+          reason: 'the checks count comments, so they will false-positive',
         );
       },
     );
 
     test(
-      'the departure at HIGH run counts is float32 accumulation, and stays far '
-      'below any threshold in navigation_safety_core',
+      'OFF-LATTICE probe: the identity holds at inputs that sit BETWEEN the '
+      'swept grid points, at run counts drawn across the range',
       () {
-        // Stated because the epsilon above is bounded by run count and `runs`
-        // is public and unbounded. This is the honest rest of the range: the
-        // identity degrades by accumulation, not by weighting, and a real
-        // weighting break (>= 0.01) is still caught here by three orders.
-        final lib = _compile(cc!, tmp, source.readAsStringSync(), 'highruns');
+        // ⚑ WHY THIS EXISTS. The lattice sweep above walks grip in steps of
+        // 0.1, visibility in steps of 100 and three fixed speeds, so a trigger
+        // written just off those points is invisible to it — and the four
+        // attacks that refuted v2 sat off the lattice AND used a compound
+        // assignment, so BOTH checks failed on the SAME input. The static
+        // check is now widened; this is its behavioural complement, and it is
+        // deliberately built to fail on different inputs: continuous
+        // parameters, a deterministic pseudo-random draw, and the two run
+        // counts that were used against this file.
+        final lib = _compile(cc!, tmp, source.readAsStringSync(), 'offlattice');
         final bindings = NativeSimulationBindings(library: lib);
+        final worst = _offLatticeProbe(bindings, surfaces);
+
+        expect(
+          worst.lowRunsWorst,
+          lessThan(_epsilonLowRuns),
+          reason:
+              'off-lattice, at runs <= $_lowRunCeiling, the worst departure '
+              'was ${worst.lowRunsWorst} (measured baseline 1.28e-06 over '
+              '20,000 samples, so this tolerance carries 7.8x headroom). A '
+              'departure here is a weighting change at a point the grid does '
+              'not visit.',
+        );
+        expect(
+          worst.highRunsWorst,
+          lessThan(_epsilonHighRuns),
+          reason:
+              'off-lattice, at runs up to $_maxAssertedRuns, the worst '
+              'departure was ${worst.highRunsWorst} (measured baseline '
+              '5.34e-05 over 20,000 samples, 18.7x headroom). Float32 '
+              'accumulation alone does not reach this tolerance ANYWHERE IN '
+              'THIS RANGE — see the run-count test for where it does.',
+        );
+        expect(
+          worst.samples,
+          greaterThan(2000),
+          reason: 'the probe must actually sample',
+        );
+      },
+    );
+
+    test(
+      'the run-count range this file asserts, and the measured point where '
+      'float32 accumulation stops being negligible',
+      () {
+        // ⚑ THIS TEST REPLACES ONE WHOSE PROSE WAS FALSE. It said "accumulation
+        // alone does not reach this" of a 1e-3 tolerance at 100,000 runs. On
+        // the UNMUTATED engine accumulation reaches 1.736e-03 at 1,000,000
+        // runs — 1.7x that tolerance. Whoever widened that test to a million
+        // runs, the natural next step since it covered the unbounded range,
+        // would have watched a CORRECT engine go red and concluded the engine
+        // was broken. A sentence about arithmetic written from reasoning
+        // rather than from running it, inside the guard built to close exactly
+        // that.
+        //
+        // Measured on the UNMUTATED engine over ONE NAMED GRID — all six
+        // surfaces x grip 0.0..1.0 in 0.1 x visibility {0, 500, 1000} x speed
+        // 60 x seed 42. The grid is named because these figures MOVE with it,
+        // and quoting a departure without its grid is how three wrong numbers
+        // got into this branch's record:
+        //
+        //     100,000 -> 1.61e-05      1,000,000 -> 1.74e-03
+        //     200,000 -> 5.58e-05      2,000,000 -> 7.30e-03
+        //     500,000 -> 2.16e-04      5,000,000 -> 5.51e-02
+        //
+        // ⚑ AND THE GROWTH IS NOT MONOTONE. Per cell it DROPS at 400k, 500k,
+        // 600k and collapses from 4.87e-05 to 3.49e-06 at 1.1M before jumping
+        // to 6.47e-04 at 1.2M, because the float32 accumulator saturates. So
+        // there is no bound formula in run count to be had, and fitting one
+        // would be the same mistake again. This file therefore asserts the
+        // identity only up to $_maxAssertedRuns and SAYS SO rather than
+        // implying more.
+        //
+        // DO NOT widen this to larger run counts expecting green. Above this
+        // range a departure is accumulation, not a defect.
+        final lib = _compile(cc!, tmp, source.readAsStringSync(), 'runbound');
+        final bindings = NativeSimulationBindings(library: lib);
+
         var worst = 0.0;
         for (final surfaceCode in surfaces) {
           for (var g = 0; g <= 10; g++) {
             for (final vis in const [0.0, 500.0, 1000.0]) {
               final r = bindings.runBatch(
-                runs: 100000,
+                runs: _maxAssertedRuns,
                 seed: 42,
                 speed: 60,
                 gripFactor: g / 10,
                 surfaceCode: surfaceCode,
                 visibilityMeters: vis,
               );
-              final d = (r.overallMean -
-                      (0.5 * r.gripMean + 0.5 * r.visibilityMean))
-                  .abs();
+              final d =
+                  (r.overallMean - (0.5 * r.gripMean + 0.5 * r.visibilityMean))
+                      .abs();
               if (d > worst) worst = d;
             }
           }
         }
         expect(
           worst,
-          lessThan(1e-3),
+          lessThan(_epsilonHighRuns),
           reason:
-              'at 100,000 runs the departure was $worst. Accumulation alone '
-              'does not reach this; a departure this size would move a '
-              'severity decision.',
+              'at the top of the asserted range ($_maxAssertedRuns runs) the '
+              'departure was $worst against a $_epsilonHighRuns tolerance. '
+              'Accumulation reaches roughly 5.6e-05 here, so this is a '
+              'weighting change, not rounding.',
         );
       },
     );
@@ -398,4 +540,90 @@ String? _findCompiler() {
     }
   }
   return null;
+}
+
+typedef _ProbeResult = ({
+  double lowRunsWorst,
+  double highRunsWorst,
+  int samples,
+});
+
+/// Deterministic pseudo-random probe at inputs BETWEEN the lattice points.
+///
+/// Fixed seed, so it is reproducible; continuous parameters, so a trigger
+/// written just off the grid cannot hide; and it explicitly includes the two
+/// run counts used against this file — 5000, which is the parity test's own
+/// run count, and 100001, which is one past the probe v2 used.
+_ProbeResult _offLatticeProbe(
+  NativeSimulationBindings bindings,
+  List<int> surfaces,
+) {
+  var state = 0x9E3779B97F4A7C15;
+  double next() {
+    state = state * 6364136223846793005 + 1442695040888963407;
+    return ((state >>> 11) & 0x1FFFFFFFFFFFFF) / 0x20000000000000;
+  }
+
+  var lowWorst = 0.0;
+  var highWorst = 0.0;
+  var samples = 0;
+
+  double measure(int runs, int seed, double speed, double grip, int surface,
+      double vis) {
+    final r = bindings.runBatch(
+      runs: runs,
+      seed: seed,
+      speed: speed,
+      gripFactor: grip,
+      surfaceCode: surface,
+      visibilityMeters: vis,
+    );
+    return (r.overallMean - (0.5 * r.gripMean + 0.5 * r.visibilityMean)).abs();
+  }
+
+  for (var i = 0; i < 1500; i++) {
+    final d = measure(
+      1 + (next() * _lowRunCeiling).floor(),
+      (next() * 0x7FFFFFFF).floor(),
+      next() * 130.0,
+      next(),
+      surfaces[(next() * surfaces.length).floor().clamp(0, surfaces.length - 1)],
+      next() * 1000.0,
+    );
+    if (d > lowWorst) lowWorst = d;
+    samples++;
+  }
+
+  for (var i = 0; i < 1500; i++) {
+    final d = measure(
+      _lowRunCeiling + (next() * (_maxAssertedRuns - _lowRunCeiling)).floor(),
+      (next() * 0x7FFFFFFF).floor(),
+      next() * 130.0,
+      next(),
+      surfaces[(next() * surfaces.length).floor().clamp(0, surfaces.length - 1)],
+      next() * 1000.0,
+    );
+    if (d > highWorst) highWorst = d;
+    samples++;
+  }
+
+  // The two run counts that were actually used against this file. Random
+  // sampling of a 200,000-wide range will not hit an exact-equality trigger,
+  // so the known ones are named. The general case is the static write-count
+  // check, not this.
+  for (final runs in const [5000, 100001]) {
+    for (final surface in surfaces) {
+      for (var g = 0; g <= 10; g++) {
+        final d = measure(runs, 42, 60.0, g / 10, surface, 500.0);
+        if (runs <= _lowRunCeiling) {
+          if (d > lowWorst) lowWorst = d;
+        } else {
+          if (d > highWorst) highWorst = d;
+        }
+        samples++;
+      }
+    }
+  }
+
+  return (lowRunsWorst: lowWorst, highRunsWorst: highWorst, samples: samples);
 }

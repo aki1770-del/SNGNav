@@ -55,15 +55,19 @@ Both of its engines produce `overall` as exactly `0.5 * grip +
 0.5 * visibility`: the pure-Dart one through `SimulatedSafetyScore`'s two
 fixed weights, and the native one at `native/native_simulation.c:104`, whose
 `overallMean` is the mean of per-run values carrying those same weights and is
-therefore `0.5 * gripMean + 0.5 * visMean` by construction. Compiled and swept
-over 26,726,620 parameter cells (runs, seed, speed, grip factor, visibility),
-the largest departure from that identity was 2.09e-06 — float32 rounding — at
-run counts up to 1000. That departure GROWS with `SimulationOptions.runs`,
-which is public and unbounded: about 1.4e-05 at 100,000 runs and 4.3e-04 at
-500,000, still orders of magnitude below every threshold this package ships.
-With `gripMean` below 0.2727 the highest `overallMean` reached was 0.629,
-against the 0.636 arithmetic ceiling above and the 0.80 `safeScoreFloor`.
+therefore `0.5 * gripMean + 0.5 * visMean` by construction — which is an
+argument from the source, not from a sample. So with `gripMean` below 0.2727
+their `overallMean` cannot exceed the same **0.636** ceiling derived above,
+while the lowest `safeScoreFloor` this package ships is **0.80**.
 **They are ON the slice, and 0.11.10's bound holds for them.**
+
+That identity is now asserted by `driving_conditions`' own
+`test/simulation/native_overall_is_the_stated_mean_test.dart`, which compiles
+the C engine and checks it on every road surface, on and off the swept grid —
+within 1e-5 at run counts up to 1000, and 1e-3 up to 200,000. Run it rather
+than take this paragraph's word. **No measured figure is quoted here that the
+suite does not re-derive:** earlier drafts of this entry quoted departures
+taken from one-off grids, and those numbers moved when the grid moved.
 
 **If your `overall` is anything else** — a different weighting, more axes, a
 model of your own — then **0.11.10 can alert where 0.11.9 was silent**:

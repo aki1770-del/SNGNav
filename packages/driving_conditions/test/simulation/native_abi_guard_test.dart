@@ -120,13 +120,25 @@ void main() {
                 'is STALE. Rebuild it: cd native && cmake --build build',
           );
         } else {
+          // SPECIFIC, not `throwsA(anything)`. Measured: an absent library
+          // raises ArgumentError carrying 'Failed to load dynamic library'.
+          // Matching ANY throw would also be satisfied by an ABI mismatch, by
+          // an UnsupportedError, or by a bug in this test — the same
+          // substitute-a-proxy-for-the-thing move as gating on the platform.
           expect(
             () => NativeSimulationBindings(),
-            throwsA(anything),
+            throwsA(
+              isA<ArgumentError>().having(
+                (e) => e.toString(),
+                'message',
+                contains('Failed to load dynamic library'),
+              ),
+            ),
             reason:
                 'there is no library at $defaultPath, so constructing bindings '
-                'MUST throw. If it returns, a different library was loaded and '
-                'every number it produces is unverified.',
+                'MUST fail AT LOAD. If it returns, a different library was '
+                'loaded and every number it produces is unverified; if it '
+                'fails some other way, the failure is not the one claimed.',
           );
         }
       },
@@ -135,14 +147,20 @@ void main() {
     test(
       'a library predating the contract is REFUSED, never read',
       () {
-        if (!Platform.isLinux) {
-          // The ONLY honest skip in this file: this replica is built with
-          // `-shared -fPIC` into a `.so`, which is a Linux build path. The
-          // capability genuinely does not exist here. The ABI-drift test above
-          // still runs on this platform and still asserts.
+        // ⚑ THIS GATE READ `!Platform.isLinux`, JUSTIFIED AS A CAPABILITY
+        // CLAIM. That substituted a proxy for the thing itself — the same move
+        // the fail-open in this file was made of. The question is not what
+        // platform this is; it is whether this toolchain can build a shared
+        // object that `DynamicLibrary` will load. So it is MEASURED, by doing
+        // it. Whether the answer differs from `Platform.isLinux` anywhere is
+        // itself unmeasured, and this replaces a guess with a check rather
+        // than claiming to know.
+        final probe = _sharedObjectCapability();
+        if (!probe.available) {
           markTestSkipped(
-            'the .so replica build path is Linux-only; the ABI-drift check '
-            'above still ran',
+            'this toolchain cannot produce a loadable shared object, measured: '
+            '${probe.reason}. The ABI-drift test above still ran and still '
+            'asserted.',
           );
           return;
         }
@@ -262,4 +280,44 @@ String? _findCompiler() {
     }
   }
   return null;
+}
+
+typedef _Capability = ({bool available, String reason});
+
+/// Measures whether this toolchain can build a shared object that
+/// `DynamicLibrary` will open — by building a trivial one and opening it.
+///
+/// Replaces a `Platform.isLinux` test that stood in for this question. A proxy
+/// is what the first fail-open in this file was made of.
+_Capability _sharedObjectCapability() {
+  final cc = _findCompiler();
+  if (cc == null) {
+    return (available: false, reason: 'no C compiler on PATH');
+  }
+  Directory? tmp;
+  try {
+    tmp = Directory.systemTemp.createTempSync('so_capability');
+    final src = File('${tmp.path}/probe.c')
+      ..writeAsStringSync('int probe_symbol(void) { return 7; }\n');
+    final out = '${tmp.path}/libprobe.so';
+    final build = Process.runSync(cc, ['-shared', '-fPIC', '-o', out, src.path]);
+    if (build.exitCode != 0) {
+      return (
+        available: false,
+        reason: '$cc could not build a shared object: ${build.stderr}',
+      );
+    }
+    DynamicLibrary.open(
+      out,
+    ).lookup<NativeFunction<Int32 Function()>>('probe_symbol');
+    return (available: true, reason: 'built and loaded a probe object');
+  } on Object catch (e) {
+    return (available: false, reason: 'probe object would not load: $e');
+  } finally {
+    try {
+      tmp?.deleteSync(recursive: true);
+    } on FileSystemException {
+      // Nothing to clean up is not a capability finding.
+    }
+  }
 }
