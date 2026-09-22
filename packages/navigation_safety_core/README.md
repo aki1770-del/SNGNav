@@ -361,10 +361,18 @@ for the full discussion.
   `toAlertSeverity` returns the WORSE of two verdicts: `overall`
   against the config's score floors, and `gripScore` against
   `NavigationSafetyConfig.criticalGripScoreFloor`. The second exists
-  because `overall` is a mean, and a mean cannot say that one axis
-  alone is lethal — black ice under a clear sky. Through 0.11.9 it
-  mapped `overall` alone, and `critical` was unreachable at any grip
-  value once visibility was good.
+  because callers commonly supply a MEAN of the axes, and a mean cannot
+  say that one axis alone is lethal — black ice under a clear sky.
+  Through 0.11.9 `toAlertSeverity` mapped `overall` alone, so on that
+  50/50 slice `critical` was unreachable at any grip value once
+  visibility was good.
+  **CORRECTED IN 0.11.11** — this paragraph read "because `overall` is a
+  mean" and "`critical` was unreachable at any grip value once
+  visibility was good", with no slice qualifier, and both were false as
+  written. `overall` is a third input this package never computes (see
+  the first line of this entry), and on 0.11.9 an `overall` below
+  `warningScoreFloor` (default 0.30) returned `critical` at ANY grip,
+  including 1.0.
 - **`SafetyScenario`** — a named, versioned id for the kind of hazard
   an alert describes (a class, not an enum); `WellKnownScenarios`
   holds ready-made ids in the sensing, routing, signal, dynamics and

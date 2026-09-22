@@ -214,9 +214,18 @@ void main() {
     // `SafetyScore` clamps each field to [0,1] and does NOTHING else: it
     // never recomputes `overall` from the axes and never checks the two
     // against each other. Any integrator whose `overall` is not our 50/50
-    // mean — a different weighting, more axes, a model of their own, or the
-    // FFI `overallMean` that `driving_conditions`' native engine passes
-    // straight through — lives OFF the slice above.
+    // mean — a different weighting, more axes, a model of their own — lives
+    // OFF the slice above.
+    //
+    // `driving_conditions` is NOT such an integrator, and this comment said
+    // it was until it was measured. BOTH of its engines produce `overall` as
+    // exactly 0.5*grip + 0.5*visibility: the pure-Dart one through
+    // SimulatedSafetyScore's two fixed weights, the native one per run at
+    // native/native_simulation.c:104, so its `overallMean` is
+    // 0.5*gripMean + 0.5*visMean by construction (compiled and swept:
+    // max departure 2.09e-06, float32 rounding). No test in THIS package can
+    // check that — it depends on neither `driving_conditions` nor `dart:ffi`
+    // — which is exactly why the claim was writable. See CHANGELOG 0.11.11.
     late int freeCells, freePromoted, freeOutOfNone, freeLowered;
     late int slicedCells, slicedPromoted, slicedOutOfNone, slicedLowered;
     late int slicedWarningToCritical, slicedInfoToCritical;

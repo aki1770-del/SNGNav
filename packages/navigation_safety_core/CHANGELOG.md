@@ -21,7 +21,7 @@ score the caller supplies" — so it is a THIRD independent input, and
 `0.5 * grip + 0.5 * visibility`, our own weighting. On that slice the
 counter-example is not absent, it is **arithmetically impossible**: with
 `gripScore` below `criticalGripScoreFloor` (0.2727...) the 50/50 mean cannot
-exceed `0.5 * 0.2727... + 0.5` = **0.635**, while the lowest `safeScoreFloor`
+exceed `0.5 * 0.2727... + 0.5` = **0.636**, while the lowest `safeScoreFloor`
 this package ships is **0.80**. "Silent on 0.11.9 and alerting on 0.11.10"
 could not occur in that grid whatever the rule did, so `expect(..., 0)` passed
 while proving nothing.
@@ -45,11 +45,22 @@ than recomputed: `SafetyScore(overall: 0.8, gripScore: 0.0, visibilityScore:
 **If your `overall` is our 50/50 mean, 0.11.10's note did not mislead you.**
 The grid covers your case and its counts hold.
 
+**`driving_conditions` holders are in that case — measured, not assumed.**
+Both of its engines produce `overall` as exactly `0.5 * grip +
+0.5 * visibility`: the pure-Dart one through `SimulatedSafetyScore`'s two
+fixed weights, and the native one at `native/native_simulation.c:104`, whose
+`overallMean` is the mean of per-run values carrying those same weights and is
+therefore `0.5 * gripMean + 0.5 * visMean` by construction. Compiled and swept
+over 26,726,620 parameter cells (runs, seed, speed, grip factor, visibility),
+the largest departure from that identity was 2.09e-06 — float32 rounding — and
+with `gripMean` below 0.2727 the highest `overallMean` reached was 0.629,
+against the 0.636 arithmetic ceiling above and the 0.80 `safeScoreFloor`.
+**They are ON the slice, and 0.11.10's bound holds for them.**
+
 **If your `overall` is anything else** — a different weighting, more axes, a
-model of your own, or the `overallMean` that `driving_conditions`' native
-simulation engine passes through from FFI — then **0.11.10 can alert where
-0.11.9 was silent**: wherever `gripScore` is below 0.2727... while your
-`overall` sits at or above your `safeScoreFloor`. That is new alert volume on
+model of your own — then **0.11.10 can alert where 0.11.9 was silent**:
+wherever `gripScore` is below 0.2727... while your `overall` sits at or above
+your `safeScoreFloor`. That is new alert volume on
 input that was previously silent. Size `AlertDensityThrottle` for it — a
 `critical` bypasses `alertsPerMinuteCap` and still consumes a slot in the
 rolling window.
@@ -68,6 +79,18 @@ counts 0.11.10 printed — 71,407 cells, 9,721 promoted, 7,723 `warning` to
 `test/grip_axis_critical_test.dart`" and were asserted nowhere in that file;
 they are asserted now, so the citation is true.
 
+**And the sentence this entry itself nearly shipped.** A draft of this note
+said `driving_conditions`' native FFI path was OFF the slice. It is not — the
+measurement above is what settled it, and it was run only because the claim
+was challenged. The claim was writable because `driving_conditions`' own
+`test/simulation/honest_fleet_absence_test.dart:48` asserts
+`overall == 0.5 * grip + 0.5 * visibility` for the **CPU** engine only:
+nothing asserted it of the FFI path, so nothing could contradict a guess about
+it. `navigation_safety_core` cannot close that gap from here — it depends on
+neither `driving_conditions` nor `dart:ffi`, so no test in this package can
+reach the native engine. The gap is named here and belongs to
+`driving_conditions`.
+
 ## 0.11.10
 
 `SafetyScore.toAlertSeverity` decided severity from `overall` alone, and
@@ -78,6 +101,23 @@ least 0.5, while the highest `warningScoreFloor` this package ships is 0.40, so
 0.11.9: grip 0.0 with visibility 1.0 returns `info` on the default config and
 `warning` on `ageingRural`. Black ice under a clear sky is the road this
 package exists for, and it had no shape in which to say so.
+
+**CORRECTED IN 0.11.11 — TWO STATEMENTS IN THE PARAGRAPH ABOVE ARE FALSE.**
+**(1) "`overall` is a MEAN of the axes."** It is not. `overall` is a THIRD
+input the caller supplies; `SafetyScore` clamps it to `[0,1]` and nothing in
+this package ever recomputes it from the axes. The README says as much in its
+own `SafetyScore` entry — "an `overall` score the caller supplies".
+**(2) "`AlertSeverity.critical` was unreachable at any grip value
+whatsoever."** It was not. On 0.11.9, `SafetyScore(overall: 0.2,
+gripScore: 1.0, visibilityScore: 1.0, fleetConfidenceScore: 1.0)
+.toAlertSeverity(NavigationSafetyConfig())` returns `AlertSeverity.critical`
+at PERFECT grip, because the composite returns `critical` whenever `overall`
+is below `warningScoreFloor` (default 0.30). Both statements hold only on the
+50/50 slice `overall = 0.5 * grip + 0.5 * visibility` — the same slice that
+produced the false "0 cells" conclusion below. **If you are still on 0.11.9
+this bears on your upgrade decision: your current version CAN return
+`critical`.** The published 0.11.10 archive cannot be changed and still reads
+as written; see 0.11.11.
 
 This release reads the grip axis separately and returns the WORSE of the
 composite verdict and the grip verdict. No threshold was lowered: lowering one
@@ -110,6 +150,11 @@ config and on all six `DriverProfile` baselines — 71,407 cells:
 
 Every change is `warning` → `critical` (7,723 cells) or `info` → `critical`
 (1,998 cells). Asserted in `test/grip_axis_critical_test.dart`.
+**CORRECTED IN 0.11.11 — this citation was FALSE when it was written.** None
+of the four counts appeared anywhere in that file in 0.11.10: it carried 17
+`expect(` calls and not one of them was these numbers. They are asserted there
+as of 0.11.11, so the citation is true of 0.11.11 and was never true of
+0.11.10.
 
 **If you pass `gripScore: 0.0` to mean "no grip reading", read this before
 upgrading.** Those inputs now return `critical`. `0.0` was never a valid

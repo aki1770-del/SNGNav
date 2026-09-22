@@ -50,17 +50,26 @@ class NavigationSafetyConfig extends Equatable {
   ///
   /// ## Why a per-axis floor exists at all
   ///
-  /// `SafetyScore.overall` is a MEAN of the axes (`0.5 * grip +
-  /// 0.5 * visibility` in `driving_conditions`). A mean answers "how good
-  /// are conditions on aggregate". Severity asks a different question:
+  /// **CORRECTED IN 0.11.11.** Through 0.11.10 this paragraph said
+  /// "`SafetyScore.overall` is a MEAN of the axes" and that `critical`
+  /// "was UNREACHABLE at any grip value". **Both were false.** `overall` is
+  /// a THIRD caller-supplied input that `SafetyScore` only clamps; and on
+  /// 0.11.9 an `overall` below [warningScoreFloor] (default 0.30) returned
+  /// `critical` at ANY grip, including 1.0. Both statements hold only on
+  /// the 50/50 slice. The true statement follows.
+  ///
+  /// `SafetyScore.overall` is whatever the caller passes. WHEN it is the
+  /// 50/50 mean of the axes — which is what `driving_conditions` supplies,
+  /// from its pure-Dart and its native engine alike — a mean answers "how
+  /// good are conditions on aggregate". Severity asks a different question:
   /// "how bad is the worst thing here". Those come apart exactly when one
   /// axis is catastrophic and the other is fine — black ice under a clear
-  /// sky. With visibility at 1.0 the mean is >= 0.5, while every shipped
-  /// [warningScoreFloor] is 0.30-0.40, so `critical` was UNREACHABLE at
-  /// any grip value. A grip score of zero scored `info` on three of the six
-  /// profile baselines and on the default config, and `warning` on the
-  /// other three — an advisory grade either way. The mean was not
-  /// mis-tuned; it was the wrong shape for the question.
+  /// sky. On that slice, with visibility at 1.0 the mean is >= 0.5, while
+  /// every shipped [warningScoreFloor] is 0.30-0.40, so `critical` was
+  /// unreachable at any grip value. A grip score of zero scored `info` on
+  /// three of the six profile baselines and on the default config, and
+  /// `warning` on the other three — an advisory grade either way. The
+  /// mean was not mis-tuned; it was the wrong shape for the question.
   ///
   /// The fix is not a lower floor — lowering it to make one number cross
   /// would promote every other road with it. [overall] keeps its stated

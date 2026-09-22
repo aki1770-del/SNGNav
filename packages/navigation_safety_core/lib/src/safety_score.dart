@@ -44,13 +44,28 @@ class SafetyScore extends Equatable {
   ///
   /// ## Why two verdicts and not one
   ///
-  /// [overall] is a MEAN of the axes. A mean answers "how good are
-  /// conditions on aggregate"; severity asks "how bad is the worst thing
-  /// here". The two come apart precisely when one axis is catastrophic and
-  /// the other is fine — **black ice under a clear sky**. With
+  /// **CORRECTED IN 0.11.11.** Through 0.11.10 this paragraph opened
+  /// "[overall] is a MEAN of the axes" and concluded that
+  /// [AlertSeverity.critical] "was UNREACHABLE at any grip whatsoever".
+  /// **Both were false.** [overall] is a THIRD caller-supplied input — the
+  /// constructor clamps it and nothing in this package ever recomputes it
+  /// from the axes — and on 0.11.9 `SafetyScore(overall: 0.2,
+  /// gripScore: 1.0, visibilityScore: 1.0, fleetConfidenceScore: 1.0)`
+  /// already returned [AlertSeverity.critical] at PERFECT grip, because the
+  /// composite returns `critical` whenever [overall] is below
+  /// [NavigationSafetyConfig.warningScoreFloor] (default 0.30). Both
+  /// statements hold only on the 50/50 slice. What follows is the true
+  /// statement.
+  ///
+  /// A mean answers "how good are conditions on aggregate"; severity asks
+  /// "how bad is the worst thing here". The two come apart precisely when
+  /// one axis is catastrophic and the other is fine — **black ice under a
+  /// clear sky**. WHEN [overall] IS the 50/50 mean of the axes — which is
+  /// what `driving_conditions` supplies, from both its engines — then with
   /// [visibilityScore] at 1.0 the mean is >= 0.5, while every shipped
   /// [NavigationSafetyConfig.warningScoreFloor] is 0.30-0.40, so
-  /// [AlertSeverity.critical] was UNREACHABLE at any grip whatsoever.
+  /// [AlertSeverity.critical] was unreachable at any grip value ON THAT
+  /// SLICE.
   /// Measured on 0.11.9 at [gripScore] `0.0` with [visibilityScore] `1.0`:
   /// [AlertSeverity.info] on three of the six [DriverProfile] baselines
   /// (`snowZoneExperienced`, `professional`, `agriculturalForestry`) and on
