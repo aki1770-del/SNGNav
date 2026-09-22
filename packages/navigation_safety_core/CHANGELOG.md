@@ -57,8 +57,11 @@ fixed weights, and the native one at `native/native_simulation.c:104`, whose
 `overallMean` is the mean of per-run values carrying those same weights and is
 therefore `0.5 * gripMean + 0.5 * visMean` by construction. Compiled and swept
 over 26,726,620 parameter cells (runs, seed, speed, grip factor, visibility),
-the largest departure from that identity was 2.09e-06 — float32 rounding — and
-with `gripMean` below 0.2727 the highest `overallMean` reached was 0.629,
+the largest departure from that identity was 2.09e-06 — float32 rounding — at
+run counts up to 1000. That departure GROWS with `SimulationOptions.runs`,
+which is public and unbounded: about 1.4e-05 at 100,000 runs and 4.3e-04 at
+500,000, still orders of magnitude below every threshold this package ships.
+With `gripMean` below 0.2727 the highest `overallMean` reached was 0.629,
 against the 0.636 arithmetic ceiling above and the 0.80 `safeScoreFloor`.
 **They are ON the slice, and 0.11.10's bound holds for them.**
 

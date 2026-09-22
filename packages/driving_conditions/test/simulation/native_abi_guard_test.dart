@@ -32,33 +32,140 @@ void main() {
   final sourceFile = File(
     '${Directory.current.path}/native/native_simulation.c',
   );
-  final realLibrary = File(
-    '${Directory.current.path}/native/build/libsimulation_engine.so',
-  );
 
   group('native ABI guard', () {
-    test('the shipped library declares the expected contract', () {
-      if (!Platform.isLinux || !realLibrary.existsSync()) {
-        markTestSkipped('needs a built libsimulation_engine.so on Linux');
-        return;
-      }
-      // Constructing IS the assertion: the constructor verifies the ABI and
-      // throws on mismatch.
-      expect(NativeSimulationBindings(), isA<NativeSimulationBindings>());
-    });
+    // ⚑ THIS GROUP NO LONGER SKIPS SILENTLY, measured 2026-09-23. The two
+    // tests below used to `markTestSkipped` when the .so or a compiler was
+    // absent. The .so is gitignored, so on EVERY developer checkout this
+    // file's first test reported green having verified nothing — the guard
+    // built for the 2026-09-12 stale-library defect, the one where a saturated
+    // `overall = 1.000` reached a safety score with no crash and no log line,
+    // was failing open on every machine but CI. A skip reads exactly like a
+    // pass in every runner and every summary.
+    //
+    // The rule applied here: a skip is honest only when the thing CANNOT exist
+    // on this platform. It is not honest when the thing is merely absent on a
+    // platform where it should be present. The check that needs neither a
+    // compiler nor a built library is separated out first, so that one runs
+    // everywhere, always.
+
+    test(
+      'the C source and the Dart binding declare the SAME ABI version — the '
+      'drift that produces a stale library in the first place',
+      () {
+        // Needs no compiler and no .so, so it runs on every platform and every
+        // checkout. This is the assertion that used to be unavailable whenever
+        // the library was missing.
+        expect(
+          sourceFile.existsSync(),
+          isTrue,
+          reason:
+              'native/native_simulation.c is tracked in git. A checkout '
+              'without it can verify nothing about the native engine.',
+        );
+        final declared = RegExp(
+          r'#define\s+SIMULATION_ABI_VERSION\s+(\d+)u?',
+        ).firstMatch(sourceFile.readAsStringSync());
+        expect(
+          declared,
+          isNotNull,
+          reason:
+              'SIMULATION_ABI_VERSION is no longer declared in the C source, '
+              'so nothing pins the contract the Dart side verifies against.',
+        );
+        expect(
+          int.parse(declared!.group(1)!),
+          NativeSimulationBindings.expectedAbiVersion,
+          reason:
+              'the C source declares a different ABI version than the Dart '
+              'binding requires. Whichever side moved, a library built from '
+              'this source will be REFUSED by this binding — or, if the Dart '
+              'side moved down, silently mis-read.',
+        );
+      },
+    );
+
+    test(
+      'the default library is ABI-verified when present and REFUSED when '
+      'absent — it is never silently read',
+      () {
+        // NOT a skip in any branch. Absence is the normal state of a fresh
+        // checkout, and the honest assertion about absence is that it FAILS AT
+        // LOAD rather than resolving to some other library on the search path.
+        String? defaultPath;
+        try {
+          defaultPath = NativeSimulationBindings.defaultLibraryPath();
+        } on UnsupportedError {
+          defaultPath = null;
+        }
+
+        if (defaultPath == null) {
+          expect(
+            () => NativeSimulationBindings(),
+            throwsA(isA<UnsupportedError>()),
+            reason:
+                'on a platform with no native build path, constructing '
+                'bindings must refuse rather than read something else',
+          );
+          return;
+        }
+
+        if (File(defaultPath).existsSync()) {
+          expect(
+            () => NativeSimulationBindings(),
+            returnsNormally,
+            reason:
+                'the built library at $defaultPath does not declare ABI '
+                'version ${NativeSimulationBindings.expectedAbiVersion}, so it '
+                'is STALE. Rebuild it: cd native && cmake --build build',
+          );
+        } else {
+          expect(
+            () => NativeSimulationBindings(),
+            throwsA(anything),
+            reason:
+                'there is no library at $defaultPath, so constructing bindings '
+                'MUST throw. If it returns, a different library was loaded and '
+                'every number it produces is unverified.',
+          );
+        }
+      },
+    );
 
     test(
       'a library predating the contract is REFUSED, never read',
       () {
-        if (!Platform.isLinux || !sourceFile.existsSync()) {
-          markTestSkipped('needs the C source on Linux');
+        if (!Platform.isLinux) {
+          // The ONLY honest skip in this file: this replica is built with
+          // `-shared -fPIC` into a `.so`, which is a Linux build path. The
+          // capability genuinely does not exist here. The ABI-drift test above
+          // still runs on this platform and still asserts.
+          markTestSkipped(
+            'the .so replica build path is Linux-only; the ABI-drift check '
+            'above still ran',
+          );
           return;
         }
+        // Below this line, absence is a MISSING PRECONDITION on a platform
+        // where it should be present, so it is red rather than skipped.
+        expect(
+          sourceFile.existsSync(),
+          isTrue,
+          reason:
+              'native/native_simulation.c is tracked in git, so on Linux its '
+              'absence is a broken checkout, not a reason to pass.',
+        );
         final cc = _findCompiler();
-        if (cc == null) {
-          markTestSkipped('no C compiler on PATH');
-          return;
-        }
+        expect(
+          cc,
+          isNotNull,
+          reason:
+              'NO C COMPILER ON PATH (looked for cc, clang, gcc), so THE '
+              'STALE-LIBRARY GUARD DID NOT RUN. This is the guard for the '
+              '2026-09-12 defect in which a mismatched library returned a '
+              'saturated safety score with no crash. Install a C compiler; do '
+              'not read this as a pass.',
+        );
 
         final tmp = Directory.systemTemp.createTempSync('abi_guard');
         addTearDown(() => tmp.deleteSync(recursive: true));
@@ -84,7 +191,7 @@ void main() {
 
         final src = File('${tmp.path}/old.c')..writeAsStringSync(stripped);
         final out = '${tmp.path}/libold.so';
-        final build = Process.runSync(cc, [
+        final build = Process.runSync(cc!, [
           '-O2',
           '-shared',
           '-fPIC',
