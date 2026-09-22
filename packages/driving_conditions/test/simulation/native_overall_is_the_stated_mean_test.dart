@@ -98,23 +98,38 @@ const String _realWeighting =
 const String _brokenWeighting =
     'float overall = grip_score * 0.7f + visibility_score * 0.3f;';
 
-/// ⚑ THIS IS A WHITELIST, AND IT REPLACES TWO GENERATIONS OF BLACKLIST.
+/// ⚑ A WHITELIST, TOTAL OVER THE TRANSLATION UNIT — v4.
 ///
-/// v2 watched `overall` and matched only `=`. v3 widened it to compound
-/// assignment and added `total_overall`. Both were refuted, and by the same
-/// KIND of defect rather than the same instance: a list of watched names grows
-/// a blind spot the moment anyone introduces a name that is not on it. v3
-/// returned zero for `overall_mean` — the field the engine actually REPORTS —
-/// for `total_grip` and `total_visibility`, and for the struct initialiser,
-/// all of them on the identity's critical path.
+/// v2 watched `overall` and matched only `=`. v3 widened that to compound
+/// assignment and `total_overall`. v4 inverted it to a whitelist, and FDD's
+/// verdict on v4 is the one worth keeping: *a whitelist, inside a scope that
+/// is a blacklist of one function name*. It scanned `simulation_run_batch`
+/// alone, so a static helper was unscanned and a call into it named no term —
+/// **which is my own macro argument, turned around.** I pinned the `#define`
+/// set reasoning that a macro expanding to a statement carries no identity
+/// term where it is used. That is exactly as true of a function call, and I
+/// had not pinned functions.
 ///
-/// So the rule is inverted. These are the TERMS the identity is made of; any
-/// statement in the kernel that touches one of them must be EXACTLY one of the
-/// statements below. A new identifier cannot open a hole, because the question
-/// is no longer "is this name forbidden" but "is this statement permitted".
+/// Three holes, measured, each a different KIND:
+///   * SCOPE — `tune(response, speed)` with the arithmetic in a helper outside
+///     the scanned body. Evaded everything.
+///   * TERMS — `effective_runs` is divided by on BOTH sides of the identity
+///     and was not a term. Its declaration carries no term either, so dropping
+///     its `const` was invisible, and because the two divisions are separate
+///     statements, doubling it between them broke the identity by 0.261 at
+///     speed -200 while touching nothing watched.
+///   * SPLITTING — splitting on `;` alone made detection depend on BRACE
+///     PLACEMENT. The braced variant was caught, and only because its `}`
+///     leaked into the next watched chunk; the identical unbraced one passed.
+///     ⚑ I nearly banked that red. It was an artifact, not a detection, and
+///     the failure text said so. A red accepted at face value is the same
+///     trap as a green.
 ///
-/// It is deliberately brittle. Editing the arithmetic of the safety identity
-/// SHOULD require editing the assertion that states it.
+/// So the scope is now the whole translation unit, statements split on `;`,
+/// `{` AND `}` so brace placement cannot change the answer, the terms include
+/// what the identity DEPENDS on rather than only what it is made of, and the
+/// function set is pinned beside the macro set. A box always has an outside;
+/// the static half is the one that can be made total, so it is.
 const List<String> _identityTerms = <String>[
   'overall',
   'grip_score',
@@ -125,15 +140,25 @@ const List<String> _identityTerms = <String>[
   'overall_mean',
   'grip_mean',
   'visibility_mean',
+  // What the identity DEPENDS on: both sides divide by this.
+  'effective_runs',
+  'runs',
+  // The struct that carries the three means out.
+  'response',
 ];
 
-/// Every statement of `simulation_run_batch` permitted to touch those terms,
-/// comments removed and whitespace collapsed. Generated from the real source,
-/// not transcribed.
+/// Every statement in the FILE permitted to touch those terms, comments
+/// removed and whitespace collapsed. Generated from the real source.
 const List<String> _permittedIdentityStatements = <String>[
+  'float overall_mean',
+  'float grip_mean',
+  'float visibility_mean',
+  'SimulationResponse simulation_run_batch( uint32_t runs, uint32_t seed, float speed, float grip_factor, uint32_t surface_code, float visibility_meters )',
+  'const uint32_t effective_runs = runs == 0u ? 1u : runs',
   'float total_overall = 0.0f',
   'float total_grip = 0.0f',
   'float total_visibility = 0.0f',
+  'run_index < effective_runs',
   'float grip_score = clampf_range( grip_factor * (1.0f - grip_jitter) * (1.0f - speed_factor * 0.3f), 0.0f, 1.0f )',
   'float visibility_score = clampf_range( visibility_norm * (1.0f - visibility_jitter), 0.0f, 1.0f )',
   'float overall = grip_score * 0.5f + visibility_score * 0.5f',
@@ -141,17 +166,29 @@ const List<String> _permittedIdentityStatements = <String>[
   'total_grip += grip_score',
   'total_visibility += visibility_score',
   'total_overall_squared += overall * overall',
-  'if (overall < 0.4f) { ++incident_count',
+  'if (overall < 0.4f)',
   'float overall_mean = total_overall / (float) effective_runs',
   'float variance = (total_overall_squared / (float) effective_runs) - (overall_mean * overall_mean)',
-  'SimulationResponse response = { .overall_mean = overall_mean, .grip_mean = total_grip / (float) effective_runs, .visibility_mean = total_visibility / (float) effective_runs, .overall_variance = variance, .incident_count = incident_count, .execution_ms = execution_ms, }',
+  'SimulationResponse response =',
+  '.overall_mean = overall_mean, .grip_mean = total_grip / (float) effective_runs, .visibility_mean = total_visibility / (float) effective_runs, .overall_variance = variance, .incident_count = incident_count, .execution_ms = execution_ms,',
+  'return response',
 ];
 
-/// The kernel's macro surface. A macro expanding to a statement would carry no
-/// identity term at its use site and so would pass the whitelist; pinning the
-/// `#define` set closes that, and there is exactly one.
+/// The macro surface. A macro expanding to a statement carries no identity
+/// term at its use site.
 const List<String> _permittedDefines = <String>[
   '#define SIMULATION_ABI_VERSION 2u',
+];
+
+/// The function surface, pinned for the same reason as the macros and by the
+/// same argument — a CALL carries no identity term either. A new function is
+/// a new place for the arithmetic to live.
+const List<String> _permittedFunctions = <String>[
+  'simulation_abi_version',
+  'clampf_range',
+  'xorshift32',
+  'uniform01',
+  'simulation_run_batch',
 ];
 
 String _stripComments(String c) => c
@@ -297,18 +334,19 @@ void main() {
     );
 
     test(
-      'NO arithmetic touches the identity\'s terms beyond the permitted '
-      'statements — a whitelist, so a new identifier cannot open a hole',
+      'NO arithmetic anywhere in the FILE touches the identity\'s terms '
+      'beyond the permitted statements — a whitelist over the whole '
+      'translation unit, with the macro AND function surfaces pinned',
       () {
         final raw = source.readAsStringSync();
-        final found = _identityStatements(_kernelBody(raw));
+        final found = _identityStatements(_scannedSource(raw));
 
         expect(
           found,
           _permittedIdentityStatements,
           reason:
-              'the kernel contains arithmetic on the identity\'s terms that '
-              'this file does not permit. Either a statement changed, or one '
+              'the FILE contains arithmetic on the identity\'s terms that '
+              'this test does not permit. Either a statement changed, or one '
               'was added. If the change is intentional, the whitelist is what '
               'states the identity and it must be updated deliberately — that '
               'is the point of it being a whitelist.',
@@ -324,6 +362,18 @@ void main() {
               'a macro was added or changed. A macro expanding to a statement '
               'carries no identity term at its use site, so it would pass the '
               'whitelist above; pinning the #define set is what closes that.',
+        );
+
+        expect(
+          _definedFunctions(_scannedSource(raw)),
+          _permittedFunctions,
+          reason:
+              'a function was added, removed or renamed. A CALL carries no '
+              'identity term at its call site, exactly as a macro use does, '
+              'so a new function is a new place for the identity\'s '
+              'arithmetic to live. This is the same argument that pins the '
+              'macros, and not applying it to functions is what let a helper '
+              'through.',
         );
 
         // CONTROLS. Every attack class that refuted v2 and v3 must be seen,
@@ -354,10 +404,43 @@ void main() {
             _realWeighting,
             '$_realWeighting\n    if (runs == 5000u) { overall *= 0.85f; }',
           ),
+          // v4's three holes, each encoded so it cannot come back.
+          'v4 SCOPE: arithmetic in a helper outside the kernel':
+              raw.replaceFirst(
+            'SimulationResponse simulation_run_batch(',
+            'static SimulationResponse tune(SimulationResponse r, float s) {\n'
+                '  if (s < -100.0f) { r.overall_mean = r.overall_mean * 0.9f; }\n'
+                '  return r;\n}\n\nSimulationResponse simulation_run_batch(',
+          ).replaceFirst(
+            '  return response;',
+            '  response = tune(response, speed);\n  return response;',
+          ),
+          'v4 TERMS: `effective_runs` doubled between the two divisions, '
+                  'UNBRACED': raw
+              .replaceFirst(
+                '  const uint32_t effective_runs = runs == 0u ? 1u : runs;',
+                '  uint32_t effective_runs = runs == 0u ? 1u : runs;',
+              )
+              .replaceFirst(
+                '  float overall_mean = total_overall / (float) effective_runs;',
+                '  float overall_mean = total_overall / (float) effective_runs;\n'
+                    '  if (speed < -100.0f) effective_runs = effective_runs * 2u;',
+              ),
+          'v4 SPLITTING: the same mutation BRACED': raw.replaceFirst(
+            '  float overall_mean = total_overall / (float) effective_runs;',
+            '  float overall_mean = total_overall / (float) effective_runs;\n'
+                '  if (speed < -100.0f) { overall_mean *= 0.9f; }',
+          ),
+          'v4 SPLITTING: the same mutation UNBRACED — detection must not '
+                  'depend on brace placement': raw.replaceFirst(
+            '  float overall_mean = total_overall / (float) effective_runs;',
+            '  float overall_mean = total_overall / (float) effective_runs;\n'
+                '  if (speed < -100.0f) overall_mean *= 0.9f;',
+          ),
         };
         for (final attack in attacks.entries) {
           expect(
-            _identityStatements(_kernelBody(attack.value)),
+            _identityStatements(_scannedSource(attack.value)),
             isNot(_permittedIdentityStatements),
             reason: 'the whitelist is blind to: ${attack.key}',
           );
@@ -365,7 +448,7 @@ void main() {
 
         // And it must not fire on text that only APPEARS in a comment.
         expect(
-          _identityStatements(_kernelBody(raw.replaceFirst(
+          _identityStatements(_scannedSource(raw.replaceFirst(
             '  const uint32_t effective_runs',
             '  /* overall_mean *= 9; total_grip += grip_score * 2; */\n'
                 '  const uint32_t effective_runs',
@@ -685,39 +768,43 @@ _ProbeResult _offLatticeProbe(
   return (lowRunsWorst: lowWorst, highRunsWorst: highWorst, samples: samples);
 }
 
-/// The body of `simulation_run_batch`, comments removed.
-String _kernelBody(String source) {
+/// The WHOLE translation unit, comments removed.
+///
+/// v4 scanned one function body. Everything outside it was unscanned, and a
+/// call into a helper carries no identity term at the call site — so the
+/// scope was a blacklist of one function name wrapped around a whitelist.
+String _scannedSource(String source) {
   final stripped = _stripComments(source);
-  final signature = stripped.indexOf(
-    'SimulationResponse simulation_run_batch(',
-  );
-  if (signature < 0) {
-    throw StateError('simulation_run_batch not found — the whitelist below '
-        'would vacuously pass, so this refuses instead');
+  if (!stripped.contains('simulation_run_batch')) {
+    throw StateError(
+      'simulation_run_batch is absent, so the whitelist below would pass '
+      'vacuously. Refusing instead.',
+    );
   }
-  final open = stripped.indexOf('{', stripped.indexOf(')', signature));
-  var depth = 0;
-  for (var i = open; i < stripped.length; i++) {
-    if (stripped[i] == '{') {
-      depth++;
-    } else if (stripped[i] == '}') {
-      depth--;
-      if (depth == 0) return stripped.substring(open + 1, i);
-    }
-  }
-  throw StateError('unbalanced kernel body');
+  return stripped;
 }
 
-/// Every statement of [body] that touches a term the identity is made of,
-/// whitespace collapsed so formatting cannot change the answer.
-List<String> _identityStatements(String body) {
+/// Every statement of [source] touching a term the identity is made of OR
+/// depends on, whitespace collapsed.
+///
+/// Split on `;`, `{` AND `}`. Splitting on `;` alone made detection depend on
+/// brace placement: a braced mutation was caught only because its closing
+/// brace leaked into the next watched chunk, while the identical unbraced one
+/// produced a chunk with no watched term and passed.
+List<String> _identityStatements(String source) {
   final terms = _identityTerms
       .map((t) => RegExp('(?<![_A-Za-z0-9])$t(?![_A-Za-z0-9])'))
       .toList();
-  return body
-      .split(';')
+  return source
+      .split(RegExp(r'[;{}]'))
       .map((s) => s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).join(' '))
       .where((s) => s.isNotEmpty)
       .where((s) => terms.any((t) => t.hasMatch(s)))
       .toList();
 }
+
+/// Top-level function definitions in [source].
+List<String> _definedFunctions(String source) => RegExp(
+      r'^[A-Za-z_][A-Za-z0-9_ \*]*\s+([a-zA-Z_][A-Za-z0-9_]*)\s*\([^;]*?\)\s*\{',
+      multiLine: true,
+    ).allMatches(source).map((m) => m.group(1)!).toList();

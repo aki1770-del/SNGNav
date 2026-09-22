@@ -27,6 +27,19 @@ entry is how you learn that; it is not a silent fix. Nothing in `lib/` changed
 and `toAlertSeverity` is identical to 0.11.11 — this is a documentation
 correction in a file that ships.
 
+**Also corrected here: 0.11.11 quoted a tolerance its own suite no longer
+asserts.** That entry says the identity is checked *"within 1e-5 at run counts
+up to 1000, and 1e-3 up to 200,000"*, and tells you to run the suite rather
+than take its word — directly above a sentence promising that no figure is
+quoted which the suite does not re-derive. **The 1e-3 is now 1e-2.** The
+tolerance was re-measured over the input space actually reachable — the
+contract enforces finiteness only, so any finite speed, grip factor or
+visibility is legal, including negative speed from a sign-flipped sensor — and
+float32 accumulation over that space exceeds 1e-3. So 0.11.11 named a bound the
+suite does not re-derive, in the sentence that told you to check it, and it
+**overstated the guarantee by an order of magnitude**. The 0.11.11 text is left
+as published and marked in place; this is the correction.
+
 **What was checked, so this is not one-site whack-a-mole.** Every file in the
 package was swept for both retracted claims. This was the ONLY remaining site
 where either stood unqualified and unmarked; every other occurrence is either
@@ -100,6 +113,15 @@ within 1e-5 at run counts up to 1000, and 1e-3 up to 200,000. Run it rather
 than take this paragraph's word. **No measured figure is quoted here that the
 suite does not re-derive:** earlier drafts of this entry quoted departures
 taken from one-off grids, and those numbers moved when the grid moved.
+
+**CORRECTED IN 0.11.12 — BOTH SENTENCES ABOVE.** The suite does not assert
+1e-3, and did not when this shipped. Re-measured over the input space actually
+reachable — the contract enforces finiteness only, so any finite speed, grip
+factor or visibility is legal — float32 accumulation exceeds 1e-3, and the
+bound is **1e-2**. So this paragraph named a figure the suite does not
+re-derive, in the sentence telling you to go and check it, one line above the
+sentence promising exactly that could not happen — and it overstated the
+guarantee by an order of magnitude. See 0.11.12.
 
 **If your `overall` is anything else** — a different weighting, more axes, a
 model of your own — then **0.11.10 can alert where 0.11.9 was silent**:
