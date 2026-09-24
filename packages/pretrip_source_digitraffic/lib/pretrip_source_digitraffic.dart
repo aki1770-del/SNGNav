@@ -30,6 +30,18 @@ export 'src/digitraffic_visibility_provider.dart'
         kDigitrafficVisibilityAttributionString,
         kDigitrafficWeatherApiBase;
 
+// The measured ROAD-SURFACE reading from the same station payload. Through
+// 0.2.3 this package took the sky number (`NÄKYVYYS_M`) out of a response
+// carrying ~97 sensors and discarded every sensor about the road itself.
+export 'src/digitraffic_road_surface.dart'
+    show
+        DigitrafficRoadSurfaceObservation,
+        RoadSurfaceStateReading,
+        kDigitrafficKeliCodeTable,
+        kDigitrafficKeliVssMapping,
+        kDigitrafficTabledSurfaceStateSensors,
+        parseDigitrafficRoadSurface;
+
 // The measured-visibility observation type and its departure-hour merge are
 // owned by the published pure-Dart `pretrip_decision_advisor` package and are
 // source-neutral (shared with the JMA AMeDAS source). Re-exported so a

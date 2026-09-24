@@ -41,6 +41,8 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:pretrip_decision_advisor/pretrip_decision_advisor.dart';
 
+import 'digitraffic_road_surface.dart';
+
 /// Default Digitraffic road-weather API base.
 const String kDigitrafficWeatherApiBase =
     'https://tie.digitraffic.fi/api/weather/v1';
@@ -65,8 +67,8 @@ class DigitrafficVisibilityProvider {
     this.userAgent = 'pretrip_source_digitraffic github.com/aki1770-del/SNGNav',
     this.maxDistanceKm = 30,
     this.maxObservationAge = const Duration(minutes: 30),
-  })  : _client = http.Client(),
-        _ownsClient = true;
+  }) : _client = http.Client(),
+       _ownsClient = true;
 
   /// Constructs a provider against a caller-supplied client (test injection).
   DigitrafficVisibilityProvider.withClient(
@@ -75,8 +77,8 @@ class DigitrafficVisibilityProvider {
     this.userAgent = 'pretrip_source_digitraffic github.com/aki1770-del/SNGNav',
     this.maxDistanceKm = 30,
     this.maxObservationAge = const Duration(minutes: 30),
-  })  : _client = client,
-        _ownsClient = false;
+  }) : _client = client,
+       _ownsClient = false;
 
   /// API base URL (no trailing slash).
   final String apiBase;
@@ -126,23 +128,71 @@ class DigitrafficVisibilityProvider {
     return null;
   }
 
+  /// Returns what the nearest road-weather station measured about the ROAD
+  /// SURFACE — state, coldest surface temperature, freezing point, cooling
+  /// rate — or `null` when no station within [maxDistanceKm] has a
+  /// road-surface sensor newer than [maxObservationAge].
+  ///
+  /// Same endpoint, same station selection and same freshness gate as
+  /// [fetchNearestVisibility]: the surface sensors were already in the payload
+  /// this provider fetched and discarded through 0.2.3. No additional network
+  /// cost to recover them.
+  ///
+  /// **Finland only.** Digitraffic's road-weather network covers Finland; this
+  /// call answers nothing anywhere else. See
+  /// `digitraffic_road_surface.dart` for the honesty rules that bound what is
+  /// and is not interpreted.
+  ///
+  /// Throws [DigitrafficVisibilityException] on HTTP/parse failure.
+  Future<DigitrafficRoadSurfaceObservation?> fetchNearestRoadSurface({
+    required double latitude,
+    required double longitude,
+    DateTime? now,
+  }) async {
+    final stations = await _fetchJson('$apiBase/stations');
+    final nearest = _nearestStations(stations, latitude, longitude);
+    if (nearest.isEmpty) return null;
+
+    final clock = now ?? DateTime.now();
+    // As with visibility: the very nearest station may be GATHERING yet carry
+    // no road-surface sensor, so try the closest few before reporting none.
+    for (final (id, name, distKm) in nearest.take(3)) {
+      final data = await _fetchJson('$apiBase/stations/$id/data');
+      final obs = parseDigitrafficRoadSurface(
+        data,
+        now: clock,
+        stationId: id,
+        stationName: name,
+        distanceKm: distKm,
+        maxObservationAge: maxObservationAge,
+      );
+      if (obs != null) return obs;
+    }
+    return null;
+  }
+
   /// Releases the underlying client if this provider constructed it.
   void close() {
     if (_ownsClient) _client.close();
   }
 
   Future<Map<String, dynamic>> _fetchJson(String url) async {
-    final response = await _client.get(Uri.parse(url), headers: {
-      'User-Agent': userAgent,
-      'Accept': 'application/json',
-      // Digitraffic returns 406 without an explicit gzip accept-encoding.
-      'Accept-Encoding': 'gzip',
-    }).timeout(
-      _kFetchBudget,
-      onTimeout: () => throw DigitrafficVisibilityException(
-        'Wall-clock budget ${_kFetchBudget.inSeconds}s exhausted: $url',
-      ),
-    );
+    final response = await _client
+        .get(
+          Uri.parse(url),
+          headers: {
+            'User-Agent': userAgent,
+            'Accept': 'application/json',
+            // Digitraffic returns 406 without an explicit gzip accept-encoding.
+            'Accept-Encoding': 'gzip',
+          },
+        )
+        .timeout(
+          _kFetchBudget,
+          onTimeout: () => throw DigitrafficVisibilityException(
+            'Wall-clock budget ${_kFetchBudget.inSeconds}s exhausted: $url',
+          ),
+        );
     if (response.statusCode != 200) {
       throw DigitrafficVisibilityException(
         'Digitraffic fetch failed: HTTP ${response.statusCode} for $url',
@@ -231,7 +281,8 @@ class DigitrafficVisibilityProvider {
     const r = 6371.0;
     final dLat = _rad(lat2 - lat1);
     final dLon = _rad(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
         cos(_rad(lat1)) * cos(_rad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
     return 2 * r * atan2(sqrt(a), sqrt(1 - a));
   }

@@ -48,6 +48,70 @@ with `mergeObservedVisibility`).
 
 ---
 
+## The road, not only the sky
+
+The same station also measures the **road surface**. One call, no extra network
+cost — through 0.2.3 these sensors were parsed and discarded.
+
+```dart
+final provider = DigitrafficVisibilityProvider();
+final obs = await provider.fetchNearestRoadSurface(latitude: 66.50, longitude: 25.73);
+provider.close();
+```
+
+Run it (`dart run example/road_surface_quickstart.dart`). Live output,
+2026-09-24:
+
+```
+Station vt4_Rovaniemi_Revontuli (#14034), 0.6 km away, measured 2026-09-24T15:13:17.000
+  KELI_1: 2 = "Moist"  VSS=(no VSS equivalent — not guessed)
+  KELI_2: 2 = "Moist"  VSS=(no VSS equivalent — not guessed)
+  coldest surface: 7.0 °C (TIE_3)
+  highest freezing point: 0.0 °C (JÄÄTYMISPISTE_1)
+  fastest cooling: -0.2 °C/h (TIE_2_DERIVAATTA)
+  present but NOT interpreted (no publisher code table): KELI_3, KELI_4, TIENPINNAN_TILA_1, TIENPINNAN_TILA_2, TIENPINNAN_TILA_3, TIENPINNAN_TILA_4
+Source: Fintraffic / digitraffic.fi, license CC 4.0 BY.
+```
+
+### ⚠️ FINLAND ONLY — and the same call proves it
+
+Digitraffic's road-weather network covers Finland. There is **no road-surface
+source for Japan** — not from this publisher and not from any publisher this
+catalog calls. The same call, measured live 2026-09-24:
+
+| point | result |
+|---|---|
+| Rovaniemi, Lapland | station 0.6 km away, surface state + temperature + freezing point |
+| Helsinki | station 1.8 km away — and its two channels **disagree**: `KELI_1` "Moist", `KELI_2` "Dry" |
+| **Akita, Japan** | **`null` — no measured road surface. Not estimated.** |
+
+### What it refuses to tell you
+
+- **A channel the publisher does not define gets no meaning.** Fintraffic
+  publishes a code table for `KELI_1`/`KELI_2` and an **empty** one for
+  `KELI_3`, `KELI_4` and every `TIENPINNAN_TILA_n`. Those six carry live
+  integers with no published meaning; borrowing `KELI_1`'s scale because the
+  name matches would be an assumption, not a measurement. They are listed in
+  `uninterpretedSensors` so you see that data exists which this package refused
+  to read — silence is never absence.
+- **A declared fault is not a surface.** Code `0` is "The sensor has a fault";
+  it sets `sensorFaultDeclared` and produces no state.
+- **No VSS equivalent means `null`, never `DRY`.** Five of ten Fintraffic codes
+  map onto VSS `Vehicle.Exterior.RoadSurfaceCondition` (`DRY`, `WET`, `SNOW`,
+  `ICE`, `SLUSH`). `Moist`, `Wet and salty`, `Frost` and `Probably moist and
+  salty` do not — the publisher's own word is carried verbatim and the VSS
+  field stays `null`. Override `vssMapping` at the call site if your roads say
+  otherwise.
+- **No averaging.** Four surface sensors at one station disagree; a mean cannot
+  say one point alone is freezing. You get the **coldest** surface, the
+  **highest** freezing point and the **fastest** cooling, each naming its sensor.
+- **No projection.** The cooling rate is a *measured* °C/h, not a forecast. If
+  you extrapolate it, that claim is yours.
+
+Emits VSS allowed-value **strings**, so this package takes no new dependency.
+For the enum, call `RoadSurfaceCondition.fromVss(value)` from
+`navigation_safety_core`.
+
 ## Background & provenance
 
 Fintraffic Digitraffic **measured road-visibility** source for the
