@@ -43,12 +43,18 @@ class SnowSceneScaffold extends StatefulWidget {
   const SnowSceneScaffold({
     super.key,
     this.tileProvider,
+    this.offlineMaxZoom,
     this.fleetIsSimulated = true,
   });
 
   /// Optional tile provider (e.g., MBTiles for offline).
   /// When null, MapLayer uses the default online OSM tiles.
   final TileProvider? tileProvider;
+
+  /// The highest zoom the open archive declares tiles for, forwarded to
+  /// [MapLayer] as its offline ceiling. Null when there is no archive, or when
+  /// the archive states no `maxzoom`.
+  final double? offlineMaxZoom;
 
   /// Whether the [FleetProvider] behind this screen's markers and hazard rings
   /// is a simulator. Drives [SimulatedFleetCaption]; see that widget for why
@@ -239,6 +245,7 @@ class _SnowSceneScaffoldState extends State<SnowSceneScaffold> {
             MapLayer(
               mapController: _mapController,
               tileProvider: widget.tileProvider,
+              offlineMaxZoom: widget.offlineMaxZoom,
             ),
 
             // Navigation overlay

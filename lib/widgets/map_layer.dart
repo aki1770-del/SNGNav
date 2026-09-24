@@ -44,7 +44,8 @@ import 'hazard_zone_layer.dart';
 /// When [fluoriteAvailable] is true, renders the Fluorite 3D scene.
 /// Otherwise, renders the 2D flutter_map with all overlay layers.
 class MapLayer extends StatelessWidget {
-  static const _offlineMaxZoom = 12.0;
+  /// The offline ceiling used when the caller supplies no archive-derived one.
+  static const _fallbackOfflineMaxZoom = 12.0;
 
   const MapLayer({
     super.key,
@@ -53,6 +54,8 @@ class MapLayer extends StatelessWidget {
     this.fluoriteHostApi,
     this.onFluoriteStatusChanged,
     this.tileProvider,
+    this.offlineMaxZoom,
+    this.allowOnlineFallback = true,
   });
 
   /// The flutter_map controller (owned by parent scaffold).
@@ -73,6 +76,42 @@ class MapLayer extends StatelessWidget {
   /// Optional tile provider (e.g., MBTiles for offline).
   /// When null, uses the default online OSM tile layer.
   final TileProvider? tileProvider;
+
+  /// The highest zoom the OPEN ARCHIVE actually holds tiles for, as the
+  /// archive itself declares it — `ArchiveCamera.maxZoom`, which
+  /// `OfflineTileManager.archiveCamera()` derives from the `metadata` table.
+  ///
+  /// Null means "no archive-derived value available", and the widget degrades
+  /// to [_fallbackOfflineMaxZoom]. Passing a value BELOW the fallback does not
+  /// lower the ceiling: see [_offlineMaxZoom].
+  final double? offlineMaxZoom;
+
+  /// Whether this map may reach the network for zooms the archive cannot serve
+  /// sharply.
+  ///
+  /// True is the hybrid map: offline tiles up to the archive's own ceiling,
+  /// online tiles above it. False is an offline-only map — no network layer is
+  /// mounted at all, and the offline layer is left uncapped so the resolver
+  /// upscales a parent tile instead of the map going blank.
+  final bool allowOnlineFallback;
+
+  /// The ceiling this map actually applies to the offline layer.
+  ///
+  /// Raises to the archive's own `maxzoom` and never lowers below the fallback.
+  /// The asymmetry is `ArchiveCamera`'s, and is deliberate: above the archive's
+  /// highest stored zoom `OfflineTileProvider` crops and upscales a parent
+  /// tile, so a shallow archive must not drag the ceiling down — blurry beats
+  /// blank. Below the ceiling the archive serves sharp native tiles, which is
+  /// the whole point of shipping one.
+  ///
+  /// A non-finite value is treated as absent rather than propagated: NaN here
+  /// would reach `TileLayer.maxZoom` AND, through `+ 1`, the network layer's
+  /// `minZoom`, blanking the map with no error anywhere.
+  double get _offlineMaxZoom {
+    final derived = offlineMaxZoom;
+    if (derived == null || !derived.isFinite) return _fallbackOfflineMaxZoom;
+    return math.max(_fallbackOfflineMaxZoom, derived);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +175,14 @@ class MapLayer extends StatelessWidget {
                                     if (tileProvider != null)
                                       TileLayer(
                                         tileProvider: tileProvider!,
-                                        maxZoom: _offlineMaxZoom,
+                                        // Offline-only: no ceiling at all, so
+                                        // the resolver upscales a parent tile
+                                        // above the archive's max instead of
+                                        // the map going blank. There is no
+                                        // network layer above to catch it.
+                                        maxZoom: allowOnlineFallback
+                                            ? _offlineMaxZoom
+                                            : double.infinity,
                                         userAgentPackageName: 'com.sngnav.snow_scene',
                                       )
                                     else
@@ -146,7 +192,15 @@ class MapLayer extends StatelessWidget {
                                         tileProvider: NetworkTileProvider(),
                                         userAgentPackageName: 'com.sngnav.snow_scene',
                                       ),
-                                    if (tileProvider != null)
+                                    // Only when this map is ALLOWED to reach
+                                    // the network. It used to mount whenever an
+                                    // archive was open, so selecting offline
+                                    // tiles still left every zoom above the
+                                    // ceiling depending on a network that, in
+                                    // the scenario this product exists for, is
+                                    // not there.
+                                    if (tileProvider != null &&
+                                        allowOnlineFallback)
                                       TileLayer(
                                         minZoom: _offlineMaxZoom + 1,
                                         urlTemplate:

@@ -166,6 +166,7 @@ Future<void> main() async {
   // Create the tile provider through the extracted offline tile package.
   offline_tiles.OfflineTileManager? offlineTileManager;
   TileProvider? tileProvider;
+  double? offlineMaxZoom;
   if (config.isMbtilesTiles) {
     try {
       offlineTileManager = offline_tiles.OfflineTileManager(
@@ -173,6 +174,15 @@ Future<void> main() async {
         mbtilesPath: config.mbtilesPath,
       );
       tileProvider = offlineTileManager.tileProvider;
+      // The hand-over point between this archive and the network is the
+      // archive's OWN declared depth, read from its `metadata` table — not a
+      // constant compiled into the widget. It is deliberately NOT
+      // `archiveCamera().maxZoom`: that one is how far the CAMERA may zoom and
+      // is generous on purpose (it never lowers the app's own ceiling, because
+      // the resolver upscales a parent tile rather than going blank). The
+      // hand-over point is where the archive stops being SHARP, which is
+      // exactly `maxzoom` and nothing else.
+      offlineMaxZoom = offlineTileManager.archiveMetadata?.maxZoom;
       final uncovered = offlineTileManager.uncoveredPoints(
         _demoRoute.shape,
         zoom: _offlineCoverageValidationZoom,
@@ -193,6 +203,7 @@ Future<void> main() async {
       // Fallback to online tiles if the archive fails to load.
       offlineTileManager = null;
       tileProvider = null;
+      offlineMaxZoom = null;
     }
   }
 
@@ -201,6 +212,7 @@ Future<void> main() async {
     config: config,
     offlineTileManager: offlineTileManager,
     tileProvider: tileProvider,
+    offlineMaxZoom: offlineMaxZoom,
   ));
 }
 
@@ -211,12 +223,16 @@ class SnowSceneApp extends StatefulWidget {
     required this.config,
     this.offlineTileManager,
     this.tileProvider,
+    this.offlineMaxZoom,
   });
 
   final Database consentDb;
   final ProviderConfig config;
   final offline_tiles.OfflineTileManager? offlineTileManager;
   final TileProvider? tileProvider;
+
+  /// What the open archive says its deepest zoom is; null when no archive.
+  final double? offlineMaxZoom;
 
   @override
   State<SnowSceneApp> createState() => _SnowSceneAppState();
@@ -313,6 +329,7 @@ class _SnowSceneAppState extends State<SnowSceneApp> {
         ],
         child: SnowSceneShell(
           tileProvider: widget.tileProvider,
+          offlineMaxZoom: widget.offlineMaxZoom,
           fleetIsSimulated: true,
         ),
       ),
@@ -357,10 +374,14 @@ class SnowSceneShell extends StatefulWidget {
   const SnowSceneShell({
     super.key,
     this.tileProvider,
+    this.offlineMaxZoom,
     this.fleetIsSimulated = true,
   });
 
   final TileProvider? tileProvider;
+
+  /// Forwarded to [SnowSceneScaffold] → [MapLayer] as the offline ceiling.
+  final double? offlineMaxZoom;
 
   /// Forwarded to [SnowSceneScaffold] — whether the fleet markers and hazard
   /// rings on the live-drive map come from a simulator.
@@ -413,6 +434,7 @@ class _SnowSceneShellState extends State<SnowSceneShell> {
       case _Destination.drive:
         return SnowSceneScaffold(
           tileProvider: widget.tileProvider,
+          offlineMaxZoom: widget.offlineMaxZoom,
           fleetIsSimulated: widget.fleetIsSimulated,
         );
     }

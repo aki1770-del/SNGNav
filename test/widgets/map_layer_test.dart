@@ -22,6 +22,8 @@
 /// Sprint 8 Day 11 — Consent-gated fleet + hazard pipeline tests.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart' hide MapEvent;
@@ -233,6 +235,9 @@ Widget _buildMapLayer({
   required MockFleetBloc fleetBloc,
   required MockConsentBloc consentBloc,
   bool fluoriteAvailable = false,
+  TileProvider? tileProvider,
+  double? offlineMaxZoom,
+  bool allowOnlineFallback = true,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -249,10 +254,54 @@ Widget _buildMapLayer({
         child: MapLayer(
           mapController: MapController(),
           fluoriteAvailable: fluoriteAvailable,
+          tileProvider: tileProvider,
+          offlineMaxZoom: offlineMaxZoom,
+          allowOnlineFallback: allowOnlineFallback,
         ),
       ),
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Offline-ceiling helpers
+// ---------------------------------------------------------------------------
+
+/// Stands in for `OfflineTileProvider` over an MBTiles archive.
+///
+/// The tests below never assert on pixels — they assert on the zoom bounds the
+/// widget hands to `TileLayer`. This provider exists only so the offline branch
+/// is REACHED (every pre-existing case in this file leaves `tileProvider` null
+/// and therefore never mounts the offline layer at all) and so the offline
+/// layer can be told apart from the network one by provider identity.
+class _FakeArchiveTileProvider extends TileProvider {
+  static final Uint8List _onePixelPng = Uint8List.fromList(<int>[
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1,
+    0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84,
+    120, 156, 99, 96, 0, 2, 0, 0, 5, 0, 1, 122, 94, 171, 63, 0, 0, 0, 0, 73,
+    69, 78, 68, 174, 66, 96, 130,
+  ]);
+
+  @override
+  ImageProvider<Object> getImage(
+    TileCoordinates coordinates,
+    TileLayer options,
+  ) =>
+      MemoryImage(_onePixelPng);
+}
+
+List<TileLayer> _tileLayers(WidgetTester tester) =>
+    tester.widgetList<TileLayer>(find.byType(TileLayer)).toList();
+
+/// The layer fed by the archive — identified by provider identity, not order.
+TileLayer _offlineLayer(WidgetTester tester, TileProvider archive) =>
+    _tileLayers(tester).singleWhere((layer) => layer.tileProvider == archive);
+
+/// The online layer stacked above the archive, or null when none is mounted.
+TileLayer? _networkLayer(WidgetTester tester, TileProvider archive) {
+  final others =
+      _tileLayers(tester).where((layer) => layer.tileProvider != archive);
+  return others.isEmpty ? null : others.single;
 }
 
 // ---------------------------------------------------------------------------
@@ -748,5 +797,181 @@ void main() {
         expect(find.byType(CircleLayer), findsOneWidget);
       },
     );
+  });
+  // -------------------------------------------------------------------------
+  // The offline z-ceiling comes FROM THE ARCHIVE (S1-S6)
+  //
+  // ⚑ WHY THIS GROUP EXISTS.
+  //
+  // `MapLayer` capped its offline `TileLayer` at a hardcoded 12.0 and mounted
+  // an unconditional online layer from 13 up. Against this repo's own gitignored
+  // Nagoya demo archive (`data/offline_tiles.mbtiles`, maxzoom=12) that constant
+  // is correct BY COINCIDENCE, so nothing was visibly wrong. Point the same
+  // widget at the Akita archive this unit ships to its Android app and into the
+  // Yocto image -- maxzoom=13, 629 real z13 tiles -- and one pinch past z12
+  // hands over to a network that, in the scenario this product exists for, is
+  // not there. Blank basemap, 629 sharp tiles unread on the device.
+  //
+  // `data/*.mbtiles` is gitignored (.gitignore:50), so the archive a developer
+  // who clones us and runs `scripts/setup.sh` actually supplies is NOT the one
+  // the constant happens to match. Coupling this test to whatever archive
+  // happens to sit on THIS disk would therefore be either vacuous or
+  // unrunnable. The coupling is to the archive's DECLARED maxzoom as a value
+  // flowing through the widget, exercised at three representative depths.
+  //
+  // Named absent eight weeks ago in 3d17b9eb, one constant over, in a different
+  // widget. Naming it did not install it. This installs it.
+  group('MapLayer offline z-ceiling derives from the archive', () {
+    late MockMapBloc mapBloc;
+    late MockRoutingBloc routingBloc;
+    late MockNavigationBloc navigationBloc;
+    late MockLocationBloc locationBloc;
+    late MockWeatherBloc weatherBloc;
+    late MockFleetBloc fleetBloc;
+    late MockConsentBloc consentBloc;
+    late _FakeArchiveTileProvider archive;
+
+    setUp(() {
+      mapBloc = MockMapBloc();
+      routingBloc = MockRoutingBloc();
+      navigationBloc = MockNavigationBloc();
+      locationBloc = MockLocationBloc();
+      weatherBloc = MockWeatherBloc();
+      fleetBloc = MockFleetBloc();
+      consentBloc = MockConsentBloc();
+      archive = _FakeArchiveTileProvider();
+
+      when(() => mapBloc.state).thenReturn(_defaultMapState);
+      when(() => routingBloc.state).thenReturn(const RoutingState.idle());
+      when(() => navigationBloc.state).thenReturn(const NavigationState.idle());
+      when(() => locationBloc.state)
+          .thenReturn(const LocationState.uninitialized());
+      when(() => weatherBloc.state)
+          .thenReturn(const WeatherState.unavailable());
+      when(() => fleetBloc.state).thenReturn(const FleetState.idle());
+      when(() => consentBloc.state)
+          .thenReturn(const ConsentState(status: ConsentBlocStatus.loading));
+    });
+
+    Future<void> pump(
+      WidgetTester tester, {
+      double? offlineMaxZoom,
+      bool allowOnlineFallback = true,
+    }) =>
+        tester.pumpWidget(
+          _buildMapLayer(
+            mapBloc: mapBloc,
+            routingBloc: routingBloc,
+            navigationBloc: navigationBloc,
+            locationBloc: locationBloc,
+            weatherBloc: weatherBloc,
+            fleetBloc: fleetBloc,
+            consentBloc: consentBloc,
+            tileProvider: archive,
+            offlineMaxZoom: offlineMaxZoom,
+            allowOnlineFallback: allowOnlineFallback,
+          ),
+        );
+
+    // S1 — the defect. An archive deeper than the old constant must be reached.
+    testWidgets(
+      'S1 reaches an archive maxzoom ABOVE the fallback (13, the Akita shape)',
+      (tester) async {
+        await pump(tester, offlineMaxZoom: 13);
+
+        expect(
+          _offlineLayer(tester, archive).maxZoom,
+          13.0,
+          reason: 'the archive holds 629 native z13 tiles; a hardcoded 12 '
+              'hands z13 to the network and blanks the map when it is dead',
+        );
+      },
+    );
+
+    // S2 — a GUARD, not a catcher. `ArchiveCamera` documents the asymmetry:
+    // maxZoom is NOT a blankness ceiling, because above the archive's own max
+    // `OfflineTileProvider` crops and upscales a parent tile. Blurry beats
+    // blank, so a shallow archive must NOT drag the ceiling down.
+    testWidgets('S2 does NOT lower the ceiling for a shallower archive (10)',
+        (tester) async {
+      await pump(tester, offlineMaxZoom: 10);
+
+      expect(
+        _offlineLayer(tester, archive).maxZoom,
+        12.0,
+        reason: 'above the archive max the resolver upscales a parent tile; '
+            'lowering the ceiling would blank what it could still paint',
+      );
+    });
+
+    // S3 — a GUARD. No archive-derived value means exactly the old behaviour.
+    testWidgets('S3 degrades to the fallback ceiling when none is derived',
+        (tester) async {
+      await pump(tester);
+
+      expect(_offlineLayer(tester, archive).maxZoom, 12.0);
+    });
+
+    // S4 — an offline-only map must not depend on a network it does not have.
+    testWidgets(
+      'S4 offline-only mounts NO network layer and leaves the archive uncapped',
+      (tester) async {
+        await pump(tester, offlineMaxZoom: 13, allowOnlineFallback: false);
+
+        expect(
+          _networkLayer(tester, archive),
+          isNull,
+          reason: 'a dead network above the ceiling is exactly the scenario '
+              'this product exists for',
+        );
+        expect(
+          _offlineLayer(tester, archive).maxZoom,
+          double.infinity,
+          reason: 'uncapped so the resolver upscales instead of going blank',
+        );
+      },
+    );
+
+    // S5 — the hybrid hand-over point must move with the archive.
+    testWidgets('S5 hybrid hands over to the network at ceiling + 1',
+        (tester) async {
+      await pump(tester, offlineMaxZoom: 13);
+
+      expect(_networkLayer(tester, archive)?.minZoom, 14.0);
+    });
+
+    // S7 — NOT in the intake set; added during round 2 on reading the fix.
+    // A non-finite ceiling would reach BOTH TileLayer.maxZoom and, through
+    // `+ 1`, the network layer's minZoom. NaN comparisons are all false, so
+    // flutter_map would silently paint nothing and no error would name why.
+    testWidgets('S7 treats a non-finite ceiling as absent, not as a ceiling',
+        (tester) async {
+      await pump(tester, offlineMaxZoom: double.nan);
+
+      expect(_offlineLayer(tester, archive).maxZoom, 12.0);
+      expect(_networkLayer(tester, archive)?.minZoom, 13.0);
+    });
+
+    // S6 — the invariant the two hardcoded constants coupled by hand. No gap
+    // (a zoom neither layer serves) and no overlap, at any archive depth.
+    for (final ceiling in <double>[10, 12, 13]) {
+      testWidgets(
+        'S6 offline ceiling and network floor stay adjacent (archive $ceiling)',
+        (tester) async {
+          await pump(tester, offlineMaxZoom: ceiling);
+
+          final offline = _offlineLayer(tester, archive);
+          final network = _networkLayer(tester, archive);
+
+          expect(network, isNotNull);
+          expect(
+            network!.minZoom,
+            offline.maxZoom + 1,
+            reason: 'a gap leaves a zoom level no layer paints; an overlap '
+                'spends the network on tiles the archive already holds',
+          );
+        },
+      );
+    }
   });
 }
