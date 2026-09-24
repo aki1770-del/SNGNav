@@ -94,9 +94,20 @@ v0.0.1).
 - `roadforecast/2.0` direct road-surface mapping. The product
   documented at
   `https://api.met.no/weatherapi/roadforecast/2.0/documentation`
-  returns HTTP 404 at curl on 2026-05-24 — the product is not publicly
-  reachable. Queued for v0.0.2+ if a public road-product endpoint
-  becomes available.
+  returns HTTP 404 at curl — the product is not publicly reachable.
+  Queued for a later version if a public road-product endpoint becomes
+  available.
+
+  **RE-MEASURED 2026-09-24 by NDI, and it still holds.** Both the
+  documentation URL and `roadforecast/2.0/complete?lat=69.65&lon=18.96`
+  return **HTTP 404**; the endpoint this package does ship against,
+  `locationforecast/2.0/compact`, returns **HTTP 200** in the same
+  sweep — so the 404 is the product's absence and not a dead client.
+  ⚑ The original note was measured on **2026-05-24** and carried
+  unchanged through eight releases. A deferral that is true and dated
+  four months back reads as current to anyone who does not check; the
+  date is stated here so the next reader can see when it was last
+  actually tried rather than inherit it.
 - `nowcast/2.0` two-hour radar overlay (Norway / Sweden / Finland /
   Denmark coverage).
 - Multi-hour-horizon advisories (`next_6_hours`, `next_12_hours`).
