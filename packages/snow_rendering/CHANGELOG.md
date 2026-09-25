@@ -26,6 +26,8 @@ changes.
 - **A spoken line may ask her to avoid abrupt inputs; it must not forbid
   braking or stopping.** The new lines ask, and put the request to slow down
   first.
+- The new Japanese still names 急ブレーキ, the same word as an emergency stop.
+  It now asks her to avoid it; it no longer forbids it.
 - The general line still does not say the road "may look wet": it is also
   reached during visible snowfall, where that would be false.
 
@@ -38,13 +40,15 @@ changes.
   re-record these when you take this release. Until you do, the lookup misses
   and those lines fall to your fallback: silence, or a different voice.
 - **The JAF advisory text carried on `invisibleBlackIceAnnouncement.vocabulary`
-  is unchanged**, and its black-ice entry also forbids abrupt starts and stops
-  in absolute terms. The new test below checks spoken lines only; it does not
-  cover that text.
+  is unchanged**, and its black-ice entry also forbids abrupt starts, stops and
+  turns in absolute terms. The new test below checks spoken lines only; it does
+  not cover that text.
 
 A new test (`test/models/no_braking_prohibition_test.dart`) fails if any spoken
-line this package exports, in either language, forbids braking or stopping. It
-proves itself first against sentences it must flag and sentences it must pass.
+line this package exports, in either language, forbids braking or stopping in
+the wording it knows. It is lexical: a new phrasing can pass it, so every change
+to a spoken line is still read by a person. It proves itself first against
+sentences it must flag and sentences it must pass.
 
 ### A correction to 0.3.3
 

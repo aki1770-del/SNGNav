@@ -5,9 +5,9 @@
 // "No abrupt steering or braking." 急ブレーキ is also the everyday word for an
 // emergency stop, and 厳禁 admits no exception, so the sentence, read
 // literally, forbids the one act a driver may need on ice. It is spoken at a
-// moment a data refresh chose, not one her traffic chose, and a warning that
-// makes stopping sound forbidden costs more than the abrupt input it tries to
-// prevent. A spoken line may ASK her to avoid abrupt inputs; it must never
+// moment a data refresh chose, not one her traffic chose. A driver who has
+// just heard that stopping is forbidden may hesitate at the moment she needs
+// to stop. A spoken line may ASK her to avoid abrupt inputs; it must never
 // FORBID braking or stopping.
 //
 // WHAT IT CHECKS
