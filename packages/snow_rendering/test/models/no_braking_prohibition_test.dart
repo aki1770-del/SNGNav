@@ -19,8 +19,9 @@
 // - Lexical. It catches the known class of wording; a new phrasing can evade
 //   it, so a person still reads every change to a spoken line.
 // - A false positive is possible (an English sentence that begins "No" and
-//   mentions stopping). It fails toward a person reading the line, never
-//   toward silence.
+//   mentions stopping, or a Japanese condition such as
+//   「ブレーキをしないと止まれません」). It fails toward a person reading the
+//   line, never toward silence.
 // - A NEW top-level announcement constant must be added to _spokenLines() by
 //   hand. The RoadSurfaceState and RecommendedResponse getters are enumerated
 //   automatically.
@@ -35,8 +36,8 @@ import 'package:test/test.dart';
 
 final RegExp _jaBrakeOrStop = RegExp(r'ブレーキ|制動|停止|止ま|停車');
 final RegExp _jaAbsolute = RegExp(r'厳禁|禁止|絶対|てはいけ|てはなら|べからず');
-final RegExp _jaNegatedBrakeVerb =
-    RegExp(r'ブレーキ[をは]?(踏ま|かけ)ない|止まらない|停止しない|停車しない');
+final RegExp _jaNegatedBrakeVerb = RegExp(
+    r'ブレーキ(操作)?[をは]?(踏ま|かけ|し|使わ|使用し)ない|止まらない|停止しない|停車しない');
 
 final RegExp _enBrakeOrStop = RegExp(r'\bbrak|\bstop', caseSensitive: false);
 final RegExp _enAbsolute = RegExp(
@@ -44,7 +45,9 @@ final RegExp _enAbsolute = RegExp(
   caseSensitive: false,
 );
 final RegExp _enNegatedBrakeVerb = RegExp(
-  r"\b(do not|don't|never|must not)\s+(\w+\s+)?(brake|stop|slam)",
+  r"\b(do not|don't|never|must not)\s+"
+  r'((\w+\s+)?(brake|stop|slam)'
+  r'|(use|hit|apply|press|touch)\s+(the\s+)?brakes?)',
   caseSensitive: false,
 );
 
@@ -73,6 +76,11 @@ const List<String> _mustFlagJa = [
   'ブレーキを踏まないでください。',
   '急停止は絶対にしないでください。',
   '発進、停止、カーブで「急」のつく動作は厳禁。', // JAF's own form
+  // The plainest way to tell a driver in unexpected snow not to make the stop.
+  // Until 2026-09-25 the predicate let all three through.
+  '急ブレーキをしないでください。',
+  'ブレーキを使わないでください。',
+  'ブレーキ操作はしないでください。',
 ];
 const List<String> _mustFlagEn = [
   'No abrupt steering or braking.', // the shipped defect
@@ -80,6 +88,8 @@ const List<String> _mustFlagEn = [
   'Do not brake hard.',
   'Never slam on the brakes.',
   'abrupt starts, stops, and turns are strictly forbidden.',
+  'Do not use the brakes.', // let through until 2026-09-25
+  "Don't hit the brakes.", // let through until 2026-09-25
 ];
 const List<String> _mustPassJa = [
   '速度を落とし、急ブレーキ・急ハンドルは避けてください。', // a request
@@ -87,6 +97,7 @@ const List<String> _mustPassJa = [
   '路面が濡れています。制動距離が伸びます。速度を控えてください。',
   '安全にできるときは、安全な場所での停車も選べます。',
   'ブレーキを緩めないでください。', // negation that keeps her braking
+  'ブレーキをしっかり踏んでください。', // し that is not しない
 ];
 const List<String> _mustPassEn = [
   'Reduce speed and avoid abrupt braking or steering.',
