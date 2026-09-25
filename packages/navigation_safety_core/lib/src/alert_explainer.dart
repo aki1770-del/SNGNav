@@ -24,6 +24,10 @@
 ///   vehicle.
 /// - No action string promises an outcome. Each is a recommendation
 ///   in the package's own advisory wording.
+/// - No action names a path or a steering target ("keep to the centre").
+///   This package sees neither the road nor the traffic, so where she
+///   puts the car is her judgment. Four slush strings did name the centre
+///   until 0.11.12; a test now fails if any string names it again.
 ///
 /// This is a Pure Dart, advisory-only surface. It does not actuate the
 /// vehicle. The matrix is information delivered in a particular format;
@@ -259,22 +263,30 @@ class AlertExplainer {
         }
 
       case RoadSurfaceCondition.slush:
+        // Until 0.11.12 four of these cells told her to keep to the centre
+        // (「道路中央寄りを走行」, 「中央走行」 twice, and "center of lane" -- the
+        // Japanese said the road, the English said the lane). A steering
+        // target is control, not advice, and on a road without marked lanes
+        // the centre is toward oncoming traffic: Japan's Road Traffic Act,
+        // Art. 18(1), has vehicles keep to the left (「道路の左側に寄つて」).
+        // The risk these strings name is sliding sideways; the request that
+        // fits it is to slow down, in the words the noviceUrban cell uses.
         switch (profile) {
           case DriverProfile.ageingRural:
             return 'シャーベット状の路面です。タイヤが横に滑る危険があるため、'
-                '車線変更を避け、道路中央寄りを走行してください';
+                '車線変更を避け、ゆっくり走行してください';
           case DriverProfile.snowZoneExperienced:
-            return 'シャーベット、車線変更回避、中央走行';
+            return 'シャーベット、車線変更回避、減速';
           case DriverProfile.noviceUrban:
             return 'シャーベット路面、ハンドルを取られやすい状態。'
                 '車線変更せず、ゆっくり走行してください';
           case DriverProfile.professional:
-            return 'シャーベット、中央走行';
+            return 'シャーベット、減速';
           case DriverProfile.agriculturalForestry:
             return 'シャーベット、轍（わだち）に注意';
           case DriverProfile.foreignTouristSnowZone:
             return 'Slush. Avoid lane changes. '
-                'Drive slowly in center of lane.';
+                'Drive slowly.';
         }
 
       case RoadSurfaceCondition.wetIce:

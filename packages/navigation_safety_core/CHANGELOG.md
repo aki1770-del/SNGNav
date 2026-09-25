@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.11.12
+
+**Four slush explainer strings told the driver where to steer: toward the
+centre. They now ask her to slow down.** This is the only change to what the
+package returns: `AlertExplainer.forConditionAndProfile` gives different text
+for `RoadSurfaceCondition.slush` in four of its six profiles.
+
+### The strings, before and after
+
+| Profile | Before (0.4.0 to 0.11.11) | From 0.11.12 |
+|---|---|---|
+| `ageingRural` | シャーベット状の路面です。タイヤが横に滑る危険があるため、車線変更を避け、道路中央寄りを走行してください | シャーベット状の路面です。タイヤが横に滑る危険があるため、車線変更を避け、ゆっくり走行してください |
+| `snowZoneExperienced` | シャーベット、車線変更回避、中央走行 | シャーベット、車線変更回避、減速 |
+| `professional` | シャーベット、中央走行 | シャーベット、減速 |
+| `foreignTouristSnowZone` | Slush. Avoid lane changes. Drive slowly in center of lane. | Slush. Avoid lane changes. Drive slowly. |
+
+The `noviceUrban` and `agriculturalForestry` slush strings are unchanged.
+
+### Why
+
+- **A steering target is control, not advice.** This package sees neither the
+  road nor the oncoming car, so where she puts the car is her judgment. The
+  class documentation promises advisory wording only, and these four strings
+  did not keep that promise from the release that introduced them (0.4.0).
+- **On a road without marked lanes, the centre is toward oncoming traffic.**
+  Japan's Road Traffic Act, Art. 18(1), has cars keep to the left on such a
+  road (「道路の左側に寄つて」). Its exceptions, such as a road condition that
+  makes it unavoidable, are judgments the law leaves to the driver who can
+  see the road.
+- **The two languages did not agree.** The Japanese said the centre of the
+  road; the English said the centre of the lane.
+- The risk these strings name is the tyres sliding sideways. The request that
+  fits it is to slow down, and the new Japanese reuses the words the
+  `noviceUrban` cell already used (「ゆっくり走行してください」).
+
+### If you use the exact text
+
+- **You receive this without changing your constraint.** A caret constraint
+  such as `^0.11.9` admits 0.11.12, so your next `dart pub upgrade` changes
+  what these four cells say.
+- **If you ship audio recorded for each string** (clips looked up by their
+  text), re-record these four when you take this release. Until you do, the
+  lookup misses for them and those lines fall to your fallback: silence, or
+  a different voice.
+- **If you compare against the old strings**, update the comparison.
+
+A new test fails if any explainer string names the centre (中央, センター,
+真ん中, "center", "centre", "middle"), and another checks that this entry quotes
+exactly the strings the code returns.
+
 ## 0.11.11
 
 **Corrects a false sentence in 0.11.10's changelog, and the test that let it

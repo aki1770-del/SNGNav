@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
 
@@ -363,6 +365,105 @@ void main() {
           e.action,
           isNot(contains('濡路')),
           reason: '$profile WET explainer must not use the unpronounceable 濡路',
+        );
+      }
+    });
+  });
+
+  group('AlertExplainer names no path to drive (0.11.12)', () {
+    // Until 0.11.12 four SLUSH cells told the driver to keep to the centre:
+    // 「道路中央寄りを走行してください」, 「中央走行」 twice, and "Drive slowly in
+    // center of lane." A steering target is control, not advice. This package
+    // sees neither the road nor the oncoming car, and on a road without marked
+    // lanes the centre is toward oncoming traffic (Japan's Road Traffic Act,
+    // Art. 18(1): keep to the left). No cell may name the centre again.
+    bool namesCentre(String action) =>
+        const ['中央', 'センター', '真ん中', 'まんなか'].any(action.contains) ||
+        RegExp(
+          r'\b(?:cent(?:er|re)|middle)',
+          caseSensitive: false,
+        ).hasMatch(action);
+
+    // (profile, the SLUSH string before 0.11.12, the string from 0.11.12).
+    const replaced = <(DriverProfile, String, String)>[
+      (
+        DriverProfile.ageingRural,
+        'シャーベット状の路面です。タイヤが横に滑る危険があるため、'
+            '車線変更を避け、道路中央寄りを走行してください',
+        'シャーベット状の路面です。タイヤが横に滑る危険があるため、'
+            '車線変更を避け、ゆっくり走行してください',
+      ),
+      (
+        DriverProfile.snowZoneExperienced,
+        'シャーベット、車線変更回避、中央走行',
+        'シャーベット、車線変更回避、減速',
+      ),
+      (DriverProfile.professional, 'シャーベット、中央走行', 'シャーベット、減速'),
+      (
+        DriverProfile.foreignTouristSnowZone,
+        'Slush. Avoid lane changes. Drive slowly in center of lane.',
+        'Slush. Avoid lane changes. Drive slowly.',
+      ),
+    ];
+
+    test('no explainer string, in any cell, tells the driver to steer toward '
+        'the centre', () {
+      final hits = <String>[];
+      for (final profile in DriverProfile.values) {
+        for (final condition in RoadSurfaceCondition.values) {
+          final action = AlertExplainer.forConditionAndProfile(
+            condition,
+            profile,
+          ).action;
+          if (namesCentre(action)) hits.add('($profile, $condition): $action');
+        }
+      }
+      expect(
+        hits,
+        isEmpty,
+        reason:
+            'a string names the centre as a place to drive. This package '
+            'cannot see the road or the traffic; where she puts the car is '
+            'hers to judge:\n${hits.join('\n')}',
+      );
+    });
+
+    test('the check catches every string it was written for', () {
+      // A check never run against the defect it exists for has not been
+      // tested.
+      for (final (_, before, after) in replaced) {
+        expect(namesCentre(before), isTrue, reason: before);
+        expect(namesCentre(after), isFalse, reason: after);
+      }
+    });
+
+    test('the four cells ask her to slow down instead, and the 0.11.12 '
+        'changelog quotes exactly these strings', () {
+      final changelog = File('CHANGELOG.md').readAsStringSync();
+      final start = changelog.indexOf('\n## 0.11.12\n');
+      expect(start, isNot(-1), reason: 'CHANGELOG.md has no 0.11.12 section');
+      final next = changelog.indexOf('\n## ', start + 1);
+      final section = changelog.substring(
+        start,
+        next == -1 ? changelog.length : next,
+      );
+      for (final (profile, before, after) in replaced) {
+        expect(
+          AlertExplainer.forConditionAndProfile(
+            RoadSurfaceCondition.slush,
+            profile,
+          ).action,
+          after,
+        );
+        expect(
+          section,
+          contains(before),
+          reason: 'the changelog must quote the old $profile string',
+        );
+        expect(
+          section,
+          contains(after),
+          reason: 'the changelog must quote the new $profile string',
         );
       }
     });
