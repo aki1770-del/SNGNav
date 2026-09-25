@@ -1,6 +1,6 @@
 /// Black ice under a clear sky: one axis is catastrophic, the other is fine.
 ///
-/// ⚑ **CORRECTED IN 0.11.12. THE 0.11.11 ARCHIVE SHIPPED THIS PARAGRAPH
+/// **CORRECTED IN 0.11.12. THE 0.11.11 ARCHIVE SHIPPED THIS PARAGRAPH
 /// UNCORRECTED, AND IT STATED THE TWO CLAIMS 0.11.11 EXISTS TO RETRACT.** It
 /// read, verbatim, so that a reader who acted on it can recognise it:
 ///
@@ -328,12 +328,12 @@ void main() {
       'counts measured, in the order the entries print them — read from the '
       'file',
       () {
-        // ⚑ THIS TEST'S NAME ONCE PROMISED A COUPLING IT DID NOT HAVE. The
+        // THIS TEST'S NAME ONCE PROMISED A COUPLING IT DID NOT HAVE. The
         // test above asserts integer literals and never opens CHANGELOG.md,
         // so editing the changelog failed nothing and editing that test
         // re-checked no document. The name is now what it does, and nothing
-        // more: SIX comma-formatted figures inside TWO entries. FDD measured
-        // the section at 37 distinct numeric tokens; this covers 7 of them.
+        // more: SIX comma-formatted figures inside TWO entries. The section
+        // was measured at 37 distinct numeric tokens; this covers 7 of them.
         // The tolerances, the sweep dimension and two line-number citations
         // are NOT covered. An over-claimed guard is how a reader stops
         // looking.
@@ -358,30 +358,31 @@ void main() {
         expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
         final section = text.substring(from, to);
 
-        // ⚑ CORRECTION MARKERS ARE EXCLUDED, AND THE REASON IS MEASURED.
+        // CORRECTION MARKERS ARE EXCLUDED, AND THE REASON IS MEASURED.
         //
-        // I argued that pinning order costs nothing because these entries are
-        // published and frozen. FDD measured: published, and NOT frozen. The
-        // 0.11.10 entry has been corrected in place three times since it
-        // published, each time by adding a marker — and correcting a
-        // published entry in place is this package's documented practice,
-        // used five times in this thread alone, precisely because the archive
-        // cannot be changed. Markers RE-QUOTE figures, which is why several
-        // counts appear twice at all. So an ordinary future marker re-quoting
-        // a correct count reddened this test while the document was right.
+        // An earlier version of this test argued that pinning order costs
+        // nothing because these entries are published and frozen. Measured:
+        // published, and NOT frozen. The 0.11.10 entry has been corrected in
+        // place three times since it published, each time by adding a
+        // marker — and correcting a published entry in place is this
+        // package's documented practice, precisely because the archive cannot
+        // be changed. Markers RE-QUOTE figures, which is why several counts
+        // appear twice at all. So an ordinary future marker re-quoting a
+        // correct count reddened this test while the document was right.
         //
-        // Brittleness-by-design is the argument that justifies the C
-        // whitelist, and it does NOT transfer here. There it guards a safety
+        // Brittleness-by-design is the argument that justifies the whitelist
+        // of permitted C statements in driving_conditions' native-kernel
+        // test, and it does NOT transfer here. There it guards a safety
         // identity that should not change without the assertion changing with
-        // it. Here it would fire on the most common edit this unit makes to
-        // these entries, and a guard that cries wolf on routine work is one a
+        // it. Here it would fire on the most common edit made to these
+        // entries, and a guard that cries wolf on routine work is one a
         // reader stops believing.
         //
         // COST OF THE EXCLUSION, stated rather than implied: a figure
         // re-quoted INSIDE a marker is no longer covered. Measured, that is
         // exactly one occurrence today.
 
-        // ⚑ ORDERED LIST, not a set and not a multiset.
+        // ORDERED LIST, not a set and not a multiset.
         //
         // v1 used `contains` per figure — satisfied by any occurrence, and
         // each of these is cited TWICE, so corrupting one of the two passed.
@@ -393,8 +394,11 @@ void main() {
         // multiset identical while both sentences become false.
         //
         // The ordered list catches both, because a transposition changes the
-        // sequence. These two entries are published and frozen, so pinning
-        // their order costs nothing a rewrite should not pay.
+        // sequence. These two entries are published and, as measured above,
+        // not frozen. With correction markers left out, a correction in the
+        // `CORRECTED IN` shape cannot change this order; only an edit to the
+        // entries' own text can, so pinning it costs nothing such an edit
+        // should not pay.
         const allowedNonMeasurements = <int>{
           200000, // the run-count range the driving_conditions suite asserts
         };
@@ -482,8 +486,8 @@ void main() {
         );
         // AND THE OTHER SIDE OF A CONTROL: it must NOT fire on the routine
         // edit. Adding a correction marker that re-quotes a correct figure is
-        // what this unit does to these entries constantly, and it reddened
-        // the previous version while the document was right.
+        // what is done to these entries constantly, and it reddened the
+        // previous version while the document was right.
         expect(
           citedIn(_withoutCorrectionMarkers(section.replaceFirst(
             '- ${_thousands(slicedPromoted)} cells change',
