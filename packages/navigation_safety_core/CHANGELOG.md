@@ -50,6 +50,49 @@ A new test fails if any explainer string names the centre (中央, センター,
 真ん中, "center", "centre", "middle"), and another checks that this entry quotes
 exactly the strings the code returns.
 
+**0.11.11 corrected the changelog, the README and the API docs, and shipped the
+false premise in its own test file — the very file 0.11.11's changelog names as
+the remedy.** If you followed that pointer to check our correction, the first
+paragraph you read contradicted it.
+
+`test/grip_axis_critical_test.dart` opened, in the published 0.11.11 archive:
+
+> *The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
+> `driving_conditions`). ... So a grip score of ZERO under clear air scored
+> `info` on the default config and could NOT reach `critical` at any grip
+> value.*
+
+Those are the two statements 0.11.11 exists to retract, stated as unqualified
+fact. **`overall` is not a mean** — it is a third input the caller supplies,
+which this package only clamps — and **`critical` was reachable at perfect
+grip** whenever `overall` fell below `warningScoreFloor` (default 0.30). Both
+are true only on the 50/50 slice, and the paragraph did not say so. It now
+does, and it quotes what it used to say, so a reader who acted on the old
+wording can recognise it.
+
+**The 0.11.11 archive cannot be changed and still reads as published.** This
+entry is how you learn that; it is not a silent fix. Nothing in `lib/` changed
+and `toAlertSeverity` is identical to 0.11.11 — this is a documentation
+correction in a file that ships.
+
+**Also corrected here: 0.11.11 quoted a tolerance its own suite no longer
+asserts.** That entry says the identity is checked *"within 1e-5 at run counts
+up to 1000, and 1e-3 up to 200,000"*, and tells you to run the suite rather
+than take its word — directly above a sentence promising that no figure is
+quoted which the suite does not re-derive. **The 1e-3 is now 1e-2.** The
+tolerance was re-measured over the input space actually reachable — the
+contract enforces finiteness only, so any finite speed, grip factor or
+visibility is legal, including negative speed from a sign-flipped sensor — and
+float32 accumulation over that space exceeds 1e-3. So 0.11.11 named a bound the
+suite does not re-derive, in the sentence that told you to check it, and it
+**overstated the guarantee by an order of magnitude**. The 0.11.11 text is left
+as published and marked in place; this is the correction.
+
+**What was checked, so this is not one-site whack-a-mole.** Every file in the
+package was swept for both retracted claims. This was the ONLY remaining site
+where either stood unqualified and unmarked; every other occurrence is either
+inside a `CORRECTED IN 0.11.11` marker or already carries its slice qualifier.
+
 ## 0.11.11
 
 **Corrects a false sentence in 0.11.10's changelog, and the test that let it
@@ -118,6 +161,19 @@ within 1e-5 at run counts up to 1000, and 1e-3 up to 200,000. Run it rather
 than take this paragraph's word. **No measured figure is quoted here that the
 suite does not re-derive:** earlier drafts of this entry quoted departures
 taken from one-off grids, and those numbers moved when the grid moved.
+
+**CORRECTED IN 0.11.12 — BOTH SENTENCES ABOVE, AND NOT THE WAY IT LOOKS.**
+**When 0.11.11 published, the suite DID assert 1e-3 and this paragraph was
+true.** The tolerance was re-measured 28 minutes later — over the input space
+actually reachable, since the contract enforces finiteness only, so any finite
+speed, grip factor or visibility is legal — float32 accumulation exceeds 1e-3,
+and the bound became **1e-2**. Nothing moved this document when that happened.
+So the failure is not a figure quoted carelessly: **the document was right and
+the test moved underneath it**, which is precisely the weakness in anchoring a
+document to a suite — the anchor holds only if changing the suite re-checks the
+document, and nothing did. Read today, the paragraph names a bound the suite
+does not assert, one line above the sentence promising that could not happen,
+and overstates the guarantee by an order of magnitude. See 0.11.12.
 
 **If your `overall` is anything else** — a different weighting, more axes, a
 model of your own — then **0.11.10 can alert where 0.11.9 was silent**:

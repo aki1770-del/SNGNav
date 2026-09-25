@@ -67,13 +67,25 @@ const double _identityEpsilon = 1e-5;
 /// departure seen on the unmutated engine over 20,000 pseudo-random samples
 /// with continuous speed / grip / visibility across all six surfaces:
 ///
-///   runs <= 1000       worst 1.2815e-06   ->  1e-5 tolerance,  7.8x headroom
-///   1000..200,000      worst 5.3436e-05   ->  1e-3 tolerance, 18.7x headroom
+///   runs <= 1000       worst 1.8477e-06   ->  1e-5 tolerance,  5.4x headroom
+///   1000..200,000      worst 1.0544e-03   ->  1e-2 tolerance,  9.5x headroom
 ///
-/// A 0.85 multiplicative override — the ordinary way an override is written —
-/// produces about 7.5e-02, so both tolerances catch it by one to four orders.
+/// ⚑ RE-MEASURED OVER THE FULL REACHABLE INPUT SPACE, which is wider than the
+/// probe used to draw from. `requireMeasured` enforces FINITENESS ONLY, so a
+/// consumer may pass any finite speed, grip factor or visibility — including
+/// negatives and speeds far above 130. The old probe drew speed as a fraction
+/// of 130, so a trigger above 130 was behaviourally unreachable; that was the
+/// two halves running parallel again, one layer up.
+///
+/// HONEST LIMIT OF THE LOOSE TIER. At high run counts with saturating inputs
+/// accumulation alone reaches 1.05e-03, so the 1e-2 tolerance separates a x0.9
+/// override (7.55e-02) by 7.2x but would NOT separate a x0.99 one (7.55e-03).
+/// Fine discrimination lives in the low-run tier, where a x0.99 override is
+/// 4,000x the tolerance — and since an input-gated trigger does not depend on
+/// the run count, the low tier is where such a trigger is caught. Run-count-
+/// gated triggers are caught by the whitelist, not here.
 const double _epsilonLowRuns = 1e-5;
-const double _epsilonHighRuns = 1e-3;
+const double _epsilonHighRuns = 1e-2;
 const int _lowRunCeiling = 1000;
 
 /// The top of the range this file asserts. Above it, float32 accumulation
@@ -86,24 +98,113 @@ const String _realWeighting =
 const String _brokenWeighting =
     'float overall = grip_score * 0.7f + visibility_score * 0.3f;';
 
-/// WRITES to a bare `overall`, comments removed first — plain AND compound.
+/// ⚑ A WHITELIST, TOTAL OVER THE TRANSLATION UNIT — v4.
 ///
-/// ⚑ v2 OF THIS PATTERN MATCHED ONLY `=`, AND WAS REFUTED. `overall *= 0.85f`
-/// is how anyone actually writes an override, and it returned zero matches, so
-/// four conditional overrides passed the static check. The blind spot was not
-/// the exotic macro case this file used to name; it was the ordinary one.
-final RegExp _overallWrite =
-    RegExp(r'(?<![_A-Za-z0-9])overall\s*(?:[-+*/%^&|]|<<|>>)?=(?!=)');
+/// v2 watched `overall` and matched only `=`. v3 widened that to compound
+/// assignment and `total_overall`. v4 inverted it to a whitelist, and FDD's
+/// verdict on v4 is the one worth keeping: *a whitelist, inside a scope that
+/// is a blacklist of one function name*. It scanned `simulation_run_batch`
+/// alone, so a static helper was unscanned and a call into it named no term —
+/// **which is my own macro argument, turned around.** I pinned the `#define`
+/// set reasoning that a macro expanding to a statement carries no identity
+/// term where it is used. That is exactly as true of a function call, and I
+/// had not pinned functions.
+///
+/// Three holes, measured, each a different KIND:
+///   * SCOPE — `tune(response, speed)` with the arithmetic in a helper outside
+///     the scanned body. Evaded everything.
+///   * TERMS — `effective_runs` is divided by on BOTH sides of the identity
+///     and was not a term. Its declaration carries no term either, so dropping
+///     its `const` was invisible, and because the two divisions are separate
+///     statements, doubling it between them broke the identity by 0.261 at
+///     speed -200 while touching nothing watched.
+///   * SPLITTING — splitting on `;` alone made detection depend on BRACE
+///     PLACEMENT. The braced variant was caught, and only because its `}`
+///     leaked into the next watched chunk; the identical unbraced one passed.
+///     ⚑ I nearly banked that red. It was an artifact, not a detection, and
+///     the failure text said so. A red accepted at face value is the same
+///     trap as a green.
+///
+/// So the scope is now the whole translation unit, statements split on `;`,
+/// `{` AND `}` so brace placement cannot change the answer, the terms include
+/// what the identity DEPENDS on rather than only what it is made of, and the
+/// function set is pinned beside the macro set. A box always has an outside;
+/// the static half is the one that can be made total, so it is.
+const List<String> _identityTerms = <String>[
+  'overall',
+  'grip_score',
+  'visibility_score',
+  'total_overall',
+  'total_grip',
+  'total_visibility',
+  'overall_mean',
+  'grip_mean',
+  'visibility_mean',
+  // What the identity DEPENDS on: both sides divide by this.
+  'effective_runs',
+  'runs',
+  // The struct that carries the three means out.
+  'response',
+];
 
-/// WRITES to the accumulator. Scaling here changes `overallMean` while never
-/// touching `overall`, so the check above cannot see it: `total_overall +=
-/// overall * 0.9f` is invisible to any pattern that watches `overall` alone.
-final RegExp _totalOverallWrite =
-    RegExp(r'(?<![_A-Za-z0-9])total_overall\s*(?:[-+*/%^&|]|<<|>>)?=(?!=)');
+/// Every statement in the FILE permitted to touch those terms, comments
+/// removed and whitespace collapsed. Generated from the real source.
+const List<String> _permittedIdentityStatements = <String>[
+  'float overall_mean',
+  'float grip_mean',
+  'float visibility_mean',
+  'SimulationResponse simulation_run_batch( uint32_t runs, uint32_t seed, float speed, float grip_factor, uint32_t surface_code, float visibility_meters )',
+  'const uint32_t effective_runs = runs == 0u ? 1u : runs',
+  'float total_overall = 0.0f',
+  'float total_grip = 0.0f',
+  'float total_visibility = 0.0f',
+  'run_index < effective_runs',
+  'float grip_score = clampf_range( grip_factor * (1.0f - grip_jitter) * (1.0f - speed_factor * 0.3f), 0.0f, 1.0f )',
+  'float visibility_score = clampf_range( visibility_norm * (1.0f - visibility_jitter), 0.0f, 1.0f )',
+  'float overall = grip_score * 0.5f + visibility_score * 0.5f',
+  'total_overall += overall',
+  'total_grip += grip_score',
+  'total_visibility += visibility_score',
+  'total_overall_squared += overall * overall',
+  'if (overall < 0.4f)',
+  'float overall_mean = total_overall / (float) effective_runs',
+  'float variance = (total_overall_squared / (float) effective_runs) - (overall_mean * overall_mean)',
+  'SimulationResponse response =',
+  '.overall_mean = overall_mean, .grip_mean = total_grip / (float) effective_runs, .visibility_mean = total_visibility / (float) effective_runs, .overall_variance = variance, .incident_count = incident_count, .execution_ms = execution_ms,',
+  'return response',
+];
 
-/// The accumulation statement itself. What is accumulated must be `overall`,
-/// unscaled — the count above cannot tell `+= overall;` from `+= overall*0.9f;`.
-const String _accumulation = 'total_overall += overall;';
+/// The macro surface. A macro expanding to a statement carries no identity
+/// term at its use site.
+const List<String> _permittedDefines = <String>[
+  '#define SIMULATION_ABI_VERSION 2u',
+];
+
+/// The include surface, pinned by the SAME argument a third time.
+///
+/// A translation unit is the source AFTER preprocessing, and this check scans
+/// BEFORE it, so an `#include` is a way to bring in text the scan never sees.
+/// FDD grades the attack that needs it low-realism — it takes a mid-function
+/// include and a macro over a clock call, and nobody would write that. It is
+/// recorded as the demonstrable EDGE of the totality claim rather than as a
+/// plausible defect, and pinned because closure costs three lines and leaving
+/// a known edge unpinned after being shown it is not a defensible choice.
+const List<String> _permittedIncludes = <String>[
+  '#include <math.h>',
+  '#include <stdint.h>',
+  '#include <time.h>',
+];
+
+/// The function surface, pinned for the same reason as the macros and by the
+/// same argument — a CALL carries no identity term either. A new function is
+/// a new place for the arithmetic to live.
+const List<String> _permittedFunctions = <String>[
+  'simulation_abi_version',
+  'clampf_range',
+  'xorshift32',
+  'uniform01',
+  'simulation_run_batch',
+];
 
 String _stripComments(String c) => c
     .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
@@ -248,73 +349,140 @@ void main() {
     );
 
     test(
-      '`overall` is WRITTEN exactly once and accumulated UNSCALED, so a '
-      'conditional override cannot hide behind a trigger the sweep misses',
+      'NO arithmetic anywhere in the FILE touches the identity\'s terms '
+      'beyond the permitted statements — a whitelist over the whole '
+      'translation unit, with the macro AND function surfaces pinned',
       () {
         final raw = source.readAsStringSync();
-        final stripped = _stripComments(raw);
+        final found = _identityStatements(_scannedSource(raw));
 
         expect(
-          _overallWrite.allMatches(stripped).length,
-          1,
+          found,
+          _permittedIdentityStatements,
           reason:
-              'the kernel writes `overall` more than once. A second write — '
-              'plain OR compound, `overall *= k` included — is how a '
-              'conditional reweighting hides from a behavioural sweep. If it '
-              'is intentional, the sweep must be widened over whatever the '
-              'new condition reads.',
-        );
-        expect(
-          _totalOverallWrite.allMatches(stripped).length,
-          2,
-          reason:
-              'the accumulator is written somewhere other than its '
-              'initialisation and the one accumulation statement',
-        );
-        expect(
-          _accumulation.allMatches(stripped).length,
-          1,
-          reason:
-              'the accumulation is no longer the unscaled `$_accumulation`. '
-              'Scaling HERE moves overallMean while never touching `overall`, '
-              'so the write-count above cannot see it.',
+              'the FILE contains arithmetic on the identity\'s terms that '
+              'this test does not permit. Either a statement changed, or one '
+              'was added. If the change is intentional, the whitelist is what '
+              'states the identity and it must be updated deliberately — that '
+              'is the point of it being a whitelist.',
         );
 
-        // CONTROLS. Each must SEE its attack, and none may fire on a comment.
-        for (final attack in <String, String>{
-          'surface-conditional (compound)': _surfaceAttack(raw),
-          'exact-run-count trigger': raw.replaceFirst(
-            _realWeighting,
-            '$_realWeighting\n    if (runs == 100001u) { overall *= 0.85f; }',
+        expect(
+          RegExp(r'^#define[^\n]*', multiLine: true)
+              .allMatches(_stripComments(raw))
+              .map((m) => m.group(0)!.trim())
+              .toList(),
+          _permittedDefines,
+          reason:
+              'a macro was added or changed. A macro expanding to a statement '
+              'carries no identity term at its use site, so it would pass the '
+              'whitelist above; pinning the #define set is what closes that.',
+        );
+
+        expect(
+          RegExp(r'^#include[^\n]*', multiLine: true)
+              .allMatches(_scannedSource(raw))
+              .map((m) => m.group(0)!.trim())
+              .toList(),
+          _permittedIncludes,
+          reason:
+              'an #include was added, removed or changed. This check scans the '
+              'source BEFORE preprocessing, so an include is text the scan '
+              'never sees — the demonstrable edge of the totality claim, and '
+              'the same argument that pins the macros and the functions.',
+        );
+
+        expect(
+          _definedFunctions(_scannedSource(raw)),
+          _permittedFunctions,
+          reason:
+              'a function was added, removed or renamed. A CALL carries no '
+              'identity term at its call site, exactly as a macro use does, '
+              'so a new function is a new place for the identity\'s '
+              'arithmetic to live. This is the same argument that pins the '
+              'macros, and not applying it to functions is what let a helper '
+              'through.',
+        );
+
+        // CONTROLS. Every attack class that refuted v2 and v3 must be seen,
+        // including the ones whose identifiers were never on any watch list.
+        final attacks = <String, String>{
+          'v2: surface-conditional override on `overall`': _surfaceAttack(raw),
+          'v3: `overall_mean` — THE REPORTED FIELD': raw.replaceFirst(
+            '  float overall_mean = total_overall / (float) effective_runs;',
+            '  float overall_mean = total_overall / (float) effective_runs;\n'
+                '  if (speed > 140.0f) { overall_mean *= 0.9f; }',
           ),
-          'grip-band trigger': raw.replaceFirst(
-            _realWeighting,
-            '$_realWeighting\n    if (grip_factor > 0.26f && grip_factor < '
-                '0.28f) { overall *= 0.85f; }',
+          'v3: `total_grip` accumulator': raw.replaceFirst(
+            '    total_grip += grip_score;',
+            '    if (speed > 140.0f) { total_grip += grip_score * 0.9f; } '
+                'else { total_grip += grip_score; }',
           ),
-        }.entries) {
-          final a = _stripComments(attack.value);
+          'v3: `total_visibility` accumulator': raw.replaceFirst(
+            '    total_visibility += visibility_score;',
+            '    if (speed > 140.0f) { total_visibility += visibility_score '
+                '* 0.9f; } else { total_visibility += visibility_score; }',
+          ),
+          'v3: the struct initialiser': raw.replaceFirst(
+            '    .overall_mean = overall_mean,',
+            '    .overall_mean = (speed > 140.0f) ? overall_mean * 0.9f : '
+                'overall_mean,',
+          ),
+          'compound assignment on `overall`': raw.replaceFirst(
+            _realWeighting,
+            '$_realWeighting\n    if (runs == 5000u) { overall *= 0.85f; }',
+          ),
+          // v4's three holes, each encoded so it cannot come back.
+          'v4 SCOPE: arithmetic in a helper outside the kernel':
+              raw.replaceFirst(
+            'SimulationResponse simulation_run_batch(',
+            'static SimulationResponse tune(SimulationResponse r, float s) {\n'
+                '  if (s < -100.0f) { r.overall_mean = r.overall_mean * 0.9f; }\n'
+                '  return r;\n}\n\nSimulationResponse simulation_run_batch(',
+          ).replaceFirst(
+            '  return response;',
+            '  response = tune(response, speed);\n  return response;',
+          ),
+          'v4 TERMS: `effective_runs` doubled between the two divisions, '
+                  'UNBRACED': raw
+              .replaceFirst(
+                '  const uint32_t effective_runs = runs == 0u ? 1u : runs;',
+                '  uint32_t effective_runs = runs == 0u ? 1u : runs;',
+              )
+              .replaceFirst(
+                '  float overall_mean = total_overall / (float) effective_runs;',
+                '  float overall_mean = total_overall / (float) effective_runs;\n'
+                    '  if (speed < -100.0f) effective_runs = effective_runs * 2u;',
+              ),
+          'v4 SPLITTING: the same mutation BRACED': raw.replaceFirst(
+            '  float overall_mean = total_overall / (float) effective_runs;',
+            '  float overall_mean = total_overall / (float) effective_runs;\n'
+                '  if (speed < -100.0f) { overall_mean *= 0.9f; }',
+          ),
+          'v4 SPLITTING: the same mutation UNBRACED — detection must not '
+                  'depend on brace placement': raw.replaceFirst(
+            '  float overall_mean = total_overall / (float) effective_runs;',
+            '  float overall_mean = total_overall / (float) effective_runs;\n'
+                '  if (speed < -100.0f) overall_mean *= 0.9f;',
+          ),
+        };
+        for (final attack in attacks.entries) {
           expect(
-            _overallWrite.allMatches(a).length,
-            greaterThan(1),
-            reason: 'the write check is blind to: ${attack.key}',
+            _identityStatements(_scannedSource(attack.value)),
+            isNot(_permittedIdentityStatements),
+            reason: 'the whitelist is blind to: ${attack.key}',
           );
         }
-        final scaled = _stripComments(
-          raw.replaceFirst(_accumulation, 'total_overall += overall * 0.9f;'),
-        );
+
+        // And it must not fire on text that only APPEARS in a comment.
         expect(
-          _accumulation.allMatches(scaled).length,
-          0,
-          reason: 'the accumulation check is blind to a scaled accumulator',
-        );
-        expect(
-          _overallWrite
-              .allMatches(_stripComments(
-                  '/* overall *= 9; */ // total_overall += overall * 2;'))
-              .length,
-          0,
-          reason: 'the checks count comments, so they will false-positive',
+          _identityStatements(_scannedSource(raw.replaceFirst(
+            '  const uint32_t effective_runs',
+            '  /* overall_mean *= 9; total_grip += grip_score * 2; */\n'
+                '  const uint32_t effective_runs',
+          ))),
+          _permittedIdentityStatements,
+          reason: 'the whitelist reads comments, so it will false-positive',
         );
       },
     );
@@ -341,8 +509,8 @@ void main() {
           lessThan(_epsilonLowRuns),
           reason:
               'off-lattice, at runs <= $_lowRunCeiling, the worst departure '
-              'was ${worst.lowRunsWorst} (measured baseline 1.28e-06 over '
-              '20,000 samples, so this tolerance carries 7.8x headroom). A '
+              'was ${worst.lowRunsWorst} (measured baseline 1.85e-06 over '
+              '48,000 samples, so this tolerance carries 5.4x headroom). A '
               'departure here is a weighting change at a point the grid does '
               'not visit.',
         );
@@ -352,7 +520,7 @@ void main() {
           reason:
               'off-lattice, at runs up to $_maxAssertedRuns, the worst '
               'departure was ${worst.highRunsWorst} (measured baseline '
-              '5.34e-05 over 20,000 samples, 18.7x headroom). Float32 '
+              '1.05e-03 over 48,000 samples, 9.5x headroom). Float32 '
               'accumulation alone does not reach this tolerance ANYWHERE IN '
               'THIS RANGE — see the run-count test for where it does.',
         );
@@ -585,10 +753,10 @@ _ProbeResult _offLatticeProbe(
     final d = measure(
       1 + (next() * _lowRunCeiling).floor(),
       (next() * 0x7FFFFFFF).floor(),
-      next() * 130.0,
-      next(),
+      -50.0 + next() * 450.0,
+      -0.5 + next() * 2.5,
       surfaces[(next() * surfaces.length).floor().clamp(0, surfaces.length - 1)],
-      next() * 1000.0,
+      -100.0 + next() * 5100.0,
     );
     if (d > lowWorst) lowWorst = d;
     samples++;
@@ -598,10 +766,10 @@ _ProbeResult _offLatticeProbe(
     final d = measure(
       _lowRunCeiling + (next() * (_maxAssertedRuns - _lowRunCeiling)).floor(),
       (next() * 0x7FFFFFFF).floor(),
-      next() * 130.0,
-      next(),
+      -50.0 + next() * 450.0,
+      -0.5 + next() * 2.5,
       surfaces[(next() * surfaces.length).floor().clamp(0, surfaces.length - 1)],
-      next() * 1000.0,
+      -100.0 + next() * 5100.0,
     );
     if (d > highWorst) highWorst = d;
     samples++;
@@ -627,3 +795,44 @@ _ProbeResult _offLatticeProbe(
 
   return (lowRunsWorst: lowWorst, highRunsWorst: highWorst, samples: samples);
 }
+
+/// The WHOLE translation unit, comments removed.
+///
+/// v4 scanned one function body. Everything outside it was unscanned, and a
+/// call into a helper carries no identity term at the call site — so the
+/// scope was a blacklist of one function name wrapped around a whitelist.
+String _scannedSource(String source) {
+  final stripped = _stripComments(source);
+  if (!stripped.contains('simulation_run_batch')) {
+    throw StateError(
+      'simulation_run_batch is absent, so the whitelist below would pass '
+      'vacuously. Refusing instead.',
+    );
+  }
+  return stripped;
+}
+
+/// Every statement of [source] touching a term the identity is made of OR
+/// depends on, whitespace collapsed.
+///
+/// Split on `;`, `{` AND `}`. Splitting on `;` alone made detection depend on
+/// brace placement: a braced mutation was caught only because its closing
+/// brace leaked into the next watched chunk, while the identical unbraced one
+/// produced a chunk with no watched term and passed.
+List<String> _identityStatements(String source) {
+  final terms = _identityTerms
+      .map((t) => RegExp('(?<![_A-Za-z0-9])$t(?![_A-Za-z0-9])'))
+      .toList();
+  return source
+      .split(RegExp(r'[;{}]'))
+      .map((s) => s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).join(' '))
+      .where((s) => s.isNotEmpty)
+      .where((s) => terms.any((t) => t.hasMatch(s)))
+      .toList();
+}
+
+/// Top-level function definitions in [source].
+List<String> _definedFunctions(String source) => RegExp(
+      r'^[A-Za-z_][A-Za-z0-9_ \*]*\s+([a-zA-Z_][A-Za-z0-9_]*)\s*\([^;]*?\)\s*\{',
+      multiLine: true,
+    ).allMatches(source).map((m) => m.group(1)!).toList();

@@ -1,16 +1,38 @@
 /// Black ice under a clear sky: one axis is catastrophic, the other is fine.
 ///
-/// The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
-/// `driving_conditions`). A mean cannot express "one axis alone is lethal":
-/// with visibility at 1.0, `overall >= 0.5`, while every shipped
-/// `warningScoreFloor` is 0.30-0.40. So a grip score of ZERO under clear air
-/// scored `info` on the default config and could NOT reach `critical` at any
-/// grip value. Google Maps working, GPS working, sky clear, road lethal — the
-/// exact condition this product exists for, and the severity model had no
-/// shape in which to say it.
+/// ⚑ **CORRECTED IN 0.11.12. THE 0.11.11 ARCHIVE SHIPPED THIS PARAGRAPH
+/// UNCORRECTED, AND IT STATED THE TWO CLAIMS 0.11.11 EXISTS TO RETRACT.** It
+/// read, verbatim, so that a reader who acted on it can recognise it:
+///
+/// > *The composite `overall` is a MEAN (`0.5 * grip + 0.5 * visibility` in
+/// > `driving_conditions`). ... So a grip score of ZERO under clear air scored
+/// > `info` on the default config and could NOT reach `critical` at any grip
+/// > value.*
+///
+/// **`overall` is NOT a mean** — it is a third input the caller supplies and
+/// this package only clamps — and **`critical` WAS reachable**: on 0.11.9,
+/// `SafetyScore(overall: 0.2, gripScore: 1.0, visibilityScore: 1.0,
+/// fleetConfidenceScore: 1.0)` returns `critical` at PERFECT grip, because the
+/// composite returns `critical` whenever `overall` is below
+/// `warningScoreFloor` (default 0.30). This file was the one the 0.11.11
+/// changelog named as the remedy, so a reader who followed our own correction
+/// to check it met the false premise in its first paragraph.
+///
+/// The true statement follows.
+///
+/// WHEN `overall` IS the 50/50 mean of the axes — which is what
+/// `driving_conditions` supplies — a mean cannot express "one axis alone is
+/// lethal": with visibility at 1.0, `overall >= 0.5`, while every shipped
+/// `warningScoreFloor` is 0.30-0.40. So on that slice a grip score of ZERO
+/// under clear air scored `info` on the default config and could not reach
+/// `critical` at any grip value. Google Maps working, GPS working, sky clear,
+/// road lethal — the exact condition this product exists for, and the severity
+/// model had no shape in which to say it.
 ///
 /// These tests fail on the composite-only rule and pass on the per-axis rule.
 library;
+
+import 'dart:io';
 
 import 'package:navigation_safety_core/navigation_safety_core.dart';
 import 'package:test/test.dart';
@@ -301,6 +323,183 @@ void main() {
       expect(slicedOutOfNone, 0);
     });
 
+    test(
+      'the comma-formatted counts in the 0.11.11 and 0.11.10 entries are the '
+      'counts measured, in the order the entries print them — read from the '
+      'file',
+      () {
+        // ⚑ THIS TEST'S NAME ONCE PROMISED A COUPLING IT DID NOT HAVE. The
+        // test above asserts integer literals and never opens CHANGELOG.md,
+        // so editing the changelog failed nothing and editing that test
+        // re-checked no document. The name is now what it does, and nothing
+        // more: SIX comma-formatted figures inside TWO entries. FDD measured
+        // the section at 37 distinct numeric tokens; this covers 7 of them.
+        // The tolerances, the sweep dimension and two line-number citations
+        // are NOT covered. An over-claimed guard is how a reader stops
+        // looking.
+        //
+        // It is not academic. 0.11.11 quoted a tolerance that was true when
+        // it published and false 28 minutes later, because the suite moved
+        // and nothing re-checked the document. This closes that loop for the
+        // figures below — and for those only.
+        final changelog = File('${Directory.current.path}/CHANGELOG.md');
+        expect(
+          changelog.existsSync(),
+          isTrue,
+          reason:
+              'CHANGELOG.md is absent, so the citations this test exists to '
+              'check were NOT checked. Do not read that as a pass.',
+        );
+        final text = changelog.readAsStringSync();
+
+        final from = text.indexOf('## 0.11.11');
+        final to = text.indexOf('## 0.11.9');
+        expect(from, greaterThanOrEqualTo(0), reason: 'no 0.11.11 entry');
+        expect(to, greaterThan(from), reason: 'no 0.11.9 entry after it');
+        final section = text.substring(from, to);
+
+        // ⚑ CORRECTION MARKERS ARE EXCLUDED, AND THE REASON IS MEASURED.
+        //
+        // I argued that pinning order costs nothing because these entries are
+        // published and frozen. FDD measured: published, and NOT frozen. The
+        // 0.11.10 entry has been corrected in place three times since it
+        // published, each time by adding a marker — and correcting a
+        // published entry in place is this package's documented practice,
+        // used five times in this thread alone, precisely because the archive
+        // cannot be changed. Markers RE-QUOTE figures, which is why several
+        // counts appear twice at all. So an ordinary future marker re-quoting
+        // a correct count reddened this test while the document was right.
+        //
+        // Brittleness-by-design is the argument that justifies the C
+        // whitelist, and it does NOT transfer here. There it guards a safety
+        // identity that should not change without the assertion changing with
+        // it. Here it would fire on the most common edit this unit makes to
+        // these entries, and a guard that cries wolf on routine work is one a
+        // reader stops believing.
+        //
+        // COST OF THE EXCLUSION, stated rather than implied: a figure
+        // re-quoted INSIDE a marker is no longer covered. Measured, that is
+        // exactly one occurrence today.
+
+        // ⚑ ORDERED LIST, not a set and not a multiset.
+        //
+        // v1 used `contains` per figure — satisfied by any occurrence, and
+        // each of these is cited TWICE, so corrupting one of the two passed.
+        // v2 compared SETS, which fixed corruption to a value OUTSIDE the
+        // measured set and did not fix the twice-cited case it was built for:
+        // changing one of two `71,407` to `9,721` kept both sets equal.
+        // A MULTISET catches that one — measured — but NOT a straight swap of
+        // two figures cited the same number of times, which leaves the
+        // multiset identical while both sentences become false.
+        //
+        // The ordered list catches both, because a transposition changes the
+        // sequence. These two entries are published and frozen, so pinning
+        // their order costs nothing a rewrite should not pay.
+        const allowedNonMeasurements = <int>{
+          200000, // the run-count range the driving_conditions suite asserts
+        };
+        final measured = <int>{
+          slicedCells,
+          slicedPromoted,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+          freeCells,
+          freeOutOfNone,
+        };
+
+        List<int> citedIn(String s) => RegExp(r'[0-9]{1,3}(?:,[0-9]{3})+')
+            .allMatches(s)
+            .map((m) => int.parse(m.group(0)!.replaceAll(',', '')))
+            .toList();
+
+        final prose = _withoutCorrectionMarkers(section);
+        final cited = citedIn(prose);
+        final expected = <int>[
+          freeCells,
+          freeOutOfNone,
+          200000,
+          slicedCells,
+          slicedPromoted,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+          slicedCells,
+          slicedPromoted,
+          slicedWarningToCritical,
+          slicedInfoToCritical,
+        ];
+        expect(
+          cited,
+          expected,
+          reason:
+              'the comma-formatted figures in the 0.11.11/0.11.10 entries are '
+              'no longer the measured ones in the order the entries print '
+              'them. Either an entry was edited away from what was measured, '
+              'or a measurement moved and the entry did not follow it — which '
+              'is exactly how 0.11.11 came to quote a tolerance that was true '
+              'when it published and false 28 minutes later.',
+        );
+        expect(
+          cited.toSet().difference(measured).difference(allowedNonMeasurements),
+          isEmpty,
+          reason: 'a cited figure is not one this test measured',
+        );
+
+        // CONTROLS, BOTH SIDES.
+        //
+        // OUT-OF-SET: a value no measurement produces.
+        expect(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
+            _thousands(freeOutOfNone),
+            _thousands(freeOutOfNone + 1),
+          ))),
+          isNot(expected),
+          reason: 'an out-of-set corruption was not detected',
+        );
+        // IN-SET, ONE OF TWO — the case being cited twice used to rescue, and
+        // the side v2's control never touched.
+        expect(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
+            _thousands(slicedCells),
+            _thousands(slicedPromoted),
+          ))),
+          isNot(expected),
+          reason:
+              'changing ONE of two occurrences of a cited figure to ANOTHER '
+              'MEASURED figure was not detected — the exact case that passed '
+              'the set comparison',
+        );
+        // IN-SET, TRANSPOSITION — multiset-invariant, so only order sees it.
+        expect(
+          citedIn(_withoutCorrectionMarkers(section
+              .replaceAll(_thousands(slicedWarningToCritical), '@@')
+              .replaceAll(
+                  _thousands(slicedInfoToCritical), _thousands(slicedWarningToCritical))
+              .replaceAll('@@', _thousands(slicedInfoToCritical)))),
+          isNot(expected),
+          reason:
+              'swapping two figures cited the same number of times was not '
+              'detected; a multiset cannot see this and a set cannot either',
+        );
+        // AND THE OTHER SIDE OF A CONTROL: it must NOT fire on the routine
+        // edit. Adding a correction marker that re-quotes a correct figure is
+        // what this unit does to these entries constantly, and it reddened
+        // the previous version while the document was right.
+        expect(
+          citedIn(_withoutCorrectionMarkers(section.replaceFirst(
+            '- ${_thousands(slicedPromoted)} cells change',
+            '- ${_thousands(slicedPromoted)} cells change\n'
+                '  **CORRECTED IN 0.11.13 — the wording above.** The '
+                '${_thousands(slicedPromoted)} figure is right.\n',
+          ))),
+          expected,
+          reason:
+              'adding an ordinary correction marker that re-quotes a CORRECT '
+              'figure made this test red. That is a false red on the most '
+              'common edit these entries receive.',
+        );
+      },
+    );
+
     test('no alert 0.11.9 delivers is silenced, on the WHOLE surface', () {
       // The safety property, and the one that must never break. It holds
       // off the slice as well as on it: 7,212,107 cells, none lowered.
@@ -359,4 +558,32 @@ AlertSeverity? _compositeOnly(NavigationSafetyConfig c, double overall) {
   if (overall < c.infoScoreFloor) return AlertSeverity.warning;
   if (overall < c.safeScoreFloor) return AlertSeverity.info;
   return null;
+}
+
+/// Renders [n] with thousands separators, the way the CHANGELOG writes them.
+String _thousands(int n) {
+  final digits = n.toString();
+  final out = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
+    out.write(digits[i]);
+  }
+  return out.toString();
+}
+
+/// Drops correction-marker blocks from [section].
+///
+/// A marker runs from the line carrying `CORRECTED IN` to the next blank line.
+/// Markers re-quote figures by design — that is what makes a correction
+/// recognisable to a reader who acted on the old wording — so counting their
+/// figures makes routine, correct corrections fail.
+String _withoutCorrectionMarkers(String section) {
+  final out = StringBuffer();
+  var inMarker = false;
+  for (final line in section.split('\n')) {
+    if (line.contains('CORRECTED IN ')) inMarker = true;
+    if (inMarker && line.trim().isEmpty) inMarker = false;
+    if (!inMarker) out.writeln(line);
+  }
+  return out.toString();
 }

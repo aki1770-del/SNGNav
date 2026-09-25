@@ -155,12 +155,37 @@ void main() {
         // it. Whether the answer differs from `Platform.isLinux` anywhere is
         // itself unmeasured, and this replaces a guess with a check rather
         // than claiming to know.
+        // ⚑ AND THE FIRST VERSION OF THIS PROBE REOPENED THE FAIL-OPEN IT
+        // WAS WRITTEN TO CLOSE. It folded "no C compiler" into "capability
+        // unavailable" and the caller skipped on it, so on a compiler-free
+        // path this file went from exit 1 to exit 0, "All tests passed",
+        // and the assertion below became unreachable in the one case it was
+        // written for. The two are NOT the same fact:
+        //
+        //   no compiler            -> merely ABSENT where it should be
+        //                             present. RED, by the same rule that
+        //                             closed the fail-open in the first place.
+        //   compiler present, but
+        //   cannot produce a
+        //   loadable shared object -> the capability genuinely does not exist
+        //                             here. The one honest skip.
         final probe = _sharedObjectCapability();
-        if (!probe.available) {
+        expect(
+          probe.verdict,
+          isNot(_ToolchainVerdict.noCompiler),
+          reason:
+              'NO C COMPILER ON PATH (looked for cc, clang, gcc), so THE '
+              'STALE-LIBRARY GUARD DID NOT RUN. This is the guard for the '
+              '2026-09-12 defect in which a mismatched library returned a '
+              'saturated safety score with no crash and no log line. Install a '
+              'C compiler; do not read this as a pass. Measured: '
+              '${probe.reason}',
+        );
+        if (probe.verdict == _ToolchainVerdict.cannotBuildSharedObject) {
           markTestSkipped(
-            'this toolchain cannot produce a loadable shared object, measured: '
-            '${probe.reason}. The ABI-drift test above still ran and still '
-            'asserted.',
+            'a compiler IS present but this toolchain cannot produce a '
+            'loadable shared object, measured: ${probe.reason}. The ABI-drift '
+            'test above still ran and still asserted.',
           );
           return;
         }
@@ -282,7 +307,21 @@ String? _findCompiler() {
   return null;
 }
 
-typedef _Capability = ({bool available, String reason});
+/// The three outcomes, kept apart because folding the first two together is
+/// exactly how this file's fail-open was reopened.
+enum _ToolchainVerdict {
+  /// A compiler built a shared object and `DynamicLibrary` opened it.
+  ok,
+
+  /// No compiler on PATH. ABSENT where it should be present — this is RED.
+  noCompiler,
+
+  /// A compiler is present and cannot produce a loadable shared object. The
+  /// capability genuinely does not exist here — this is the honest skip.
+  cannotBuildSharedObject,
+}
+
+typedef _Capability = ({_ToolchainVerdict verdict, String reason});
 
 /// Measures whether this toolchain can build a shared object that
 /// `DynamicLibrary` will open — by building a trivial one and opening it.
@@ -292,7 +331,10 @@ typedef _Capability = ({bool available, String reason});
 _Capability _sharedObjectCapability() {
   final cc = _findCompiler();
   if (cc == null) {
-    return (available: false, reason: 'no C compiler on PATH');
+    return (
+      verdict: _ToolchainVerdict.noCompiler,
+      reason: 'no C compiler on PATH (looked for cc, clang, gcc)',
+    );
   }
   Directory? tmp;
   try {
@@ -303,16 +345,22 @@ _Capability _sharedObjectCapability() {
     final build = Process.runSync(cc, ['-shared', '-fPIC', '-o', out, src.path]);
     if (build.exitCode != 0) {
       return (
-        available: false,
+        verdict: _ToolchainVerdict.cannotBuildSharedObject,
         reason: '$cc could not build a shared object: ${build.stderr}',
       );
     }
     DynamicLibrary.open(
       out,
     ).lookup<NativeFunction<Int32 Function()>>('probe_symbol');
-    return (available: true, reason: 'built and loaded a probe object');
+    return (
+      verdict: _ToolchainVerdict.ok,
+      reason: 'built and loaded a probe object with $cc',
+    );
   } on Object catch (e) {
-    return (available: false, reason: 'probe object would not load: $e');
+    return (
+      verdict: _ToolchainVerdict.cannotBuildSharedObject,
+      reason: 'probe object would not load: $e',
+    );
   } finally {
     try {
       tmp?.deleteSync(recursive: true);
