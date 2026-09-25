@@ -42,8 +42,8 @@ one string.
 |---|---|---|
 | `ageingRural` | アイスバーンです。最も滑りやすい路面の一つです。可能であれば停車できる安全な場所を探してください。走行中は時速20km以下を目安に | アイスバーンです。最も滑りやすい路面の一つです。安全にできるときは、安全な場所での停車も選べます。走行中は時速20km以下を目安に |
 | `noviceUrban` | アイスバーン、極めて危険。可能なら安全な場所で停車してください。走行時は時速20km以下に | アイスバーン、極めて危険。安全にできるときは、安全な場所での停車も選べます。走行時は時速20km以下に |
-| `agriculturalForestry` | アイスバーン、停車できる場所まで最低速で | アイスバーン、最低速で。安全な場所での停車も選べます |
-| `foreignTouristSnowZone` | Wet ice — among the most slippery road surfaces. If possible, stop in a safe place. Otherwise drive below 20 km/h. | Wet ice — among the most slippery road surfaces. If you can do so safely, pausing at a safe place is an option. While driving, stay below 20 km/h. |
+| `agriculturalForestry` | アイスバーン、停車できる場所まで最低速で | アイスバーン、最低速で。安全にできるときは、安全な場所での停車も選べます |
+| `foreignTouristSnowZone` | Wet ice — among the most slippery road surfaces. If possible, stop in a safe place. Otherwise drive below 20 km/h. | Wet ice — among the most slippery road surfaces. If you can do so safely, pausing at a safe place is an option. While driving, keep to 20 km/h or less. |
 
 **Compacted snow: a gear.** Three of the six profiles.
 
@@ -88,7 +88,9 @@ made part of that judgment for her, or said something the package cannot know.
 - **Wet ice: whether to stop is hers.** The old strings told her to stop, or to
   look for a place to stop, on a road where the package cannot see what is
   behind her. Stopping stays available: the new strings name it as an option
-  she may take when it is safe. The speed guidance is unchanged.
+  she may take when it is safe. The speed guidance keeps its numbers. The
+  English said "below 20 km/h" and now says "20 km/h or less", which is what
+  the Japanese 以下 always said.
 - **Compacted snow and loose gravel: a control input is not advice.** 低速ギア
   ("keep a low gear") names a gear the package cannot see; her car may be an
   EV, a hybrid or a CVT, and a gear change on packed snow is itself an input.

@@ -549,7 +549,7 @@ void main() {
             RoadSurfaceCondition.wetIce,
             [DriverProfile.agriculturalForestry],
             'アイスバーン、停車できる場所まで最低速で',
-            'アイスバーン、最低速で。安全な場所での停車も選べます',
+            'アイスバーン、最低速で。安全にできるときは、安全な場所での停車も選べます',
           ),
           (
             RoadSurfaceCondition.wetIce,
@@ -559,7 +559,7 @@ void main() {
                 'Otherwise drive below 20 km/h.',
             'Wet ice — among the most slippery road surfaces. '
                 'If you can do so safely, pausing at a safe place is an option. '
-                'While driving, stay below 20 km/h.',
+                'While driving, keep to 20 km/h or less.',
           ),
           (
             RoadSurfaceCondition.snow,

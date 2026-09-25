@@ -308,11 +308,11 @@ class AlertExplainer {
           case DriverProfile.professional:
             return 'アイスバーン、20km/h';
           case DriverProfile.agriculturalForestry:
-            return 'アイスバーン、最低速で。安全な場所での停車も選べます';
+            return 'アイスバーン、最低速で。安全にできるときは、安全な場所での停車も選べます';
           case DriverProfile.foreignTouristSnowZone:
             return 'Wet ice — among the most slippery road surfaces. '
                 'If you can do so safely, pausing at a safe place is an '
-                'option. While driving, stay below 20 km/h.';
+                'option. While driving, keep to 20 km/h or less.';
         }
 
       case RoadSurfaceCondition.looseGravel:
