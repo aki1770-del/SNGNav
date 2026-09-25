@@ -17,7 +17,15 @@
 //
 // BOUNDS
 // - Lexical. It catches the known class of wording; a new phrasing can evade
-//   it, so a person still reads every change to a spoken line.
+//   it, so a person still reads every change to a spoken line. The negations
+//   it knows: after ブレーキ (or ブレーキ操作), the ない, ず and imperative な
+//   forms of 踏む, かける, する, 使う and 使用する; the same three forms of
+//   止まる, 停止する and 停車する; てはいけ, てはなら and てはだめ with their
+//   voiced で forms (踏んではいけません); and in English "do not", "don't",
+//   "never" and "must not" before brake, stop or slam, before use, hit, apply,
+//   press or touch the brake(s), or before step, press, put or stamp on the
+//   brake(s), plus "stay off" and "keep (your foot) off" the brake(s), and
+//   "not allowed" or "not permitted".
 // - A false positive is possible (an English sentence that begins "No" and
 //   mentions stopping, or a Japanese condition such as
 //   「ブレーキをしないと止まれません」). It fails toward a person reading the
@@ -35,19 +43,31 @@ import 'package:test/test.dart';
 // ---- The predicate ----------------------------------------------------------
 
 final RegExp _jaBrakeOrStop = RegExp(r'ブレーキ|制動|停止|止ま|停車');
-final RegExp _jaAbsolute = RegExp(r'厳禁|禁止|絶対|てはいけ|てはなら|べからず');
+// 踏む takes the voiced て-form (踏んで), so its prohibition reads ではいけ, not
+// てはいけ. Until 2026-09-25 「ブレーキを踏んではいけません。」 passed.
+final RegExp _jaAbsolute =
+    RegExp(r'厳禁|禁止|絶対|[てで]はいけ|[てで]はなら|[てで]は(?:だめ|ダメ)|べからず');
+// The imperative な is not read where it begins なら, など, なの, なり or なん
+// ("if", "such as", ...), so 「ブレーキを踏むなら」 is not a prohibition.
 final RegExp _jaNegatedBrakeVerb = RegExp(
-    r'ブレーキ(操作)?[をは]?(踏ま|かけ|し|使わ|使用し)ない|止まらない|停止しない|停車しない');
+    r'ブレーキ(操作)?[をは]?(踏ま|かけ|し|使わ|使用し)ない'
+    r'|ブレーキ(操作)?[をは]?(踏まず|かけず|せず|使わず|使用せず)'
+    r'|ブレーキ(操作)?[をは]?(踏む|かける|する|使う|使用する)な(?![らどのりん])'
+    r'|止まらない|停止しない|停車しない|止まらず|停止せず|停車せず'
+    r'|(止まる|停止する|停車する)な(?![らどのりん])');
 
 final RegExp _enBrakeOrStop = RegExp(r'\bbrak|\bstop', caseSensitive: false);
 final RegExp _enAbsolute = RegExp(
-  r'^no\b|\bnever\b|\bforbidden\b|\bprohibited\b|\bstrictly\b|\bmust not\b',
+  r'^no\b|\bnever\b|\bforbidden\b|\bprohibited\b|\bstrictly\b|\bmust not\b'
+  r'|\bnot (?:allowed|permitted)\b',
   caseSensitive: false,
 );
 final RegExp _enNegatedBrakeVerb = RegExp(
   r"\b(do not|don't|never|must not)\s+"
   r'((\w+\s+)?(brake|stop|slam)'
-  r'|(use|hit|apply|press|touch)\s+(the\s+)?brakes?)',
+  r'|(use|hit|apply|press|touch)\s+(the\s+)?brakes?'
+  r'|(step|press|put|stamp)\s+on\s+(the\s+)?brakes?)'
+  r'|\b(stay|keep(\s+your\s+foot)?)\s+off\s+(the\s+)?brakes?\b',
   caseSensitive: false,
 );
 
@@ -81,6 +101,16 @@ const List<String> _mustFlagJa = [
   '急ブレーキをしないでください。',
   'ブレーキを使わないでください。',
   'ブレーキ操作はしないでください。',
+  // The plainest prohibitions of all, let through until 2026-09-25: the voiced
+  // て-form of 踏む, the imperative な, and the ず form.
+  'ブレーキを踏んではいけません。',
+  '急ブレーキを踏んではならない。',
+  'ブレーキを踏んではだめです。',
+  'ブレーキを踏むな。',
+  '止まるな。',
+  '停止するな。',
+  'ブレーキを踏まずに減速してください。',
+  'ブレーキはかけずに走行してください。',
 ];
 const List<String> _mustFlagEn = [
   'No abrupt steering or braking.', // the shipped defect
@@ -90,6 +120,13 @@ const List<String> _mustFlagEn = [
   'abrupt starts, stops, and turns are strictly forbidden.',
   'Do not use the brakes.', // let through until 2026-09-25
   "Don't hit the brakes.", // let through until 2026-09-25
+  // Let through until the second widening, also 2026-09-25:
+  'Do not step on the brake.',
+  "Don't press on the brakes.",
+  'Do not put on the brakes.',
+  'Stay off the brakes.',
+  'Keep your foot off the brake.',
+  'Braking is not allowed.',
 ];
 const List<String> _mustPassJa = [
   '速度を落とし、急ブレーキ・急ハンドルは避けてください。', // a request
@@ -98,12 +135,18 @@ const List<String> _mustPassJa = [
   '安全にできるときは、安全な場所での停車も選べます。',
   'ブレーキを緩めないでください。', // negation that keeps her braking
   'ブレーキをしっかり踏んでください。', // し that is not しない
+  'ブレーキを踏むなら、やさしく踏んでください。', // な that begins なら
+  'ブレーキを踏んで、速度を落としてください。', // voiced て that is not ては
+  '止まれる速度で走行してください。',
 ];
 const List<String> _mustPassEn = [
   'Reduce speed and avoid abrupt braking or steering.',
   'Wet road surface. Stopping distance increases. Reduce speed.',
   'Keep pressing the brake firmly.',
   'Do not release the brake.',
+  'If you need to stop, brake firmly.',
+  'Stopping is always allowed when it is safe.',
+  'Ease off the accelerator before you brake.',
 ];
 
 // ---- Every spoken line the package exports ----------------------------------
