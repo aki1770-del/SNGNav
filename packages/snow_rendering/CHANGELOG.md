@@ -50,14 +50,15 @@ the wording it knows. It is lexical: a new phrasing can pass it, so every change
 to a spoken line is still read by a person. It proves itself first against
 sentences it must flag and sentences it must pass.
 
-### A correction to 0.3.3
+### 0.3.3 was never published
 
-0.3.3 says a check in the repository fails the build if the `version:` in
-`sngnav_coverage.yaml` drifts from the package version. That check is not yet
-on the repository's main branch, so today nothing fails the build when they
-drift. This release keeps them equal by hand.
+0.3.3 was staged and never published. Its documentation-only changes ship
+inside this release: pub.dev goes from 0.3.2 to 0.3.4. The 0.3.3 entry below
+describes them.
 
-## 0.3.3
+## 0.3.3 — never published
+
+**Never published.** The changes below ship in 0.3.4, with 0.3.4's own.
 
 **Documentation only. No code change.**
 
@@ -86,8 +87,8 @@ drift. This release keeps them equal by hand.
   files were written in one commit on 2026-04-05 and the union was already 66
   that day.
 - **`version:` said 0.1.0** for a package shipping 0.3.x. It now equals the
-  package version, and a check in the repository fails the build if they drift
-  apart again.
+  package version, set by hand; nothing in this entry adds a check that fails a
+  build if they drift apart again.
 
 ## 0.3.2
 
