@@ -20,12 +20,17 @@
 //   it, so a person still reads every change to a spoken line. The negations
 //   it knows: after ブレーキ (or ブレーキ操作), the ない, ず and imperative な
 //   forms of 踏む, かける, する, 使う and 使用する; the same three forms of
-//   止まる, 停止する and 停車する; てはいけ, てはなら and てはだめ with their
-//   voiced で forms (踏んではいけません); and in English "do not", "don't",
-//   "never" and "must not" before brake, stop or slam, before use, hit, apply,
-//   press or touch the brake(s), or before step, press, put or stamp on the
-//   brake(s), plus "stay off" and "keep (your foot) off" the brake(s), and
-//   "not allowed" or "not permitted".
+//   止まる, 停止する and 停車する; てはいけ, てはだめ, and てはなら as in
+//   てはならない, with their voiced で forms (踏んではいけません); and in
+//   English "do not", "don't", "never" and "must not" before brake, stop or
+//   slam, before use, hit, apply, press or touch the brake(s), or before step,
+//   press, put or stamp on the brake(s), plus "stay off" and "keep (your foot)
+//   off" the brake(s), and "not allowed" or "not permitted".
+// - てはなら does not reach the polite てはなりません. Both
+//   「ブレーキを使用してはなりません。」 and 「急ブレーキを踏んではなりません。」
+//   pass this check. A list of phrasings cannot close this class, so
+//   braking_sentences_are_reviewed_test.dart makes a person read every spoken
+//   sentence that names braking, stopping or the brake pedal.
 // - A false positive is possible (an English sentence that begins "No" and
 //   mentions stopping, or a Japanese condition such as
 //   「ブレーキをしないと止まれません」). It fails toward a person reading the
