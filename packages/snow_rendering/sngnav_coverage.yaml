@@ -21,7 +21,7 @@
 # "shader" does not occur anywhere in lib/.
 
 package: snow_rendering
-version: "0.3.3"
+version: "0.3.4"
 maintainer: aki1770@gmail.com
 
 scenarios:

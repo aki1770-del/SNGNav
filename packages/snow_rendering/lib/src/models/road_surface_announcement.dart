@@ -96,10 +96,10 @@ final RoadSurfaceAnnouncement invisibleBlackIceAnnouncement =
   jaSpokenText:
       'ブラックアイスバーンに注意。路面は濡れて見えても、'
       '凍結しているおそれがあります。'
-      '急ハンドル、急ブレーキは厳禁。速度を落としてください。',
+      '速度を落とし、急ブレーキ・急ハンドルは避けてください。',
   enSpokenText:
       'Black ice warning. The road may look merely wet but may be '
-      'frozen. No abrupt steering or braking. Reduce speed.',
+      'frozen. Reduce speed and avoid abrupt braking or steering.',
   termJa: 'ブラックアイスバーン',
   vocabulary: jafAuthoritativeData[JapaneseSnowSurfaceClass.blackIceBahn],
 );
@@ -161,10 +161,10 @@ extension RoadSurfaceStateAnnouncement on RoadSurfaceState {
         return const RoadSurfaceAnnouncement(
           jaSpokenText:
               'ブラックアイスバーンに注意。路面が凍結しているおそれがあります。'
-              '急ハンドル、急ブレーキは厳禁。速度を落としてください。',
+              '速度を落とし、急ブレーキ・急ハンドルは避けてください。',
           enSpokenText:
               'Black ice warning. The road surface may be frozen. '
-              'No abrupt steering or braking. Reduce speed.',
+              'Reduce speed and avoid abrupt braking or steering.',
           termJa: 'ブラックアイスバーン',
         );
 

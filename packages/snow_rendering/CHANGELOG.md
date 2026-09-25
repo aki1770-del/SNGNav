@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.3.4
+
+**Both black-ice lines told the driver that hard braking was strictly
+forbidden. They now ask her to avoid abrupt braking and steering.** This
+changes what two spoken lines say, in both languages. Nothing else in `lib/`
+changes.
+
+### The lines, before and after
+
+| Line | Before (to 0.3.3) | From 0.3.4 |
+|---|---|---|
+| `invisibleBlackIceAnnouncement`, ja | ブラックアイスバーンに注意。路面は濡れて見えても、凍結しているおそれがあります。急ハンドル、急ブレーキは厳禁。速度を落としてください。 | ブラックアイスバーンに注意。路面は濡れて見えても、凍結しているおそれがあります。速度を落とし、急ブレーキ・急ハンドルは避けてください。 |
+| `invisibleBlackIceAnnouncement`, en | Black ice warning. The road may look merely wet but may be frozen. No abrupt steering or braking. Reduce speed. | Black ice warning. The road may look merely wet but may be frozen. Reduce speed and avoid abrupt braking or steering. |
+| `RoadSurfaceState.blackIce.announcement`, ja | ブラックアイスバーンに注意。路面が凍結しているおそれがあります。急ハンドル、急ブレーキは厳禁。速度を落としてください。 | ブラックアイスバーンに注意。路面が凍結しているおそれがあります。速度を落とし、急ブレーキ・急ハンドルは避けてください。 |
+| `RoadSurfaceState.blackIce.announcement`, en | Black ice warning. The road surface may be frozen. No abrupt steering or braking. Reduce speed. | Black ice warning. The road surface may be frozen. Reduce speed and avoid abrupt braking or steering. |
+
+### Why
+
+- **急ブレーキ is also the everyday word for an emergency stop, and 厳禁
+  ("strictly forbidden") admits no exception.** Read literally, the old
+  Japanese line forbade the one act a driver may need on ice, and "No abrupt
+  steering or braking." did the same in English. The line is spoken at a moment
+  a data refresh chose, not one her traffic chose.
+- **A spoken line may ask her to avoid abrupt inputs; it must not forbid
+  braking or stopping.** The new lines ask, and put the request to slow down
+  first.
+- The general line still does not say the road "may look wet": it is also
+  reached during visible snowfall, where that would be false.
+
+### If you use the exact text
+
+- **You receive this without changing your constraint.** A caret constraint
+  such as `^0.3.0` admits 0.3.4, so your next `dart pub upgrade` changes what
+  these two lines say.
+- **If you ship audio recorded for each line** (clips looked up by their text),
+  re-record these when you take this release. Until you do, the lookup misses
+  and those lines fall to your fallback: silence, or a different voice.
+- **The JAF advisory text carried on `invisibleBlackIceAnnouncement.vocabulary`
+  is unchanged**, and its black-ice entry also forbids abrupt starts and stops
+  in absolute terms. The new test below checks spoken lines only; it does not
+  cover that text.
+
+A new test (`test/models/no_braking_prohibition_test.dart`) fails if any spoken
+line this package exports, in either language, forbids braking or stopping. It
+proves itself first against sentences it must flag and sentences it must pass.
+
+### A correction to 0.3.3
+
+0.3.3 says a check in the repository fails the build if the `version:` in
+`sngnav_coverage.yaml` drifts from the package version. That check is not yet
+on the repository's main branch, so today nothing fails the build when they
+drift. This release keeps them equal by hand.
+
 ## 0.3.3
 
 **Documentation only. No code change.**
