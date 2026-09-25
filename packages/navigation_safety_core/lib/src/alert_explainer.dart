@@ -19,9 +19,9 @@
 ///   chosen by the package (a recorded decision), not system-enforced
 ///   limits. Wording uses 「以下に減速」 ("reduce to or below") /
 ///   "Slow to" — the driver retains full speed authority.
-/// - "Stop in a safe place" is the strongest action; phrased "if
-///   possible" / 「可能であれば」 — does not imply the system stops the
-///   vehicle.
+/// - No action tells her to stop, to go on, or that the road is fine to
+///   drive as usual. Stopping is named only as an option she may take
+///   when it is safe (「安全な場所での停車も選べます」 / "is an option").
 /// - No action string promises an outcome. Each is a recommendation
 ///   in the package's own advisory wording.
 /// - No action names a path or a steering target ("keep to the centre").
@@ -178,11 +178,15 @@ class AlertExplainer {
         return '路面状況不明。慎重に運転してください';
 
       case RoadSurfaceCondition.dry:
-        // Profile-flat: routine condition; minimal advisory.
+        // Profile-flat: the condition, and nothing after it. Until
+        // 2026-09-25 this cell added 「通常運転で問題ありません」 /
+        // "Maintain normal driving.": an all-clear this package cannot
+        // know. It sees neither the road nor the traffic, and black ice
+        // can look dry.
         if (profile == DriverProfile.foreignTouristSnowZone) {
-          return 'Road is dry. Maintain normal driving.';
+          return 'Road is dry.';
         }
-        return '乾燥路面、通常運転で問題ありません';
+        return '乾燥路面';
 
       case RoadSurfaceCondition.wet:
         switch (profile) {
@@ -219,14 +223,14 @@ class AlertExplainer {
         switch (profile) {
           case DriverProfile.ageingRural:
             return '圧雪路面です。雪は固く凍結に近い状態です。'
-                '低速ギアを保ち、急ブレーキ・急ハンドルを避けてください';
+                '速度を落とし、急ブレーキ・急ハンドルを避けてください';
           case DriverProfile.snowZoneExperienced:
-            return '圧雪、低速ギア、急操作回避';
+            return '圧雪、減速、急操作回避';
           case DriverProfile.noviceUrban:
             return '圧雪路面、滑ります。スピードを大きく落とし、'
                 'ゆっくり運転してください';
           case DriverProfile.professional:
-            return '圧雪、低速ギア';
+            return '圧雪、減速';
           case DriverProfile.agriculturalForestry:
             return '圧雪路面、トラクションタイヤ・チェーン推奨';
           case DriverProfile.foreignTouristSnowZone:
@@ -293,22 +297,22 @@ class AlertExplainer {
         switch (profile) {
           case DriverProfile.ageingRural:
             return 'アイスバーンです。最も滑りやすい路面の一つです。'
-                '可能であれば停車できる安全な場所を探してください。'
+                '安全にできるときは、安全な場所での停車も選べます。'
                 '走行中は時速20km以下を目安に';
           case DriverProfile.snowZoneExperienced:
             return 'アイスバーン、極めて危険、20km/h以下';
           case DriverProfile.noviceUrban:
             return 'アイスバーン、極めて危険。'
-                '可能なら安全な場所で停車してください。'
+                '安全にできるときは、安全な場所での停車も選べます。'
                 '走行時は時速20km以下に';
           case DriverProfile.professional:
             return 'アイスバーン、20km/h';
           case DriverProfile.agriculturalForestry:
-            return 'アイスバーン、停車できる場所まで最低速で';
+            return 'アイスバーン、最低速で。安全な場所での停車も選べます';
           case DriverProfile.foreignTouristSnowZone:
             return 'Wet ice — among the most slippery road surfaces. '
-                'If possible, stop in a safe place. '
-                'Otherwise drive below 20 km/h.';
+                'If you can do so safely, pausing at a safe place is an '
+                'option. While driving, stay below 20 km/h.';
         }
 
       case RoadSurfaceCondition.looseGravel:
@@ -325,7 +329,8 @@ class AlertExplainer {
           case DriverProfile.agriculturalForestry:
             return '砂利路面（通常運用範囲）、後続車に小石注意';
           case DriverProfile.foreignTouristSnowZone:
-            return 'Loose gravel. Increase following distance. Brake gently.';
+            return 'Loose gravel. Sudden braking may cause a skid. '
+                'Increase following distance.';
         }
     }
   }

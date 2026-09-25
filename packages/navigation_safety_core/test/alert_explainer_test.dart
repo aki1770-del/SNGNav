@@ -143,22 +143,23 @@ void main() {
       }
     });
 
-    test('foreignTouristSnowZone WET_ICE uses "if possible" advisory', () {
-      // The strongest action ("stop in a safe place") is phrased as an
-      // option, not a command. Wording must include "if possible".
+    test('foreignTouristSnowZone WET_ICE names stopping as an option', () {
+      // Stopping is offered, never directed: "If possible, stop in a safe
+      // place." was an imperative with a condition on it.
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.wetIce,
         DriverProfile.foreignTouristSnowZone,
       );
-      expect(e.action.toLowerCase(), contains('if possible'));
+      expect(e.action, contains('is an option'));
+      expect(e.action.toLowerCase(), isNot(contains('stop in')));
     });
 
-    test('ageingRural WET_ICE uses 可能であれば (advisory phrasing)', () {
+    test('ageingRural WET_ICE names stopping as an option', () {
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.wetIce,
         DriverProfile.ageingRural,
       );
-      expect(e.action, contains('可能であれば'));
+      expect(e.action, contains('停車も選べます'));
     });
   });
 
@@ -198,7 +199,7 @@ void main() {
     });
 
     test('snowZoneExperienced SNOW is brief (≤30 chars)', () {
-      // By design: brief format "圧雪、低速ギア、急操作回避".
+      // By design: brief format "圧雪、減速、急操作回避".
       final e = AlertExplainer.forConditionAndProfile(
         RoadSurfaceCondition.snow,
         DriverProfile.snowZoneExperienced,
