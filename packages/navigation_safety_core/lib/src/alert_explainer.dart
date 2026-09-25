@@ -270,9 +270,9 @@ class AlertExplainer {
         // Until 0.11.12 four of these cells told her to keep to the centre
         // (「道路中央寄りを走行」, 「中央走行」 twice, and "center of lane" -- the
         // Japanese said the road, the English said the lane). A steering
-        // target is control, not advice, and on a road without marked lanes
-        // the centre is toward oncoming traffic: Japan's Road Traffic Act,
-        // Art. 18(1), has vehicles keep to the left (「道路の左側に寄つて」).
+        // target is control, not advice, and on a two-way road without marked
+        // lanes the centre is toward oncoming traffic: Japan's Road Traffic
+        // Act, Art. 18(1), has vehicles keep to the left (「道路の左側に寄つて」).
         // The risk these strings name is sliding sideways; the request that
         // fits it is to slow down, in the words the noviceUrban cell uses.
         switch (profile) {

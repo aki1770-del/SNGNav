@@ -375,9 +375,9 @@ void main() {
     // Until 0.11.12 four SLUSH cells told the driver to keep to the centre:
     // 「道路中央寄りを走行してください」, 「中央走行」 twice, and "Drive slowly in
     // center of lane." A steering target is control, not advice. This package
-    // sees neither the road nor the oncoming car, and on a road without marked
-    // lanes the centre is toward oncoming traffic (Japan's Road Traffic Act,
-    // Art. 18(1): keep to the left). No cell may name the centre again.
+    // sees neither the road nor the oncoming car, and on a two-way road without
+    // marked lanes the centre is toward oncoming traffic (Japan's Road Traffic
+    // Act, Art. 18(1): keep to the left). No cell may name the centre again.
     bool namesCentre(String action) =>
         const ['中央', 'センター', '真ん中', 'まんなか'].any(action.contains) ||
         RegExp(
@@ -465,6 +465,193 @@ void main() {
           section,
           contains(after),
           reason: 'the changelog must quote the new $profile string',
+        );
+      }
+    });
+  });
+
+  group('The 0.11.12 entry quotes every string it changes', () {
+    // Measured, not assumed: all 48 cells were dumped from the published
+    // 0.11.11 source and from this release, and exactly these 18 cells
+    // differ, through 14 distinct strings. This test cannot re-derive that
+    // list, because it has no copy of 0.11.11. It checks that the code returns
+    // each new string in every cell listed, and that the entry quotes each old
+    // and new string on the same table row.
+    //
+    // Checking the two strings apart is not enough. Two of the new strings
+    // (「乾燥路面」, "Road is dry.") are substrings of the old ones, so a
+    // `contains` check on each would pass an entry that quoted only the old.
+    const changed =
+        <(RoadSurfaceCondition, List<DriverProfile>, String, String)>[
+          (
+            RoadSurfaceCondition.slush,
+            [DriverProfile.ageingRural],
+            'シャーベット状の路面です。タイヤが横に滑る危険があるため、'
+                '車線変更を避け、道路中央寄りを走行してください',
+            'シャーベット状の路面です。タイヤが横に滑る危険があるため、'
+                '車線変更を避け、ゆっくり走行してください',
+          ),
+          (
+            RoadSurfaceCondition.slush,
+            [DriverProfile.snowZoneExperienced],
+            'シャーベット、車線変更回避、中央走行',
+            'シャーベット、車線変更回避、減速',
+          ),
+          (
+            RoadSurfaceCondition.slush,
+            [DriverProfile.professional],
+            'シャーベット、中央走行',
+            'シャーベット、減速',
+          ),
+          (
+            RoadSurfaceCondition.slush,
+            [DriverProfile.foreignTouristSnowZone],
+            'Slush. Avoid lane changes. Drive slowly in center of lane.',
+            'Slush. Avoid lane changes. Drive slowly.',
+          ),
+          (
+            RoadSurfaceCondition.dry,
+            [
+              DriverProfile.ageingRural,
+              DriverProfile.snowZoneExperienced,
+              DriverProfile.noviceUrban,
+              DriverProfile.professional,
+              DriverProfile.agriculturalForestry,
+            ],
+            '乾燥路面、通常運転で問題ありません',
+            '乾燥路面',
+          ),
+          (
+            RoadSurfaceCondition.dry,
+            [DriverProfile.foreignTouristSnowZone],
+            'Road is dry. Maintain normal driving.',
+            'Road is dry.',
+          ),
+          (
+            RoadSurfaceCondition.wetIce,
+            [DriverProfile.ageingRural],
+            'アイスバーンです。最も滑りやすい路面の一つです。'
+                '可能であれば停車できる安全な場所を探してください。'
+                '走行中は時速20km以下を目安に',
+            'アイスバーンです。最も滑りやすい路面の一つです。'
+                '安全にできるときは、安全な場所での停車も選べます。'
+                '走行中は時速20km以下を目安に',
+          ),
+          (
+            RoadSurfaceCondition.wetIce,
+            [DriverProfile.noviceUrban],
+            'アイスバーン、極めて危険。可能なら安全な場所で停車してください。'
+                '走行時は時速20km以下に',
+            'アイスバーン、極めて危険。安全にできるときは、安全な場所での停車も選べます。'
+                '走行時は時速20km以下に',
+          ),
+          (
+            RoadSurfaceCondition.wetIce,
+            [DriverProfile.agriculturalForestry],
+            'アイスバーン、停車できる場所まで最低速で',
+            'アイスバーン、最低速で。安全な場所での停車も選べます',
+          ),
+          (
+            RoadSurfaceCondition.wetIce,
+            [DriverProfile.foreignTouristSnowZone],
+            'Wet ice — among the most slippery road surfaces. '
+                'If possible, stop in a safe place. '
+                'Otherwise drive below 20 km/h.',
+            'Wet ice — among the most slippery road surfaces. '
+                'If you can do so safely, pausing at a safe place is an option. '
+                'While driving, stay below 20 km/h.',
+          ),
+          (
+            RoadSurfaceCondition.snow,
+            [DriverProfile.ageingRural],
+            '圧雪路面です。雪は固く凍結に近い状態です。'
+                '低速ギアを保ち、急ブレーキ・急ハンドルを避けてください',
+            '圧雪路面です。雪は固く凍結に近い状態です。'
+                '速度を落とし、急ブレーキ・急ハンドルを避けてください',
+          ),
+          (
+            RoadSurfaceCondition.snow,
+            [DriverProfile.snowZoneExperienced],
+            '圧雪、低速ギア、急操作回避',
+            '圧雪、減速、急操作回避',
+          ),
+          (
+            RoadSurfaceCondition.snow,
+            [DriverProfile.professional],
+            '圧雪、低速ギア',
+            '圧雪、減速',
+          ),
+          (
+            RoadSurfaceCondition.looseGravel,
+            [DriverProfile.foreignTouristSnowZone],
+            'Loose gravel. Increase following distance. Brake gently.',
+            'Loose gravel. Sudden braking may cause a skid. '
+                'Increase following distance.',
+          ),
+        ];
+
+    String entry() {
+      final changelog = File('CHANGELOG.md').readAsStringSync();
+      final start = changelog.indexOf('\n## 0.11.12\n');
+      expect(start, isNot(-1), reason: 'CHANGELOG.md has no 0.11.12 section');
+      final next = changelog.indexOf('\n## ', start + 1);
+      return changelog.substring(start, next == -1 ? changelog.length : next);
+    }
+
+    bool quotesRow(String section, String before, String after) =>
+        section.contains('| $before | $after |');
+
+    test('the list is the one measured: 18 cells, 14 strings, none twice', () {
+      final cells = <(RoadSurfaceCondition, DriverProfile)>{
+        for (final (condition, profiles, _, _) in changed)
+          for (final profile in profiles) (condition, profile),
+      };
+      expect(changed, hasLength(14));
+      expect(
+        changed.fold<int>(0, (n, c) => n + c.$2.length),
+        18,
+        reason: 'a cell is listed twice',
+      );
+      expect(cells, hasLength(18));
+    });
+
+    test('the code returns each new string in every cell listed', () {
+      for (final (condition, profiles, _, after) in changed) {
+        for (final profile in profiles) {
+          expect(
+            AlertExplainer.forConditionAndProfile(condition, profile).action,
+            after,
+            reason: '($profile, $condition)',
+          );
+        }
+      }
+    });
+
+    test('the row check fails on an entry that quotes only the old string, '
+        'where a contains check would pass', () {
+      // A check never run against the defect it exists for has not been
+      // tested.
+      const dryBefore = '乾燥路面、通常運転で問題ありません';
+      const dryAfter = '乾燥路面';
+      const onlyOld =
+          '| the five Japanese profiles | $dryBefore | $dryBefore |';
+      expect(onlyOld.contains(dryBefore) && onlyOld.contains(dryAfter), isTrue);
+      expect(quotesRow(onlyOld, dryBefore, dryAfter), isFalse);
+      const oneWordChanged = '| the five Japanese profiles | $dryBefore | 乾燥 |';
+      expect(quotesRow(oneWordChanged, dryBefore, dryAfter), isFalse);
+      const right = '| the five Japanese profiles | $dryBefore | $dryAfter |';
+      expect(quotesRow(right, dryBefore, dryAfter), isTrue);
+    });
+
+    test('the entry quotes each old and new string on one table row', () {
+      final section = entry();
+      for (final (condition, profiles, before, after) in changed) {
+        expect(
+          quotesRow(section, before, after),
+          isTrue,
+          reason:
+              'the 0.11.12 entry has no row "| $before | $after |" '
+              'for $condition, $profiles',
         );
       }
     });

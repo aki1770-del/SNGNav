@@ -2,12 +2,21 @@
 
 ## 0.11.12
 
-**Four slush explainer strings told the driver where to steer: toward the
-centre. They now ask her to slow down.** This is the only change to what the
-package returns: `AlertExplainer.forConditionAndProfile` gives different text
-for `RoadSurfaceCondition.slush` in four of its six profiles.
+**Eighteen of the 48 explainer cells change what they tell the driver.** Four
+named the centre as the place to drive, six told her the dry road was fine to
+drive as usual, four told her to stop, and four named a gear or how to use the
+brake. This is the only change to what the package returns:
+`AlertExplainer.forConditionAndProfile` gives different text in 18 of its 48
+(condition, profile) cells, through 14 distinct strings, each quoted below
+before and after. The other 30 cells return exactly what 0.11.11 returned.
+
+This release also corrects 0.11.11's own test file and one figure in its
+changelog. That correction changes nothing the package returns; it is the last
+part of this entry.
 
 ### The strings, before and after
+
+**Slush: the centre.** Four of the six profiles.
 
 | Profile | Before (0.4.0 to 0.11.11) | From 0.11.12 |
 |---|---|---|
@@ -18,37 +27,103 @@ for `RoadSurfaceCondition.slush` in four of its six profiles.
 
 The `noviceUrban` and `agriculturalForestry` slush strings are unchanged.
 
+**Dry road: the all-clear.** All six profiles. The five Japanese profiles share
+one string.
+
+| Profile | Before (to 0.11.11) | From 0.11.12 |
+|---|---|---|
+| the five Japanese profiles | 乾燥路面、通常運転で問題ありません | 乾燥路面 |
+| `foreignTouristSnowZone` | Road is dry. Maintain normal driving. | Road is dry. |
+
+**Wet ice: the instruction to stop.** Four of the six profiles. The
+`snowZoneExperienced` and `professional` strings are unchanged.
+
+| Profile | Before (to 0.11.11) | From 0.11.12 |
+|---|---|---|
+| `ageingRural` | アイスバーンです。最も滑りやすい路面の一つです。可能であれば停車できる安全な場所を探してください。走行中は時速20km以下を目安に | アイスバーンです。最も滑りやすい路面の一つです。安全にできるときは、安全な場所での停車も選べます。走行中は時速20km以下を目安に |
+| `noviceUrban` | アイスバーン、極めて危険。可能なら安全な場所で停車してください。走行時は時速20km以下に | アイスバーン、極めて危険。安全にできるときは、安全な場所での停車も選べます。走行時は時速20km以下に |
+| `agriculturalForestry` | アイスバーン、停車できる場所まで最低速で | アイスバーン、最低速で。安全な場所での停車も選べます |
+| `foreignTouristSnowZone` | Wet ice — among the most slippery road surfaces. If possible, stop in a safe place. Otherwise drive below 20 km/h. | Wet ice — among the most slippery road surfaces. If you can do so safely, pausing at a safe place is an option. While driving, stay below 20 km/h. |
+
+**Compacted snow: a gear.** Three of the six profiles.
+
+| Profile | Before (to 0.11.11) | From 0.11.12 |
+|---|---|---|
+| `ageingRural` | 圧雪路面です。雪は固く凍結に近い状態です。低速ギアを保ち、急ブレーキ・急ハンドルを避けてください | 圧雪路面です。雪は固く凍結に近い状態です。速度を落とし、急ブレーキ・急ハンドルを避けてください |
+| `snowZoneExperienced` | 圧雪、低速ギア、急操作回避 | 圧雪、減速、急操作回避 |
+| `professional` | 圧雪、低速ギア | 圧雪、減速 |
+
+**Loose gravel: how to use the brake.** One profile.
+
+| Profile | Before (to 0.11.11) | From 0.11.12 |
+|---|---|---|
+| `foreignTouristSnowZone` | Loose gravel. Increase following distance. Brake gently. | Loose gravel. Sudden braking may cause a skid. Increase following distance. |
+
 ### Why
 
-- **A steering target is control, not advice.** This package sees neither the
-  road nor the oncoming car, so where she puts the car is her judgment. The
-  class documentation promises advisory wording only, and these four strings
-  did not keep that promise from the release that introduced them (0.4.0).
-- **On a road without marked lanes, the centre is toward oncoming traffic.**
-  Japan's Road Traffic Act, Art. 18(1), has cars keep to the left on such a
-  road (「道路の左側に寄つて」). Its exceptions, such as a road condition that
-  makes it unavoidable, are judgments the law leaves to the driver who can
-  see the road.
-- **The two languages did not agree.** The Japanese said the centre of the
-  road; the English said the centre of the lane.
-- The risk these strings name is the tyres sliding sideways. The request that
-  fits it is to slow down, and the new Japanese reuses the words the
-  `noviceUrban` cell already used (「ゆっくり走行してください」).
+This package sees neither the road, the traffic nor her car. It classifies a
+surface, sometimes by inference, and hands your app a sentence. What she does
+with the car is her judgment, made with what she can see. Each string above
+made part of that judgment for her, or said something the package cannot know.
+
+- **Slush: a steering target is control, not advice.** Where she puts the car
+  is hers to judge. The class documentation promises advisory wording only,
+  and these four strings did not keep that promise from the release that
+  introduced them (0.4.0).
+  - **On a two-way road without marked lanes, the centre is toward oncoming
+    traffic.** Japan's Road Traffic Act, Art. 18(1), has cars keep to the left
+    on such a road (「道路の左側に寄つて」). Its exceptions, such as a road
+    condition that makes it unavoidable, are judgments the law leaves to the
+    driver who can see the road.
+  - **The two languages did not agree.** The Japanese said the centre of the
+    road; the English said the centre of the lane.
+  - The risk these strings name is the tyres sliding sideways. The request
+    that fits it is to slow down, and the new Japanese reuses the words the
+    `noviceUrban` cell already used (「ゆっくり走行してください」).
+- **Dry road: an all-clear is something this package cannot know.**
+  「通常運転で問題ありません」 ("normal driving is no problem") and "Maintain
+  normal driving." told her the road was fine. The classification may be
+  inferred rather than measured, and black ice is hard to see. The cell now
+  states the finding and nothing after it.
+- **Wet ice: whether to stop is hers.** The old strings told her to stop, or to
+  look for a place to stop, on a road where the package cannot see what is
+  behind her. Stopping stays available: the new strings name it as an option
+  she may take when it is safe. The speed guidance is unchanged.
+- **Compacted snow and loose gravel: a control input is not advice.** 低速ギア
+  ("keep a low gear") names a gear the package cannot see; her car may be an
+  EV, a hybrid or a CVT, and a gear change on packed snow is itself an input.
+  "Brake gently." tells her how to use the brake. The new strings ask her to
+  slow down, and say what sudden braking may do, as the Japanese gravel
+  strings already did.
 
 ### If you use the exact text
 
 - **You receive this without changing your constraint.** A caret constraint
   such as `^0.11.9` admits 0.11.12, so your next `dart pub upgrade` changes
-  what these four cells say.
+  what these 18 cells say.
 - **If you ship audio recorded for each string** (clips looked up by their
-  text), re-record these four when you take this release. Until you do, the
-  lookup misses for them and those lines fall to your fallback: silence, or
-  a different voice.
+  text), re-record the 14 new strings when you take this release. Until you
+  do, the lookup misses for them and those lines fall to your fallback:
+  silence, or a different voice.
 - **If you compare against the old strings**, update the comparison.
 
-A new test fails if any explainer string names the centre (中央, センター,
-真ん中, "center", "centre", "middle"), and another checks that this entry quotes
-exactly the strings the code returns.
+### What the tests check, and what they do not
+
+Two tests read all 48 strings, and each first proves itself on the old
+strings: one fails if any string names the centre (中央, センター, 真ん中,
+まんなか, "center", "centre", "middle"); the other fails if any string tells her
+the road is fine to drive as usual, or tells her to stop, to go on or to turn
+back. A third checks that the code returns each new string above, and that this
+entry quotes each old and new string on the same table row.
+
+- **They are lexical.** They catch the words they know; a new phrasing can
+  pass them. A person still reads every change to a string.
+- **No test checks for a prescribed control input.** The four above were found
+  by reading.
+- **The other 30 strings are unchanged**, and this entry claims nothing about
+  them beyond what these tests check.
+
+### A correction to 0.11.11's test file and changelog
 
 **0.11.11 corrected the changelog, the README and the API docs, and shipped the
 false premise in its own test file — the very file 0.11.11's changelog names as
@@ -71,9 +146,9 @@ does, and it quotes what it used to say, so a reader who acted on the old
 wording can recognise it.
 
 **The 0.11.11 archive cannot be changed and still reads as published.** This
-entry is how you learn that; it is not a silent fix. Nothing in `lib/` changed
-and `toAlertSeverity` is identical to 0.11.11 — this is a documentation
-correction in a file that ships.
+entry is how you learn that; it is not a silent fix. This correction changes
+nothing in `lib/`, and `toAlertSeverity` is identical to 0.11.11 — it is a
+documentation correction in a file that ships.
 
 **Also corrected here: 0.11.11 quoted a tolerance its own suite no longer
 asserts.** That entry says the identity is checked *"within 1e-5 at run counts
