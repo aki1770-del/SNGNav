@@ -9,19 +9,12 @@ dependencies:
     sdk: flutter
   navigation_safety:
     path: ../
-  routing_engine: ^0.4.0
+  routing_engine: '>=0.4.0 <0.7.0'
   latlong2: ^0.9.1
   flutter_bloc: ^9.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-# Monorepo development: navigation_safety transitively pulls
-# navigation_safety_core; resolve it locally too.
-dependency_overrides:
-  navigation_safety_core:
-    path: ../../navigation_safety_core
-
 flutter:
   uses-material-design: true

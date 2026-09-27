@@ -169,7 +169,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.9.5"
+    version: "0.9.6"
   navigation_safety_calibration:
     dependency: transitive
     description:
@@ -184,7 +184,7 @@ packages:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.4"
+    version: "0.11.6"
   nested:
     dependency: transitive
     description:

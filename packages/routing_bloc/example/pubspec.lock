@@ -93,21 +93,21 @@ packages:
       path: "../../condition_aggregator_digitraffic"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.8"
   condition_aggregator_jma:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_jma"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.7.0"
   condition_aggregator_met_norway:
     dependency: "direct overridden"
     description:
       path: "../../condition_aggregator_met_norway"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.8"
   condition_aggregator_nws:
     dependency: "direct overridden"
     description:
@@ -152,7 +152,7 @@ packages:
       path: "../../driving_conditions"
       relative: true
     source: path
-    version: "0.6.1"
+    version: "0.7.1"
   driving_consent:
     dependency: "direct overridden"
     description:
@@ -322,7 +322,7 @@ packages:
       path: "../../kalman_dr"
       relative: true
     source: path
-    version: "0.6.1"
+    version: "0.6.4"
   latlong2:
     dependency: "direct main"
     description:
@@ -452,7 +452,7 @@ packages:
       path: "../../navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.5"
+    version: "0.11.6"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
@@ -489,7 +489,7 @@ packages:
       path: "../../offline_tiles"
       relative: true
     source: path
-    version: "0.5.7"
+    version: "0.5.8"
   package_config:
     dependency: transitive
     description:
@@ -554,6 +554,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  petitparser:
+    dependency: transitive
+    description:
+      name: petitparser
+      sha256: "91bd59303e9f769f108f8df05e371341b15d59e995e6806aefab827b58336675"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.2"
   platform:
     dependency: transitive
     description:
@@ -584,7 +592,7 @@ packages:
       path: "../../pretrip_decision_advisor"
       relative: true
     source: path
-    version: "0.6.0"
+    version: "0.6.1"
   proj4dart:
     dependency: transitive
     description:
@@ -644,7 +652,7 @@ packages:
       path: "../../routing_engine"
       relative: true
     source: path
-    version: "0.6.2"
+    version: "0.6.3"
   simple_sparse_list:
     dependency: transitive
     description:
@@ -767,7 +775,7 @@ packages:
       path: "../../voice_guidance"
       relative: true
     source: path
-    version: "0.7.6"
+    version: "0.7.7"
   web:
     dependency: transitive
     description:
@@ -808,6 +816,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  xml:
+    dependency: transitive
+    description:
+      name: xml
+      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.6.1"
   yaml:
     dependency: transitive
     description:
