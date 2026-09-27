@@ -187,7 +187,7 @@ packages:
       path: "packages/driving_conditions"
       relative: true
     source: path
-    version: "0.7.0"
+    version: "0.7.1"
   driving_consent:
     dependency: "direct main"
     description:
@@ -422,15 +422,15 @@ packages:
       path: "packages/kalman_dr"
       relative: true
     source: path
-    version: "0.6.2"
+    version: "0.6.4"
   kuksa_dart_sdk:
     dependency: "direct main"
     description:
       name: kuksa_dart_sdk
-      sha256: "593fd640427689ba41442548c85e9944b56a6d5a917d54ffb0c454dd7e2bc5fd"
+      sha256: dda13cb5eab34b329cfb91eda54ad413cebad1f97df15b7ddb8ffdbc6f7b4857
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.6"
+    version: "0.2.10"
   latlong2:
     dependency: "direct main"
     description:
@@ -594,7 +594,7 @@ packages:
       path: "packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.5"
+    version: "0.11.6"
   nested:
     dependency: transitive
     description:
@@ -625,7 +625,7 @@ packages:
       path: "packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.7"
+    version: "0.5.8"
   package_config:
     dependency: transitive
     description:
@@ -735,7 +735,7 @@ packages:
       path: "packages/pretrip_source_digitraffic"
       relative: true
     source: path
-    version: "0.2.3"
+    version: "0.3.0"
   pretrip_source_jma:
     dependency: "direct main"
     description:

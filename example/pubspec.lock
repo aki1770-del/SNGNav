@@ -116,7 +116,7 @@ packages:
       path: "../packages/driving_conditions"
       relative: true
     source: path
-    version: "0.7.0"
+    version: "0.7.1"
   driving_consent:
     dependency: "direct overridden"
     description:
@@ -279,7 +279,7 @@ packages:
       path: "../packages/kalman_dr"
       relative: true
     source: path
-    version: "0.6.2"
+    version: "0.6.4"
   latlong2:
     dependency: "direct main"
     description:
@@ -419,7 +419,7 @@ packages:
       path: "../packages/navigation_safety_core"
       relative: true
     source: path
-    version: "0.11.5"
+    version: "0.11.6"
   navigation_safety_enums:
     dependency: "direct overridden"
     description:
@@ -449,7 +449,7 @@ packages:
       path: "../packages/offline_tiles"
       relative: true
     source: path
-    version: "0.5.7"
+    version: "0.5.8"
   path:
     dependency: transitive
     description:
@@ -681,7 +681,7 @@ packages:
       path: "../packages/voice_guidance"
       relative: true
     source: path
-    version: "0.7.6"
+    version: "0.7.7"
   web:
     dependency: transitive
     description:
