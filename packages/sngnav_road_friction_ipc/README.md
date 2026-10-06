@@ -3,12 +3,12 @@
 **sngnav_road_friction_ipc for Eclipse iceoryx™**
 
 Road-condition samples over [iceoryx2™](https://github.com/eclipse-iceoryx/iceoryx2)
-shared memory, classified by **the same rule the KUKSA path uses**.
+shared memory, classified by **the same rule the Eclipse KUKSA™ path uses**.
 
 A publisher writes a `sngnav_road_friction_t` into shared memory. This package
 receives it and hands the value to `RoadFriction.classify` from
 [`kuksa_dart_sdk`](https://pub.dev/packages/kuksa_dart_sdk), so a consumer
-reading friction over iceoryx2™ and a consumer reading it over KUKSA cannot
+reading friction over iceoryx2™ and a consumer reading it over KUKSA™ cannot
 disagree about whether a road is icy. There is no second threshold table here —
 a second place to decide "the road is fine" is a second place to be wrong.
 
@@ -209,5 +209,6 @@ BSD-3-Clause `LICENSE` copied from the repository root, contradicting the
 Apache-2.0 headers. It was corrected before publication; no published version
 carried it.
 
-Eclipse, iceoryx and iceoryx2 are trademarks of Eclipse Foundation AISBL.
-This package is not part of the Eclipse iceoryx™ project and is not endorsed by it.
+Eclipse, iceoryx, iceoryx2 and KUKSA are trademarks of Eclipse Foundation AISBL.
+This package is not part of the Eclipse iceoryx™ or Eclipse KUKSA™ projects and is not
+endorsed by either.

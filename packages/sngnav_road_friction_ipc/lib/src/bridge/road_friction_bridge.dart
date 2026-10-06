@@ -9,7 +9,7 @@
 /// `RoadFriction.classify` from `package:kuksa_dart_sdk`.
 ///
 /// The point of routing through that one function rather than re-deriving a
-/// verdict here is that the iceoryx2™ path and the KUKSA path then answer
+/// verdict here is that the iceoryx2™ path and the KUKSA™ path then answer
 /// identically. A second threshold table living in this package is a second
 /// place for "the road is fine" to be wrong.
 ///

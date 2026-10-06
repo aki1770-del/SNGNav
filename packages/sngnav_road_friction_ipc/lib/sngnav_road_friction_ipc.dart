@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Zero-copy road-condition samples over Eclipse iceoryx™ (iceoryx2™) shared
-/// memory, classified by the same rule the KUKSA path uses.
+/// memory, classified by the same rule the Eclipse KUKSA™ path uses.
 ///
 /// A publisher writes `sngnav_road_friction_t` into shared memory; this package
 /// receives it and hands each sample to `RoadFriction.classify` from
-/// `package:kuksa_dart_sdk`, so an iceoryx2™ consumer and a KUKSA consumer
+/// `package:kuksa_dart_sdk`, so an iceoryx2™ consumer and a KUKSA™ consumer
 /// cannot disagree about whether a road is icy.
 ///
 /// **Bounds.** Host Linux x86_64 only, today. Not verified on the IVI target,
@@ -18,9 +18,9 @@
 /// iceoryx2™ library cannot be loaded, naming the path it tried; it is exported
 /// so a caller can catch it by type.
 ///
-/// Eclipse, iceoryx and iceoryx2 are trademarks of Eclipse Foundation AISBL.
-/// This package is not part of the Eclipse iceoryx™ project and is not
-/// endorsed by it.
+/// Eclipse, iceoryx, iceoryx2 and KUKSA are trademarks of Eclipse Foundation
+/// AISBL. This package is not part of the Eclipse iceoryx™ or Eclipse KUKSA™
+/// projects and is not endorsed by either.
 library;
 
 export 'src/bridge/road_friction_bridge.dart';
