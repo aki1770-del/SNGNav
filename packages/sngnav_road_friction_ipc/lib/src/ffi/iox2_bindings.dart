@@ -37,12 +37,12 @@
 //     nm -D --defined-only ... | grep -iE 'version|abi|revision|semver|commit'
 //     -> nothing, across 660 exported iox2_* symbols.
 // The library cannot be asked what it is. A stale .so IS UNDETECTABLE AT OPEN.
-// `Iox2Library.open` therefore verifies only that the symbols it needs RESOLVE,
+// `IpcLibrary.open` therefore verifies only that the symbols it needs RESOLVE,
 // which catches a wrong library but not an old one. Stated rather than faked.
 
 import 'dart:ffi' as ffi;
 
-/// Success return value shared by the whole iceoryx2 C API (`IOX2_OK`).
+/// Success return value shared by the whole iceoryx2™ C API (`IOX2_OK`).
 const int iox2Ok = 0;
 
 /// `iox2_service_type_e_IPC` — cross-process. `_LOCAL` (0) is same-process only.
@@ -247,21 +247,21 @@ typedef Iox2SamplePayloadBytesDart =
 typedef _SetLogLevelNative = ffi.Void Function(ffi.Int32);
 typedef Iox2SetLogLevelDart = void Function(int);
 
-/// Thrown when the iceoryx2 shared library cannot be opened or is not the
+/// Thrown when the iceoryx2™ shared library cannot be opened or is not the
 /// library this binding was written against.
-class Iox2LibraryException implements Exception {
-  Iox2LibraryException(this.message);
+class IpcLibraryException implements Exception {
+  IpcLibraryException(this.message);
   final String message;
   @override
-  String toString() => 'Iox2LibraryException: $message';
+  String toString() => 'IpcLibraryException: $message';
 }
 
-/// Resolved iceoryx2 C entry points.
+/// Resolved iceoryx2™ C entry points.
 ///
 /// Holds no state of its own beyond the resolved function pointers; lifetime
 /// of nodes, services and samples belongs to the caller.
-class Iox2Library {
-  Iox2Library._(
+class IpcLibrary {
+  IpcLibrary._(
     this._lib, {
     required this.nodeBuilderNew,
     required this.nodeBuilderCreate,
@@ -295,12 +295,12 @@ class Iox2Library {
   ///
   /// This CANNOT detect a stale-but-compatible library. There is no version
   /// symbol to ask (measured; see the file header).
-  factory Iox2Library.open(String path) {
+  factory IpcLibrary.open(String path) {
     final ffi.DynamicLibrary lib;
     try {
       lib = ffi.DynamicLibrary.open(path);
     } on ArgumentError catch (e) {
-      throw Iox2LibraryException(
+      throw IpcLibraryException(
         'could not open iceoryx2 library at "$path": $e\n'
         'Build it with tool/build_iceoryx2.sh and pass the ICEORYX2_LIB it prints.',
       );
@@ -315,7 +315,7 @@ class Iox2Library {
     }
 
     try {
-      return Iox2Library._(
+      return IpcLibrary._(
         lib,
         nodeBuilderNew: step(
           'iox2_node_builder_new',
@@ -461,7 +461,7 @@ class Iox2Library {
         ),
       );
     } on ArgumentError {
-      throw Iox2LibraryException(
+      throw IpcLibraryException(
         'iceoryx2 library at "$path" does not export "$symbol". This is not the '
         'library these bindings were written against (iceoryx2 @ 05a3a8fa59b8).',
       );

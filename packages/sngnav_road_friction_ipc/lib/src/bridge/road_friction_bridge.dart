@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Akihiko Komada <aki1770@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-/// The bridge from an iceoryx2 sample to our classification asset.
+/// The bridge from an iceoryx2™ sample to our classification asset.
 ///
 /// This file contains no transport code and no FFI. It takes a
-/// [RoadFrictionSource] — any source, the real `Iox2RoadFrictionSource` or a
+/// [RoadFrictionSource] — any source, the real `IpcRoadFrictionSource` or a
 /// fake — and turns each sample into a [RoadFrictionReading] produced by
 /// `RoadFriction.classify` from `package:kuksa_dart_sdk`.
 ///
 /// The point of routing through that one function rather than re-deriving a
-/// verdict here is that the iceoryx2 path and the KUKSA path then answer
+/// verdict here is that the iceoryx2™ path and the KUKSA™ path then answer
 /// identically. A second threshold table living in this package is a second
 /// place for "the road is fine" to be wrong.
 ///
@@ -26,7 +26,7 @@ import '../ffi/road_friction_source.dart';
 /// One received sample, classified, with the wire metadata kept alongside.
 ///
 /// The sequence number is retained because it is the only way a consumer can
-/// see that samples were dropped — iceoryx2 publish-subscribe does not block a
+/// see that samples were dropped — iceoryx2™ publish-subscribe does not block a
 /// publisher for a slow subscriber, so a gap here is real information and not
 /// noise to be smoothed away.
 final class ClassifiedRoadFriction {

@@ -7,7 +7,7 @@
 // a separate file so that a green run here can never be mistaken for a working
 // transport.
 
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 import 'package:test/test.dart';
 

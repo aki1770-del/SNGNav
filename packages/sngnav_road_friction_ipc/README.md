@@ -1,40 +1,89 @@
-# iceoryx2_ipc
+# sngnav_road_friction_ipc
 
-Road-condition samples over [Eclipse iceoryx2](https://github.com/eclipse-iceoryx/iceoryx2)
-shared memory, classified by **the same rule the KUKSA path uses**.
+**sngnav_road_friction_ipc for Eclipse iceoryx™**
+
+Road-condition samples over [iceoryx2™](https://github.com/eclipse-iceoryx/iceoryx2)
+shared memory, classified by **`RoadFriction.classify` from `kuksa_dart_sdk`**, the same rule that package
+applies to friction read over Eclipse KUKSA™. The rule is `kuksa_dart_sdk`'s, not the Eclipse KUKSA™ project's.
 
 A publisher writes a `sngnav_road_friction_t` into shared memory. This package
 receives it and hands the value to `RoadFriction.classify` from
 [`kuksa_dart_sdk`](https://pub.dev/packages/kuksa_dart_sdk), so a consumer
-reading friction over iceoryx2 and a consumer reading it over KUKSA cannot
+reading friction over iceoryx2™ and a consumer reading it over KUKSA™ cannot
 disagree about whether a road is icy. There is no second threshold table here —
 a second place to decide "the road is fine" is a second place to be wrong.
 
 ```dart
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'dart:io';
+
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart'; // RoadGrip lives here, not in this package
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 
-final source = Iox2RoadFrictionSource.open();
-final bridge = RoadFrictionBridge(source);
+Future<void> main() async {
+  // The path tool/build_iceoryx2.sh prints as ICEORYX2_LIB (see below).
+  final libraryPath =
+      Platform.environment['ICEORYX2_LIB'] ?? 'libiceoryx2_ffi_c.so';
+  final bridge = RoadFrictionBridge(
+    IpcRoadFrictionSource.open(libraryPath: libraryPath),
+  );
 
-final sample = bridge.tryNext();
-if (sample != null) {
-  switch (sample.grip) {
-    case RoadGrip.icy:     // positively measured as ice
-    case RoadGrip.reduced: // wet, slush, loose
-    case RoadGrip.grip:    // normal
-    case RoadGrip.unknown: // NOT a claim that the road is fine
+  // tryNext() never blocks, and the first call right after open() is normally
+  // null: nothing new has arrived yet. So poll, for up to 2 s.
+  ClassifiedRoadFriction? sample;
+  try {
+    final deadline = DateTime.now().add(const Duration(seconds: 2));
+    sample = bridge.tryNext();
+    while (sample == null && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      sample = bridge.tryNext();
+    }
+  } finally {
+    bridge.dispose();
   }
+
+  if (sample == null) {
+    print('No sample arrived within 2 s.'); // not a claim about the road
+    return;
+  }
+  final meaning = switch (sample.grip) {
+    RoadGrip.icy => 'positively measured as ice',
+    RoadGrip.reduced => 'wet, slush, loose',
+    RoadGrip.grip => 'normal',
+    RoadGrip.unknown => 'NOT a claim that the road is fine',
+  };
+  print('seq ${sample.sequence}: ${sample.grip.name} ($meaning)');
 }
 ```
+
+`open()` with no arguments looks for `libiceoryx2_ffi_c.so` on the loader path, and `tool/build_iceoryx2.sh` does not install it there. Pass the `ICEORYX2_LIB` path that script prints: `IpcRoadFrictionSource.open(libraryPath: ...)`. If the library cannot be loaded, `open()` throws, naming the path.
+
+If no publisher is running, `open()` still succeeds and `tryNext()` returns `null`. Nothing in this package reports a publisher that is absent or has stopped: `null` means only that no new sample arrived.
 
 Run the demo:
 
 ```
-./tool/build_iceoryx2.sh        # builds libiceoryx2_ffi_c.so
+./tool/build_iceoryx2.sh        # builds libiceoryx2_ffi_c.so, prints ICEORYX2_LIB=<path>
 make -C native                  # builds the publisher
-./native/road_friction_publisher &
-dart run example/road_friction_glance.dart
+./native/road_friction_publisher 200 &   # ~40 s of samples, then exits
+dart run example/example.dart
+```
+
+Run these from a clone of the repository, not from the pub cache: the Makefile writes the publisher binary and `native/.iceoryx2.env` into the package directory. The first run fetches iceoryx2™ and builds it with cargo into `~/.cache/sngnav/iceoryx2` (about 360 MB on the one host measured). Set `SNGNAV_ICEORYX2_BUILD_DIR` to put it elsewhere.
+
+A run leaves iceoryx2™'s files on the host, and this package removes none of
+them. Measured on the one host: after the publisher exits by itself or on
+SIGTERM, one file stays in `/dev/shm` (`iox2_…global_mgmt`, 16 bytes) and the
+directory `/tmp/iceoryx2` stays with empty `nodes` and `services`
+subdirectories. After SIGKILL, the service's shared-memory segments
+(`/dev/shm/iox2_*.data`, `iox2_*.dynamic`) and the node's files under
+`/tmp/iceoryx2` stay as well.
+
+The program at the top of this page reads the library path from `ICEORYX2_LIB`.
+After the steps above, in the package directory, this sets it to the library
+the publisher was linked against:
+
+```
+export ICEORYX2_LIB="$(sed -n 's/^ICEORYX2_LIB=//p' native/.iceoryx2.env)"
 ```
 
 ## Absence is not grip
@@ -65,15 +114,18 @@ Stated here rather than in a commit message, because a consumer reads this file.
   not, because there is no aarch64 Dart SDK on the host that ran it. The pair
   has never been compared on the architecture the IVI target runs.
   Run `test/abi_layout_test.dart` on the target before trusting it there.
-- **Not usable across processes on Android.** Upstream iceoryx2's Android
+  That test needs `packages/driving_conditions/tool/abi_layout_check.dart` from
+  the SNGNav repository, which is not in this package's archive. Run it from a
+  clone of the repository. Run from the pub cache, it fails as UNVERIFIED.
+- **Not usable across processes on Android.** Upstream iceoryx2™'s Android
   support is inter-thread only.
-- **No version symbol exists in iceoryx2's C API.** Measured by RSE on the
+- **No version symbol exists in iceoryx2™'s C API.** Measured by RSE on the
   built `libiceoryx2_ffi_c.so`, 2026-09-12: zero exported symbols matching
   version / abi / revision / semver across 660 `iox2_*` symbols. A stale
-  iceoryx2 cannot be detected at `dlopen` time. iceoryx2 does compare a payload
+  iceoryx2™ cannot be detected at `dlopen` time. iceoryx2™ does compare a payload
   type name, size and alignment at service-open, which catches a **width**
   change — it does not catch a **field reorder** at constant width.
-- **Not published.** `publish_to: none`. This is an integration, not a release.
+- **First release, 0.0.1.** Verified only on host Linux x86_64, within the bounds above.
 - **The service name is machine-global, and this package does not own it.**
   `SNGNAV_ROAD_FRICTION_SERVICE` is the fixed string `sngnav/road_friction`,
   compiled into both halves. **Any** other process on the same host publishing
@@ -101,27 +153,33 @@ Stated here rather than in a commit message, because a consumer reads this file.
      indistinguishably. Nothing in the payload identifies which process wrote
      it.
 
-  Today that is a development-environment hazard rather than a shipped one —
-  there is one publisher on a real target. It is recorded because a
-  single-publisher assumption is currently enforced by nothing, and the failure
-  it produces is a plausible wrong reading, not an error.
+  This package assumes one publisher per host and enforces nothing. It has not
+  run on any vehicle target, so no target has been shown to have only one. The
+  bundled `native/road_friction_publisher` sends a scripted loop of fixed values
+  (80 %, 50 %, 18 %, not measured) stamped with the current time. It is a demo,
+  not a sensor. With no argument it runs until stopped. Do not leave it running
+  on a host where a real publisher uses `sngnav/road_friction`: its readings
+  arrive as current ones, and nothing in the payload tells them apart.
 
 ## What you are binding to, and what the build needs
 
 - **The pin is a commit on `main`, not a release.** `tool/build_iceoryx2.sh`
-  pins iceoryx2 to `05a3a8fa` (2026-09-11). Every iceoryx2 release to date is
+  pins iceoryx2™ to `05a3a8fa` (2026-09-11). Every iceoryx2™ release to date is
   flagged prerelease — 17 of 17 as of 2026-09-12, newest `v0.9.3` from
   2026-07-08, two months behind the pin. There is no stable line to track yet,
   and the C API exports no version symbol (0 of 660), so if the pin moves and
   you keep an old `.so`, nothing at `open` will tell you.
-- **The build fetches over the network.** Nothing from iceoryx2 is vendored; the
+- **The build fetches over the network.** Nothing from iceoryx2™ is vendored; the
   script does a bare-SHA shallow fetch from GitHub and re-verifies the SHA after
   checkout. If that SHA ever becomes unfetchable the package is unbuildable. To
   build from a local clone or a mirror instead, set `SNGNAV_ICEORYX2_URL`
   (`build_iceoryx2.sh:31`); `SNGNAV_ICEORYX2_BUILD_DIR` and
   `SNGNAV_ICEORYX2_PROFILE` are the other two knobs.
-- **A Rust toolchain and a C compiler are required on the machine that builds.**
-  Consumers who cannot have either cannot use this package today.
+- **`git`, a Rust toolchain and a C compiler are required on the machine that
+  builds.** Consumers who cannot have them cannot use this package today.
+  iceoryx2™ at the pin declares `rust-version = "1.89"` (its workspace
+  `Cargo.toml`, inherited by the `iceoryx2-ffi-c` crate the script builds).
+  This package's build has been run with Rust 1.94.1 only.
 
 ## The layout check
 
@@ -161,11 +219,14 @@ line agree.
 
 This differs from the rest of the SNGNav catalog, which is BSD-3-Clause. It is
 deliberate: the FFI layer takes the opaque-handle path an earlier, unmerged
-Dart binding for iceoryx2 found first — contributed to a repository that is
+Dart binding for iceoryx2™ found first — contributed to a repository that is
 dual-licensed Apache-2.0 OR MIT, so his work sits under both — and credits its
-author in the file headers. That credit said "Apache-2.0 on both sides", which
-narrowed his side and, for a few hours on
-2026-09-12 it was false — this package briefly shipped a BSD-3-Clause `LICENSE`
-copied from the monorepo root, which made pub.dev stop refusing the package and
-made the crediting sentence untrue at the same time. A refusal became a
-contradiction. Corrected the same evening.
+author in the file headers. Before this first release, a draft carried a
+BSD-3-Clause `LICENSE` copied from the repository root, contradicting the
+Apache-2.0 headers. It was corrected before publication; no published version
+carried it.
+
+Eclipse, iceoryx, iceoryx2 and KUKSA are trademarks of Eclipse Foundation AISBL.
+This package is not part of the Eclipse iceoryx™ or Eclipse KUKSA™ projects and is not
+endorsed by either.
+`kuksa_dart_sdk`, which supplies the classification rule, is by the same author and is not part of the Eclipse KUKSA™ project either.

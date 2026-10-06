@@ -19,7 +19,7 @@
 
 import 'dart:io';
 
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 import 'package:test/test.dart';
 
@@ -99,7 +99,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 500));
 
         try {
-          source = Iox2RoadFrictionSource.open(libraryPath: soPath);
+          source = IpcRoadFrictionSource.open(libraryPath: soPath);
         } on Object catch (e) {
           _unverified('the subscriber could not open', '$e\n$publisherLog');
         }

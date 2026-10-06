@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Akihiko Komada <aki1770@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// The demo. Opens the real iceoryx2 subscriber, receives what the publisher
+// The demo. Opens the real iceoryx2™ subscriber, receives what the publisher
 // puts in shared memory, and prints the classification of each sample.
 //
-//   Terminal 1:  ./native/road_friction_publisher
-//   Terminal 2:  dart run example/road_friction_glance.dart
+//   Terminal 1:  ./native/road_friction_publisher 200   # ~40 s, then exits
+//   Terminal 2:  dart run example/example.dart
+//
+// Run both from the package directory of a clone of the repository: the
+// publisher and native/.iceoryx2.env are built there (see README.md).
 //
 // Every line is one sample that actually crossed a process boundary. A sample
 // whose wire quality was 0 prints `not measured` — never a number, and never a
@@ -15,9 +18,9 @@
 
 import 'dart:io';
 
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 
-/// Where to find iceoryx2.
+/// Where to find iceoryx2™.
 ///
 /// Defaults to the path `tool/build_iceoryx2.sh` recorded in
 /// `native/.iceoryx2.env` — the same library the publisher was linked against.
@@ -26,7 +29,7 @@ import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
 /// demo would fail with a confusing "cannot open shared object file" on a
 /// machine where everything is in fact built. Reading the env file also means
 /// the publisher and the subscriber cannot end up on two different builds of
-/// iceoryx2, which nothing else here would detect: iceoryx2 exports no version
+/// iceoryx2™, which nothing else here would detect: iceoryx2™ exports no version
 /// symbol.
 String _defaultLibraryPath() {
   final env = File('native/.iceoryx2.env');
@@ -46,12 +49,12 @@ Future<void> main(List<String> args) async {
 
   final RoadFrictionSource source;
   try {
-    source = Iox2RoadFrictionSource.open(libraryPath: libraryPath);
+    source = IpcRoadFrictionSource.open(libraryPath: libraryPath);
   } on Object catch (e) {
     stderr.writeln('Could not open the iceoryx2 subscriber: $e');
     stderr.writeln(
       'Build the native half first:  ./tool/build_iceoryx2.sh\n'
-      'Then start the publisher:     ./native/road_friction_publisher',
+      'Then start the publisher:     ./native/road_friction_publisher 200',
     );
     exitCode = 2;
     return;
