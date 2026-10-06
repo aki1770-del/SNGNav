@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Akihiko Komada <aki1770@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// The demo. Opens the real iceoryx2 subscriber, receives what the publisher
+// The demo. Opens the real iceoryx2™ subscriber, receives what the publisher
 // puts in shared memory, and prints the classification of each sample.
 //
 //   Terminal 1:  ./native/road_friction_publisher 200   # ~40 s, then exits
@@ -20,7 +20,7 @@ import 'dart:io';
 
 import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 
-/// Where to find iceoryx2.
+/// Where to find iceoryx2™.
 ///
 /// Defaults to the path `tool/build_iceoryx2.sh` recorded in
 /// `native/.iceoryx2.env` — the same library the publisher was linked against.
@@ -29,7 +29,7 @@ import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 /// demo would fail with a confusing "cannot open shared object file" on a
 /// machine where everything is in fact built. Reading the env file also means
 /// the publisher and the subscriber cannot end up on two different builds of
-/// iceoryx2, which nothing else here would detect: iceoryx2 exports no version
+/// iceoryx2™, which nothing else here would detect: iceoryx2™ exports no version
 /// symbol.
 String _defaultLibraryPath() {
   final env = File('native/.iceoryx2.env');
@@ -49,7 +49,7 @@ Future<void> main(List<String> args) async {
 
   final RoadFrictionSource source;
   try {
-    source = Iox2RoadFrictionSource.open(libraryPath: libraryPath);
+    source = IpcRoadFrictionSource.open(libraryPath: libraryPath);
   } on Object catch (e) {
     stderr.writeln('Could not open the iceoryx2 subscriber: $e');
     stderr.writeln(

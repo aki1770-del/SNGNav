@@ -99,7 +99,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 500));
 
         try {
-          source = Iox2RoadFrictionSource.open(libraryPath: soPath);
+          source = IpcRoadFrictionSource.open(libraryPath: soPath);
         } on Object catch (e) {
           _unverified('the subscriber could not open', '$e\n$publisherLog');
         }

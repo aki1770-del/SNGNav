@@ -1,8 +1,8 @@
 name: sngnav_road_friction_ipc
 description: >-
-  Host Linux x86_64 only. Receives road-friction samples over Eclipse iceoryx2
-  shared memory and classifies them with the RoadFriction rule from
-  kuksa_dart_sdk.
+  Host Linux x86_64 only. Receives road-friction samples over Eclipse iceoryx™
+  (iceoryx2™) shared memory and classifies them with the RoadFriction rule
+  from kuksa_dart_sdk.
 version: 0.0.1
 repository: https://github.com/aki1770-del/sngnav
 issue_tracker: https://github.com/aki1770-del/sngnav/issues

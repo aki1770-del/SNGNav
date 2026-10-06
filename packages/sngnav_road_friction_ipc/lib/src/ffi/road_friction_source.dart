@@ -42,24 +42,24 @@ import 'dart:ffi' as ffi;
 
 import 'iox2_bindings.dart';
 
-/// The iceoryx2 commit these bindings were written and proven against.
+/// The iceoryx2™ commit these bindings were written and proven against.
 ///
 /// Recorded, not enforced — see the file header. If you build against another
 /// commit, this string is the only thing that will tell a later reader.
 const String iceoryx2SourceSha = '05a3a8fa59b87af5ced3af12f9145d4f46de472b';
 
-/// The iceoryx2 service name both ends open. Must equal
+/// The iceoryx2™ service name both ends open. Must equal
 /// `SNGNAV_ROAD_FRICTION_SERVICE` in native/sngnav_road_friction.h.
 const String roadFrictionServiceName = 'sngnav/road_friction';
 
-/// The payload type name iceoryx2 records with the service. Must equal
+/// The payload type name iceoryx2™ records with the service. Must equal
 /// `SNGNAV_ROAD_FRICTION_TYPE_NAME` in native/sngnav_road_friction.h.
 const String roadFrictionTypeName = 'sngnav_road_friction_t';
 
 /// The wire layout of `sngnav_road_friction_t`.
 ///
 /// THIS IS THE ONE PLACE IN THIS PACKAGE WHERE A DART-DECLARED LAYOUT MEETS A
-/// C-DECLARED LAYOUT. Everything else on the iceoryx2 side is an opaque
+/// C-DECLARED LAYOUT. Everything else on the iceoryx2™ side is an opaque
 /// handle, deliberately, so that this is the only surface where the two can
 /// disagree — and it is the surface `abi_layout_check.dart` is pointed at:
 ///
@@ -121,7 +121,7 @@ final class RoadFrictionSample {
 
 /// A source of road-friction samples.
 ///
-/// Consumers code against this, not against iceoryx2. A fake implementation is
+/// Consumers code against this, not against iceoryx2™. A fake implementation is
 /// a class with a list and a cursor; that is the point.
 abstract interface class RoadFrictionSource {
   /// The next sample, or `null` when none has arrived. Never blocks.
@@ -187,13 +187,13 @@ class _Libc {
   }
 }
 
-/// A [RoadFrictionSource] backed by a real iceoryx2 publish-subscribe service.
+/// A [RoadFrictionSource] backed by a real iceoryx2™ publish-subscribe service.
 ///
-/// Every caller-allocatable iceoryx2 struct is passed as `nullptr`, so the
+/// Every caller-allocatable iceoryx2™ struct is passed as `nullptr`, so the
 /// library heap-allocates it at its own size. Dart never states the size of an
-/// iceoryx2 struct, so a size Dart got wrong cannot exist.
-final class Iox2RoadFrictionSource implements RoadFrictionSource {
-  Iox2RoadFrictionSource._(
+/// iceoryx2™ struct, so a size Dart got wrong cannot exist.
+final class IpcRoadFrictionSource implements RoadFrictionSource {
+  IpcRoadFrictionSource._(
     this._iox2,
     this._libc,
     this._nodeSlot,
@@ -208,11 +208,11 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
   /// Returns as soon as the subscriber exists. A publisher need not be running
   /// yet — `open_or_create` makes the service, and [tryReceive] simply returns
   /// `null` until one appears.
-  factory Iox2RoadFrictionSource.open({
+  factory IpcRoadFrictionSource.open({
     String libraryPath = 'libiceoryx2_ffi_c.so',
     String nodeName = 'sngnav_subscriber',
   }) {
-    final iox2 = Iox2Library.open(libraryPath);
+    final iox2 = IpcLibrary.open(libraryPath);
     final libc = _Libc.process();
     iox2.setLogLevelFromEnvOr(iox2LogLevelWarn);
 
@@ -329,7 +329,7 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
         );
       }
 
-      return Iox2RoadFrictionSource._(
+      return IpcRoadFrictionSource._(
         iox2,
         libc,
         nodeSlot,
@@ -356,12 +356,12 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
   /// Dart exposes no `alignOf`. The struct is a double, an int64, a uint32 and
   /// four uint8 with NO alignment attributes, so its alignment is that of its
   /// widest member: 8. The value is not merely asserted here — the ABI layout
-  /// check measures the C side with `_Alignof` and compares, and iceoryx2
+  /// check measures the C side with `_Alignof` and compares, and iceoryx2™
   /// refuses the service if the publisher's compiler-measured alignment
   /// disagrees with this number. A wrong value fails loudly at open.
   static const int _roadFrictionAlignment = 8;
 
-  final Iox2Library _iox2;
+  final IpcLibrary _iox2;
   final _Libc _libc;
   final ffi.Pointer<ffi.Pointer<ffi.Opaque>> _nodeSlot;
   final ffi.Pointer<ffi.Pointer<ffi.Opaque>> _serviceSlot;
@@ -373,7 +373,7 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
   @override
   RoadFrictionSample? tryReceive() {
     if (_disposed) {
-      throw StateError('tryReceive() on a disposed Iox2RoadFrictionSource');
+      throw StateError('tryReceive() on a disposed IpcRoadFrictionSource');
     }
 
     _sampleSlot.value = ffi.nullptr;
