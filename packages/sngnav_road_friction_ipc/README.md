@@ -19,23 +19,39 @@ import 'dart:io';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart'; // RoadGrip lives here, not in this package
 import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 
-void main() {
+Future<void> main() async {
   // The path tool/build_iceoryx2.sh prints as ICEORYX2_LIB (see below).
   final libraryPath =
       Platform.environment['ICEORYX2_LIB'] ?? 'libiceoryx2_ffi_c.so';
-  final source = IpcRoadFrictionSource.open(libraryPath: libraryPath);
-  final bridge = RoadFrictionBridge(source);
+  final bridge = RoadFrictionBridge(
+    IpcRoadFrictionSource.open(libraryPath: libraryPath),
+  );
 
-  final sample = bridge.tryNext();
-  if (sample != null) {
-    switch (sample.grip) {
-      case RoadGrip.icy:     // positively measured as ice
-      case RoadGrip.reduced: // wet, slush, loose
-      case RoadGrip.grip:    // normal
-      case RoadGrip.unknown: // NOT a claim that the road is fine
+  // tryNext() never blocks, and the first call right after open() is normally
+  // null: nothing new has arrived yet. So poll, for up to 2 s.
+  ClassifiedRoadFriction? sample;
+  try {
+    final deadline = DateTime.now().add(const Duration(seconds: 2));
+    sample = bridge.tryNext();
+    while (sample == null && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      sample = bridge.tryNext();
     }
+  } finally {
+    bridge.dispose();
   }
-  bridge.dispose();
+
+  if (sample == null) {
+    print('No sample arrived within 2 s.'); // not a claim about the road
+    return;
+  }
+  final meaning = switch (sample.grip) {
+    RoadGrip.icy => 'positively measured as ice',
+    RoadGrip.reduced => 'wet, slush, loose',
+    RoadGrip.grip => 'normal',
+    RoadGrip.unknown => 'NOT a claim that the road is fine',
+  };
+  print('seq ${sample.sequence}: ${sample.grip.name} ($meaning)');
 }
 ```
 
