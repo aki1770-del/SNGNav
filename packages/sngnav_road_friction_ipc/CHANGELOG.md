@@ -7,7 +7,7 @@ First release.
 **What it is.** A Dart subscriber for road-friction samples carried over Eclipse
 iceoryx™ (iceoryx2™) shared memory, and a bridge that classifies each sample with
 `RoadFriction.classify` from the published `kuksa_dart_sdk` 0.2.9 — the same
-function the Eclipse KUKSA™ path uses, so the two transports cannot return different
+function that package applies to friction read over Eclipse KUKSA™, so the two transports cannot return different
 verdicts for the same road. `quality == 0` on the wire becomes a `null` percent
 and `RoadGrip.unknown`; absence never rides the measurement scale.
 
