@@ -442,8 +442,9 @@ final class Iox2RoadFrictionSource implements RoadFrictionSource {
     if (_disposed) return;
     _disposed = true;
     // Reverse construction order: subscriber, then service, then node.
-    if (_subscriberSlot.value != ffi.nullptr)
+    if (_subscriberSlot.value != ffi.nullptr) {
       _iox2.subscriberDrop(_subscriberSlot.value);
+    }
     if (_serviceSlot.value != ffi.nullptr) _iox2.pubSubDrop(_serviceSlot.value);
     if (_nodeSlot.value != ffi.nullptr) _iox2.nodeDrop(_nodeSlot.value);
     _libc.free(_nodeSlot.cast());

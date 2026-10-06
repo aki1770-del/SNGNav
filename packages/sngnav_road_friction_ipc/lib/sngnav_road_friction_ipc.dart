@@ -13,7 +13,12 @@
 /// not verified on aarch64 at runtime, and iceoryx2's own Android support is
 /// inter-thread only. See README.md — the bounds are on the package's face
 /// rather than in a commit message, because a consumer reads the former.
+///
+/// `Iox2RoadFrictionSource.open` throws [Iox2LibraryException] when the
+/// iceoryx2 library cannot be loaded, naming the path it tried; it is exported
+/// so a caller can catch it by type.
 library;
 
 export 'src/bridge/road_friction_bridge.dart';
+export 'src/ffi/iox2_bindings.dart' show Iox2LibraryException;
 export 'src/ffi/road_friction_source.dart';

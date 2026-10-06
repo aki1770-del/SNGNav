@@ -4,8 +4,11 @@
 // The demo. Opens the real iceoryx2 subscriber, receives what the publisher
 // puts in shared memory, and prints the classification of each sample.
 //
-//   Terminal 1:  ./native/road_friction_publisher
-//   Terminal 2:  dart run example/road_friction_glance.dart
+//   Terminal 1:  ./native/road_friction_publisher 200   # ~40 s, then exits
+//   Terminal 2:  dart run example/example.dart
+//
+// Run both from the package directory of a clone of the repository: the
+// publisher and native/.iceoryx2.env are built there (see README.md).
 //
 // Every line is one sample that actually crossed a process boundary. A sample
 // whose wire quality was 0 prints `not measured` — never a number, and never a
@@ -15,7 +18,7 @@
 
 import 'dart:io';
 
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 
 /// Where to find iceoryx2.
 ///
@@ -51,7 +54,7 @@ Future<void> main(List<String> args) async {
     stderr.writeln('Could not open the iceoryx2 subscriber: $e');
     stderr.writeln(
       'Build the native half first:  ./tool/build_iceoryx2.sh\n'
-      'Then start the publisher:     ./native/road_friction_publisher',
+      'Then start the publisher:     ./native/road_friction_publisher 200',
     );
     exitCode = 2;
     return;

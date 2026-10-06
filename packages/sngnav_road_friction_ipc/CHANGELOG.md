@@ -2,7 +2,7 @@
 
 ## 0.0.1 — 2026-09-12
 
-First integration. Not published (`publish_to: none`).
+First release.
 
 **What it is.** A Dart subscriber for road-friction samples carried over Eclipse
 iceoryx2 shared memory, and a bridge that classifies each sample with
@@ -17,7 +17,6 @@ alignment.
 
 **What it is not.**
 
-- Not released. No pub.dev publish, no version reachable by any consumer.
 - Not verified on the IVI target, and not verified on aarch64 at runtime — the
   Dart half of the layout comparison has only ever run on host x86_64.
 - Not usable across processes on Android; upstream iceoryx2 is inter-thread only

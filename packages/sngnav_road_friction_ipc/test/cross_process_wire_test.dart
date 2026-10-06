@@ -19,7 +19,7 @@
 
 import 'dart:io';
 
-import 'package:iceoryx2_ipc/iceoryx2_ipc.dart';
+import 'package:sngnav_road_friction_ipc/sngnav_road_friction_ipc.dart';
 import 'package:kuksa_dart_sdk/kuksa_dart_sdk.dart';
 import 'package:test/test.dart';
 
